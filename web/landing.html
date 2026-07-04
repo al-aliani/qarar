@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>قرار — دراسة جدوى مطعمك بدقة بنكية خلال ٢٤ ساعة</title>
+  <meta name="description" content="منصة قرار تحوّل بيانات مطعمك أو كافيهك إلى قرار استثماري واضح (GO / NO-GO) بدقة تُقنع البنك، وبثلث تكلفة المكتب الاستشاري. مصممة للسوق السعودي." />
+  <meta property="og:title" content="قرار — دراسات جدوى المطاعم والكافيهات السعودية" />
+  <meta property="og:description" content="قرار استثماري موثوق لمطعمك خلال ٢٤ ساعة، بدقة بنكية وسعر يبدأ من ٢٤٩ ﷼." />
+  <meta property="og:type" content="website" />
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <style>
+    :root {
+      --pine: #0e5b44; --pine-deep: #0a3d2e; --pine-2: #127a5b;
+      --brass: #b07d2c; --brass-ink: #8a5f1c;
+      --paper: #f6f5f0; --paper-2: #eeece4; --card: #fdfcf9;
+      --ink: #1c2420; --muted: #5b665f; --line: rgba(28,36,32,.14);
+      --good: #157f5f; --crit: #c2382e;
+      --r: 16px; --r-sm: 10px;
+      --font: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+      --shadow: 0 1px 2px rgba(20,33,28,.05), 0 12px 32px -14px rgba(20,33,28,.28);
+      --shadow-lg: 0 24px 60px -22px rgba(10,61,46,.5);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); background: var(--paper); color: var(--ink); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+    h1, h2, h3 { line-height: 1.2; letter-spacing: -.3px; text-wrap: balance; }
+    section { padding: 72px 0; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--brass-ink); background: rgba(176,125,44,.12); padding: 6px 14px; border-radius: 100px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-size: 15.5px; font-weight: 700; padding: 13px 26px; border-radius: 12px; border: 1.5px solid transparent; cursor: pointer; transition: transform .15s, box-shadow .15s, background .15s; white-space: nowrap; }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: var(--pine); color: #fff; box-shadow: 0 10px 24px -12px rgba(14,91,68,.7); }
+    .btn-primary:hover { background: var(--pine-2); }
+    .btn-wa { background: #25d366; color: #05331d; }
+    .btn-wa:hover { background: #2ee06f; }
+    .btn-ghost { background: var(--card); color: var(--ink); border-color: var(--line); }
+    .btn-ghost:hover { border-color: var(--pine); color: var(--pine); }
+    .btn-lg { font-size: 17px; padding: 16px 32px; }
+
+    /* Header */
+    header.top { position: sticky; top: 0; z-index: 50; background: rgba(246,245,240,.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+    .top-in { display: flex; align-items: center; gap: 16px; height: 66px; }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; font-size: 20px; }
+    .brand .mk { width: 38px; height: 38px; border-radius: 11px; background: var(--pine); color: #fff; display: grid; place-items: center; font-size: 22px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
+    nav.links { display: flex; gap: 24px; margin-inline-start: auto; font-size: 15px; font-weight: 600; color: var(--muted); }
+    nav.links a:hover { color: var(--pine); }
+    .top-cta { display: flex; gap: 10px; }
+    @media (max-width: 820px) { nav.links { display: none; } .top-cta .btn-ghost { display: none; } }
+
+    /* Hero */
+    .hero { position: relative; overflow: hidden; background: radial-gradient(120% 130% at 88% -10%, #0f6a4f 0%, var(--pine-deep) 55%, #072f23 100%); color: #eaf2ee; padding: 84px 0 96px; }
+    .hero-grid-bg { position: absolute; inset: 0; opacity: .5; background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px); background-size: 46px 46px; -webkit-mask-image: radial-gradient(80% 90% at 85% 0%, #000, transparent 72%); mask-image: radial-gradient(80% 90% at 85% 0%, #000, transparent 72%); }
+    .hero-in { position: relative; z-index: 2; display: grid; grid-template-columns: 1.15fr .85fr; gap: 48px; align-items: center; }
+    @media (max-width: 900px) { .hero-in { grid-template-columns: 1fr; gap: 40px; } }
+    .hero .eyebrow { color: #9fd8c3; background: rgba(159,216,195,.1); border: 1px solid rgba(159,216,195,.3); }
+    .hero h1 { font-size: clamp(30px, 5vw, 50px); font-weight: 800; color: #fff; margin: 20px 0 0; max-width: 16ch; }
+    .hero h1 .hl { color: #eabf6f; }
+    .hero .lede { font-size: clamp(16px, 2vw, 19px); color: #c7dcd3; margin-top: 18px; max-width: 46ch; }
+    .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
+    .hero-trust { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 30px; }
+    .hero-trust div { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #bcd4ca; font-weight: 600; }
+    .hero-trust .ic { color: #6fe0b0; font-size: 17px; }
+
+    /* Decision card mock */
+    .decision-card { background: var(--card); border-radius: 20px; padding: 24px; box-shadow: var(--shadow-lg); color: var(--ink); }
+    .dc-top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    .dc-top .name { font-weight: 800; font-size: 16px; }
+    .dc-top .name span { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+    .dc-verdict { display: inline-flex; align-items: center; gap: 6px; background: #ddf0e6; color: var(--good); font-weight: 800; font-size: 14px; padding: 6px 13px; border-radius: 100px; }
+    .dc-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
+    .dc-kpi { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; }
+    .dc-kpi .k { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .dc-kpi .v { font-size: 22px; font-weight: 800; font-family: var(--mono); margin-top: 4px; letter-spacing: -.5px; }
+    .dc-kpi .v.pos { color: var(--good); }
+    .dc-bar { display: flex; align-items: flex-end; gap: 6px; height: 56px; padding: 0 4px; }
+    .dc-bar span { flex: 1; background: linear-gradient(180deg, var(--pine-2), var(--pine)); border-radius: 4px 4px 0 0; }
+    .dc-note { font-size: 11.5px; color: var(--muted); text-align: center; margin-top: 10px; }
+
+    /* Logos / social proof strip */
+    .strip { background: var(--paper-2); padding: 22px 0; border-block: 1px solid var(--line); }
+    .strip-in { display: flex; align-items: center; justify-content: center; gap: 14px 40px; flex-wrap: wrap; font-size: 14px; color: var(--muted); font-weight: 600; }
+    .strip-in b { color: var(--ink); font-weight: 800; }
+
+    /* Section heads */
+    .sec-head { text-align: center; max-width: 640px; margin: 0 auto 48px; }
+    .sec-head h2 { font-size: clamp(25px, 3.4vw, 36px); font-weight: 800; margin-top: 12px; }
+    .sec-head p { color: var(--muted); font-size: 17px; margin-top: 12px; }
+
+    /* Problem cards */
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 820px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+    .card-b { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 26px; box-shadow: var(--shadow); }
+    .card-b .ic { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; margin-bottom: 14px; }
+    .ic-red { background: rgba(194,56,46,.1); }
+    .ic-pine { background: rgba(14,91,68,.1); }
+    .ic-brass { background: rgba(176,125,44,.12); }
+    .card-b h3 { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+    .card-b p { color: var(--muted); font-size: 15px; }
+
+    /* Steps */
+    .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; counter-reset: s; }
+    @media (max-width: 900px) { .steps { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
+    .step { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 24px 22px; box-shadow: var(--shadow); }
+    .step .n { width: 38px; height: 38px; border-radius: 11px; background: var(--pine); color: #fff; font-family: var(--mono); font-weight: 800; display: grid; place-items: center; margin-bottom: 14px; }
+    .step h3 { font-size: 16.5px; font-weight: 800; margin-bottom: 6px; }
+    .step p { color: var(--muted); font-size: 14px; }
+
+    /* Deliverable list */
+    .deliver { background: linear-gradient(160deg, var(--pine-deep), var(--pine)); color: #eaf2ee; border-radius: 24px; padding: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 36px; align-items: center; }
+    @media (max-width: 820px) { .deliver { grid-template-columns: 1fr; padding: 32px; } }
+    .deliver h2 { color: #fff; font-size: clamp(24px, 3vw, 32px); font-weight: 800; }
+    .deliver .sub { color: #c7dcd3; margin-top: 12px; font-size: 16px; }
+    .deliver ul { list-style: none; margin-top: 22px; display: flex; flex-direction: column; gap: 12px; }
+    .deliver li { display: flex; gap: 11px; align-items: flex-start; font-size: 15.5px; color: #e4efe9; }
+    .deliver li .ck { color: #6fe0b0; font-weight: 900; flex: none; }
+    .deliver-visual { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: 16px; padding: 20px; }
+    .dv-row { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.1); font-size: 14px; }
+    .dv-row:last-child { border-bottom: 0; }
+    .dv-row .lbl { color: #a9cabd; }
+    .dv-row .val { font-family: var(--mono); font-weight: 700; color: #fff; }
+
+    /* Pricing */
+    .prices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch; }
+    @media (max-width: 900px) { .prices { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; } }
+    .price { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 30px 26px; display: flex; flex-direction: column; box-shadow: var(--shadow); position: relative; }
+    .price.feat { border: 2px solid var(--pine); box-shadow: 0 0 0 1px var(--pine), var(--shadow-lg); }
+    .price .tag { position: absolute; top: -13px; inset-inline-start: 24px; background: var(--pine); color: #fff; font-size: 12px; font-weight: 800; padding: 5px 13px; border-radius: 100px; }
+    .price .tname { font-size: 14px; font-weight: 800; color: var(--brass-ink); letter-spacing: .02em; }
+    .price .amt { font-size: 40px; font-weight: 800; font-family: var(--mono); margin: 10px 0 2px; letter-spacing: -1px; }
+    .price .amt small { font-size: 15px; color: var(--muted); font-weight: 600; font-family: var(--font); }
+    .price .desc { font-size: 14px; color: var(--muted); min-height: 40px; }
+    .price ul { list-style: none; margin: 18px 0 24px; display: flex; flex-direction: column; gap: 11px; flex: 1; }
+    .price li { display: flex; gap: 9px; align-items: flex-start; font-size: 14.5px; color: var(--ink); }
+    .price li .ck { color: var(--good); font-weight: 900; flex: none; }
+    .price .btn { width: 100%; }
+    .price-note { text-align: center; color: var(--muted); font-size: 13.5px; margin-top: 22px; }
+
+    /* Why us */
+    .why { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    @media (max-width: 900px) { .why { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 520px) { .why { grid-template-columns: 1fr; } }
+    .why-item { padding: 8px; }
+    .why-item .ic { font-size: 26px; margin-bottom: 10px; }
+    .why-item h3 { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+    .why-item p { color: var(--muted); font-size: 14px; }
+
+    /* FAQ */
+    .faq { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 20px; box-shadow: var(--shadow); }
+    details summary { cursor: pointer; font-weight: 700; font-size: 16px; padding: 16px 0; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+    details summary::-webkit-details-marker { display: none; }
+    details summary::after { content: '+'; font-size: 22px; color: var(--pine); font-weight: 400; }
+    details[open] summary::after { content: '−'; }
+    details p { color: var(--muted); font-size: 15px; padding: 0 0 18px; }
+
+    /* Final CTA */
+    .cta-band { background: radial-gradient(120% 140% at 15% 0%, #0f6a4f, var(--pine-deep) 60%, #072f23); color: #fff; text-align: center; border-radius: 24px; padding: 56px 32px; }
+    .cta-band h2 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 800; }
+    .cta-band p { color: #c7dcd3; font-size: 18px; margin-top: 14px; max-width: 48ch; margin-inline: auto; }
+    .cta-band .hero-cta { justify-content: center; }
+
+    /* Footer */
+    footer { background: var(--paper-2); border-top: 1px solid var(--line); padding: 44px 0 30px; margin-top: 20px; }
+    .foot-in { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+    .foot-brand { font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 9px; }
+    .foot-brand .mk { width: 32px; height: 32px; border-radius: 9px; background: var(--pine); color: #fff; display: grid; place-items: center; }
+    .foot-links { display: flex; gap: 26px; flex-wrap: wrap; font-size: 15px; color: var(--muted); font-weight: 600; }
+    .foot-links a:hover { color: var(--pine); }
+    .foot-copy { color: var(--muted); font-size: 13px; margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); line-height: 1.9; }
+
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+
+  <!-- ملاحظة للمالك: استبدل رقم الواتساب في كل الروابط (data-wa) برقمك بصيغة دولية بلا +، مثال 9665XXXXXXXX -->
+
+  <header class="top">
+    <div class="wrap top-in">
+      <a href="#" class="brand"><span class="mk">ق</span> قرار</a>
+      <nav class="links">
+        <a href="#how">كيف يعمل</a>
+        <a href="#deliverable">ماذا تحصل</a>
+        <a href="#pricing">الأسعار</a>
+        <a href="#faq">الأسئلة</a>
+      </nav>
+      <div class="top-cta">
+        <a href="./index.html" class="btn btn-ghost">جرّب مجاناً</a>
+        <a href="#pricing" class="btn btn-primary">اطلب دراستك</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-grid-bg"></div>
+    <div class="wrap hero-in">
+      <div>
+        <span class="eyebrow">◆ دراسات جدوى المطاعم والكافيهات — السعودية</span>
+        <h1>قرار افتتاح مطعمك… مبني على <span class="hl">رقم</span>، لا على حدس.</h1>
+        <p class="lede">تحوّل «قرار» بيانات مشروعك إلى قرار استثماري واضح (GO / NO-GO) بدقة تُقنع البنك — خلال ٢٤ ساعة، وبثلث تكلفة المكتب الاستشاري.</p>
+        <div class="hero-cta">
+          <a href="#pricing" class="btn btn-primary btn-lg">اطلب دراستك الآن</a>
+          <a href="./index.html" class="btn btn-ghost btn-lg" style="background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.25)">جرّب تقديراً مجانياً</a>
+        </div>
+        <div class="hero-trust">
+          <div><span class="ic">✓</span> دقة بنكية (NPV · IRR · تعادل)</div>
+          <div><span class="ic">✓</span> توطين سعودي كامل</div>
+          <div><span class="ic">✓</span> جاهز للبنك ومنشآت</div>
+        </div>
+      </div>
+      <div class="decision-card" aria-hidden="true">
+        <div class="dc-top">
+          <div class="name">كافيه النرجس المختص<span>الرياض · قهوة مختصة</span></div>
+          <div class="dc-verdict">🟢 مجدٍ (GO)</div>
+        </div>
+        <div class="dc-kpis">
+          <div class="dc-kpi"><div class="k">صافي القيمة الحالية</div><div class="v pos">٣.٠ م﷼</div></div>
+          <div class="dc-kpi"><div class="k">فترة الاسترداد</div><div class="v">١.٠ سنة</div></div>
+          <div class="dc-kpi"><div class="k">العائد الداخلي (IRR)</div><div class="v pos">١٠٢٪</div></div>
+          <div class="dc-kpi"><div class="k">تغطية الدين (DSCR)</div><div class="v">١٥.٦×</div></div>
+        </div>
+        <div class="dc-bar"><span style="height:42%"></span><span style="height:58%"></span><span style="height:70%"></span><span style="height:85%"></span><span style="height:100%"></span></div>
+        <div class="dc-note">توقعات الإيراد على ٥ سنوات — نموذج توضيحي</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="strip">
+    <div class="wrap strip-in">
+      <span>معايير موطّنة: <b>GOSI</b> · <b>ضريبة ١٥٪</b> · <b>زكاة</b> · <b>تراخيص بلدية</b></span>
+      <span>قنوات المطاعم: <b>صالة</b> · <b>تيك أواي</b> · <b>توصيل (جاهز/هنقرستيشن)</b></span>
+    </div>
+  </div>
+
+  <!-- Problem -->
+  <section id="problem">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">لماذا قرار</span>
+        <h2>أكثر من نصف المطاعم الجديدة تتعثّر خلال ٣ سنوات</h2>
+        <p>السبب غالباً ليس الفكرة — بل قرار افتُتح على تقدير متفائل بلا أرقام. والبدائل التقليدية بطيئة وغالية.</p>
+      </div>
+      <div class="grid-3">
+        <div class="card-b">
+          <div class="ic ic-red">💸</div>
+          <h3>مكتب استشاري غالٍ</h3>
+          <p>دراسة تكلّف ٥٬٠٠٠ إلى ٢٥٬٠٠٠ ﷼ وتأخذ أسابيع — وتنتهي كملف PDF ميت لا يُحدَّث ولا يُقارَن.</p>
+        </div>
+        <div class="card-b">
+          <div class="ic ic-brass">🎲</div>
+          <h3>قرار بالحدس</h3>
+          <p>«الموقع حلو والزحمة كثيرة» ليست دراسة جدوى. بدون NPV وتعادل وحساسية، أنت تراهن لا تستثمر.</p>
+        </div>
+        <div class="card-b">
+          <div class="ic ic-pine">⏳</div>
+          <h3>أدوات عامة سطحية</h3>
+          <p>قوالب أجنبية بلا تعريب ولا معايير سعودية ولا عمق مالي — تعطيك أرقاماً لا يقبلها ممول.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how" style="background:var(--paper-2);border-block:1px solid var(--line)">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">بأربع خطوات</span>
+        <h2>من فكرتك إلى قرار موثوق</h2>
+        <p>سواء سوّيتها بنفسك أو طلبتها كخدمة كاملة — نفس المحرك، نفس الدقة.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="n">١</div><h3>أدخل بيانات مشروعك</h3><p>نوع المطعم، المدينة، التكاليف، المبيعات المتوقعة — أو ابدأ من قالب جاهز يعبّئ لك الأساسيات.</p></div>
+        <div class="step"><div class="n">٢</div><h3>احصل على القرار فوراً</h3><p>يحسب المحرك NPV و IRR والتعادل والتدفقات، ويعطيك توصية GO / NO-GO مع تحليل حساسية وسيناريوهات.</p></div>
+        <div class="step"><div class="n">٣</div><h3>راجعه خبير (اختياري)</h3><p>مختص مطاعم يضبط التكاليف ويضيف توصيات موثّقة — لثقة أعلى أمام الممول والشريك.</p></div>
+        <div class="step"><div class="n">٤</div><h3>صدّر جاهزاً للبنك</h3><p>تقرير احترافي (PDF / Excel) بهيكل متوافق مع بنك التنمية ومنشآت — جاهز للتقديم.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Deliverable -->
+  <section id="deliverable">
+    <div class="wrap">
+      <div class="deliver">
+        <div>
+          <h2>دراسة يمسكها الممول ويثق بها</h2>
+          <p class="sub">ليست جداول عامة — قرار استثماري متكامل قابل للتدقيق، مبني على بيانات مطاعم واقعية.</p>
+          <ul>
+            <li><span class="ck">✓</span> بطاقة قرار واضحة (GO / NO-GO / مراجعة) في صفحة واحدة</li>
+            <li><span class="ck">✓</span> قوائم مالية تقديرية على ٥ سنوات + ميزانية عمومية</li>
+            <li><span class="ck">✓</span> تحليل حساسية وسيناريوهات (متحفّظ / أساسي / طموح)</li>
+            <li><span class="ck">✓</span> جدول سداد القرض وحساب الزكاة والضريبة</li>
+            <li><span class="ck">✓</span> تقرير بنكي بصيغة PDF و Excel جاهز للتقديم</li>
+          </ul>
+        </div>
+        <div class="deliver-visual" aria-hidden="true">
+          <div class="dv-row"><span class="lbl">إجمالي الاستثمار</span><span class="val">٩٥٤٬٢٦٧ ﷼</span></div>
+          <div class="dv-row"><span class="lbl">صافي القيمة الحالية (NPV)</span><span class="val">٣٬٠١١٬٧١٤ ﷼</span></div>
+          <div class="dv-row"><span class="lbl">العائد الداخلي (IRR)</span><span class="val">١٠٢٪</span></div>
+          <div class="dv-row"><span class="lbl">فترة الاسترداد</span><span class="val">١.٠ سنة</span></div>
+          <div class="dv-row"><span class="lbl">تغطية خدمة الدين</span><span class="val">١٥.٦×</span></div>
+          <div class="dv-row"><span class="lbl">القرار</span><span class="val" style="color:#6fe0b0">المضي قدماً</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" style="background:var(--paper-2);border-block:1px solid var(--line)">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">أسعار واضحة</span>
+        <h2>اختر ما يناسبك</h2>
+        <p>ادفع مرة واحدة لكل دراسة — بلا اشتراكات مخفية. وبعد الدفع تفتح التعديل الحي متى شئت.</p>
+      </div>
+      <div class="prices">
+        <div class="price">
+          <div class="tname">ذاتي</div>
+          <div class="amt">٢٤٩ <small>﷼ / دراسة</small></div>
+          <div class="desc">أنت تسوّي الدراسة بنفسك عبر المنصة، بإرشاد كامل.</div>
+          <ul>
+            <li><span class="ck">✓</span> كل المؤشرات المالية والتقارير</li>
+            <li><span class="ck">✓</span> قوالب مطاعم وكافيهات جاهزة</li>
+            <li><span class="ck">✓</span> تصدير PDF و Excel</li>
+            <li><span class="ck">✓</span> تعديل حيّ غير محدود</li>
+          </ul>
+          <a href="./index.html" class="btn btn-ghost">ابدأ الآن</a>
+        </div>
+        <div class="price feat">
+          <div class="tag">الأعلى قيمة</div>
+          <div class="tname">مراجَع بخبير</div>
+          <div class="amt">٩٩٠ <small>﷼ / دراسة</small></div>
+          <div class="desc">نبنيها لك ويراجعها مختص مطاعم قبل التسليم.</div>
+          <ul>
+            <li><span class="ck">✓</span> كل مزايا الباقة الذاتية</li>
+            <li><span class="ck">✓</span> مراجعة خبير وضبط التكاليف</li>
+            <li><span class="ck">✓</span> توصيات موثّقة ترفع ثقة الممول</li>
+            <li><span class="ck">✓</span> تسليم خلال ٢٤–٤٨ ساعة</li>
+          </ul>
+          <a href="#" class="btn btn-wa" data-wa>اطلب عبر واتساب</a>
+        </div>
+        <div class="price">
+          <div class="tname">خدمة كاملة</div>
+          <div class="amt">٢٬٩٠٠ <small>﷼ / دراسة</small></div>
+          <div class="desc">نتولّى كل شيء نيابةً عنك — من الصفر للتسليم.</div>
+          <ul>
+            <li><span class="ck">✓</span> جمع البيانات وبناء الدراسة</li>
+            <li><span class="ck">✓</span> مراجعة خبير + تقرير بنكي/منشآت</li>
+            <li><span class="ck">✓</span> جلسة عرض للنتائج</li>
+            <li><span class="ck">✓</span> مقابل ٥ﻙ–٢٥ﻙ للمكاتب التقليدية</li>
+          </ul>
+          <a href="#" class="btn btn-wa" data-wa>اطلب عبر واتساب</a>
+        </div>
+      </div>
+      <p class="price-note">الأسعار بالريال السعودي وتشمل ضريبة القيمة المضافة حيثما تنطبق · تُصدر فاتورة ضريبية.</p>
+    </div>
+  </section>
+
+  <!-- Why us -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">ما الذي يميّزنا</span>
+        <h2>دقة المكتب الاستشاري بسرعة الأداة الرقمية</h2>
+      </div>
+      <div class="why">
+        <div class="why-item"><div class="ic">🏦</div><h3>دقة بنكية</h3><p>NPV · IRR · تعادل · DSCR · تدفقات نقدية — رياضيات صحيحة تُقنع الممول.</p></div>
+        <div class="why-item"><div class="ic">🇸🇦</div><h3>موطّن للسعودية</h3><p>GOSI والزكاة والضريبة والتراخيص وعمولات منصات التوصيل محسوبة بدقة.</p></div>
+        <div class="why-item"><div class="ic">🍽️</div><h3>متخصص للمطاعم</h3><p>تكلفة الطعام، الطاقة الاستيعابية، وقنوات البيع — نموذج مطعمي حقيقي لا عام.</p></div>
+        <div class="why-item"><div class="ic">🧠</div><h3>لمسة خبير بشري</h3><p>عند الحاجة، مختص يضيف خبرته — ما لا تعطيه أداة رخيصة ولا يوفّره مكتب بطيء.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" style="background:var(--paper-2);border-block:1px solid var(--line)">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">أسئلة شائعة</span>
+        <h2>كل ما تحتاج معرفته</h2>
+      </div>
+      <div class="faq">
+        <details open><summary>هل الدراسة معتمدة للتقديم على تمويل؟</summary><p>التقرير مُعدّ بهيكل ومصطلحات متوافقة مع متطلبات جهات التمويل المحلية (بنك التنمية الاجتماعية، منشآت). هو أداة قوية تدعم طلبك، لكن قرار الاعتماد النهائي يعود للجهة الممولة، ونوصي دائماً بمراجعة بياناتك قبل التقديم.</p></details>
+        <details><summary>ما الفرق بين الباقات الثلاث؟</summary><p>«ذاتي» تسوّيها بنفسك عبر المنصة. «مراجَع بخبير» نبنيها لك ويدقّقها مختص مطاعم. «خدمة كاملة» نتولّى كل شيء من جمع البيانات حتى التسليم مع جلسة عرض. الجودة الحسابية واحدة في الثلاث — الفرق في مقدار العمل الذي نقوم به عنك ولمسة الخبير.</p></details>
+        <details><summary>كم يستغرق إعداد الدراسة؟</summary><p>الباقة الذاتية فورية (تحصل على القرار وأنت تُدخل البيانات). الباقات المدفوعة تُسلَّم عادةً خلال ٢٤ إلى ٤٨ ساعة حسب اكتمال بياناتك.</p></details>
+        <details><summary>لأي قطاع هذه المنصة؟</summary><p>مصممة خصيصاً للمطاعم والكافيهات داخل السعودية (سفرة، تيك أواي، توصيل، مطبخ سحابي). هذا التخصص هو ما يمنحنا الدقة التي لا توفّرها الأدوات العامة.</p></details>
+        <details><summary>هل بياناتي آمنة؟</summary><p>نعم. تُحفظ دراستك افتراضياً على جهازك، ولا تُرسل للسحابة إلا إذا فعّلت ذلك بنفسك. لا نبيع بياناتك ولا نشاركها. اطّلع على <a href="./privacy.html" style="color:var(--pine);font-weight:700">سياسة الخصوصية</a>.</p></details>
+        <details><summary>هل أقدر أعدّل الدراسة بعد إعدادها؟</summary><p>نعم — بعد الدفع يُفتح لك التعديل الحيّ، فتغيّر أي رقم وتشاهد أثره على القرار فوراً، وتقارن السيناريوهات كما تشاء.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section>
+    <div class="wrap">
+      <div class="cta-band">
+        <h2>لا تفتح مطعمك على تخمين.</h2>
+        <p>اعرف رقمك الحقيقي قبل أن تصرف ريالاً — ابدأ تقديراً مجانياً الآن، أو اطلب دراستك الكاملة.</p>
+        <div class="hero-cta">
+          <a href="./index.html" class="btn btn-primary btn-lg" style="background:#fff;color:var(--pine-deep)">جرّب مجاناً الآن</a>
+          <a href="#" class="btn btn-wa btn-lg" data-wa>اطلب دراسة كاملة — واتساب</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-in">
+        <div>
+          <div class="foot-brand"><span class="mk">ق</span> قرار</div>
+          <p style="color:var(--muted);font-size:14px;margin-top:10px;max-width:34ch">منصة دراسات جدوى المطاعم والكافيهات السعودية — قرارك مبني على رقم.</p>
+        </div>
+        <div class="foot-links">
+          <a href="#how">كيف يعمل</a>
+          <a href="#pricing">الأسعار</a>
+          <a href="#faq">الأسئلة</a>
+          <a href="./terms.html">الشروط</a>
+          <a href="./privacy.html">الخصوصية</a>
+          <a href="./index.html">دخول المنصة</a>
+        </div>
+      </div>
+      <div class="foot-copy">
+        © <span id="year"></span> قرار — جميع الحقوق محفوظة · صُمّمت للسوق السعودي.<br>
+        هذه المنصة أداة مساندة للقرار، ولا تُعد استشارة مالية أو قانونية ملزمة.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // سنة التذييل
+    document.getElementById('year').textContent = new Date().getFullYear();
+    // رقم الواتساب — استبدله برقمك (بصيغة دولية بلا +، مثال 9665XXXXXXXX)
+    var WHATSAPP_NUMBER = '9665XXXXXXXX';
+    var msg = encodeURIComponent('السلام عليكم، أرغب في طلب دراسة جدوى لمشروعي عبر منصة قرار.');
+    document.querySelectorAll('a[data-wa]').forEach(function (a) {
+      a.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + msg;
+      a.target = '_blank'; a.rel = 'noopener';
+    });
+  </script>
+</body>
+</html>

@@ -9,6 +9,19 @@ const assetsDir = resolve(__dirname, 'assets');
 export default defineConfig({
     root: './web',
     publicDir: 'public',
+    // بناء متعدد الصفحات: بدون هذا كان Vite يبني index.html فقط، فتُفقد صفحة الهبوط
+    // والشروط والخصوصية من الإنتاج (روابط التذييل تُعطي 404). smoke_test أداة تطوير — تُستثنى.
+    build: {
+        rollupOptions: {
+            input: {
+                main: resolve(__dirname, 'web/index.html'),
+                landing: resolve(__dirname, 'web/landing.html'),
+                terms: resolve(__dirname, 'web/terms.html'),
+                privacy: resolve(__dirname, 'web/privacy.html'),
+                // investor.html مُستثناة: فيها استيراد مكسور (getPitchFromStorage) وهي خارج مسار الإطلاق.
+            },
+        },
+    },
     optimizeDeps: {
         include: ['lz-string'],
     },
