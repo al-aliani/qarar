@@ -22,6 +22,7 @@
 
 import { DISCLAIMER_TEXT } from "../report/constants.js";
 import { sanitizeFilename, exportDateISO, downloadBlob } from "./utils.js";
+import { calculateStudy } from "../js/core/engine.js";
 
 async function loadTemplateArrayBuffer() {
   const candidates = [
@@ -47,11 +48,21 @@ function wbGetSheet(wb, name) {
   return ws;
 }
 
-/** كتابة قيمة رقمية آمنة (0 بدل NaN/undefined) دون كسر خلايا فارغة عمداً عند null صريحة. */
-function num(v) {
+/** كتابة قيمة رقمية آمنة (0 بدل NaN/undefined) مع قصّ ضجيج الفاصلة العائمة
+ *  (كان 2826920.2500000005 و0.050000000000000176 يصلان للعميل كما هما). */
+function num(v, decimals = 2) {
   const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
+  if (!Number.isFinite(n)) return 0;
+  const f = Math.pow(10, decimals);
+  return Math.round(n * f) / f;
 }
+
+/** كسر نسبة نظيف (4 منازل) — يُعرض كنسبة مئوية عبر numFmt. */
+function frac(v) {
+  return num(v, 4);
+}
+
+const PCT_FMT = '0.0%';
 
 /**
  * @param {object} study - حالة الدراسة (state)
@@ -80,38 +91,69 @@ export async function exportExcel(study, results) {
   const cs = capex.capitalStructure || {};
 
   // ═══ 1) الافتراضات ═══
-  // القيم الفعلية المُستخدَمة في الحساب (تطابق نفس الافتراضات الضمنية في engine.js عند غياب قيمة المستخدم)
+  // القيم الفعلية المُستخدَمة في الحساب. النِسب تُكتب ككسور مع تنسيق مئوي (numFmt)
+  // كي تُقرأ «2.0%» — كانت تُكتب خاماً (0.02) بجانب عمود وحدة «%» فتُقرأ 0.02%.
   const wsAss = wbGetSheet(wb, "الافتراضات");
-  wsAss.getCell("B5").value = assumptions.inflationRate ?? 0.02;
-  wsAss.getCell("B6").value = assumptions.taxRate ?? 0.15;
-  wsAss.getCell("B7").value = assumptions.discountRate ?? 0.10;
+  const setPct = (ws, addr, v, fmt = PCT_FMT) => { const c = ws.getCell(addr); c.value = frac(v); c.numFmt = fmt; };
+  setPct(wsAss, "B5", assumptions.inflationRate ?? 0.02);
+  // الزكاة/الضريبة الفعلية: زكاة 2.5% على الحصة السعودية + ضريبة الدخل على حصة الأجانب فقط
+  const aa = results.assumptionsApplied || {};
+  const fs = Number(aa.foreignOwnershipRate ?? assumptions.foreignOwnershipRate ?? 0);
+  const effectiveLevy = 0.025 * (1 - fs) + Number(aa.taxRate ?? assumptions.taxRate ?? 0.20) * fs;
+  wsAss.getCell("A6").value = "معدل الزكاة/الضريبة الفعلي";
+  setPct(wsAss, "B6", effectiveLevy, '0.00%');
+  wsAss.getCell("D6").value = fs > 0
+    ? `زكاة 2.5% على ${Math.round((1 - fs) * 100)}% + ضريبة دخل على ${Math.round(fs * 100)}%`
+    : "زكاة 2.5% (مشروع سعودي 100%)";
+  setPct(wsAss, "B7", assumptions.discountRate ?? 0.10);
   wsAss.getCell("B8").value = assumptions.projectionYears || is.length || 5;
   for (let i = 0; i < 5; i++) {
     const row = 11 + i;
     const prevRev = i > 0 ? is[i - 1]?.revenue : null;
     const growth = i === 0 || !prevRev ? 0 : (is[i].revenue - prevRev) / prevRev;
-    wsAss.getCell(`B${row}`).value = Number.isFinite(growth) ? growth : 0;
+    setPct(wsAss, `B${row}`, Number.isFinite(growth) ? growth : 0);
+    // إزالة ادعاءات القالب الجاهزة («30-50% للناشئة») — النمو محسوب من مدخلات المستخدم
+    wsAss.getCell(`D${row}`).value = i === 0 ? "السنة الأولى" : "محسوب من نمو مصادر الإيراد المُدخلة";
   }
   const y1 = is[0] || {};
-  wsAss.getCell("B18").value = y1.revenue > 0 ? num(y1.variableCosts) / y1.revenue : 0;
-  wsAss.getCell("B19").value = y1.revenue > 0 ? num(y1.fixedCosts) / y1.revenue : 0;
-  if (capex.total > 0) wsAss.getCell("B20").value = num(results.depreciation) / capex.total;
+  setPct(wsAss, "B18", y1.revenue > 0 ? num(y1.variableCosts) / y1.revenue : 0);
+  setPct(wsAss, "B19", y1.revenue > 0 ? num(y1.fixedCosts) / y1.revenue : 0);
+  if (capex.total > 0) {
+    setPct(wsAss, "B20", num(results.depreciation) / capex.total, '0.00%');
+    wsAss.getCell("D20").value = "محسوب من أعمار الأصول المُدخلة";
+  }
   // نسبة الصيانة (B21): لا مصدر بيانات موثوق — تُترك القيمة الافتراضية في القالب كما هي.
 
   // ═══ 2) الاستثمار الأولي (CAPEX) ═══
+  // القالب يحمل كمية/سعر توضيحيين (1×500000) ومعادلة D=B×C — الكود القديم كان يدوس D
+  // بقيمة المحرك ويترك B×C كما هما، فيظهر للعميل «1 × 500,000 = 380,000» (تناقض فاضح).
+  // الآن: B=1 وC=قيمة المحرك وD=القيمة نفسها → كمية×سعر=الإجمالي دائماً،
+  // وكل بنود المحرك (مركبات، تأسيس، امتياز…) تدخل صفاً مناسباً فمجموع الصفوف = الإجمالي.
   const wsInv = wbGetSheet(wb, "الاستثمار_الأولي");
   const invBd = cs.investment?.breakdown || {};
   const estBd = cs.establishment?.breakdown || {};
-  wsInv.getCell("D5").value = num(invBd.buildings);   // المبنى/الإنشاءات
-  wsInv.getCell("D6").value = num(invBd.equipment);   // المعدات والأجهزة
-  wsInv.getCell("D7").value = num(invBd.furniture);   // الأثاث والتجهيزات
-  wsInv.getCell("D8").value = num(invBd.tech);        // أجهزة الحاسوب/تقنية
-  wsInv.getCell("D9").value = num(invBd.services);    // برمجيات وتراخيص
-  wsInv.getCell("D12").value = num(estBd.legal);      // مصاريف التأسيس القانونية
-  wsInv.getCell("D13").value = num(estBd.marketing);  // مصاريف التسويق الأولية
-  wsInv.getCell("D14").value = 0;                     // مصاريف التدريب — لا بيانات، تُصفَّر بدل رقم توضيحي وهمي
-  wsInv.getCell("D17").value = num(cs.operating?.total ?? capex.workingCapital); // رأس المال العامل
-  wsInv.getCell("D19").value = num(capex.total);       // إجمالي الاستثمار
+  const setInvRow = (row, value, label = null, source = "من مدخلات الدراسة") => {
+    const v = num(value);
+    if (label) wsInv.getCell(`A${row}`).value = label;
+    wsInv.getCell(`B${row}`).value = v > 0 ? 1 : 0;
+    wsInv.getCell(`C${row}`).value = v;
+    wsInv.getCell(`D${row}`).value = v;
+    // مصادر القالب الوهمية («عرض سعر مقاول»، «3 عروض أسعار») لا تصل للعميل كادّعاء
+    wsInv.getCell(`E${row}`).value = v > 0 ? source : "";
+  };
+  setInvRow(5, invBd.buildings);                                     // المبنى/الإنشاءات
+  setInvRow(6, num(invBd.equipment) + num(invBd.vehicles),
+    "المعدات والأجهزة والمركبات");
+  setInvRow(7, invBd.furniture);                                     // الأثاث والتجهيزات
+  setInvRow(8, invBd.tech, "الأجهزة والموارد التقنية");
+  setInvRow(9, invBd.services);                                      // برمجيات وتراخيص (خدمات)
+  setInvRow(12, num(estBd.legal) + num(estBd.foundation),
+    "مصاريف التأسيس والتراخيص");
+  setInvRow(13, estBd.marketing);                                    // مصاريف التسويق الأولية
+  const otherEst = num(estBd.franchise) + num(estBd.ventureBuilder) + num(estBd.envMitigation);
+  setInvRow(14, otherEst, otherEst > 0 ? "رسوم امتياز/شراكة ومعالجات أخرى" : null);
+  setInvRow(17, cs.operating?.total ?? capex.workingCapital);        // رأس المال العامل
+  wsInv.getCell("D19").value = num(capex.total);                     // إجمالي الاستثمار
 
   // ═══ 3) تقدير الإيرادات ═══
   const wsRev = wbGetSheet(wb, "تقدير_الإيرادات");
@@ -133,20 +175,31 @@ export async function exportExcel(study, results) {
   ["B", "C", "D", "E", "F"].forEach((col, i) => { wsRev.getCell(`${col}8`).value = num(is[i]?.revenue); });
 
   // ═══ 4) قائمة الدخل (5 سنوات) ═══
+  // كل صف يُكتب من تفصيل المحرك الفعلي بحيث «تُجمَع» الأعمدة:
+  // (كانت بنود الثابتة تُصفَّر بينما الإجمالي 425 ألفاً — تناقض يلتقطه أي محلل)
   const wsIS = wbGetSheet(wb, "قائمة_الدخل");
+  wsIS.getCell("A15").value = "الطوارئ التشغيلية (احتياطي)";
+  wsIS.getCell("A17").value = "(-) الفوائد ورسوم الامتياز/الشراكة";
+  wsIS.getCell("A19").value = "الزكاة والضريبة";
   const cols = ["B", "C", "D", "E", "F"];
   cols.forEach((col, i) => {
     const r = is[i] || {};
+    const bd = r.fixedCostsBreakdown || {};
     wsIS.getCell(`${col}4`).value = num(r.revenue);
     wsIS.getCell(`${col}6`).value = num(r.variableCosts);
     wsIS.getCell(`${col}7`).value = num(r.grossProfit);
-    // رواتب/إيجار/مرافق/تسويق (صفوف 10-13): لا تفصيل سنوي موثوق داخل المحرك — تُصفَّر بدل أرقام توضيحية.
-    ["10", "11", "12", "13"].forEach((row) => { wsIS.getCell(`${col}${row}`).value = 0; });
-    wsIS.getCell(`${col}14`).value = num(r.depreciation);
-    wsIS.getCell(`${col}15`).value = 0; // الصيانة: لا بيانات
-    wsIS.getCell(`${col}16`).value = num(r.fixedCosts);
+    wsIS.getCell(`${col}10`).value = num(bd.payroll);            // الرواتب والأجور
+    wsIS.getCell(`${col}11`).value = num(bd.rentAndAdmin);       // الإيجار والمصاريف الإدارية
+    wsIS.getCell(`${col}12`).value = num(bd.servicesFixed);      // المرافق والخدمات
+    wsIS.getCell(`${col}13`).value = num(bd.marketing);          // التسويق
+    wsIS.getCell(`${col}14`).value = num(r.depreciation);        // الاستهلاك
+    wsIS.getCell(`${col}15`).value = num(bd.hiddenOverheads);    // الطوارئ التشغيلية
+    // الإجمالي = ثابتة المحرك + الاستهلاك (بنية القالب تضم الاستهلاك داخل كتلة الثابتة)
+    wsIS.getCell(`${col}16`).value = num(num(r.fixedCosts) + num(r.depreciation));
+    // فوائد التمويل + رسوم الامتياز/الشراكة — كانت غائبة فلا يستقيم EBT مع الأعمدة
+    wsIS.getCell(`${col}17`).value = num(num(r.interest) + num(r.franchiseFees) + num(r.builderSuccessFee));
     wsIS.getCell(`${col}18`).value = num(r.ebt);
-    wsIS.getCell(`${col}19`).value = num(r.tax) + num(r.zakat);
+    wsIS.getCell(`${col}19`).value = num(num(r.tax) + num(r.zakat));
     wsIS.getCell(`${col}20`).value = num(r.netIncome);
   });
 
@@ -163,9 +216,19 @@ export async function exportExcel(study, results) {
     wsK.getCell(`E${row}`).value = num(c.cumulative);
   }
   wsK.getCell("B15").value = num(ind.npv);
-  wsK.getCell("B16").value = num(ind.irr);
+  // IRR كسر + تنسيق مئوي: 1.02 يُعرض «102.0%» — كان يُكتب خاماً فيُقرأ «1.02%»
+  wsK.getCell("B16").value = frac(ind.irr);
+  wsK.getCell("B16").numFmt = PCT_FMT;
   wsK.getCell("B17").value = num(ind.profitabilityIndex);
-  wsK.getCell("B18").value = num(ind.paybackPeriod);
+  wsK.getCell("B17").numFmt = '0.00';
+  // فترة استرداد غير محققة لا تُكتب 0 أبداً
+  if (ind.paybackPeriod != null && Number.isFinite(ind.paybackPeriod) && ind.paybackPeriod > 0) {
+    wsK.getCell("B18").value = num(ind.paybackPeriod);
+    wsK.getCell("C18").value = "سنة";
+  } else {
+    wsK.getCell("B18").value = "غير قابل للاسترداد خلال فترة الدراسة";
+    wsK.getCell("C18").value = "";
+  }
   const decisionAr = results.decision === 'GO' ? 'المضي قدماً (GO)'
     : (results.decision === 'NO-GO' || results.decision === 'NOGO') ? 'عدم المضي (NO-GO)'
     : results.decision === 'REVISE' ? 'مراجعة مطلوبة (REVISE)' : (results.decision || '—');
@@ -180,14 +243,47 @@ export async function exportExcel(study, results) {
     wsSc.getCell("B8").value = num(sc.pessimistic.kpis?.npv);
     wsSc.getCell("C8").value = num(sc.base.kpis?.npv);
     wsSc.getCell("D8").value = num(sc.optimistic.kpis?.npv);
-    wsSc.getCell("B9").value = num(sc.pessimistic.kpis?.irr);
-    wsSc.getCell("C9").value = num(sc.base.kpis?.irr);
-    wsSc.getCell("D9").value = num(sc.optimistic.kpis?.irr);
+    [["B9", sc.pessimistic], ["C9", sc.base], ["D9", sc.optimistic]].forEach(([addr, s]) => {
+      const c = wsSc.getCell(addr);
+      c.value = frac(s.kpis?.irr);
+      c.numFmt = PCT_FMT;
+    });
     const label = (s) => (s.kpis?.npv > 0 && s.kpis?.irr > 0) ? 'GO' : (s.kpis?.npv > 0 ? 'مشروط' : 'NO-GO');
     wsSc.getCell("B10").value = label(sc.pessimistic);
     wsSc.getCell("C10").value = label(sc.base);
     wsSc.getCell("D10").value = label(sc.optimistic);
   }
+
+  // ═══ 7) تحليل الحساسية — يُملأ آلياً بإعادة تشغيل المحرك لكل حالة ═══
+  // (كانت الورقة تصل للعميل فارغة مع ملاحظة «يجب ملء هذا الجدول يدوياً»)
+  try {
+    const wsSens = wbGetSheet(wb, "تحليل_الحساسية");
+    const revChanges = [-0.20, -0.10, 0, 0.10, 0.20];   // أعمدة B..F
+    const costChanges = [-0.20, -0.10, 0, 0.10, 0.20];  // صفوف 6..10
+    costChanges.forEach((costChange, ri) => {
+      revChanges.forEach((revenueChange, ci) => {
+        let npvCase = null;
+        if (revenueChange === 0 && costChange === 0) {
+          npvCase = ind.npv;
+        } else {
+          try {
+            const r = calculateStudy(study, { revenueChange, costChange });
+            npvCase = r?.indicators?.npv;
+          } catch (_) { npvCase = null; }
+        }
+        const cell = wsSens.getCell(6 + ri, 2 + ci);
+        cell.value = npvCase != null && Number.isFinite(npvCase) ? Math.round(npvCase) : "—";
+      });
+    });
+    wsSens.getCell("A13").value = "محسوبة آلياً بإعادة تشغيل النموذج المالي لكل حالة (إيرادات × تكاليف).";
+  } catch (e) { console.warn("تعذّر ملء تحليل الحساسية", e); }
+
+  // ورقة «قائمة_المراجعة» أداة مراجعة داخلية بخانات غير مؤشَّرة —
+  // لا تُسلَّم للعميل (توحي بأن الملف غير مُراجَع)
+  try {
+    const wsCheck = wb.getWorksheet("قائمة_المراجعة");
+    if (wsCheck) wb.removeWorksheet(wsCheck.id);
+  } catch (_) { /* غير حرج */ }
 
   // ═══ أوراق إضافية (لا تتطلب وجودها في القالب — تُضاف عند توفر بياناتها) ═══
 
@@ -253,6 +349,9 @@ export async function exportExcel(study, results) {
       wsBs.getColumn(1).width = 24;
     } catch (e) { console.warn("تعذّرت إضافة ورقة الميزانية العمومية", e); }
   }
+
+  // أي معادلات متبقية من القالب تُعاد حسابتها عند الفتح (لا قيم مخبّأة قديمة)
+  wb.calcProperties = { ...(wb.calcProperties || {}), fullCalcOnLoad: true };
 
   const outBuf = await wb.xlsx.writeBuffer();
   const blob = new Blob([outBuf], {

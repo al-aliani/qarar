@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Restaurant Feasibility Study Model (Schema) - Full Integrated Edition
  * Based on comprehensive feasibility study standards with connected tables
  */
@@ -436,7 +436,12 @@ export function createEmptyStudy() {
         [SECTIONS.ASSUMPTIONS]: {
             currency: 'SAR', // عملات خليجية: SAR, AED, KWD, BHD, OMR, QAR
             inflationRate: 0.02,
-            taxRate: 0.15,
+            // الزكاة 2.5% تُحسب تلقائياً على حصة الملكية السعودية/الخليجية.
+            // ضريبة الدخل (20%) تُطبق فقط على حصة الملكية الأجنبية أدناه.
+            // (كان taxRate: 0.15 يُطبق على كل مشروع فوق الزكاة = اقتطاع ~17% خطأً؛
+            //  الـ15% هي ضريبة القيمة المضافة على المبيعات وليست ضريبة دخل.)
+            foreignOwnershipRate: 0, // 0 = مشروع سعودي 100% (زكاة فقط)
+            taxRate: 0.20,
             discountRate: 0.10, // معدل خصم متحفظ يناسب مخاطر مشروع مطعمي سعودي (كان 0.05 — يضخّم NPV)
             workingCapitalMonths: 3,
             contingencyRate: 0.10,
@@ -643,7 +648,7 @@ export function createEmptyStudy() {
             incomeStatement: [], // 5 years
             cashFlow: [],       // Cash in / Cash out
             balanceSheet: [],   // Assets, Liabilities, Equity
-            taxRate: 0.15,
+            taxRate: 0.20, // ضريبة دخل حصة الأجانب فقط (انظر assumptions.foreignOwnershipRate)
             zakatRate: 0.025
         },
 
@@ -1061,7 +1066,7 @@ export const TABLE_SCHEMAS = {
             { key: 'service', label: 'الخدمة', type: 'text' },
             { key: 'customersPerMonth', label: 'العملاء/شهر', type: 'number' },
             { key: 'avgPrice', label: 'متوسط السعر', type: 'number' },
-            { key: 'growthRate', label: 'نمو سنوي (كسر: 0.07 = 7%)', type: 'number', default: 0.07 },
+            { key: 'growthRate', label: 'نمو سنوي %', type: 'number', default: 0.07 },
             { key: 'year1', label: 'السنة 1', type: 'computed', formula: r => (r.customersPerMonth || 0) * 12 * (r.avgPrice || 0) }
         ],
         showTotal: true,
@@ -1078,7 +1083,7 @@ export const TABLE_SCHEMAS = {
             { key: 'variableCostPerUnit', label: 'تكلفة/عميل', type: 'number' },
             { key: 'pricePerUnit', label: 'سعر الخدمة', type: 'number' },
             { key: 'customersPerMonth', label: 'عملاء/شهر', type: 'number' },
-            { key: 'growthRate', label: 'نمو سنوي (كسر: 0.07 = 7%)', type: 'number', default: 0.07 },
+            { key: 'growthRate', label: 'نمو سنوي %', type: 'number', default: 0.07 },
             {
                 key: 'annualRevenue', label: 'الإيراد السنوي', type: 'computed',
                 formula: r => (r.customersPerMonth || 0) * 12 * (r.pricePerUnit || 0)

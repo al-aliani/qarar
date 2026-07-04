@@ -202,8 +202,9 @@ class EncryptionService {
                 target = target[keys[i]];
             }
 
-            // Decrypt the value
-            if (target[lastKey] !== undefined && target[lastKey] !== null) {
+            // Decrypt the value (only strings can be encrypted payloads —
+            // arrays/objects here mean the field was saved plaintext; leave untouched)
+            if (typeof target[lastKey] === 'string') {
                 try {
                     const decryptedValue = await this.decrypt(target[lastKey]);
                     // Try to parse as JSON, fallback to string

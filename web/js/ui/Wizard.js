@@ -1,4 +1,4 @@
-import { getLabel } from '../core/labels.js';
+﻿import { getLabel } from '../core/labels.js';
 import { getLabelSDB, getAuditorTooltip, getFieldHint } from '../core/regulatoryLabels.js';
 import { getPhaseForStep, getStepHelp } from '../core/wizardSteps.js';
 import { EXPERT_FAQ } from '../config.js';
@@ -121,7 +121,7 @@ export class Wizard {
                 ${stepId === 'technical' ? `<div class="alert alert--info mb-4" style="font-size: 0.85rem;"><strong>معيار التصنيف:</strong> الآلات والمعدات = عناصر <em>أساسية</em> لتنفيذ المشروع (مثل ماكينة القهوة للمقهى). الأثاث = عناصر <em>مساعدة</em> (طاولات، كراسي). نفس العنصر قد يُصنّف مختلفاً حسب نوع المشروع.</div><div class="alert alert-info mb-4" style="font-size: 0.85rem;"><strong>وصف العملية الإنتاجية:</strong> وصف خطوات الإنتاج من المدخلات للمخرجات يساعد في تحديد الاحتياجات (عمالة، معدات، مواد) بدقة.</div>` : ''}
                 ${stepId === 'marketing' ? `<div class="alert alert-info mb-4" style="font-size: 0.85rem;"><strong>توازن العرض والطلب:</strong> الطلب &gt; العرض = فرصة؛ العرض &gt; الطلب = خطر. ادرس اتجاه الطلب خلال 5 سنوات على الأقل — الاتجاه الصاعد إيجابي. <strong>المصدر المقترح لاتجاهات الطلب:</strong> GASTAT، دراسات قطاعية، الغرف. <strong>أساليب التنبؤ:</strong> إذا لديك بيانات تاريخية (5+ سنوات)، يمكن استخدام: نمو بسيط، نمو مركب، متوسط متحرك — التنبؤ يعتمد على بيانات الماضي.</div>` : ''}
                 ${stepId === 'projectInfo' ? `<div class="alert alert-info mb-4" style="font-size: 0.85rem;"><strong>خطوات جمع المعلومات:</strong> أسبوع بحث أونلاين (كلمات مفتاحية، جروبات، إعلانات، أوليكس، بيانات حكومية) — ثم زيارة منافسين، جهات حكومية (تراخيص)، جهات تمويل. <strong>البحث أونلاين يصفي 50% من الأفكار</strong> — الباقي يحتاج نزول ميداني. "جمع المعلومات هو أكبر جزء في دراسة الجدوى".</div>` : ''}
-                ${stepId === 'revenue' ? `<div class="alert alert--info mb-4" style="font-size: 0.85rem; border-right: 4px solid var(--c-p-500);"><strong>أفضل الممارسات المحلية:</strong> جمع المعلومات الدقيقة هو أساس دراسة جدوى موثوقة.</div><div class="alert alert-warning mb-4" style="font-size: 0.85rem;"><strong>تجنّب وهم المبيعات:</strong> تقدير المبيعات يجب أن يُبنى على دراسة السوق والمنافسين — «هتبيع كام؟» يُجاب بناءً على بيانات، وليس تقديراً وهمياً.</div><div class="alert alert--info mb-4" style="font-size: 0.85rem;"><strong>مخرَج الدراسة السوقية:</strong> جدول (صنف، عدد متوقع بيعه، سعر) — الخدمة = الصنف، العملاء/شهر × 12 = العدد السنوي، متوسط السعر = السعر. هذا الجدول يغذّي الدراسة الفنية.</div>` : ''}
+                ${stepId === 'revenue' ? `<div class="alert alert--info mb-4" style="font-size: 0.85rem; border-right: 4px solid var(--c-p-500);"><strong>أفضل الممارسات المحلية:</strong> جمع المعلومات الدقيقة هو أساس دراسة جدوى موثوقة.</div><div class="alert alert-warning mb-4" style="font-size: 0.85rem;"><strong>تجنّب وهم المبيعات:</strong> تقدير المبيعات يجب أن يُبنى على دراسة السوق والمنافسين — «كم ستبيع فعلياً؟» يُجاب بناءً على بيانات، وليس تقديراً وهمياً.</div><div class="alert alert--info mb-4" style="font-size: 0.85rem;"><strong>مخرَج الدراسة السوقية:</strong> جدول (صنف، عدد متوقع بيعه، سعر) — الخدمة = الصنف، العملاء/شهر × 12 = العدد السنوي، متوسط السعر = السعر. هذا الجدول يغذّي الدراسة الفنية.</div>` : ''}
         `;
 
         // ⚠️ FIX: Always get fresh data from store to ensure latest changes are reflected
@@ -207,7 +207,7 @@ export class Wizard {
                         </button>
                         <div class="nav-indicator">
                             <span class="text-muted text-xs">الخطوة التالية</span>
-                            <span class="font-medium">${isLastStep ? 'خلاص !' : this.steps[stepIndex + 1]?.label}</span>
+                            <span class="font-medium">${isLastStep ? 'إنهاء الدراسة' : this.steps[stepIndex + 1]?.label}</span>
                         </div>
                     </div>
                     <button type="button" class="btn btn--primary" id="btnNextStep" ${isLastStep ? 'disabled' : ''}>
@@ -652,7 +652,7 @@ export class Wizard {
 
     /** المفاتيح المخزّنة ككسر (0–1) وتُعرض كنسبة مئوية (0–100). */
     static isFractionPercentKey(keyPath) {
-        const PERCENT_FRACTION_KEYS = ['discountRate', 'taxRate', 'inflationRate', 'contingencyRate', 'gosiRate'];
+        const PERCENT_FRACTION_KEYS = ['discountRate', 'taxRate', 'inflationRate', 'contingencyRate', 'gosiRate', 'foreignOwnershipRate'];
         return PERCENT_FRACTION_KEYS.some(p => keyPath === p || keyPath.endsWith('.' + p));
     }
 

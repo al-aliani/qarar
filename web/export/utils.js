@@ -43,16 +43,31 @@ export function safeNum(v) {
 }
 
 /**
+ * كسر (من المحرك: 0.155 = 15.5%) → نسبة للنشر.
+ * لا «تخمين ذكي»: التخمين القديم (n > 1 ? n/100 : n) كان يحوّل IRR حقيقياً
+ * قدره 1.3 (أي 130%) إلى «1.3%» في ملف Excel المُسلَّم للعميل.
+ * كل مؤشرات المحرك كسور دائماً — نضرب في 100 فقط.
  * @param {unknown} v
- * @returns {number} نسبة آمنة للنشر (0–100)
+ * @returns {number} نسبة للنشر (0.155 → 15.5)
  */
 export function safePct(v) {
     const n = v != null && Number.isFinite(Number(v)) ? Number(v) : 0;
-    return (n > 1 ? n / 100 : n) * 100;
+    return n * 100;
 }
 
-/** {@see safeNum} {@see safePct} */
-export const SAFE = { num: safeNum, pct: safePct };
+/**
+ * فترة الاسترداد للنشر: null/0/Infinity = غير قابل للاسترداد — لا «0.0 سنة» أبداً.
+ * @param {unknown} v
+ * @returns {string}
+ */
+export function safePayback(v) {
+    const n = v != null && Number.isFinite(Number(v)) ? Number(v) : null;
+    if (n == null || n <= 0) return 'غير قابل للاسترداد خلال فترة الدراسة';
+    return n.toFixed(1) + ' سنة';
+}
+
+/** {@see safeNum} {@see safePct} {@see safePayback} */
+export const SAFE = { num: safeNum, pct: safePct, payback: safePayback };
 
 /**
  * @param {unknown} v

@@ -15,7 +15,7 @@ export class TrashView {
             <div class="flex justify-between items-center mb-8">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-800">🗑️ سلة المحذوفات</h1>
-                    <p class="text-gray-500">المشاريع المحذوفة تبقى هنا لمدة 30 يوماً قبل الحذف النهائي.</p>
+                    <p class="text-gray-500">المشاريع المحذوفة تبقى هنا حتى تستعيدها أو تحذفها نهائياً بنفسك.</p>
                 </div>
                 <button class="btn btn-secondary text-sm" onclick="window.history.back()">عودة</button>
             </div>

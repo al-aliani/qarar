@@ -100,28 +100,32 @@ export class ShareStudyView {
                 ? `<p class="text-sm text-warning mb-4">سجّل الدخول لمشاركة الدراسة مع آخرين (محرر أو مشاهد).</p>`
                 : `
                         <div class="mb-4">
+                            <div class="alert alert--info mb-3" style="font-size: 0.8rem;">
+                                <strong>ملاحظة صريحة:</strong> الدعوات البريدية والتحرير المشترك غير مفعّلين بعد.
+                                القائمة أدناه <strong>مذكّرة شخصية</strong> بمن تريد مشاركتهم — المشاركة الفعلية تتم
+                                بإرسال ملف PDF/Excel من قائمة التصدير أو عبر واتساب.
+                            </div>
                             <label class="block text-xs text-muted mb-1">البريد الإلكتروني</label>
                             <input type="email" id="shareEmail" class="input w-full mb-2" placeholder="email@example.com" dir="ltr" />
-                            <label class="block text-xs text-muted mb-1">الصلاحية</label>
+                            <label class="block text-xs text-muted mb-1">الصلاحية (عند تفعيل التعاون لاحقاً)</label>
                             <select id="shareRole" class="input w-full mb-3">
                                 ${ROLES.map(r => `<option value="${r.value}">${r.label} — ${r.desc}</option>`).join('')}
                             </select>
-                            <button type="button" id="btnShareInvite" class="btn btn--primary w-full">دعوة عضو</button>
-                        </div>
-                        <div class="mb-2 text-xs text-muted">التحديثات تظهر للمشاركين تلقائياً (حفظ تلقائي). عند التحرير المشترك قد يظهر مؤشر «شخص آخر يعدّل».</div>
-                        <div id="collabWhoEditingPlaceholder" class="mt-3 p-3 rounded-lg bg-white/5 border border-white/10 text-center text-xs text-muted" aria-live="polite">
-                            عند تفعيل السحابة سيظهر هنا: <strong>من يعدّل الدراسة الآن</strong> (تعاون في الوقت الفعلي).
+                            <button type="button" id="btnShareInvite" class="btn btn--primary w-full">أضِف إلى قائمة المشاركة</button>
                         </div>
                         `
             }
-                    <h4 class="text-sm font-bold mb-2">الأعضاء المدعوون</h4>
+                    <h4 class="text-sm font-bold mb-2">قائمة المشاركة (مذكّرة)</h4>
                     ${membersListHtml}
 
                     <hr class="my-4 border-white/10" />
                     <h4 class="text-sm font-bold mb-2">رابط مشاركة للقراءة فقط</h4>
-                    <p class="text-xs text-muted mb-2">رابط يعرض ملخص الدراسة (لوحة المستثمر) دون إمكانية التعديل — مناسب لمستثمر أو بنك.</p>
+                    <div class="alert alert--warning mb-2" style="font-size: 0.8rem;">
+                        غير متاح حالياً: الرابط كان يعمل على هذا الجهاز فقط ولا يفتح لدى المستلم — عُطّل حتى
+                        تكتمل المشاركة السحابية. البديل الموثوق: صدّر PDF من قائمة التصدير وأرسله مباشرة.
+                    </div>
                     <div class="flex gap-2 mb-2">
-                        <button type="button" id="btnGenerateReadOnlyLink" class="btn btn--ghost btn--sm">إنشاء رابط</button>
+                        <button type="button" id="btnGenerateReadOnlyLink" class="btn btn--ghost btn--sm" disabled title="غير متاح حتى تفعيل المشاركة السحابية">إنشاء رابط (قريباً)</button>
                         <span id="readOnlyLinkStatus" class="text-xs text-muted self-center"></span>
                     </div>
                     <div id="readOnlyLinkBox" class="hidden mb-2 p-2 rounded bg-white/5 border border-white/10">
@@ -168,7 +172,8 @@ export class ShareStudyView {
                     this.store.update('projectInfo', { ...info, members: newMembers });
 
                     this._members = newMembers;
-                    toast.success(`تمت دعوة ${email} بنجاح (تم الحفظ).`);
+                    // صياغة صادقة: لا يُرسَل أي بريد — هذه قائمة تذكير محلية فقط
+                    toast.info(`أُضيف ${email} إلى قائمة المشاركة (تذكير محلي — لم يُرسَل بريد). شارك الدراسة بملف PDF من قائمة التصدير.`);
                     this.render();
                 }
                 if (emailEl) emailEl.value = '';

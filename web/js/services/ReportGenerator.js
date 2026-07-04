@@ -540,7 +540,7 @@ export class ReportGenerator {
                         <h3 class="section-title"><span class="section-number">${num}</span>الملخص التنفيذي</h3>
                         <div class="section-content">
                             ${exHighlights}
-                            <p>${state.executiveSummary?.aiGeneratedText || `يعرض هذا التقرير دراسة جدوى مشروع «${info.name || 'المشروع'}»${info.city ? ' في ' + info.city : ''}، شاملةً الجوانب الفنية والتسويقية والمالية، مع تحليل حساسية وسيناريوهات وقرار استثماري مبني على مؤشرات مالية محسوبة من مدخلات الدراسة.`}</p>
+                            <p>${state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText || `يعرض هذا التقرير دراسة جدوى مشروع «${info.name || 'المشروع'}»${info.city ? ' في ' + info.city : ''}، شاملةً الجوانب الفنية والتسويقية والمالية، مع تحليل حساسية وسيناريوهات وقرار استثماري مبني على مؤشرات مالية محسوبة من مدخلات الدراسة.`}</p>
                         </div>
                     </div>`;
                 break;
@@ -691,6 +691,7 @@ export class ReportGenerator {
                                 ${isRow('(-) الاستهلاك والإطفاء', 'depreciation')}
                                 ${isRow('(-) الفوائد', 'interest')}
                                 ${isRow('(-) الزكاة', 'zakat')}
+                                ${isYears.some(y => (y.tax || 0) > 0) ? isRow('(-) ضريبة الدخل (حصة الأجانب)', 'tax') : ''}
                                 ${isRow('(=) صافي الربح', 'netIncome', { highlight: true })}
                             </tbody></table>
                         </div>

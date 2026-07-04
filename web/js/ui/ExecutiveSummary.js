@@ -259,13 +259,13 @@ export class ExecutiveSummary {
         const financing = state.financing || {};
         const ind = results?.indicators || {};
         const inv = financing.totalInvestment ?? results?.capex?.total ?? 0;
-        const payback = ind.paybackPeriod ?? ind.payback ?? 0;
+        const payback = ind.paybackPeriod ?? ind.payback ?? null;
 
         const highlights = [
             { label: 'إجمالي الاستثمار', value: this.formatCurrency(inv), icon: '💰' },
             { label: 'صافي القيمة الحالية', value: this.formatCurrency(ind.npv ?? 0), icon: '📈', positive: (ind.npv ?? 0) > 0 },
             { label: 'معدل العائد الداخلي', value: `${((ind.irr ?? 0) * 100).toFixed(1)}%`, icon: '📊' },
-            { label: 'فترة الاسترداد', value: `${Number(payback) >= 0 && Number(payback) < 900 ? payback.toFixed(1) : '—'} سنة`, icon: '⏱️' },
+            { label: 'فترة الاسترداد', value: (payback != null && Number.isFinite(payback) && payback > 0 && payback < 900) ? `${payback.toFixed(1)} سنة` : 'غير محقق', icon: '⏱️' },
             { label: 'العائد على الاستثمار', value: `${((ind.roi ?? 0) * 100).toFixed(0)}%`, icon: '💹' }
         ];
 
@@ -472,11 +472,14 @@ export class ExecutiveSummary {
                     // Call unified AI Service
                     const generatedText = await aiConnector.generateExecutiveSummary(state, results);
 
-                    // Update UI
-                    if (inputEl) {
+                    // Update UI — فقط إن كان الناتج نصاً فعلياً (null = تعذر التوليد؛
+                    // لا نحفظ فراغاً/رسالة خطأ كملخص تنفيذي)
+                    if (inputEl && typeof generatedText === 'string' && generatedText.trim()) {
                         inputEl.value = generatedText;
                         // Trigger change event to save to store
                         inputEl.dispatchEvent(new Event('change'));
+                    } else if (!generatedText) {
+                        throw new Error('تعذر التوليد — لا يوجد ناتج');
                     }
 
                     // Success feedback

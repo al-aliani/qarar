@@ -298,6 +298,17 @@ export class QuickFeasibilityWizard {
             this.quickData.monthlyCosts = Number(this.container.querySelector('#qf-monthlyCosts')?.value) || 0;
             this.quickData.initialInvestment = Number(this.container.querySelector('#qf-initialInvestment')?.value) || 0;
             this.quickData.fundingSource = this.container.querySelector('#qf-fundingSource')?.value || 'self';
+
+            // تحقق مانع: مدخلات صفرية/سالبة كانت تمر وتعطي «GO باسترداد 0 سنة»
+            const problems = [];
+            if (this.quickData.monthlyRevenue <= 0) problems.push('الإيراد الشهري المتوقع');
+            if (this.quickData.monthlyCosts <= 0) problems.push('التكاليف الشهرية');
+            if (this.quickData.initialInvestment <= 0) problems.push('الاستثمار الأولي');
+            if (problems.length) {
+                toast.error(`أدخل قيماً أكبر من صفر في: ${problems.join('، ')} — لا يمكن حساب جدوى بلا هذه الأرقام.`);
+                return;
+            }
+
             this.step = 3;
             this.render();
         });

@@ -37,16 +37,17 @@ export class CrowdfundingPitchExporter {
         const askAmount = financing.totalInvestment || capex.total || (financing.sources?.equity?.amount || 0) + (financing.sources?.bankLoan?.amount || 0);
         const useOfFunds = (financing.useOfFunds || 'استثمار وتشغيل المشروع (تجهيزات، رأس مال عامل، تسويق).').toString().replace(/</g, '&lt;');
 
+        // لا بيانات = لا قسم — «يُضاف يدوياً» داخل ملف موسوم «جاهز للرفع» يفضح عدم الاكتمال
         const timelineText = activities.length > 0
             ? activities.map(a => `${esc(a.name || '')} (الشهر ${a.startMonth || 1}–${(a.startMonth || 1) + (a.duration || 1) - 1})`).join(' • ')
             : (projTimeline.projectStart || projTimeline.operationStart)
                 ? `بدء المشروع: ${esc(projTimeline.projectStart || projTimeline.operationStart)} — التشغيل: ${esc(projTimeline.operationStart || '—')}`
-                : 'يُضاف الجدول الزمني يدوياً (مراحل التأسيس، الافتتاح، التوسع).';
+                : '';
 
         const rewardsRaw = financing.investorBenefits || financing.rewards || exec.keyMilestones || '';
         const rewardsText = rewardsRaw.toString().trim()
             ? rewardsRaw.toString().replace(/</g, '&lt;')
-            : 'يُضاف يدوياً: ما يقدمه الداعم مقابل مساهمته (منتج مبكر، عائد، خصم، إلخ).';
+            : '';
         const ind = results.indicators || {};
         const paybackStr = ind.paybackPeriod != null ? (ind.paybackPeriod.toFixed(1) + ' سنة') : '—';
 
@@ -93,16 +94,16 @@ export class CrowdfundingPitchExporter {
         <p>${useOfFunds}</p>
     </div>
 
-    <div class="block">
+    ${timelineText ? `<div class="block">
         <h3>الجدول الزمني</h3>
         <p>${timelineText}</p>
-    </div>
+    </div>` : ''}
 
-    <div class="block">
+    ${(rewardsText || paybackStr !== '—') ? `<div class="block">
         <h3>ما يقدمه الداعم/المستثمر — المكافآت أو العوائد</h3>
-        <p>${rewardsText}</p>
+        ${rewardsText ? `<p>${rewardsText}</p>` : ''}
         ${paybackStr !== '—' ? `<p class="text-muted mt-2">فترة الاسترداد المتوقعة: ${paybackStr}</p>` : ''}
-    </div>
+    </div>` : ''}
 
     <div class="footer">
         تم إنشاء هذا العرض بواسطة محاكي الجدوى — ${new Date().toLocaleDateString('ar-SA')} | جاهز للرفع على منصة تمويل جماعي.

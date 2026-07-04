@@ -399,7 +399,9 @@ export class AIConnector {
         if (this.useInternalOnly) {
             const r = runInternal();
             if (r !== undefined) { this._setCache(cacheKey, r); return r; }
-            return "لا يتوفر مولّد داخلي لهذا النوع. غيّر إعداد «داخلي فقط» أو شغّل الخادم.";
+            // null = «لا ناتج» — لا نعيد نص خطأ قد يحفظه المستدعي كمحتوى قسم في التقرير
+            console.warn(`AIConnector: لا يتوفر مولّد داخلي للنوع "${type}"`);
+            return null;
         }
 
         try {
@@ -416,7 +418,9 @@ export class AIConnector {
             console.error('Internal Brain query error:', error);
             const r = runInternal();
             if (r !== undefined) return r;
-            return "عذراً، الخادم الداخلي غير متصل. يرجى تشغيل ai_server_enhanced.py أو تفعيل «داخلي فقط».";
+            // null = «لا ناتج» — كانت رسالة الخطأ هنا تجتاز فحص typeof string لدى المستدعين
+            // وتُحفظ كنص قسم «دراسة السوق» ثم تُطبع حرفياً في تقرير منشآت
+            return null;
         }
     }
 

@@ -82,14 +82,20 @@ export class ExcelExporter {
         await loadXLSX();
 
         const workbook = XLSX.utils.book_new();
+        // مصنّف عربي: اتجاه الأوراق من اليمين لليسار (كان يُفتح بأعمدة من اليسار)
+        workbook.Workbook = workbook.Workbook || {};
+        workbook.Workbook.Views = [{ RTL: true }];
         const projectName = this.data?.projectInfo?.name || '';
         const baseName = sanitizeFilename(projectName || filename);
 
-        this.addIndexSheet(workbook);
         const sheetOrder = this.getExcelSheetOrder();
         for (const sheetId of sheetOrder) {
             this.addSheetById(workbook, sheetId);
         }
+        // الفهرس يُبنى بعد إضافة الأوراق من أسمائها الفعلية —
+        // كان قائمة مصمتة تعِد بأوراق (جدول القرض، التحليل الجغرافي…) قد لا تكون موجودة
+        this.addIndexSheet(workbook);
+        workbook.SheetNames.unshift(workbook.SheetNames.pop());
 
         const outFilename = `${baseName}_${exportDateISO()}.xlsx`;
         XLSX.writeFile(workbook, outFilename);
@@ -98,26 +104,31 @@ export class ExcelExporter {
 
     addIndexSheet(workbook) {
         const exportedAt = formatExportDateTime();
+        const DESCRIPTIONS = {
+            'الملخص': 'ملخص المؤشرات والبيانات الأساسية',
+            'الأشخاص الرئيسون': 'الفريق المؤسس والأدوار',
+            'CAPEX': 'التكاليف الرأسمالية',
+            'OPEX': 'التكاليف التشغيلية',
+            'الإيرادات': 'توقعات الإيرادات',
+            'قائمة الدخل': 'قائمة الدخل التقديرية',
+            'التدفقات النقدية': 'التدفقات النقدية',
+            'الميزانية': 'الميزانية العمومية',
+            'جدول القرض': 'جدول سداد القرض',
+            'المؤشرات': 'مؤشرات التقييم المالي',
+            'تحليل السوق': 'تحليل السوق TAM/SAM/SOM',
+            'التحليل الجغرافي': 'الإحداثيات والمواقع البديلة',
+            'المخاطر': 'تحليل المخاطر',
+            'الجدول الزمني': 'الجدول الزمني',
+            'السيناريوهات': 'السيناريوهات (متشائم/أساسي/متفائل)',
+            'الحساسية': 'تحليل الحساسية',
+        };
+        // من الأوراق الموجودة فعلاً في المصنّف — الفهرس لا يعِد بما لا يوجد
+        const rows = workbook.SheetNames.map(name => [name, DESCRIPTIONS[name] || '']);
         const data = [
             ['فهرس محتويات التصدير'],
             ['', ''],
             ['الورقة', 'الوصف'],
-            ['الملخص', 'ملخص المؤشرات والبيانات الأساسية'],
-            ['الأشخاص الرئيسون', 'الفريق المؤسس والأدوار'],
-            ['CAPEX', 'التكاليف الرأسمالية'],
-            ['OPEX', 'التكاليف التشغيلية'],
-            ['الإيرادات', 'توقعات الإيرادات'],
-            ['قائمة الدخل', 'قائمة الدخل التقديرية'],
-            ['التدفقات النقدية', 'التدفقات النقدية'],
-            ['الميزانية', 'الميزانية العمومية (إن وُجدت)'],
-            ['جدول القرض', 'جدول سداد القرض (إن وُجد)'],
-            ['المؤشرات', 'مؤشرات التقييم المالي'],
-            ['تحليل السوق', 'تحليل السوق TAM/SAM/SOM'],
-            ['التحليل الجغرافي', 'الإحداثيات والمواقع البديلة'],
-            ['المخاطر', 'تحليل المخاطر (إن وُجدت)'],
-            ['الجدول الزمني', 'الجدول الزمني'],
-            ['السيناريوهات', 'السيناريوهات (متشائم/أساسي/متفائل)'],
-            ['الحساسية', 'تحليل الحساسية'],
+            ...rows,
             ['', ''],
             ['تاريخ ووقت التصدير', exportedAt],
             ['مُنشأ بواسطة', 'محاكي الجدوى | دراسة الجدوى الذكية'],
@@ -150,7 +161,7 @@ export class ExcelExporter {
             ['الإيرادات السنة الأولى', SAFE.num(proj?.total ?? proj?.revenue)],
             ['صافي القيمة الحالية', SAFE.num(ind.npv)],
             ['معدل العائد الداخلي', (SAFE.pct(ind.irr) || 0).toFixed(1) + '%'],
-            ['فترة الاسترداد', (SAFE.num(ind.paybackPeriod ?? ind.payback)).toFixed(1) + ' سنة'],
+            ['فترة الاسترداد', SAFE.payback(ind.paybackPeriod ?? ind.payback)],
             ['نسبة DSCR', formatDscr(this.results?.indicators?.dscr)],
             ['', ''],
             ['القرار', this.results?.decision || 'غير محدد'],
@@ -294,7 +305,10 @@ export class ExcelExporter {
             ['EBIT', ...statements.map((s) => SAFE.num(s.ebit))],
             ['(-) مصروفات الفوائد', ...statements.map((s) => -SAFE.num(s.interestExpense ?? s.interest))],
             ['EBT', ...statements.map((s) => SAFE.num(s.ebt ?? s.ebit))],
-            ['(-) الضرائب/الزكاة', ...statements.map((s) => -SAFE.num(s.tax))],
+            // الزكاة والضريبة صفان منفصلان — كان صف واحد يعرض الضريبة فقط
+            // فلا يُجمَع العمود إلى صافي الربح أمام محلل الائتمان
+            ['(-) الزكاة', ...statements.map((s) => -SAFE.num(s.zakat))],
+            ['(-) ضريبة الدخل (حصة الأجانب)', ...statements.map((s) => -SAFE.num(s.tax))],
             ['صافي الربح', ...statements.map((s) => SAFE.num(s.netIncome))],
             ['', ...statements.map(() => '')],
             [
@@ -410,9 +424,13 @@ export class ExcelExporter {
         const dscr = this.results?.dscrAnalysis || [];
 
         const irrVal = SAFE.pct(ind.irr);
-        const paybackVal = SAFE.num(ind.paybackPeriod ?? ind.payback);
         const roiVal = SAFE.pct(ind.roi);
         const marginVal = SAFE.pct(ind.profitMargin);
+        // المحرك يعيد التعادل بوحدات سنوية — البند معنون «وحدات/شهر» فنقسم على 12.
+        // (كان يسقط إلى breakEvenPointValue وهو مبلغ بالريال لا وحدات!)
+        const breakevenMonthly = Number.isFinite(Number(ind.breakevenUnitsPerMonth))
+            ? Number(ind.breakevenUnitsPerMonth)
+            : (Number.isFinite(Number(ind.breakEvenUnits)) ? Number(ind.breakEvenUnits) / 12 : 0);
 
         const data = [
             ['مؤشرات التقييم المالي'],
@@ -420,10 +438,10 @@ export class ExcelExporter {
             ['المؤشرات الأساسية', ''],
             ['صافي القيمة الحالية', SAFE.num(ind.npv)],
             ['معدل العائد الداخلي', irrVal.toFixed(1) + '%'],
-            ['فترة الاسترداد', paybackVal.toFixed(2) + ' سنة'],
+            ['فترة الاسترداد', SAFE.payback(ind.paybackPeriod ?? ind.payback)],
             ['العائد على الاستثمار', roiVal.toFixed(1) + '%'],
             ['هامش الربح الصافي', marginVal.toFixed(1) + '%'],
-            ['نقطة التعادل (وحدات/شهر)', Math.round(SAFE.num(ind.breakevenUnitsPerMonth ?? ind.breakEvenPointValue))],
+            ['نقطة التعادل (وحدات/شهر)', Math.round(breakevenMonthly)],
             ['', ''],
             ['تكلفة رأس المال المرجح', ''],
             ['وزن حقوق الملكية', formatWaccPct(wacc.equityWeight)],
@@ -698,13 +716,14 @@ export async function exportGrantCard(studyData, financialResults) {
         ['الإيرادات السنة الأولى (ريال)', SAFE.num(proj?.total ?? proj?.revenue)],
         ['صافي القيمة الحالية (ريال)', SAFE.num(ind.npv)],
         ['معدل العائد الداخلي %', (SAFE.pct(ind.irr) || 0).toFixed(1) + '%'],
-        ['فترة الاسترداد (سنة)', (SAFE.num(ind.paybackPeriod ?? ind.payback)).toFixed(1)],
+        ['فترة الاسترداد', SAFE.payback(ind.paybackPeriod ?? ind.payback)],
         ['', ''],
         ['تاريخ التصدير', formatExportDateTime()],
         ['مُنشأ بواسطة', 'محاكي الجدوى | دراسة الجدوى الذكية'],
     ];
 
     const workbook = XLSX.utils.book_new();
+    workbook.Workbook = { Views: [{ RTL: true }] };
     const ws = XLSX.utils.aoa_to_sheet(data);
     ws['!cols'] = [{ wch: 35 }, { wch: 50 }];
     XLSX.utils.book_append_sheet(workbook, ws, sanitizeSheetName('بطاقة المنح'));

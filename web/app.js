@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, {
       onStartQuickFeasibility: () => startQuickFeasibilityWizard(),
       onShowAdvisory: () => showAdvisoryView(),
-      onShowMonshaatCompliance: () => showComplianceMatrixView(),
+      onShowMonshaatCompliance: () => showMonshaatComplianceView(),
       onShowFinancingGuide: () => showFinancingGuideView(),
       onShowBeginnerGuide: () => showBeginnerGuideView(),
       onShowHypothesis: () => showHypothesisView(),
@@ -743,7 +743,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const { StudyComparison } = await import('./js/ui/StudyComparison.js');
           components.studyComparison = new StudyComparison(containerId, store, navigateTo);
         }
-        components.studyComparison.render();
+        await components.studyComparison.render();
       } else if (step.isDecisionDashboard) {
         if (!components.decisionDashboard) {
           const { DecisionDashboard } = await import('./js/ui/DecisionDashboard.js');
@@ -895,6 +895,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize Progress Tracker (must be created before wiring stage bar + sidebar)
   const progressTracker = new ProgressTracker(STEPS.length);
 
+  // كشف الإكمال تلقائياً من بيانات الدراسة (كان detectCompletion غير مستدعى إطلاقاً
+  // فيبقى عدّاد «X خطوة مكتملة» صفراً دائماً) — مع تخميد لتفادي إعادة الحساب لكل ضغطة مفتاح
+  let _completionDetectTimer = null;
+  const refreshCompletion = () => {
+    if (_completionDetectTimer) clearTimeout(_completionDetectTimer);
+    _completionDetectTimer = setTimeout(() => {
+      try {
+        progressTracker.detectCompletion(store.getState(), STEPS);
+        renderHeaderStageBar({
+          activeStepIndex: (window.sidebarInstance?.activeStep) || 0,
+          progressTracker,
+          sections: window.sidebarInstance?.sections
+        });
+      } catch (e) {
+        console.warn('[App] completion detection failed:', e);
+      }
+    }, 500);
+  };
+
   const sidebar = new Sidebar('stepperNav', STEPS, handleStepClick, store);
   // Store sidebar instance globally for access in enterWorkspaceMode
   window.sidebarInstance = sidebar;
@@ -906,6 +925,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initial render for header stage bar
   renderHeaderStageBar({ activeStepIndex: 0, progressTracker });
+
+  // كشف الإكمال عند الإقلاع وعند كل تغيير في البيانات
+  refreshCompletion();
+  store.subscribe(() => refreshCompletion());
 
   // --- Fail-Safe: Force Sidebar Visibility ---
   try {
@@ -1052,6 +1075,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
     await view.render();
+  });
+
+  // سلة المحذوفات (من الشريط الجانبي)
+  window.addEventListener('feasibility:showTrash', async () => {
+    const savedStepIndex = wizard.currentStepIndex;
+    try {
+      const { TrashView } = await import('./js/ui/TrashView.js');
+      const view = new TrashView();
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      // زر «عودة» داخل الواجهة يستخدم history.back — نوفر مساراً صريحاً أيضاً
+      const backBtn = el.querySelector('button.btn-secondary');
+      if (backBtn) {
+        backBtn.removeAttribute('onclick');
+        backBtn.addEventListener('click', () => navigateTo(savedStepIndex));
+      }
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('TrashView load failed:', err);
+      toast.error('تعذر فتح سلة المحذوفات');
+    }
   });
 
   // لوحة المستثمر (Investor Dashboard)
@@ -1631,10 +1675,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       mainContainer.classList.remove('w-full', 'px-0', 'py-0');
     }
 
-    // Process step navigation
-    const hashIndex = parseInt(hash.replace('#', '')) || 0;
-    if (!Number.isNaN(hashIndex) && hash !== '') {
-      navigateTo(hashIndex);
+    // Process step navigation — تجاهل أي hash غير رقمي بدل إرجاع المستخدم للخطوة 0 بعنف
+    const stripped = hash.replace('#', '').trim();
+    if (stripped !== '' && /^\d+$/.test(stripped)) {
+      const hashIndex = parseInt(stripped, 10);
+      if (hashIndex >= 0 && hashIndex < STEPS.length) {
+        navigateTo(hashIndex);
+      }
     }
   };
 

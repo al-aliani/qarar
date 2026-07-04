@@ -59,7 +59,7 @@ export class ProfessionalReviewReportGenerator {
             title: PRO_REVIEW_SECTION_TITLES[id] || id
         }));
 
-        const execText = state.executiveSummary?.aiGeneratedText
+        const execText = state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText
             || `يهدف مشروع «${info.name || 'المشروع'}» إلى ${info.concept || 'تنفيذ نشاط تجاري'} في ${info.city || 'الموقع المحدد'}. تم إعداد هذه الدراسة وفق منهجيات احترافية قابلة للمراجعة من قبل جهة مستقلة.`;
 
         const methodologyText = `اعتمدت الدراسة على: (أ) افتراضات مالية من مقدم الطلب ومراجع داخلية، (ب) معايير تقييم استثمارية (صافي القيمة الحالية، معدل العائد الداخلي، فترة الاسترداد، نقطة التعادل)، (ج) نطاق الدراسة يشمل الجانب المالي والتشغيلي والمخاطر. هذه المسودة قابلة للمراجعة والتدقيق من قبل جهة مستقلة.`;
@@ -165,7 +165,7 @@ export class ProfessionalReviewReportGenerator {
         const secId = `sec${num}`;
         switch (id) {
             case 'executive_summary': {
-                const execText = state.executiveSummary?.aiGeneratedText
+                const execText = state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText
                     || `يهدف مشروع «${info.name || 'المشروع'}» إلى ${info.concept || 'تنفيذ نشاط تجاري'} في ${info.city || 'الموقع المحدد'}. تم إعداد هذه الدراسة وفق منهجيات احترافية قابلة للمراجعة من قبل جهة مستقلة.`;
                 return `<section class="pr-section" id="${secId}">
             <div class="pr-section-title">${n}. ${title}</div>

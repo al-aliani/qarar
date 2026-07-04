@@ -97,7 +97,9 @@ export class PersistenceService {
             return { success: true, location: 'local' };
         } catch (e) {
             console.error("PersistenceService.save error:", e);
-            return { success: true, location: 'local', error: `Cloud sync failed: ${e.message}` };
+            // إبلاغ صادق: الحفظ المحلي نجح لكن المزامنة السحابية فشلت —
+            // كان يُبلَّغ success بلا تمييز فتظهر رسالة «تم الحفظ» رغم فشل السحابة
+            return { success: true, location: 'local', cloudSyncFailed: true, error: `Cloud sync failed: ${e.message}` };
         }
     }
 
@@ -316,7 +318,9 @@ export class PersistenceService {
         if (!supabase) return;
 
         // Cascade delete should handle inputs if configured, but let's be safe
-        await supabase.from(SUPA_TABLE_STUDIES).delete().eq('id', id);
+        const { error } = await supabase.from(SUPA_TABLE_STUDIES).delete().eq('id', id);
+        // كان الخطأ يُبتلع بصمت — دراسة «محذوفة» تبقى في السحابة وتعود عند المزامنة
+        if (error) throw new Error(`فشل الحذف السحابي: ${error.message}`);
     }
 
     static async _listCloudHeaders(userId) {

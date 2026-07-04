@@ -24,28 +24,41 @@ export function quickFeasibilityCalc(inputs) {
 
     const annualRevenue = rev * 12;
     const annualCosts = cost * 12;
+
+    // ربح تشغيلي بعد زكاة تقريبية 2.5% (اتساقاً مع المحرك الكامل — مشروع سعودي)
+    const operatingProfit = annualRevenue - annualCosts;
+    const zakat = operatingProfit > 0 ? operatingProfit * 0.025 : 0;
+    const operatingNet = operatingProfit - zakat;
+
     let annualDebtService = 0;
     if (isLoan && initial > 0) {
         const r = DEFAULT_LOAN_RATE;
         const n = DEFAULT_LOAN_YEARS;
-        const annualPayment = (initial * (r * Math.pow(1 + r, n))) / (Math.pow(1 + r, n) - 1);
-        annualDebtService = annualPayment;
+        annualDebtService = (initial * (r * Math.pow(1 + r, n))) / (Math.pow(1 + r, n) - 1);
     }
-    const annualNet = annualRevenue - annualCosts - annualDebtService;
+    const annualNet = operatingNet - annualDebtService;
 
-    // NPV (سنوات 1..5، خصم 10%)
-    let npv = -initial;
+    // NPV من منظور صاحب المشروع (خصم 10%):
+    // تمويل ذاتي: يدفع الاستثمار كاملاً سنة 0 ويستلم الربح التشغيلي.
+    // قرض: البنك يدفع الاستثمار (لا خروج نقدي سنة 0) ويُخصم قسط القرض من الصافي.
+    // (كان الحساب القديم يخصم الاستثمار كاملاً *و* أقساط القرض معاً = عدّ مزدوج
+    //  يجعل التمويل بقرض 8% يبدو أسوأ من الذاتي رغم أنه أرخص من معدل الخصم.)
+    const equityOutflow = isLoan ? 0 : initial;
+    let npv = -equityOutflow;
     const dr = DEFAULT_DISCOUNT_RATE;
     for (let t = 1; t <= PROJECTION_YEARS; t++) {
         npv += annualNet / Math.pow(1 + dr, t);
     }
     npv = Math.round(npv);
 
-    // فترة الاسترداد (سنوات)
+    // فترة الاسترداد على أساس المشروع (الاستثمار ÷ الصافي التشغيلي) —
+    // ثابتة بين طريقتي التمويل كي لا يوحي القرض باسترداد فوري وهمي
     let paybackYears = 999;
-    if (annualNet > 0) {
-        paybackYears = initial / annualNet;
+    if (operatingNet > 0 && initial > 0) {
+        paybackYears = initial / operatingNet;
         paybackYears = Math.round(paybackYears * 10) / 10;
+    } else if (initial === 0) {
+        paybackYears = 999; // لا استثمار = لا معنى للاسترداد؛ لا نعرض «0 سنة»
     }
 
     // نقطة التعادل: إيراد شهري = تكاليف شهرية (+ خدمة دين إن وُجد)

@@ -13,11 +13,11 @@ export class StudyComparison {
         this.selectedStudyId = null;
     }
 
-    render() {
+    async render() {
         if (!this.container) return;
 
         const currentStudy = this.store.get();
-        const availableStudies = DataService.getAvailableStudiesForComparison(currentStudy.projectInfo?.id);
+        const availableStudies = await DataService.getAvailableStudiesForComparison(currentStudy.projectInfo?.id);
 
         this.container.innerHTML = `
             <div class="comparison-panel animate-entry">

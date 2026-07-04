@@ -6,6 +6,7 @@
  */
 
 import { formatCurrency } from '../js/utils/formatters.js';
+import { SAFE } from './utils.js';
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { validateStudy } from '../js/utils/validation.js';
 import { getLabelSDB } from '../js/core/regulatoryLabels.js';
@@ -153,7 +154,7 @@ export class BankReportGenerator {
             case 'executive_summary':
                 return `<div class="bank-section">
             <div class="bank-section-title">${n}. الملخص التنفيذي</div>
-            <p>${state.executiveSummary?.aiGeneratedText || `يهدف مشروع «${info.name || 'المشروع'}» إلى ${info.concept || 'تنفيذ نشاط تجاري'} في ${info.city || 'الموقع المحدد'}. تم إعداد هذه الدراسة وفق منهجيات احترافية لتقديم طلب التمويل.`}</p>
+            <p>${state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText || `يهدف مشروع «${info.name || 'المشروع'}» إلى ${info.concept || 'تنفيذ نشاط تجاري'} في ${info.city || 'الموقع المحدد'}. تم إعداد هذه الدراسة وفق منهجيات احترافية لتقديم طلب التمويل.`}</p>
         </div>`;
             case 'financial_kpis':
                 return `<div class="bank-section">
@@ -161,14 +162,14 @@ export class BankReportGenerator {
             <div class="bank-kpi">
                 <div class="bank-kpi-card"><div class="label">${L('npv')}</div><div class="value ${(ind.npv || 0) > 0 ? 'positive' : 'negative'}">${_fmt(ind.npv || 0)}</div></div>
                 <div class="bank-kpi-card"><div class="label">${L('irr')}</div><div class="value">${((ind.irr || 0) * 100).toFixed(1)}%</div></div>
-                <div class="bank-kpi-card"><div class="label">${L('paybackPeriod')}</div><div class="value">${(ind.paybackPeriod ?? ind.payback ?? 0).toFixed(1)} سنة</div></div>
+                <div class="bank-kpi-card"><div class="label">${L('paybackPeriod')}</div><div class="value">${SAFE.payback(ind.paybackPeriod ?? ind.payback)}</div></div>
                 <div class="bank-kpi-card"><div class="label">${L('breakEvenPointValue')}</div><div class="value">${_fmt(ind.breakEvenPointValue || 0)}</div></div>
             </div>
             <table class="bank-table">
                 <tr><th>المؤشر</th><th>القيمة</th><th>ملاحظة</th></tr>
                 <tr><td>${L('npv')}</td><td>${_fmt(ind.npv || 0)}</td><td>${(ind.npv || 0) > 0 ? 'إيجابي ✓' : 'يحتاج مراجعة'}</td></tr>
                 <tr><td>${L('irr')}</td><td>${((ind.irr || 0) * 100).toFixed(2)}%</td><td>${(ind.irr || 0) >= 0.15 ? 'مقبول للتمويل' : 'تحت الحد المفضل'}</td></tr>
-                <tr><td>${L('paybackPeriod')}</td><td>${(ind.paybackPeriod ?? ind.payback ?? 0).toFixed(1)} سنة</td><td>${(ind.paybackPeriod ?? 999) < 5 ? 'مناسب' : 'طويل نسبياً'}</td></tr>
+                <tr><td>${L('paybackPeriod')}</td><td>${SAFE.payback(ind.paybackPeriod ?? ind.payback)}</td><td>${(() => { const p = ind.paybackPeriod ?? ind.payback; if (p == null || !Number.isFinite(p) || p <= 0) return 'غير محقق — يحتاج مراجعة'; return p < 5 ? 'مناسب' : 'طويل نسبياً'; })()}</td></tr>
                 <tr><td>${L('totalCapex')}</td><td>${_fmt(cap.total || financing.totalInvestment || 0)}</td><td>ريال</td></tr>
             </table>
         </div>`;
@@ -177,7 +178,7 @@ export class BankReportGenerator {
             <div class="bank-section-title">${n}. هيكل التمويل المطلوب</div>
             <table class="bank-table">
                 <tr><th>المصدر</th><th>المبلغ (ريال)</th><th>النسبة</th></tr>
-                ${this._renderFinancingRows(financing)}
+                ${this._renderFinancingRows(financing, cap.total)}
                 <tr class="total-row"><td>الإجمالي</td><td>${_fmt(cap.total || financing.totalInvestment || 0)}</td><td>100%</td></tr>
             </table>
         </div>`;
@@ -192,6 +193,9 @@ export class BankReportGenerator {
                 <tr><td>(=) مجمل الربح</td><td>${_fmt(incomeY1.grossProfit || 0)}</td></tr>
                 <tr><td>(-) المصاريف التشغيلية</td><td>${_fmt(incomeY1.fixedCosts || 0)}</td></tr>
                 <tr><td>(-) الاستهلاك</td><td>${_fmt(incomeY1.depreciation || 0)}</td></tr>
+                ${incomeY1.interest ? `<tr><td>(-) فوائد التمويل</td><td>${_fmt(incomeY1.interest)}</td></tr>` : ''}
+                <tr><td>(-) الزكاة</td><td>${_fmt(incomeY1.zakat || 0)}</td></tr>
+                ${incomeY1.tax ? `<tr><td>(-) ضريبة الدخل (حصة الأجانب)</td><td>${_fmt(incomeY1.tax)}</td></tr>` : ''}
                 <tr class="total-row"><td>(=) صافي الربح</td><td>${_fmt(incomeY1.netIncome || 0)}</td></tr>
             </table>
         </div>`;
@@ -240,9 +244,11 @@ export class BankReportGenerator {
         }
     }
 
-    static _renderFinancingRows(financing) {
+    static _renderFinancingRows(financing, capTotal) {
         const sources = financing.sources || {};
-        const total = financing.totalInvestment || 
+        // النسب تُحسب على نفس الإجمالي المطبوع في صف «الإجمالي» (إجمالي المحرك أولاً) —
+        // كانت تُحسب على مدخل المستخدم فتظهر نسب لا تساوي 100% من الرقم المطبوع
+        const total = (Number(capTotal) > 0 ? Number(capTotal) : 0) || financing.totalInvestment ||
             (sources.equity?.amount || 0) + (sources.bankLoan?.amount || 0) + (sources.investors?.amount || 0) + (sources.governmentSupport?.amount || 0) || 1;
         const rows = [];
         const map = [

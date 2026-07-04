@@ -90,8 +90,9 @@ export class DataService {
     /**
      * Get all available studies for selection
      */
-    static getAvailableStudiesForComparison(currentId) {
-        return ProjectManager.getAllProjects()
+    static async getAvailableStudiesForComparison(currentId) {
+        const projects = await ProjectManager.getAllProjects();
+        return (projects || [])
             .filter(p => p.id !== currentId)
             .map(p => ({
                 id: p.id,

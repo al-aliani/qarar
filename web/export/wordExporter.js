@@ -2,15 +2,25 @@
  * Word (DOCX) Exporter
  * تصدير دراسة الجدوى كتقرير نصي احترافي بصيغة DOCX
  * يستخدم مكتبة 'docx'
- * ترتيب الأقسام: يُطبَّق state.reportSectionOrder عند وجوده (المهمة 70 — توحيد مع ReportGenerator).
+ * ترتيب الأقسام: يُطبَّق state.reportSectionOrder عند وجوده (المهمة 70 — توحيد مع ReportGenerator).
+ *
+ * إصلاحات تدقيق 2026-07-04:
+ * - خط عربي معرَّف على مستوى المستند (كان يسقط إلى Calibri).
+ * - bold على TextRun لا على Paragraph (خاصية bold على Paragraph لا تعمل في مكتبة docx).
+ * - فترة استرداد غير محققة لا تُعرض «0.0 سنة».
+ * - أقسام بلا بيانات تُحذف بدل طباعة «—» تحت كل عنوان.
  */
 
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle } from 'docx';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel } from 'docx';
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { calculateProjectScore } from '../js/core/scoring.js';
+import { formatPayback } from '../js/utils/formatters.js';
 
 /** أقسام تقرير Word (معرّفات قابلة للربط مع reportSectionOrder). */
 const WORD_SECTION_IDS = ['executive_summary', 'market', 'financial_kpis', 'recommendation'];
+
+/** الخط العربي الموحد للمستند — نفس هوية المنصة */
+const AR_FONT = 'IBM Plex Sans Arabic';
 
 function formatCurrency(n) {
     if (!n && n !== 0) return '0';
@@ -18,8 +28,8 @@ function formatCurrency(n) {
     return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
 }
 
-function safeText(s) {
-    return String(s || '').trim() || '—';
+function hasText(s) {
+    return String(s || '').trim().length > 0;
 }
 
 export class WordExporter {
@@ -47,26 +57,40 @@ export class WordExporter {
         return ordered;
     }
 
-    /** يُرجع مصفوفة عناصر docx لقسم واحد (حسب المعرّف). */
+    /** يُرجع مصفوفة عناصر docx لقسم واحد — الأقسام الفارغة تُحذف بدل «—» */
     buildSectionBlocks(sectionId) {
         const project = this.state.projectInfo || {};
         const exec = this.state.executiveSummary || {};
         switch (sectionId) {
-            case 'executive_summary':
-                return [
-                    this.createHeading("الملخص التنفيذي"),
-                    this.createSubHeading("المشكلة"),
-                    this.createParagraph(exec.problemStatement),
-                    this.createSubHeading("الحل المقترح"),
-                    this.createParagraph(project.concept || exec.solutionStatement),
-                    this.createSubHeading("القيمة المميزة"),
-                    this.createParagraph(exec.uniqueValueProposition)
+            case 'executive_summary': {
+                const blocks = [this.createHeading("الملخص التنفيذي")];
+                // النص المولَّد/المكتوب أولاً؛ ثم العناصر الجزئية المتوفرة فقط
+                if (hasText(exec.projectOverview)) {
+                    blocks.push(this.createParagraph(exec.projectOverview));
+                }
+                const parts = [
+                    ["المشكلة", exec.problemStatement],
+                    ["الحل المقترح", project.concept || exec.solutionStatement],
+                    ["القيمة المميزة", exec.uniqueValueProposition]
                 ];
-            case 'market':
+                parts.forEach(([title, text]) => {
+                    if (hasText(text)) {
+                        blocks.push(this.createSubHeading(title));
+                        blocks.push(this.createParagraph(text));
+                    }
+                });
+                return blocks.length > 1 ? blocks : [];
+            }
+            case 'market': {
+                const market = this.state.marketSizing || {};
+                const hasAny = [market.tam?.value, market.sam?.value, market.som?.value]
+                    .some(v => Number(v) > 0);
+                if (!hasAny) return []; // لا نطبع جدول سوق بقيم صفرية
                 return [
                     this.createHeading("حجم السوق"),
                     this.createMarketTable()
                 ];
+            }
             case 'financial_kpis':
                 return [
                     this.createHeading("المؤشرات المالية"),
@@ -76,8 +100,11 @@ export class WordExporter {
                 return [
                     this.createHeading("التوصية النهائية"),
                     new Paragraph({
-                        text: this.score?.recommendationLabel || "يحتاج مراجعة",
-                        bold: true,
+                        children: [new TextRun({
+                            text: this.score?.recommendationLabel || "يحتاج مراجعة",
+                            bold: true,
+                            size: 28
+                        })],
                         alignment: AlignmentType.CENTER,
                         bidirectional: true,
                         spacing: { before: 200, after: 200 }
@@ -94,19 +121,19 @@ export class WordExporter {
 
             const headerBlocks = [
                 new Paragraph({
-                    text: safeText(project.name),
+                    children: [new TextRun({ text: String(project.name || 'دراسة جدوى').trim(), bold: true })],
                     heading: HeadingLevel.TITLE,
                     alignment: AlignmentType.CENTER,
                     bidirectional: true
                 }),
                 new Paragraph({
-                    text: "تقرير دراسة الجدوى الاقتصادية",
+                    children: [new TextRun({ text: "تقرير دراسة الجدوى الاقتصادية" })],
                     alignment: AlignmentType.CENTER,
                     bidirectional: true,
                     spacing: { after: 400 }
                 }),
                 new Paragraph({
-                    text: `تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}`,
+                    children: [new TextRun({ text: `تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}` })],
                     alignment: AlignmentType.CENTER,
                     bidirectional: true,
                     spacing: { after: 800 }
@@ -117,6 +144,15 @@ export class WordExporter {
             const sectionBlocks = sectionOrder.flatMap(id => this.buildSectionBlocks(id));
 
             const doc = new Document({
+                // خط عربي افتراضي لكل الأنماط — بدونه يسقط المستند إلى Calibri
+                styles: {
+                    default: {
+                        document: { run: { font: AR_FONT, size: 24 } },
+                        heading1: { run: { font: AR_FONT, bold: true } },
+                        heading2: { run: { font: AR_FONT, bold: true } },
+                        title: { run: { font: AR_FONT, bold: true } }
+                    }
+                },
                 sections: [{
                     properties: {
                         page: {
@@ -146,7 +182,7 @@ export class WordExporter {
 
     createHeading(text) {
         return new Paragraph({
-            text: text,
+            children: [new TextRun({ text, bold: true })],
             heading: HeadingLevel.HEADING_1,
             bidirectional: true,
             spacing: { before: 400, after: 200 }
@@ -155,7 +191,7 @@ export class WordExporter {
 
     createSubHeading(text) {
         return new Paragraph({
-            text: text,
+            children: [new TextRun({ text, bold: true })],
             heading: HeadingLevel.HEADING_2,
             bidirectional: true,
             spacing: { before: 200, after: 100 }
@@ -164,7 +200,7 @@ export class WordExporter {
 
     createParagraph(text) {
         return new Paragraph({
-            children: [new TextRun({ text: safeText(text), size: 24 })], // size is half-points (24 = 12pt)
+            children: [new TextRun({ text: String(text || '').trim(), size: 24 })], // size is half-points (24 = 12pt)
             bidirectional: true,
             alignment: AlignmentType.RIGHT,
             spacing: { after: 200 }
@@ -192,7 +228,7 @@ export class WordExporter {
                 this.createTableRow(["القيمة", "المؤشر"], true),
                 this.createTableRow([formatCurrency(ind.npv), "صافي القيمة الحالية (NPV)"]),
                 this.createTableRow([`${((ind.irr ?? 0) * 100).toFixed(1)}%`, "معدل العائد الداخلي (IRR)"]),
-                this.createTableRow([`${(ind.paybackPeriod ?? 0).toFixed(1)} سنة`, "فترة الاسترداد"]),
+                this.createTableRow([formatPayback(ind.paybackPeriod), "فترة الاسترداد"]),
                 this.createTableRow([`${((ind.roi ?? 0) * 100).toFixed(1)}%`, "العائد على الاستثمار (ROI)"])
             ]
         });
@@ -202,8 +238,7 @@ export class WordExporter {
         return new TableRow({
             children: cells.map(text => new TableCell({
                 children: [new Paragraph({
-                    text: text,
-                    bold: isHeader,
+                    children: [new TextRun({ text: String(text), bold: isHeader })],
                     alignment: AlignmentType.CENTER,
                     bidirectional: true
                 })],

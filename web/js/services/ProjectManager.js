@@ -87,7 +87,7 @@ export class ProjectManager {
      * Soft Delete - Move to Trash
      */
     static async deleteProject(id) {
-        const { data } = await this.loadProject(id);
+        const { data } = (await this.loadProject(id)) || {};
         if (!data) return { success: false, error: 'Project not found' };
 
         data.projectInfo = data.projectInfo || {};
@@ -103,7 +103,7 @@ export class ProjectManager {
      * Restore from Trash
      */
     static async restoreProject(id) {
-        const { data } = await this.loadProject(id);
+        const { data } = (await this.loadProject(id)) || {};
         if (!data) return { success: false, error: 'Project not found' };
 
         data.projectInfo = data.projectInfo || {};

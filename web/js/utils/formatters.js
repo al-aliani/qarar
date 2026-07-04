@@ -36,3 +36,31 @@ export const formatNumber = (value) => {
         maximumFractionDigits: 2
     }).format(n);
 };
+
+/**
+ * فترة الاسترداد للعرض في التقارير والمصدّرات.
+ * null / Infinity / 0 (القيمة الحارسة القديمة) = غير قابل للاسترداد —
+ * لا تُعرض «0.0 سنة» أبداً (كانت تظهر لأسوأ مشروع كأفضل مؤشر في تقرير البنك).
+ */
+export const formatPayback = (value) => {
+    const n = safeNum(value);
+    if (n == null || n <= 0) return 'غير قابل للاسترداد خلال فترة الدراسة';
+    return n.toFixed(1) + ' سنة';
+};
+
+/**
+ * نسبة مخزنة ككسر (0.155 → «15.5%»). تقصّ ضجيج الفاصلة العائمة
+ * (0.050000000000000176 → «5.0%») ولا تعرض الكسر الخام أبداً.
+ */
+export const formatFractionAsPercent = (value, decimals = 1) => {
+    const n = safeNum(value);
+    return n == null ? '—' : (n * 100).toFixed(decimals) + '%';
+};
+
+/** تقريب رقم لعدد منازل محدد مع إزالة ضجيج الفاصلة العائمة — للكتابة في خلايا Excel */
+export const roundClean = (value, decimals = 2) => {
+    const n = safeNum(value);
+    if (n == null) return 0;
+    const f = Math.pow(10, decimals);
+    return Math.round(n * f) / f;
+};

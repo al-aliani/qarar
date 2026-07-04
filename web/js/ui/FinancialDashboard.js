@@ -2,7 +2,10 @@
  * Financial Dashboard Component
  * Displays aggregated CAPEX/OPEX, Income Statement, and Key Indicators
  */
-import { runFullModel } from '../../../lib/calc/financialModel.js';
+// توحيد مصدر الحقيقة (تدقيق 2026-07-04): كانت اللوحة تحسب عبر lib/calc/financialModel.js
+// (بلا زكاة، خصم 5%) فتعرض NPV/IRR مختلفة عن التقرير المُصدَّر لنفس الدراسة.
+// الآن كل الشاشات والمصدّرات تقرأ من engine.js حصراً.
+import { calculateStudy as runFullModel } from '../core/engine.js';
 import { SmartAdvisor } from '../services/SmartAdvisor.js';
 import { aiConnector } from '../services/AIConnector.js';
 import { createTooltip, wrapWithTooltip } from '../utils/glossary.js';
@@ -64,7 +67,11 @@ export class FinancialDashboard {
         const y1 = incomeStatement[0] || {};
         const revY1 = y1.revenue ?? 0;
         const costY1 = (y1.variableCosts ?? 0) + (y1.fixedCosts ?? 0) + (y1.depreciation ?? 0);
-        const breakevenDisplay = typeof indicators.breakevenUnitsPerMonth === 'number' ? Math.round(indicators.breakevenUnitsPerMonth) : (indicators.breakEvenUnits != null ? Math.round(indicators.breakEvenUnits) : '—');
+        // المحرك يعيد التعادل بوحدات سنوية — نعرضه شهرياً (البطاقة معنونة «وحدة/شهر»)
+        const breakevenMonthly = typeof indicators.breakevenUnitsPerMonth === 'number'
+            ? indicators.breakevenUnitsPerMonth
+            : (Number.isFinite(indicators.breakEvenUnits) ? indicators.breakEvenUnits / 12 : null);
+        const breakevenDisplay = breakevenMonthly != null ? Math.round(breakevenMonthly) : '—';
 
         this.container.innerHTML = `
             <!-- Decision Banner -->
@@ -162,7 +169,7 @@ export class FinancialDashboard {
             <div id="fullKpiGrid" class="indicators-grid ${isSimpleView ? 'hidden' : ''}">
                 ${this.renderKPICard('صافي القيمة الحالية', 'صافي القيمة الحالية', this.formatCurrency(indicators.npv), indicators.npv >= 0 ? 'positive' : 'negative')}
                 ${this.renderKPICard('معدل العائد الداخلي', 'معدل العائد الداخلي', this.formatPercent(indicators.irr), indicators.irr >= 0.05 ? 'positive' : 'negative')}
-                ${this.renderKPICard('فترة الاسترداد', 'فترة الاسترداد', indicators.paybackPeriod === Infinity ? 'غير محدد' : indicators.paybackPeriod.toFixed(1) + ' سنة', 'neutral')}
+                ${this.renderKPICard('فترة الاسترداد', 'فترة الاسترداد', (indicators.paybackPeriod != null && Number.isFinite(indicators.paybackPeriod)) ? indicators.paybackPeriod.toFixed(1) + ' سنة' : 'غير قابل للاسترداد خلال فترة الدراسة', 'neutral')}
                 ${this.renderKPICard('العائد على الاستثمار', 'العائد على الاستثمار', this.formatPercent(indicators.roi), indicators.roi > 0 ? 'positive' : 'negative')}
             </div>
 
@@ -172,7 +179,7 @@ export class FinancialDashboard {
                 <div class="indicators-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
                     <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px;">
                         <div class="kpi-label text-muted">نقطة التعادل (وحدات/شهر)</div>
-                        <div class="kpi-value text-gold">${typeof indicators.breakevenUnitsPerMonth === 'number' ? Math.round(indicators.breakevenUnitsPerMonth) : '—'}</div>
+                        <div class="kpi-value text-gold">${breakevenDisplay}</div>
                         <p class="text-xs text-muted mt-1">مبيعات شهرية للوصول لتعادل التكاليف</p>
                     </div>
                     <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px;">
@@ -495,6 +502,11 @@ export class FinancialDashboard {
                     };
 
                     const report = await aiConnector.query('', 'consultant_review', context);
+                    if (report == null) {
+                        box.innerHTML = '<p class="text-muted">تعذر توليد التقرير حالياً — التحليل الفوري أعلاه (المستشار الذكي) يغطي أهم الملاحظات.</p>';
+                        e.target.disabled = false;
+                        return;
+                    }
                     let text = report;
                     if (typeof report === 'object' && report.content) text = report.content;
                     else if (typeof report !== 'string') text = JSON.stringify(report);

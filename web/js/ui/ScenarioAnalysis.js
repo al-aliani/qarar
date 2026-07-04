@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Scenario Analysis Component
  * Sensitivity analysis, scenario comparison, and break-even visualization
  */
@@ -93,8 +93,9 @@ export class ScenarioAnalysis {
         const mapToView = (r) => ({
             npv: r.npv || 0,
             irr: r.irr || 0,
-            payback: r.paybackPeriod || 0
+            payback: (r.paybackPeriod != null && Number.isFinite(r.paybackPeriod)) ? r.paybackPeriod : null
         });
+        const fmtPayback = (p) => (p != null && p > 0) ? `${p.toFixed(1)} سنة` : 'غير محقق';
 
         const viewPess = mapToView(pessResults);
         const viewBase = mapToView(baseResultsCalc);
@@ -124,7 +125,7 @@ export class ScenarioAnalysis {
                     <div class="scenario-results">
                         <div class="kpi"><span>صافي القيمة الحالية</span><span class="text-danger">${formatCurrency(viewPess.npv)}</span></div>
                         <div class="kpi"><span>معدل العائد الداخلي</span><span>${formatPercent(viewPess.irr)}</span></div>
-                        <div class="kpi"><span>فترة الاسترداد</span><span>${viewPess.payback.toFixed(1)} سنة</span></div>
+                        <div class="kpi"><span>فترة الاسترداد</span><span>${fmtPayback(viewPess.payback)}</span></div>
                     </div>
                 </div>
 
@@ -143,7 +144,7 @@ export class ScenarioAnalysis {
                     <div class="scenario-results">
                         <div class="kpi"><span>صافي القيمة الحالية</span><span class="text-gold">${formatCurrency(viewBase.npv)}</span></div>
                         <div class="kpi"><span>معدل العائد الداخلي</span><span>${formatPercent(viewBase.irr)}</span></div>
-                        <div class="kpi"><span>فترة الاسترداد</span><span>${viewBase.payback.toFixed(1)} سنة</span></div>
+                        <div class="kpi"><span>فترة الاسترداد</span><span>${fmtPayback(viewBase.payback)}</span></div>
                     </div>
                 </div>
 
@@ -166,7 +167,7 @@ export class ScenarioAnalysis {
                     <div class="scenario-results">
                         <div class="kpi"><span>صافي القيمة الحالية</span><span class="text-success">${formatCurrency(viewOpt.npv)}</span></div>
                         <div class="kpi"><span>معدل العائد الداخلي</span><span>${formatPercent(viewOpt.irr)}</span></div>
-                        <div class="kpi"><span>فترة الاسترداد</span><span>${viewOpt.payback.toFixed(1)} سنة</span></div>
+                        <div class="kpi"><span>فترة الاسترداد</span><span>${fmtPayback(viewOpt.payback)}</span></div>
                     </div>
                 </div>
             </div>

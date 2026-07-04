@@ -6,6 +6,11 @@ import { toast } from '../utils/toast.js';
  * Renders editable tables with add/delete row functionality
  */
 export class DynamicTable {
+    /** أعمدة مخزنة ككسر (0–1) وتُعرض/تُحرَّر كنسبة مئوية (0–100) — نفس نهج Wizard.isFractionPercentKey */
+    static isFractionPercentColumn(colKey) {
+        return ['growthRate', 'variableCostRate', 'amortizationRate'].includes(colKey);
+    }
+
     constructor(containerId, config) {
         this.container = document.getElementById(containerId) || document.createElement('div');
         this.config = config;
@@ -144,10 +149,19 @@ export class DynamicTable {
                            ${isChecked}>
                 </td>`;
             } else {
-                const val = row[col.key] || '';
+                const isFractionPct = DynamicTable.isFractionPercentColumn(col.key);
+                let val = row[col.key] ?? '';
+                // نسب النمو/الحصص المخزنة ككسر (0.07) تُعرض وتُحرَّر كنسبة مئوية (7)
+                // — كان المستخدم يرى «نمو سنوي (كسر)» فيكتب 7 ويحصل على 700%
+                if (isFractionPct && typeof val === 'number') {
+                    val = Math.round(val * 10000) / 100;
+                }
                 const inputType = col.type === 'number' ? 'number' : 'text';
+                // أسعار ورواتب وكميات سالبة لا معنى لها — تمرّ للمحرك وتفسد النتائج
+                const minAttr = col.type === 'number' && col.allowNegative !== true ? 'min="0"' : '';
+                const maxAttr = isFractionPct || /marketShare|share|percent/i.test(col.key) ? 'max="100"' : '';
                 const stepAttr = col.type === 'number' ? 'step="any"' : '';
-                
+
                 // Magic Wand for empty numbers (متاح في الوضعين السريع والمفصل)
                 let magicBtn = '';
                 if (col.type === 'number' && (!val || val == 0)) {
@@ -156,12 +170,13 @@ export class DynamicTable {
 
                 html += `<td class="${isHidden ? 'hidden col-advanced' : ''} relative">
                     <div class="flex items-center gap-1">
-                        <input type="${inputType}" 
-                               class="table-input ${magicBtn ? 'pr-8' : ''}" 
-                               data-row="${rowIndex}" 
+                        <input type="${inputType}"
+                               class="table-input ${magicBtn ? 'pr-8' : ''}"
+                               data-row="${rowIndex}"
                                data-col="${col.key}"
                                value="${val}"
-                               ${stepAttr}>
+                               ${stepAttr} ${minAttr} ${maxAttr}>
+                        ${isFractionPct ? '<span class="text-muted" aria-hidden="true">٪</span>' : ''}
                         ${magicBtn}
                     </div>
                 </td>`;
@@ -237,6 +252,16 @@ export class DynamicTable {
 
                 if (e.target.type === 'number') {
                     value = parseFloat(value) || 0;
+                    // القيم السالبة تُقص عند الصفر (أسعار/رواتب/كميات سالبة تفسد المحرك)
+                    const colDef = (this.config.columns || []).find(c => c.key === colKey);
+                    if (value < 0 && colDef?.allowNegative !== true) {
+                        value = 0;
+                        e.target.value = 0;
+                    }
+                    // أعمدة النسب المعروضة كنسبة مئوية تُخزَّن ككسر (7 → 0.07)
+                    if (DynamicTable.isFractionPercentColumn(colKey)) {
+                        value = Math.min(value, 100) / 100;
+                    }
                 } else if (e.target.type === 'checkbox') {
                     value = e.target.checked;
                 }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * مولّد نصوص داخلي (ذكاء صناعي داخلي)
  * ينتج نصوص نموذج العمل وغيره من بيانات الدراسة باستخدام قواعد ونماذج محلية.
  * لا يتطلب اتصالاً خارجياً أو مفاتيح API.
@@ -98,9 +98,13 @@ export function generateSectorIndustry(state) {
     const som = state?.marketSizing?.som?.value ?? state?.marketSizing?.som ?? 0;
     const tam = state?.marketSizing?.tam?.value ?? state?.marketSizing?.tam ?? 0;
 
-    const sectorAnalysis = `قطاع ${concept} في ${city} يشهد نمواً متسارعاً مدفوعاً بالتحول الاقتصادي ورؤية 2030. السوق المستهدف يتميز بشرائح متعددة (أفراد، عائلات، شركات) مع تفضيل متزايد للجودة والخدمة. الحصة المستهدفة تشكل نسبة معقولة من السوق المتاح. (التحليل مبني على معايير دراسات الجدوى المعتمدة محلياً — منشآت، بنك التنمية الاجتماعية.)`;
+    // لا ادعاءات منهجية بجهات رسمية ولا إحصاءات مُختلَقة — نص استرشادي مبني على مدخلات المستخدم فقط
+    const somPart = Number(som) > 0 && Number(tam) > 0
+        ? ` الحصة المستهدفة المُدخلة (${Number(som).toLocaleString('ar-SA')}) تعادل ${((Number(som) / Number(tam)) * 100).toFixed(1)}% من السوق الكلي المُقدّر.`
+        : '';
+    const sectorAnalysis = `قطاع ${concept} في ${city} من القطاعات المرتبطة بالإنفاق الاستهلاكي المحلي، ويستفيد من برامج دعم المنشآت الصغيرة والمتوسطة ضمن رؤية 2030.${somPart} (نص استرشادي مولَّد من مدخلات دراستك — راجعه وأسنده بأرقام سوق فعلية قبل التقديم لممول.)`;
 
-    const industryAnalysis = `صناعة ${concept} تتسم بتنافسية متوسطة إلى عالية، مع لاعبين كبار ومشاريع صغيرة ومتوسطة. العوامل الرئيسية: الجودة، السعر، الموقع، و experience العميل. التوجهات: الرقمنة، التوصيل، والتخصيص حسب احتياجات الشريحة.`;
+    const industryAnalysis = `المنافسة في نشاط ${concept} تتراوح عادة بين متوسطة وعالية، بين لاعبين راسخين ومشاريع صغيرة ومتوسطة. عوامل التنافس الرئيسية: الجودة، السعر، الموقع، وتجربة العميل. التوجهات العامة: الرقمنة، التوصيل، والتخصيص حسب احتياجات الشريحة.`;
 
     return { sectorAnalysis, industryAnalysis };
 }
@@ -145,8 +149,7 @@ export function generateMarketAnalysisSummary(state) {
     const parts = [
         sector.sectorAnalysis,
         sector.industryAnalysis,
-        `السوق المتاح: ${desc.tam?.description || ''}. السوق المستهدف: ${desc.sam?.description || ''}. الحصة المستهدفة: ${desc.som?.description || ''}.`,
-        ' (تحليل السوق مبني على معايير دراسات الجدوى المعتمدة محلياً — رؤية 2030، منشآت، بنك التنمية الاجتماعية.)'
+        `السوق المتاح: ${desc.tam?.description || ''}. السوق المستهدف: ${desc.sam?.description || ''}. الحصة المستهدفة: ${desc.som?.description || ''}.`
     ].filter(Boolean);
     return parts.join(' ');
 }
@@ -202,11 +205,15 @@ export function generateSWOT(state) {
     if (pos.length > 0) strengths.push(`هيكل فريق واضح: ${pos.slice(0, 2).map(x => x?.position || x?.title).filter(Boolean).join('، ') || 'كادر تشغيلي'}`);
     if (streams.length > 1) strengths.push('تنوع في مصادر الإيرادات المتوقعة');
 
-    const weaknesses = [
-        'حجم مشروع صغير أو متوسط في مرحلة الانطلاق',
-        'الحاجة لبناء الوعي بالعلامة التجارية',
-        'محدودية الموارد المالية في البداية'
-    ];
+    // نقاط ضعف مبنية على مدخلات الدراسة الفعلية قدر الإمكان (كانت 3 نقاط متطابقة لكل مشروع)
+    const weaknesses = ['علامة تجارية جديدة تحتاج بناء وعي في السوق'];
+    const financing = state?.financing?.sources || {};
+    const equityAmt = Number(financing.equity?.amount || 0);
+    const loanAmt = Number(financing.bankLoan?.amount || 0);
+    if (loanAmt > 0 && loanAmt >= equityAmt) weaknesses.push('اعتماد ملموس على التمويل بالدين (أقساط تضغط على التدفق النقدي)');
+    if (pos.length <= 2) weaknesses.push('فريق عمل محدود العدد في مرحلة الانطلاق');
+    if (streams.length <= 1) weaknesses.push('الاعتماد على مصدر إيراد واحد يزيد حساسية المشروع لتقلب الطلب');
+    if (weaknesses.length < 3) weaknesses.push('محدودية الموارد المالية والتشغيلية في البداية مقارنة بالمنافسين الراسخين');
 
     const opportunities = [
         `نمو الطلب المحلي على ${concept} في ${city}`,
@@ -284,44 +291,44 @@ export function generateCompetitors(state) {
 
     if (isFandB) {
         return [
-            { name: `سلسلة أو فرع راسخ في ${city}`, strengths: 'علامة معروفة، ولاء عملاء', weaknesses: 'أسعار أعلى، بطء في التحديث', marketShare: 28, advantage: 'الانتشار' },
-            { name: 'منافس وافد (فرانشايز)', strengths: 'دعم مركزي، تسويق قوي', weaknesses: 'تكيف محدود مع الأذواق المحلية', marketShare: 18, advantage: 'العلامة' },
-            { name: 'مشاريع محلية صغيرة', strengths: 'مرونة، أسعار منافسة، طابع محلي', weaknesses: 'محدودية التمويل والتوسع', marketShare: 22, advantage: 'السعر والمرونة' }
+            { name: `سلسلة أو فرع راسخ في ${city}`, strengths: 'علامة معروفة، ولاء عملاء', weaknesses: 'أسعار أعلى، بطء في التحديث', marketShare: null, advantage: 'الانتشار' },
+            { name: 'منافس وافد (فرانشايز)', strengths: 'دعم مركزي، تسويق قوي', weaknesses: 'تكيف محدود مع الأذواق المحلية', marketShare: null, advantage: 'العلامة' },
+            { name: 'مشاريع محلية صغيرة', strengths: 'مرونة، أسعار منافسة، طابع محلي', weaknesses: 'محدودية التمويل والتوسع', marketShare: null, advantage: 'السعر والمرونة' }
         ];
     }
     if (isRetail) {
         return [
-            { name: 'مولات وسلاسل كبرى', strengths: 'تنوع ومساحة، عروض', weaknesses: 'إيجارات عالية، منافسة داخل المول', marketShare: 35, advantage: 'الموقع والتنوع' },
-            { name: 'متاجر أحياء', strengths: 'قرب من العملاء، ولاء محلي', weaknesses: 'مساحة و Assortment محدودان', marketShare: 25, advantage: 'القرب' },
-            { name: 'منصات إلكترونية وتوصيل', strengths: 'وصول واسع، عدم حاجة لموقع', weaknesses: 'عمولات وتكاليف توصيل', marketShare: 15, advantage: 'الرقمنة' }
+            { name: 'مولات وسلاسل كبرى', strengths: 'تنوع ومساحة، عروض', weaknesses: 'إيجارات عالية، منافسة داخل المول', marketShare: null, advantage: 'الموقع والتنوع' },
+            { name: 'متاجر أحياء', strengths: 'قرب من العملاء، ولاء محلي', weaknesses: 'مساحة وتشكيلة محدودتان', marketShare: null, advantage: 'القرب' },
+            { name: 'منصات إلكترونية وتوصيل', strengths: 'وصول واسع، عدم حاجة لموقع', weaknesses: 'عمولات وتكاليف توصيل', marketShare: null, advantage: 'الرقمنة' }
         ];
     }
     if (isService) {
         return [
-            { name: `مقدم خدمة راسخ في ${city}`, strengths: 'سمعة، شبكة علاقات', weaknesses: 'أسعار أعلى، تركيز على شرائح معينة', marketShare: 30, advantage: 'السمعة' },
-            { name: 'مشاريع وافدة أو فرانشايز', strengths: 'معايير، دعم فني', weaknesses: 'تكاليف تشغيل ورسوم', marketShare: 20, advantage: 'المعايير' },
-            { name: 'ممارسون أفراد أو ورش صغيرة', strengths: 'مرونة، تكلفة منخفضة', weaknesses: 'قدرة استيعاب محدودة', marketShare: 18, advantage: 'المرونة' }
+            { name: `مقدم خدمة راسخ في ${city}`, strengths: 'سمعة، شبكة علاقات', weaknesses: 'أسعار أعلى، تركيز على شرائح معينة', marketShare: null, advantage: 'السمعة' },
+            { name: 'مشاريع وافدة أو فرانشايز', strengths: 'معايير، دعم فني', weaknesses: 'تكاليف تشغيل ورسوم', marketShare: null, advantage: 'المعايير' },
+            { name: 'ممارسون أفراد أو ورش صغيرة', strengths: 'مرونة، تكلفة منخفضة', weaknesses: 'قدرة استيعاب محدودة', marketShare: null, advantage: 'المرونة' }
         ];
     }
     if (isLogistics) {
         return [
-            { name: 'شركات شحن كبرى وطنية', strengths: 'شبكة تغطية، أسطول', weaknesses: 'أسعار أعلى للكميات الصغيرة', marketShare: 40, advantage: 'الحجم' },
-            { name: 'وكلاء ومستودعات محلية', strengths: 'قرب من السوق، مرونة', weaknesses: 'قدرة تخزين ونقل محدودة', marketShare: 25, advantage: 'القرب' },
-            { name: 'منصات رقمية وخدمات آخر ميل', strengths: 'تتبع، تكامل تقني', weaknesses: 'عمولات وتقلب الطلب', marketShare: 15, advantage: 'الرقمنة' }
+            { name: 'شركات شحن كبرى وطنية', strengths: 'شبكة تغطية، أسطول', weaknesses: 'أسعار أعلى للكميات الصغيرة', marketShare: null, advantage: 'الحجم' },
+            { name: 'وكلاء ومستودعات محلية', strengths: 'قرب من السوق، مرونة', weaknesses: 'قدرة تخزين ونقل محدودة', marketShare: null, advantage: 'القرب' },
+            { name: 'منصات رقمية وخدمات آخر ميل', strengths: 'تتبع، تكامل تقني', weaknesses: 'عمولات وتقلب الطلب', marketShare: null, advantage: 'الرقمنة' }
         ];
     }
     if (isIndustrial) {
         return [
-            { name: 'مصانع راسخة بالقطاع', strengths: 'حجم إنتاج، علاقات توريد', weaknesses: 'بطء في التكيف مع منتجات جديدة', marketShare: 35, advantage: 'الإنتاجية' },
-            { name: 'وحدات إنتاج وافدة أو مشتركة', strengths: 'تقنية، معايير جودة', weaknesses: 'تكاليف وتوطين', marketShare: 25, advantage: 'الجودة' },
-            { name: 'ورش ومنشآت صغيرة', strengths: 'مرونة، تخصيص', weaknesses: 'محدودية الطاقة والتمويل', marketShare: 18, advantage: 'المرونة' }
+            { name: 'مصانع راسخة بالقطاع', strengths: 'حجم إنتاج، علاقات توريد', weaknesses: 'بطء في التكيف مع منتجات جديدة', marketShare: null, advantage: 'الإنتاجية' },
+            { name: 'وحدات إنتاج وافدة أو مشتركة', strengths: 'تقنية، معايير جودة', weaknesses: 'تكاليف وتوطين', marketShare: null, advantage: 'الجودة' },
+            { name: 'ورش ومنشآت صغيرة', strengths: 'مرونة، تخصيص', weaknesses: 'محدودية الطاقة والتمويل', marketShare: null, advantage: 'المرونة' }
         ];
     }
 
     return [
-        { name: `منافس محلي راسخ في ${city}`, strengths: 'اسم معروف، قاعدة عملاء', weaknesses: 'بطء في التطوير', marketShare: 25, advantage: 'الحصة السوقية' },
-        { name: 'منافس وافد حديثاً', strengths: 'علامة كبيرة، استثمار', weaknesses: 'تكيف محدود مع السوق المحلي', marketShare: 15, advantage: 'التمويل' },
-        { name: 'مشاريع صغيرة ومتوسطة', strengths: 'مرونة، أسعار', weaknesses: 'محدودية الموارد والوصول', marketShare: 20, advantage: 'المرونة' }
+        { name: `منافس محلي راسخ في ${city}`, strengths: 'اسم معروف، قاعدة عملاء', weaknesses: 'بطء في التطوير', marketShare: null, advantage: 'الحصة السوقية' },
+        { name: 'منافس وافد حديثاً', strengths: 'علامة كبيرة، استثمار', weaknesses: 'تكيف محدود مع السوق المحلي', marketShare: null, advantage: 'التمويل' },
+        { name: 'مشاريع صغيرة ومتوسطة', strengths: 'مرونة، أسعار', weaknesses: 'محدودية الموارد والوصول', marketShare: null, advantage: 'المرونة' }
     ];
 }
 
@@ -355,8 +362,8 @@ export function generateFieldSuggestion(fieldName, currentValue, state) {
         // المهمة 3 — AI Writer في المعالج
         'ua-insight-text': `ميزتنا التنافسية تكمن في خبرة الفريق في ${concept} وعلاقاتنا مع السوق المحلي في ${city}، مما يتيح لنا تقديم قيمة مضافة يصعب على المنافسين الجدد محاكاتها.`,
         'national-importance': `المشروع يساهم في التنويع الاقتصادي وتوطين صناعة ${concept} في ${city}، مع إمكانية خلق فرص عمل محلية.`,
-        'selectionFactors': `الكثافة السكانية وقرب العملاء المستهدفين، توفر مواقف السيارات والبنية التحتية، تكلفة الإيجار المناسبة، واجهة الشارع والظهور التجاري، وقوانين zoning في المنطقة.`,
-        'la-factors': `الكثافة السكانية وقرب العملاء المستهدفين، توفر مواقف السيارات والبنية التحتية، تكلفة الإيجار المناسبة، واجهة الشارع والظهور التجاري، وقوانين zoning في المنطقة.`,
+        'selectionFactors': `الكثافة السكانية وقرب العملاء المستهدفين، توفر مواقف السيارات والبنية التحتية، تكلفة الإيجار المناسبة، واجهة الشارع والظهور التجاري، واشتراطات البلدية وتصنيف استخدام الموقع في المنطقة.`,
+        'la-factors': `الكثافة السكانية وقرب العملاء المستهدفين، توفر مواقف السيارات والبنية التحتية، تكلفة الإيجار المناسبة، واجهة الشارع والظهور التجاري، واشتراطات البلدية وتصنيف استخدام الموقع في المنطقة.`,
         'problemStatement': `نقص في خيارات ${concept} الجيدة في ${city}، مع حاجة السوق لتجربة عميل متميزة وأسعار معقولة.`,
         'exec-problemStatement': `نقص في خيارات ${concept} الجيدة في ${city}، مع حاجة السوق لتجربة عميل متميزة وأسعار معقولة.`,
         'uniqueValueProposition': `نقدم ${concept} بجودة عالية وخدمة متميزة، مع التركيز على تجربة العميل والأسعار التنافسية في ${city}.`,
@@ -399,7 +406,7 @@ export function generateIntroSuggestions(state) {
     const cityCoords = { الرياض: [24.7136, 46.6753], جدة: [21.5433, 39.1728], مكة: [21.4225, 39.8262], 'مكة المكرمة': [21.4225, 39.8262], المدينة: [24.5247, 39.5692], الدمام: [26.4207, 50.0888], الخبر: [26.2172, 50.1971], الطائف: [21.2703, 40.4158], تبوك: [28.3838, 36.5550], بريدة: [26.3260, 43.9750] };
     const coords = cityCoords[city?.trim()] || cityCoords['الرياض'];
     const locationAnalysis = {
-        selectionFactors: `الكثافة السكانية، قرب العملاء المستهدفين، تكلفة الإيجار، البنية التحتية والمواقف، واجهة الشارع والظهور، قوانين zoning.`,
+        selectionFactors: `الكثافة السكانية، قرب العملاء المستهدفين، تكلفة الإيجار، البنية التحتية والمواقف، واجهة الشارع والظهور، اشتراطات البلدية وتصنيف استخدام الموقع.`,
         alternativesComparison: `تم تقييم عدة مواقع في ${city} ومقارنة التكلفة والوصولية والمنافسة المحلية.`,
         chosenReason: `الموقع المختار يوازن بين التكلفة والوصولية وملاءمته للشريحة المستهدفة.`,
         coordinates: { lat: coords[0], lng: coords[1] },
@@ -784,16 +791,12 @@ export function generateMitigationSuggestions(risks) {
  * @param {string} sector - القطاع أو النشاط
  * @returns {{ tam: number, sam: number, som: number }}
  */
-export function generateMarketEstimates(city, sector) {
-    const cityFactor = { الرياض: 2, جدة: 1.5, مكة: 1.2, 'مكة المكرمة': 1.2, المدينة: 1.1, الدمام: 1.2, الخبر: 1.1, الطائف: 1, تبوك: 0.9, بريدة: 0.9 }[city?.trim() || ''] || 1;
-    const s = (sector || '').toLowerCase();
-    let sectorFactor = 1;
-    if (/مطعم|كافي|قهوة|فود|طعام|تجزئة|بقالة|متجر|بيع|retail|f&b/i.test(s)) sectorFactor = 1.25;
-    else if (/خدمي|صحي|تعليم|استشار|service/i.test(s)) sectorFactor = 1.1;
-    else if (/لوجستي|شحن|نقل|تخزين|توزيع|استيراد|تصدير/i.test(s)) sectorFactor = 1.35;
-    else if (/صناع|مصنع|إنتاج|تصنيع/i.test(s)) sectorFactor = 1.2;
-    const base = 1_000_000 * cityFactor * sectorFactor;
-    return { tam: Math.round(base * 5), sam: Math.round(base * 2), som: Math.round(base * 0.4) };
+export function generateMarketEstimates() {
+    // مبدأ «لا محتوى مزيف»: كانت هذه الدالة تختلق أرقام سوق
+    // (مليون × عامل مدينة × عامل قطاع) تُقدَّم كتقديرات TAM/SAM/SOM في التقرير.
+    // لا نُدرج أرقام سوق غير حقيقية — المستخدم يُدخل تقديراته من مصادر فعلية
+    // (الهيئة العامة للإحصاء، تقارير القطاع) والأوصاف النصية تشرح له كيف.
+    return { tam: null, sam: null, som: null };
 }
 
 /**
@@ -1056,15 +1059,17 @@ export function generatePositions(state) {
  * @param {object} state - { projectInfo, marketing }
  * @returns {Array}
  */
-export function generateCompetitorBenchmark(state) {
-    const concept = or(state?.projectInfo?.concept, 'النشاط');
+export function generateCompetitorBenchmark() {
+    // هيكل معايير جاهز بلا ترتيبات مُختلَقة — كانت تُعبّأ برُتب وهمية (نحن 1 والمنافس 3…)
+    // تصل للتقرير كأنها تقييم فعلي. المستخدم وحده من يعرف منافسيه.
+    const NOTE = 'قيّم من 1 (الأفضل) إلى 4 حسب معرفتك الفعلية بالمنافسين';
     return [
-        { criterion: 'المنتجات والخدمات', importance: 'high', myRank: 2, comp1Rank: 1, comp2Rank: 3, comp3Rank: 4, notes: '' },
-        { criterion: 'السعر', importance: 'high', myRank: 2, comp1Rank: 3, comp2Rank: 1, comp3Rank: 4, notes: '' },
-        { criterion: 'الجودة', importance: 'high', myRank: 1, comp1Rank: 2, comp2Rank: 3, comp3Rank: 3, notes: '' },
-        { criterion: 'الموقع', importance: 'medium', myRank: 2, comp1Rank: 1, comp2Rank: 4, comp3Rank: 3, notes: '' },
-        { criterion: 'المظهر والتصميم', importance: 'medium', myRank: 2, comp1Rank: 2, comp2Rank: 1, comp3Rank: 4, notes: '' },
-        { criterion: 'مستوى الخدمة', importance: 'high', myRank: 1, comp1Rank: 3, comp2Rank: 2, comp3Rank: 4, notes: '' }
+        { criterion: 'المنتجات والخدمات', importance: 'high', myRank: null, comp1Rank: null, comp2Rank: null, comp3Rank: null, notes: NOTE },
+        { criterion: 'السعر', importance: 'high', myRank: null, comp1Rank: null, comp2Rank: null, comp3Rank: null, notes: NOTE },
+        { criterion: 'الجودة', importance: 'high', myRank: null, comp1Rank: null, comp2Rank: null, comp3Rank: null, notes: NOTE },
+        { criterion: 'الموقع', importance: 'medium', myRank: null, comp1Rank: null, comp2Rank: null, comp3Rank: null, notes: NOTE },
+        { criterion: 'المظهر والتصميم', importance: 'medium', myRank: null, comp1Rank: null, comp2Rank: null, comp3Rank: null, notes: NOTE },
+        { criterion: 'مستوى الخدمة', importance: 'high', myRank: null, comp1Rank: null, comp2Rank: null, comp3Rank: null, notes: NOTE }
     ];
 }
 
@@ -1370,12 +1375,21 @@ export function generateRevenueStreams(state) {
     return [{ service: or(concept, 'الخدمة الرئيسية'), customersPerMonth: 150, avgPrice: 200, growthRate: 0.07 }];
 }
 
+// الكائن المجمَّع يجب أن يشمل *كل* الدوال المصدَّرة — كان ناقصاً 7 دوال
+// (generateMarketAnalysisSummary وأخواتها) فترمي أزرار التوليد TypeError وقت التشغيل.
 export const InternalAIGenerator = {
     generateBusinessModel,
     generateMarketDescriptions,
+    generateMarketAnalysisSummary,
     generateSWOT,
     generateSegments,
     generateCompetitors,
+    generateCompetitorBenchmark,
+    generateFieldSuggestion,
+    generateSuppliers,
+    generateEstablishmentCosts,
+    generateOperationalKpis,
+    generateProductionCapacity,
     generateMarketingMix,
     generateIntroSuggestions,
     generateSectorIndustry,

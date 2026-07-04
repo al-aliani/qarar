@@ -8,5 +8,7 @@ export { ExcelExporter, exportToExcel } from './excelExporter.js';
 export { exportToCSV } from './csvExporter.js';
 export { exportExcel } from './excel.js';
 export { PDFGenerator } from './pdfGenerator.js';
-export { exportPDF } from './pdf.js';
+// ⛔ exportPDF (pdf.js) أُزيل من الواجهة العامة (تدقيق 2026-07-04):
+// مُصدِّر قديم لقالب «مطاعم السعودية» يطبع عنواناً مثبتاً وJSON خاماً داخل التقرير —
+// لا يستدعيه أي مسار حي؛ إعادة تصديره هنا كانت تسمح باستخدامه خطأً.
 export { adaptRunFullModelForExcel } from './adaptRunFullModelForExcel.js';

@@ -88,6 +88,82 @@ export async function runQAChecks(state, results) {
                     path: 'projectInfo.name'
                 });
             }
+
+            // ═══ فحوصات الاتساق الداخلي (تدقيق 2026-07-04) ═══
+            // تتحقق أن أعمدة قائمة الدخل «تُجمَع» فعلاً وأن الميزانية متوازنة —
+            // أي كسر هنا يعني تناقضاً سيصل للعميل في الملف المُصدَّر.
+
+            // 1) هوية قائمة الدخل لكل سنة: المكونات = الصافي (± ريال واحد)
+            (results?.incomeStatement || []).forEach((y) => {
+                const computed = (y.revenue || 0) - (y.variableCosts || 0) - (y.fixedCosts || 0)
+                    - (y.franchiseFees || 0) - (y.builderSuccessFee || 0) - (y.depreciation || 0)
+                    - (y.interest || 0) - (y.zakat || 0) - (y.tax || 0);
+                if (Number.isFinite(computed) && Math.abs(computed - (y.netIncome || 0)) > 1) {
+                    qaResults.hardErrors.push({
+                        code: 'INCOME_STATEMENT_MISMATCH',
+                        message: `قائمة الدخل لا تُجمَع في السنة ${y.year}: مجموع البنود لا يساوي صافي الربح (فرق ${Math.round(computed - y.netIncome)} ريال).`,
+                        path: 'incomeStatement'
+                    });
+                }
+            });
+
+            // 2) توازن الميزانية العمومية (± 2 ريال تقريب)
+            (results?.balanceSheets || []).forEach((bs) => {
+                const assets = Number(bs?.assets?.total ?? NaN);
+                const liabEq = Number(bs?.totalLiabilitiesAndEquity ?? ((bs?.liabilities?.total || 0) + (bs?.equity?.total || 0)));
+                if (Number.isFinite(assets) && Number.isFinite(liabEq) && Math.abs(assets - liabEq) > 2) {
+                    qaResults.hardErrors.push({
+                        code: 'BALANCE_SHEET_UNBALANCED',
+                        message: `الميزانية العمومية غير متوازنة في السنة ${bs.year ?? '؟'} (فرق ${Math.round(assets - liabEq)} ريال).`,
+                        path: 'balanceSheets'
+                    });
+                }
+            });
+
+            // 3) قرار GO مع استرداد غير محقق = تناقض
+            const payback = kpis?.paybackPeriod;
+            if (results?.decision === 'GO' && (payback == null || !Number.isFinite(payback) || payback <= 0)) {
+                qaResults.hardErrors.push({
+                    code: 'GO_WITHOUT_PAYBACK',
+                    message: 'القرار GO بينما رأس المال لا يُسترد خلال فترة الدراسة — تناقض يجب مراجعته.',
+                    path: 'decision'
+                });
+            }
+
+            // 4) مؤشرات مبالغ فيها = افتراضات غير واقعية على الأرجح (تنبيه للمراجعة)
+            const irr = Number(kpis?.irr ?? NaN);
+            if (Number.isFinite(irr) && irr >= 1) {
+                qaResults.softWarnings.push({
+                    code: 'IRR_UNREALISTIC',
+                    message: `معدل العائد الداخلي ${(irr * 100).toFixed(0)}% مرتفع بشكل غير معتاد — راجع اكتمال التكاليف (إيجار، رواتب، تشغيل) قبل تقديمه لممول.`,
+                    path: 'kpis.irr'
+                });
+            }
+            const netMargin = Number(kpis?.netMargin ?? NaN);
+            if (Number.isFinite(netMargin) && netMargin > 0.40) {
+                qaResults.softWarnings.push({
+                    code: 'MARGIN_UNREALISTIC',
+                    message: `هامش الربح الصافي ${(netMargin * 100).toFixed(0)}% أعلى من المعتاد لمعظم الأنشطة (10–25%) — تأكد أن كل التكاليف مُدخلة.`,
+                    path: 'kpis.netMargin'
+                });
+            }
+            const payback2 = Number(payback ?? NaN);
+            if (Number.isFinite(payback2) && payback2 > 0 && payback2 < 1.2 && Number(results?.capex?.total || 0) > 100000) {
+                qaResults.softWarnings.push({
+                    code: 'PAYBACK_TOO_FAST',
+                    message: `فترة استرداد ${payback2.toFixed(1)} سنة سريعة بشكل استثنائي — ممول متمرس سيشكك في الافتراضات. راجع الإيرادات والتكاليف.`,
+                    path: 'kpis.paybackPeriod'
+                });
+            }
+            // 5) DSCR أقل من 1 مع وجود قرض = خطر رفض تمويلي
+            const dscr = Number(kpis?.dscr ?? NaN);
+            if (Number.isFinite(dscr) && dscr > 0 && dscr < 1) {
+                qaResults.softWarnings.push({
+                    code: 'DSCR_BELOW_ONE',
+                    message: `نسبة تغطية خدمة الدين ${dscr.toFixed(2)} أقل من 1 — التدفق لا يغطي أقساط القرض؛ أعد هيكلة التمويل قبل التقديم للبنك.`,
+                    path: 'kpis.dscr'
+                });
+            }
         } catch (coherenceErr) {
             console.warn('Coherence checks failed:', coherenceErr);
         }

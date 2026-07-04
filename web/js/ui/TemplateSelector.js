@@ -82,6 +82,9 @@ export class TemplateSelector {
             if (detailedContainer) {
                 detailedContainer.innerHTML = '<div class="card">حدث خطأ أثناء تحميل المشاريع المحفوظة</div>';
             }
+            // أزرار تطبيق القوالب تُربط هنا أيضاً — كان فشل تحميل المشاريع
+            // المحفوظة يترك كل أزرار القوالب ميتة
+            this.bindProjectEvents();
         });
     }
 
@@ -288,13 +291,12 @@ export class TemplateSelector {
         const empty = createEmptyStudy();
         const merged = JSON.parse(JSON.stringify(empty));
         if (template.data) {
-            Object.keys(template.data).forEach(section => {
+            const data = this._normalizeTemplateData(template.data);
+            Object.keys(data).forEach(section => {
                 if (merged[section] && typeof merged[section] === 'object' && !Array.isArray(merged[section])) {
-                    merged[section] = { ...merged[section], ...template.data[section] };
-                } else if (merged[section] !== undefined) {
-                    merged[section] = template.data[section];
+                    merged[section] = { ...merged[section], ...data[section] };
                 } else {
-                    merged[section] = template.data[section];
+                    merged[section] = data[section];
                 }
             });
         }
@@ -310,6 +312,64 @@ export class TemplateSelector {
         toast.success('تم تحميل القالب: ' + (template.label || template.id));
     }
 
+    /**
+     * توحيد مفاتيح القالب مع مخطط الدراسة قبل التطبيق —
+     * كانت القوالب تكتب بمفاتيح لا يقرأها المحرك ولا الجداول:
+     * title→position (فيظهر عمود المسمى فارغاً)، name→service،
+     * depreciationYears→depreciationRate (فتُهمل نسب الإهلاك المدروسة)،
+     * وopex.costItems قسم غير موجود في المخطط أصلاً (فتضيع كل التكاليف التشغيلية).
+     */
+    _normalizeTemplateData(rawData) {
+        const d = JSON.parse(JSON.stringify(rawData || {}));
+
+        (d.hr?.positions || []).forEach(p => {
+            if (p.title && !p.position) p.position = p.title;
+            if (p.months == null) p.months = 12;
+        });
+
+        (d.revenue?.streams || []).forEach(s => {
+            if (s.name && !s.service) s.service = s.name;
+        });
+
+        const fixAssets = (arr) => (arr || []).forEach(a => {
+            const years = Number(a.depreciationYears);
+            if (Number.isFinite(years) && years > 0 && a.depreciationRate == null) {
+                a.depreciationRate = Math.round((1 / years) * 10000) / 10000;
+            }
+        });
+        fixAssets(d.technical?.buildings);
+        fixAssets(d.technical?.equipment);
+        fixAssets(d.technical?.furniture);
+        fixAssets(d.technical?.vehicles);
+        fixAssets(d.techResources?.techResources);
+
+        // opex.costItems → الأقسام التي يقرأها المحرك فعلاً
+        if (Array.isArray(d.opex?.costItems) && d.opex.costItems.length) {
+            const admin = [];
+            const campaigns = [];
+            d.opex.costItems.forEach(item => {
+                const name = String(item.name || '');
+                const monthly = Number(item.monthlyAmount ?? item.monthly ?? 0);
+                if (!monthly) return;
+                // GOSI والإقامات يحسبها المحرك تلقائياً من الرواتب والجنسيات — لا نكررها
+                if (/GOSI|تأمينات|إقامات|إقامة/i.test(name)) return;
+                if (/تسويق|إعلان/i.test(name)) campaigns.push({ name, type: 'operating', monthly });
+                else admin.push({ name, monthly });
+            });
+            if (admin.length) {
+                d.administrative = d.administrative || {};
+                d.administrative.administrative = [...(d.administrative.administrative || []), ...admin];
+            }
+            if (campaigns.length) {
+                d.marketing = d.marketing || {};
+                d.marketing.campaigns = [...(d.marketing.campaigns || []), ...campaigns];
+            }
+            delete d.opex;
+        }
+
+        return d;
+    }
+
     applyTemplate(template) {
         console.log('Applying template:', template.id);
 
@@ -317,15 +377,21 @@ export class TemplateSelector {
         const studyData = this.store.get();
         const newData = { ...studyData };
 
-        // Apply template data to specific sections
-        if (template.data.projectInfo) newData.projectInfo = { ...newData.projectInfo, ...template.data.projectInfo };
-        if (template.data.technical) newData.technical = { ...newData.technical, ...template.data.technical };
-        if (template.data.hr) newData.hr = { ...newData.hr, ...template.data.hr };
-        if (template.data.revenue) newData.revenue = { ...newData.revenue, ...template.data.revenue };
-        if (template.data.marketing) newData.marketing = { ...newData.marketing, ...template.data.marketing };
+        // كل أقسام القالب تُنسخ (كانت قائمة مثبتة تنسخ 5 أقسام فقط وتُسقط opex
+        // — الإيجار وكل التكاليف التشغيلية — فيبدو مشروع القالب أكثر ربحية زوراً)
+        const data = this._normalizeTemplateData(template.data);
+        Object.keys(data).forEach(section => {
+            const tplValue = data[section];
+            if (tplValue && typeof tplValue === 'object' && !Array.isArray(tplValue)
+                && newData[section] && typeof newData[section] === 'object' && !Array.isArray(newData[section])) {
+                newData[section] = { ...newData[section], ...tplValue };
+            } else {
+                newData[section] = tplValue;
+            }
+        });
 
         this.store.set(newData);
-        toast.success('تم تطبيق قالب «' + (template.label || template.id) + '»');
+        toast.success('تم تطبيق قالب «' + (template.label || template.id) + '» — راجع الأرقام وعدّلها حسب واقعك');
 
         if (this.onTemplateApplied) {
             this.onTemplateApplied(template);

@@ -382,8 +382,11 @@ export class FinancingStructure {
         const debt = sources.bankLoan?.amount || 0;
         const costOfEquity = 0.15; // تكلفة حقوق الملكية 15%: افتراض سوقي للمشاريع الصغيرة في السوق السعودي
         const costOfDebt = (sources.bankLoan?.interestRate || 0.08);
-        // معدل الضريبة يُقرأ من افتراضات الدراسة (كسر: 0.15 = 15%) مع 15% كقيمة احتياطية
-        const taxRate = Number(this.store?.getState?.()?.assumptions?.taxRate ?? 0.15);
+        // الدرع الضريبي للدين: بنظام الزكاة السعودي الاقتطاع الفعلي على الربح =
+        // زكاة 2.5% × الحصة السعودية + ضريبة دخل × الحصة الأجنبية (متسق مع المحرك)
+        const _a = this.store?.getState?.()?.assumptions || {};
+        const _fs = Math.min(1, Math.max(0, Number(_a.foreignOwnershipRate ?? 0)));
+        const taxRate = (0.025 * (1 - _fs)) + (Number(_a.taxRate ?? 0.20) * _fs);
 
         const total = equity + debt || 1;
         const we = equity / total;

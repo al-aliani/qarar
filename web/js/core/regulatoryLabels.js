@@ -91,7 +91,8 @@ export function getAuditorTooltip(key) {
 export const FIELD_HINTS = {
     // نِسب (تُعرض وتُدخَل كنسبة مئوية)
     discountRate: { hint: 'النطاق المعتاد ١٠–١٥٪ (تكلفة رأس المال أو العائد البديل المقبول).', placeholder: '10' },
-    taxRate: { hint: 'ضريبة دخل الشركات في السعودية ١٥٪ (الزكاة ٢.٥٪ تُحسب تلقائياً).', placeholder: '15' },
+    taxRate: { hint: 'ضريبة الدخل ٢٠٪ وتُطبق فقط على حصة الملكية الأجنبية. المشروع السعودي ١٠٠٪ يدفع زكاة ٢.٥٪ فقط (تُحسب تلقائياً).', placeholder: '20' },
+    foreignOwnershipRate: { hint: 'نسبة الشركاء غير السعوديين/الخليجيين في الملكية. اتركها ٠ إن كان المشروع سعودياً بالكامل.', placeholder: '0' },
     inflationRate: { hint: 'معدل تضخم سنوي معتاد ٢–٣٪.', placeholder: '2' },
     contingencyRate: { hint: 'احتياطي طوارئ معتاد ٥–١٠٪ من إجمالي الاستثمار.', placeholder: '10' },
     gosiRate: { hint: 'نسبة التأمينات الاجتماعية (حصة صاحب العمل) ~١١.٧٥٪.', placeholder: '11.75' },

@@ -24,9 +24,11 @@ export function calculateIdeaScore(state, results = null) {
     breakdown.completeness = Math.round((completenessPct / 100) * 40);
 
     // 2) هامش الربح المتوقع — وزن 30%
+    // Number(undefined) = NaN وليس null، فـ ?? لا يلتقطها — نستخدم حارس Finite صريحاً
+    const safeNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
     let marginScore = 0;
     if (results && typeof results.indicators === 'object') {
-        const netMargin = Number(results.indicators.netMargin) ?? 0;
+        const netMargin = safeNum(results.indicators.netMargin);
         if (netMargin >= 0.20) marginScore = 30;
         else if (netMargin >= 0.15) marginScore = 25;
         else if (netMargin >= 0.10) marginScore = 20;
@@ -36,7 +38,7 @@ export function calculateIdeaScore(state, results = null) {
         try {
             const res = calculateStudy(state);
             if (res && res.indicators) {
-                const netMargin = Number(res.indicators.netMargin) ?? 0;
+                const netMargin = safeNum(res.indicators.netMargin);
                 if (netMargin >= 0.20) marginScore = 30;
                 else if (netMargin >= 0.15) marginScore = 25;
                 else if (netMargin >= 0.10) marginScore = 20;

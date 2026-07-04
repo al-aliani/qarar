@@ -67,11 +67,7 @@ class StudyStore {
                         throw new Error('Parsed state is invalid (null or not an object)');
                     }
 
-                    // Decrypt sensitive fields if encrypted
-                    const decrypted = await encryptionService.decryptSensitiveFields(parsed, SENSITIVE_FIELDS);
-
-                    // Merge with empty study to ensure all new fields/sections exist (Schema Evolution)
-                    this.state = this.mergeWithDefaults(decrypted);
+                    this.state = await this._hydrate(parsed);
                 } catch (parseErr) {
                     console.warn('Main save corrupted, trying backup...');
                     monitoring.captureException(parseErr, { source: 'store.load', step: 'main_parse' });
@@ -85,7 +81,7 @@ class StudyStore {
                                 throw new Error('Backup state is invalid');
                             }
 
-                            this.state = await encryptionService.decryptSensitiveFields(parsed, SENSITIVE_FIELDS);
+                            this.state = await this._hydrate(parsed);
                             console.info('Restored from backup successfully.');
                             monitoring.addBreadcrumb('Restored from backup', 'storage', 'info');
                         } catch (backupErr) {
@@ -108,7 +104,7 @@ class StudyStore {
                             throw new Error('Backup state is invalid');
                         }
 
-                        this.state = await encryptionService.decryptSensitiveFields(parsed, SENSITIVE_FIELDS);
+                        this.state = await this._hydrate(parsed);
                         console.info('Restored from backup (main missing).');
                         monitoring.addBreadcrumb('Restored from backup (main missing)', 'storage', 'info');
                     } catch (backupErr) {
@@ -134,10 +130,12 @@ class StudyStore {
                         const cloudResult = await PersistenceService.load(projectId);
 
                         if (cloudResult && cloudResult.data && cloudResult.source === 'cloud') {
-                            // Cloud data is newer or only available in cloud
+                            // Cloud data is newer or only available in cloud.
+                            // _hydrate repairs rows that were uploaded encrypted by the old
+                            // (removed) at-rest encryption — see _sanitizeCorruptedFields.
                             console.log('✅ Loaded study from cloud:', projectId);
-                            this.state = cloudResult.data;
-                            await this.saveLocal(); // Update local cache
+                            this.state = await this._hydrate(cloudResult.data);
+                            await this.saveLocal(); // Update local cache (re-writes repaired plaintext)
                             this.notify();
                         } else if (cloudResult && cloudResult.data && cloudResult.source === 'local') {
                             // Local data exists, but we checked cloud first (good)
@@ -156,6 +154,65 @@ class StudyStore {
         }
     }
 
+    /**
+     * مسار ترطيب موحّد لأي حالة قادمة من التخزين (محلي أو سحابي):
+     * 1) محاولة فك تشفير الحقول الموروثة (يعمل فقط إن كان مفتاح الجلسة نفسه ما زال حياً).
+     * 2) الدمج مع المخطط الافتراضي.
+     * 3) تعقيم الحقول التالفة: أي حقل حسّاس بقي نصاً مشفّراً غير قابل للفك
+     *    (مفتاحه فُقد بإغلاق التبويب) يُعاد إلى قيمته الافتراضية بدل أن يكسر المحرك.
+     */
+    async _hydrate(parsed) {
+        const decrypted = await encryptionService.decryptSensitiveFields(parsed, SENSITIVE_FIELDS);
+        const merged = this.mergeWithDefaults(decrypted);
+        const repaired = this._sanitizeCorruptedFields(merged);
+        if (repaired.length) {
+            console.warn('[Store] أُصلحت حقول تالفة من التشفير القديم (أُعيدت للافتراضي):', repaired);
+            monitoring.addBreadcrumb('Repaired corrupted encrypted fields', 'storage', 'warning', { fields: repaired });
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('qarar:data-repaired', { detail: { fields: repaired } }));
+            }
+        }
+        return merged;
+    }
+
+    /**
+     * يكتشف بقايا التشفير القديم: نص Base64 في موضع يتوقع المخطط فيه
+     * مصفوفة/كائناً/رقماً، ويعيده إلى الافتراضي. يعيد قائمة الحقول المُصلحة.
+     */
+    _sanitizeCorruptedFields(state) {
+        const defaults = createEmptyStudy();
+        const repaired = [];
+        for (const field of SENSITIVE_FIELDS) {
+            const keys = field.split('.');
+            let tgt = state;
+            let dfl = defaults;
+            for (let i = 0; i < keys.length - 1; i++) {
+                tgt = tgt?.[keys[i]];
+                dfl = dfl?.[keys[i]];
+            }
+            if (!tgt || typeof tgt !== 'object' || !dfl) continue;
+            const last = keys[keys.length - 1];
+            const val = tgt[last];
+            const defVal = dfl[last];
+            if (typeof val !== 'string') continue;
+            if (typeof defVal === 'number' || typeof defVal === 'boolean') {
+                // أرقام حُفظت كنصوص (مسار fallback القديم): "0.15" → 0.15
+                const n = Number(val);
+                if (Number.isFinite(n)) {
+                    tgt[last] = typeof defVal === 'boolean' ? Boolean(n) : n;
+                } else {
+                    tgt[last] = defVal;
+                    repaired.push(field);
+                }
+            } else if (Array.isArray(defVal) || (typeof defVal === 'object' && defVal !== null)) {
+                // نص مكان بنية = حمولة مشفّرة فُقد مفتاحها
+                tgt[last] = JSON.parse(JSON.stringify(defVal));
+                repaired.push(field);
+            }
+        }
+        return repaired;
+    }
+
     // Safe Deep Merge for Schema Evolution
     mergeWithDefaults(loadedState) {
         const defaults = createEmptyStudy();
@@ -171,6 +228,12 @@ class StudyStore {
 
             if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
                 target[key] = sourceValue; // Arrays: overwrite (don't merge items to avoid dupes)
+            } else if (Array.isArray(targetValue) && typeof sourceValue === 'string') {
+                // نص مكان مصفوفة (حمولة تشفير قديمة تالفة) — أبقِ الافتراضي السليم
+                return;
+            } else if (typeof targetValue === 'object' && targetValue !== null && typeof sourceValue === 'string') {
+                // نص مكان كائن — نفس الحالة
+                return;
             } else if (typeof targetValue === 'object' && typeof sourceValue === 'object' && targetValue !== null && sourceValue !== null) {
                 target[key] = this._deepMerge({ ...targetValue }, sourceValue);
             } else {
@@ -262,9 +325,10 @@ class StudyStore {
                 this._versionHistory = this._versionHistory.slice(-this._versionHistoryMax);
             }
 
-            // Encrypt sensitive fields before saving
-            stateToSave = await encryptionService.encryptSensitiveFields(stateToSave, SENSITIVE_FIELDS);
-
+            // ملاحظة (2026-07-04): أُزيل تشفير الحقول قبل الحفظ نهائياً.
+            // كان المفتاح يعيش في sessionStorage فيفنى بإغلاق التبويب، فتُرفع نسخة
+            // مشفّرة غير قابلة للفك إلى السحابة وتعود كنص Base64 مكان المصفوفات
+            // («اختفاء» الإيرادات/الرواتب). الحماية الحقيقية = RLS في Supabase.
             const jsonString = JSON.stringify(stateToSave);
 
             // Check localStorage size (warn if approaching limit)
@@ -302,7 +366,7 @@ class StudyStore {
             this._saveInProgress = false;
             this._processSaveQueue(); // Process queue even on error
 
-            // If encryption fails, try saving without encryption (backward compatibility)
+            // محاولة أخيرة بنسخة جديدة من الحالة (قد يكون فشل الأولى عابراً)
             try {
                 const stateToSave = JSON.parse(JSON.stringify(this.state));
                 const jsonString = JSON.stringify(stateToSave);

@@ -226,8 +226,10 @@ export class ServiceAnalysis {
             growthRate = 0.07
         } = service;
 
-        const discountRate = assumptions.discountRate || 0.05;
-        const taxRate = assumptions.taxRate || 0.15;
+        const discountRate = assumptions.discountRate || 0.10;
+        // اقتطاع فعلي متسق مع المحرك: زكاة 2.5% على الحصة السعودية + ضريبة على حصة الأجانب
+        const foreignShare = Math.min(1, Math.max(0, Number(assumptions.foreignOwnershipRate ?? 0)));
+        const taxRate = (0.025 * (1 - foreignShare)) + (Number(assumptions.taxRate ?? 0.20) * foreignShare);
         const years = assumptions.projectionYears || 5;
 
         // Annual calculations

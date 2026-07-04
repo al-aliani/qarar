@@ -260,8 +260,13 @@ export class ReportBuilderView {
                     const riskAnalysis = state.riskAnalysis || { risks: [] };
                     const existing = riskAnalysis.risks || [];
                     const merged = [...existing];
+                    // إزالة التكرار بالاسم — كانت كل نقرة تضيف نفس المخاطر مجدداً
+                    const seen = new Set(existing.map(r => (r.name || r.description || '').trim()));
                     risks.forEach(r => {
-                        if (r && (r.name || r.description)) merged.push({
+                        const key = (r?.name || r?.description || '').trim();
+                        if (!key || seen.has(key)) return;
+                        seen.add(key);
+                        merged.push({
                             name: r.name || r.description,
                             description: r.description || r.name || '',
                             probability: r.probability || 'medium',
@@ -269,6 +274,10 @@ export class ReportBuilderView {
                             mitigation: r.mitigation || ''
                         });
                     });
+                    if (merged.length === existing.length) {
+                        toast.info('لا مخاطر جديدة — المقترحات موجودة مسبقاً في القسم.');
+                        return;
+                    }
                     this.store.update('riskAnalysis', { ...riskAnalysis, risks: merged });
                     if (this.store.notify) this.store.notify();
                     toast.success('تم توليد تحليل المخاطر. راجع قسم تحليل المخاطر.');

@@ -182,6 +182,7 @@ export class AIChatModal {
 
         if (/ملخص|تنفيذي|summary/i.test(text)) {
             const summary = await aiConnector.generateExecutiveSummary(state, results || {});
+            if (summary == null) return 'تعذر توليد الملخص حالياً — أكمل بيانات المشروع (الاسم، النشاط، الإيرادات) ثم جرّب مرة أخرى.';
             return typeof summary === 'string' ? summary : (summary?.content || JSON.stringify(summary));
         }
 

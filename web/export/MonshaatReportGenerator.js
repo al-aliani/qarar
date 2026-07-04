@@ -157,10 +157,13 @@ export class MonshaatReportGenerator {
 
         switch (id) {
             case 'executive_summary':
-                return wrap(`<p>${state.executiveSummary?.aiGeneratedText || state.executiveSummary?.projectOverview || `يهدف مشروع «${info.name || 'المشروع'}» إلى ${info.concept || 'تنفيذ نشاط تجاري'} في ${info.city || 'الموقع المحدد'}. تم إعداد هذه الدراسة بهيكل متوافق مع متطلبات منشآت قدر الإمكان.`}</p>`);
+                return wrap(`<p>${state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText || `يهدف مشروع «${info.name || 'المشروع'}» إلى ${info.concept || 'تنفيذ نشاط تجاري'} في ${info.city || 'الموقع المحدد'}. تم إعداد هذه الدراسة بهيكل متوافق مع متطلبات منشآت قدر الإمكان.`}</p>`);
             case 'market': {
                 const ma = state.marketing?.marketAnalysis || {};
-                const text = ma.summary || ma.description || (state.marketSizing?.tam?.description || state.marketSizing?.targetDistrict) || 'يُحدد حسب النشاط والمنطقة.';
+                const text = ma.summary || ma.description || state.marketSizing?.tam?.description || state.marketSizing?.targetDistrict || '';
+                // لا بيانات سوق = لا قسم — أربع كلمات حشو («يُحدد حسب النشاط والمنطقة»)
+                // في تقرير موسوم بتوافق منشآت أسوأ من غياب القسم
+                if (!String(text).trim()) return '';
                 return wrap(`<p>${text}</p>`);
             }
             case 'technical': {

@@ -55,17 +55,25 @@ export function validateRevenueStreams(streams) {
   const err = [];
   if (!Array.isArray(streams)) return { valid: true, errors: [] };
   streams.forEach((s, i) => {
+    const label = s.name || s.service || (i + 1);
     const price = num(s.avgPrice, num(s.price, num(s.pricePerUnit, null)));
     if (price != null && (Number.isNaN(price) || price < 0)) {
-      err.push(`مصدر الإيراد "${s.name || s.service || i + 1}": السعر يجب أن يكون رقماً موجباً`);
+      err.push(`مصدر الإيراد "${label}": السعر يجب أن يكون رقماً موجباً`);
+    }
+    // سعر صفر مع عملاء = إيراد وهمي صفري يمر بصمت
+    if (price === 0 && num(s.customersPerMonth, 0) > 0) {
+      err.push(`مصدر الإيراد "${label}": السعر صفر رغم وجود عملاء — أدخل السعر الفعلي`);
     }
     const growth = num(s.growthRate, null);
-    if (growth != null && !Number.isNaN(growth) && (growth < -0.5 || growth > 2)) {
-      err.push(`مصدر الإيراد "${s.name || s.service || i + 1}": معدل النمو يقترح أن يكون بين -50% و 200%`);
+    if (growth != null && !Number.isNaN(growth) && (growth < -0.5 || growth > 1)) {
+      err.push(`مصدر الإيراد "${label}": معدل النمو ${Math.round(growth * 100)}% خارج النطاق الواقعي (-50% إلى 100%) — هل قصدت ${Math.round(growth)}%؟ (النسبة تُدخل كنسبة مئوية)`);
     }
     const vol = num(s.customersPerMonth, num(s.expectedDailySales, null));
     if (vol != null && !Number.isNaN(vol) && vol < 0) {
-      err.push(`مصدر الإيراد "${s.name || s.service || i + 1}": حجم المبيعات لا يمكن أن يكون سالباً`);
+      err.push(`مصدر الإيراد "${label}": حجم المبيعات لا يمكن أن يكون سالباً`);
+    }
+    if (vol === 0 && price != null && price > 0) {
+      err.push(`مصدر الإيراد "${label}": عدد العملاء صفر رغم وجود سعر — أدخل حجم المبيعات المتوقع`);
     }
   });
   return { valid: err.length === 0, errors: err };
