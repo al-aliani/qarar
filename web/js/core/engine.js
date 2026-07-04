@@ -30,6 +30,12 @@ export function calculateStudy(study, overrides) {
     const revMult = 1 + (overrides?.revenueChange ?? 0);
     const opexMult = 1 + (overrides?.opexChange ?? overrides?.costChange ?? 0);
     const capexMult = 1 + (overrides?.capexChange ?? 0);
+    // محاور حساسية منفصلة (لرسم Tornado): سعر / حجم / تكلفة متغيرة / ثابتة
+    // — revenueChange القديم يحرك السعر والحجم معاً؛ هذه تعزلها لمعرفة المتغير المهيمن
+    const priceMult = 1 + (overrides?.priceChange ?? 0);
+    const volumeMult = 1 + (overrides?.volumeChange ?? 0);
+    const vcRateMult = 1 + (overrides?.vcRateChange ?? 0);
+    const fixedMult = 1 + (overrides?.fixedChange ?? 0);
 
     const years = study.assumptions?.projectionYears || 5;
     const inflation = study.assumptions?.inflationRate || 0.02;
@@ -244,7 +250,40 @@ export function calculateStudy(study, overrides) {
             .reduce((a, s) => a + s[field] * Math.pow(1 + (Number.isFinite(s.growth) ? s.growth : defaultGrowth), yearIndex), 0);
 
     // ═══════════════════════════════════════════════════════════
-    // 4. رأس المال العامل (فترات تغطية حسب الفئة)
+    // 3.5 مصالحة الطاقة (Capacity Reconciliation) — سقف مادي للمبيعات
+    // «تبيع 20 ألف عميل/شهر؟ كم مقعداً؟ كم دورة؟» — أول سؤال يطرحه مدقق محترف
+    // ═══════════════════════════════════════════════════════════
+    let capacityCheck = null;
+    {
+        const capRow = toArray(technical.capacityModel)[0];
+        if (capRow) {
+            const maxMonthly = Number(capRow.maxUnitsPerMonth) ||
+                (Number(capRow.seats || 0) * Number(capRow.turnsPerDay || 0) * Number(capRow.daysPerMonth || 26));
+            if (maxMonthly > 0) {
+                const plannedMonthly = year1Units / 12;
+                capacityCheck = {
+                    maxUnitsPerMonth: Math.round(maxMonthly),
+                    plannedUnitsPerMonth: Math.round(plannedMonthly),
+                    utilizationOfMax: maxMonthly > 0 ? plannedMonthly / maxMonthly : null,
+                    exceeded: plannedMonthly > maxMonthly
+                };
+            }
+        }
+    }
+
+    // منحنى التصاعد (Ramp-Up): الإيراد لا يقفز لكامل الخطة من الشهر الأول —
+    // معامل السنة الأولى = متوسط منحنى خطي يبلغ 100% عند شهر rampUpMonths
+    const rampUpMonths = Math.max(0, Math.min(24, Number(study.assumptions?.rampUpMonths || 0)));
+    let rampFactorY1 = 1;
+    if (rampUpMonths > 1) {
+        let s = 0;
+        for (let m = 1; m <= 12; m++) s += Math.min(1, m / rampUpMonths);
+        rampFactorY1 = s / 12;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 4. رأس المال العامل: دورة نقدية فعلية (DSO/DIO/DPO) إن حُددت،
+    //    وإلا فترات تغطية بالأشهر (الطريقة المبسطة)
     // ═══════════════════════════════════════════════════════════
     const wcMonths = Number(study.assumptions?.workingCapitalMonths);
     const baseMonths = Number.isFinite(wcMonths) && wcMonths > 0 ? wcMonths : 3;
@@ -263,10 +302,55 @@ export function calculateStudy(study, overrides) {
     const monthlyMarketing = annualMarketing / 12;
     const wcMarketing = monthlyMarketing * coverage.marketing;
     const monthlyVariable = year1OperatingVCBase / 12;
-    const wcCOGS = monthlyVariable * coverage.cogs;
+    let wcCOGS = monthlyVariable * coverage.cogs;
+
+    // سياسة الدورة النقدية: AR + مخزون − ذمم موردين تحل محل مخزون «الأشهر» —
+    // حاسمة لنشاط B2B (تحصيل آجل) أو مخزون بطيء الدوران
+    const wcp = study.assumptions?.workingCapitalPolicy || {};
+    const dso = Number(wcp.dsoDays);
+    const dpo = Number(wcp.dpoDays);
+    const dio = Number(wcp.dioDays);
+    const hasCashCycle = [dso, dpo, dio].some(v => Number.isFinite(v) && v > 0);
+    let cashCycle = null;
+    if (hasCashCycle) {
+        const rev1Total = year1OperatingRevenueBase + year1NonOperatingRevenueBase;
+        const ar = rev1Total * (Number.isFinite(dso) && dso > 0 ? dso : 0) / 365;
+        const inventory = year1OperatingVCBase * (Number.isFinite(dio) && dio > 0 ? dio : 0) / 365;
+        const ap = year1OperatingVCBase * (Number.isFinite(dpo) && dpo > 0 ? dpo : 0) / 365;
+        cashCycle = { receivables: ar, inventory, payables: ap, net: Math.max(0, ar + inventory - ap) };
+        wcCOGS = cashCycle.net; // يحل محل تغطية COGS بالأشهر
+    }
 
     const workingCapital = wcRent + wcSalaries + wcMarketing + wcCOGS;
     const totalInvestment = totalCapex + workingCapital;
+
+    // ═══════════════════════════════════════════════════════════
+    // 4.5 إهلاك نظامي (زكوي/ضريبي) بالقسط المتناقص — مجموعات ZATCA مبسطة:
+    //     مبانٍ ثابتة 5%، آلات/معدات/حاسبات/مركبات 25%، أخرى (أثاث…) 10%.
+    //     يُستخدم لحساب الربح المعدل زكوياً؛ الإهلاك الدفتري (الخطي) يبقى للقوائم.
+    // ═══════════════════════════════════════════════════════════
+    const taxDepByYear = (() => {
+        const pools = [
+            { balance: capexBreakdown.buildings, rate: 0.05 },
+            {
+                balance: capexBreakdown.equipment + capexBreakdown.vehicles +
+                    capexBreakdown.techResources + capexBreakdown.servicesCapex,
+                rate: 0.25
+            },
+            { balance: capexBreakdown.furniture + capexBreakdown.establishment, rate: 0.10 }
+        ];
+        const out = [];
+        for (let y = 0; y < years; y++) {
+            let dep = 0;
+            pools.forEach(p => {
+                const d = p.balance * p.rate;
+                dep += d;
+                p.balance -= d;
+            });
+            out.push(dep);
+        }
+        return out;
+    })();
 
     // ═══════════════════════════════════════════════════════════
     // 5. معدل استغلال الطاقة (مع استيفاء خطي بين السنوات المعرفة)
@@ -319,17 +403,24 @@ export function calculateStudy(study, overrides) {
     let paybackPeriod = Infinity;
     let discountedPaybackPeriod = Infinity;
 
+    // وعاء الزكاة الحقيقي يتطلب تتبع حقوق الملكية والأصول سنة بسنة
+    const paidCapital = Math.max(0, totalInvestment - loanAmount);
+    let retainedEarningsStart = 0; // الأرباح المحتجزة في بداية كل سنة
+
     for (let i = 1; i <= years; i++) {
         const yearIndex = i - 1;
         const utilRate = getUtilizationRate(i);
         const costInflation = Math.pow(1 + inflation, yearIndex);
+        // منحنى التصاعد يطال السنة الأولى فقط (الحجم لا يبدأ كاملاً من الشهر الأول)
+        const rampFactor = i === 1 ? rampFactorY1 : 1;
 
         // التشغيلي يتدرج مع الاستغلال؛ غير التشغيلي دخل شبه ثابت
-        const opRev = sourcesAtYear(true, 'rev1', yearIndex) * revMult * utilRate;
+        // السعر يحرك الإيراد فقط؛ الحجم يحرك الإيراد والتكاليف المتغيرة معاً
+        const opRev = sourcesAtYear(true, 'rev1', yearIndex) * revMult * priceMult * volumeMult * utilRate * rampFactor;
         // التكاليف المتغيرة تتبع حجم المبيعات في الاتجاهين (كانت غير متماثلة:
         // زيادة الإيراد لم تكن ترفعها فينتفخ السيناريو المتفائل)
-        const opVC = sourcesAtYear(true, 'vc1', yearIndex) * costInflation * revMult * utilRate;
-        const nonOpRev = sourcesAtYear(false, 'rev1', yearIndex) * revMult;
+        const opVC = sourcesAtYear(true, 'vc1', yearIndex) * costInflation * revMult * volumeMult * vcRateMult * utilRate * rampFactor;
+        const nonOpRev = sourcesAtYear(false, 'rev1', yearIndex) * revMult * priceMult;
         const nonOpVC = 0;
 
         const totalRevenue = opRev + nonOpRev;
@@ -344,7 +435,7 @@ export function calculateStudy(study, overrides) {
 
         // الطوارئ التشغيلية المخفية (كان يقرأ SECTIONS.FINANCIAL غير الموجود → صفر دائماً)
         const overheadRate = (study.assumptions?.hiddenOverheadsRate || 0) / 100;
-        const baseFixed = (payroll + rentAndAdmin + mkt + svcFixed) * opexMult;
+        const baseFixed = (payroll + rentAndAdmin + mkt + svcFixed) * opexMult * fixedMult;
         const hiddenOverheads = baseFixed * overheadRate;
         const fixedCosts = baseFixed + hiddenOverheads;
 
@@ -393,14 +484,23 @@ export function calculateStudy(study, overrides) {
 
         const ebt = ebit - interest;
 
-        // الزكاة على حصة السعوديين، الضريبة على حصة الأجانب.
-        // وعاء الزكاة مبسّط لأغراض الجدوى = صافي الربح قبل الزكاة (EBT) —
-        // تقريب متعارف عليه في قوالب الجدوى؛ الحساب النظامي الدقيق يتطلب
-        // ميزانية فعلية (وعاء = حقوق الملكية + قروض طويلة − أصول ثابتة).
-        const taxableBase = Math.max(0, ebt);
-        const zakat = taxableBase * zakatRate * (1 - foreignShare);
-        const tax = foreignShare > 0 ? taxableBase * taxRate * foreignShare : 0;
+        // ═══ الزكاة على الوعاء النظامي الحقيقي (منهجية ZATCA — طريقة مصادر الأموال) ═══
+        // الوعاء = حقوق الملكية أول السنة (رأس مال مدفوع + أرباح محتجزة)
+        //        + القروض طويلة الأجل (رصيد أول السنة) − صافي الأصول الثابتة أول السنة،
+        // ولا يقل نظاماً عن «الربح المعدل» = الربح الدفتري + إهلاك دفتري − إهلاك نظامي متناقص.
+        const loanBalanceStart = loanScheduleData
+            ? (i === 1 ? loanAmount : (loanScheduleData.annualSummary.find(s => s.year === i - 1)?.endingBalance ?? 0))
+            : 0;
+        const netFixedStart = Math.max(0, totalCapex - annualDepreciation * yearIndex);
+        const fundingSourcesBase = paidCapital + retainedEarningsStart + loanBalanceStart - netFixedStart;
+        const taxDepY = taxDepByYear[yearIndex] || 0;
+        const adjustedProfit = ebt + depreciation - taxDepY; // الربح المعدل (إهلاك نظامي بدل الدفتري)
+        const zakatBase = Math.max(0, Math.max(adjustedProfit, fundingSourcesBase));
+        const zakat = zakatBase * zakatRate * (1 - foreignShare);
+        // ضريبة دخل حصة الأجانب تُحسب على الربح المعدل (الإهلاك النظامي هو المعتمد ضريبياً)
+        const tax = foreignShare > 0 ? Math.max(0, adjustedProfit) * taxRate * foreignShare : 0;
         const netIncome = ebt - zakat - tax;
+        retainedEarningsStart += netIncome; // ترحيل لبداية السنة التالية
 
         // التدفق النقدي
         const operatingCF = netIncome + depreciation;
@@ -448,6 +548,9 @@ export function calculateStudy(study, overrides) {
             interest,
             ebt,
             zakat,
+            zakatBase,
+            adjustedProfit,
+            taxDepreciation: taxDepY,
             tax,
             netIncome,
             replacementCost,
@@ -464,6 +567,38 @@ export function calculateStudy(study, overrides) {
     const npv = calculateNPV(discountRate, cashFlows);
     const irr = calculateIRR(cashFlows);
     const mirr = calculateMIRR(cashFlows, discountRate, discountRate);
+
+    // ═══ القيمة النهائية (Terminal Value — نمو Gordon) ═══
+    // استرشادية دائماً: القرار يبقى على NPV المتحفظ بدونها (البنوك لا تعتد بها)،
+    // لكن غيابها كلياً يعني افتراض تصفية المشروع بلا قيمة بعد سنوات الدراسة.
+    const tvCfg = study.assumptions?.terminalValue || {};
+    let terminalValueDiscounted = 0;
+    if ((tvCfg.method || 'gordon') !== 'none') {
+        const lastCF = incomeStatement[incomeStatement.length - 1]?.cashFlow || 0;
+        // نمو مستدام مقصوص تحت معدل الخصم (شرط صحة معادلة Gordon)
+        const g = Math.min(Number(tvCfg.growthRate ?? 0.02), Math.max(0, discountRate - 0.02));
+        if (lastCF > 0 && discountRate > g) {
+            const tv = (lastCF * (1 + g)) / (discountRate - g);
+            terminalValueDiscounted = tv / Math.pow(1 + discountRate, years);
+        }
+    }
+
+    // ═══ ضريبة القيمة المضافة (15%) — توقيت نقدي، لا ربحية ═══
+    // الأسعار تُفترض غير شاملة للضريبة؛ تُحصَّل على المبيعات وتُخصم على المشتريات
+    // وتُورَّد لهيئة الزكاة — أثرها الحقيقي على السيولة (عوّامة/التزام) لا على الربح.
+    const VAT_RATE = 0.15;
+    const vat = {
+        rate: VAT_RATE,
+        note: 'الأسعار غير شاملة للضريبة؛ صافي المستحق يُورَّد ربع سنوياً — أثر سيولة لا ربح',
+        years: incomeStatement.map(y => {
+            const bd = y.fixedCostsBreakdown || {};
+            const outputVat = (y.revenue || 0) * VAT_RATE;
+            // مدخلات خاضعة: التكاليف المتغيرة + الإيجار/الإدارية + التسويق (الرواتب غير خاضعة)
+            const inputVat = ((y.variableCosts || 0) + (bd.rentAndAdmin || 0) + (bd.marketing || 0)) * VAT_RATE;
+            const netPayable = Math.max(0, outputVat - inputVat);
+            return { year: y.year, outputVat, inputVat, netPayable, avgFloat: netPayable * (45 / 365) };
+        })
+    };
     const roi = (incomeStatement.reduce((acc, y) => acc + y.netIncome, 0) / totalInvestment) * 100;
     const pi = (npv + totalInvestment) / totalInvestment;
     const avgAnnualProfit = incomeStatement.reduce((acc, y) => acc + y.netIncome, 0) / incomeStatement.length;
@@ -544,6 +679,7 @@ export function calculateStudy(study, overrides) {
     let scenarios = null;
     let loanSchedule = null;
     let balanceSheets = [];
+    let tornado = [];
     if (!overrides) {
         if (loanScheduleData) {
             loanSchedule = { ...loanScheduleData, loanAmount, annualRate: interestRate, termYears: loanTerm };
@@ -582,6 +718,30 @@ export function calculateStudy(study, overrides) {
         if (revCases.length) sensitivity.push({ dim: 'الإيرادات', cases: revCases });
         if (costCases.length) sensitivity.push({ dim: 'التكاليف التشغيلية', cases: costCases });
 
+        // رسم Tornado: حساسية NPV لكل متغير على حدة (±10%) مرتبة بحجم الأثر —
+        // تُري المستثمر أي متغير يهيمن على النتيجة فيركّز دقته فيه
+        const TORNADO_AXES = [
+            { key: 'priceChange', label: 'سعر البيع' },
+            { key: 'volumeChange', label: 'حجم المبيعات' },
+            { key: 'vcRateChange', label: 'التكاليف المتغيرة' },
+            { key: 'fixedChange', label: 'التكاليف الثابتة' },
+            { key: 'capexChange', label: 'الاستثمار الرأسمالي' }
+        ];
+        tornado = TORNADO_AXES.map(ax => {
+            const lo = runCase({ [ax.key]: -0.10 });
+            const hi = runCase({ [ax.key]: 0.10 });
+            if (!lo || !hi) return null;
+            const npvLow = lo.kpis.npv;
+            const npvHigh = hi.kpis.npv;
+            return {
+                variable: ax.label,
+                key: ax.key,
+                npvLow,
+                npvHigh,
+                swing: Math.abs(npvHigh - npvLow)
+            };
+        }).filter(Boolean).sort((a, b) => b.swing - a.swing);
+
         scenarios = {
             base: {
                 kpis: { npv, irr, payback: paybackOut, roi: roi / 100 },
@@ -616,15 +776,28 @@ export function calculateStudy(study, overrides) {
         opex: {
             fixedAnnual: totalFixedOpexYear1,
             variableAnnual: year1VariableCosts,
-            totalAnnual: totalFixedOpexYear1 + year1VariableCosts
+            totalAnnual: totalFixedOpexYear1 + year1VariableCosts,
+            // مكونات السنة الأولى — تستهلكها فحوصات معايير «السائقين» القطاعية
+            payrollAnnual: annualPayroll,
+            rentAdminAnnual: annualLogistics + annualAdmin,
+            marketingAnnual: annualMarketing
         },
         depreciation: annualDepreciation,
+        depreciationSchedules: {
+            book: incomeStatement.map(() => annualDepreciation), // خطي (للقوائم)
+            tax: taxDepByYear.slice(0, incomeStatement.length)   // متناقص (زكوي/ضريبي — ZATCA)
+        },
         incomeStatement,
         sensitivity,
         scenarios,
+        tornado,
         loanSchedule,
         balanceSheets,
         saudization,
+        capacityCheck,
+        cashCycle,
+        rampUpMonths,
+        vat,
         cashFlow: cashFlowRows,
         assumptionsApplied: {
             zakatRate,
@@ -652,7 +825,10 @@ export function calculateStudy(study, overrides) {
             roa: totalInvestment > 0 ? (incomeStatement.reduce((acc, y) => acc + y.netIncome, 0) / incomeStatement.length) / totalInvestment : 0,
             profitabilityIndex: pi,
             discountedPaybackPeriod: discountedPaybackOut,
-            arr: arr / 100
+            arr: arr / 100,
+            // القيمة النهائية (مخصومة) — استرشادية؛ القرار على NPV المتحفظ أعلاه
+            terminalValue: terminalValueDiscounted,
+            npvWithTerminal: npv + terminalValueDiscounted
         },
         dscrAnalysis,
         ...computeDecision(study.assumptions?.thresholds, {

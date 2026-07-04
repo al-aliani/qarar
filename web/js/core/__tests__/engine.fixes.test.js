@@ -36,22 +36,31 @@ function makeStudy(overrides = {}) {
     return { ...base, ...overrides };
 }
 
-describe('الزكاة والضريبة — فصل الحصص', () => {
-    it('مشروع سعودي 100%: زكاة 2.5% من EBT بالضبط وضريبة = 0', () => {
+describe('الزكاة والضريبة — الوعاء النظامي (ZATCA) وفصل الحصص', () => {
+    it('مشروع سعودي 100%: زكاة 2.5% من الوعاء النظامي وضريبة = 0', () => {
         const r = calculateStudy(makeStudy());
         const y1 = r.incomeStatement[0];
         expect(y1.tax).toBe(0);
-        expect(y1.zakat).toBeCloseTo(Math.max(0, y1.ebt) * 0.025, 6);
+        // الوعاء = max(الربح المعدل، مصادر الأموال) — والربح المعدل = EBT + إهلاك دفتري − إهلاك نظامي
+        expect(y1.adjustedProfit).toBeCloseTo(y1.ebt + y1.depreciation - y1.taxDepreciation, 6);
+        expect(y1.zakatBase).toBeGreaterThanOrEqual(Math.max(0, y1.adjustedProfit) - 1e-6);
+        expect(y1.zakat).toBeCloseTo(y1.zakatBase * 0.025, 6);
     });
 
-    it('ملكية أجنبية 40%: زكاة على 60% وضريبة 20% على 40%', () => {
+    it('الإهلاك النظامي متناقص: سنة 1 أعلى من سنة 2 (25% على المعدات)', () => {
+        const r = calculateStudy(makeStudy());
+        const [y1, y2] = r.incomeStatement;
+        expect(y1.taxDepreciation).toBeGreaterThan(y2.taxDepreciation);
+        expect(r.depreciationSchedules.tax[0]).toBeCloseTo(y1.taxDepreciation, 6);
+    });
+
+    it('ملكية أجنبية 40%: زكاة على 60% من الوعاء وضريبة 20% على 40% من الربح المعدل', () => {
         const r = calculateStudy(makeStudy({
             assumptions: { projectionYears: 5, discountRate: 0.10, inflationRate: 0.02, hiddenOverheadsRate: 0, foreignOwnershipRate: 0.4, taxRate: 0.20 }
         }));
         const y1 = r.incomeStatement[0];
-        const base = Math.max(0, y1.ebt);
-        expect(y1.zakat).toBeCloseTo(base * 0.025 * 0.6, 6);
-        expect(y1.tax).toBeCloseTo(base * 0.20 * 0.4, 6);
+        expect(y1.zakat).toBeCloseTo(y1.zakatBase * 0.025 * 0.6, 6);
+        expect(y1.tax).toBeCloseTo(Math.max(0, y1.adjustedProfit) * 0.20 * 0.4, 6);
     });
 
     it('الاقتطاع السعودي 100% أقل بكثير من نظام الازدواج القديم (~17%)', () => {

@@ -5,6 +5,7 @@
  * @returns {Promise<{ passed: boolean, hardErrors: Array, softWarnings: Array, validationErrors: Array, validationWarnings: Array }>}
  */
 import { validateInputs } from '../../../lib/calc/validateInputs.js';
+import { checkDriversAgainstBenchmarks } from '../core/sectorBenchmarks.js';
 
 export async function runQAChecks(state, results) {
     const qaResults = {
@@ -263,6 +264,58 @@ export async function runQAChecks(state, results) {
                         path: 'hr'
                     });
                 }
+            }
+
+            // 10) مصالحة الطاقة — سقف مادي للمبيعات (أول سؤال يطرحه مدقق SIDF)
+            {
+                const cc = results?.capacityCheck;
+                if (cc && cc.exceeded) {
+                    qaResults.hardErrors.push({
+                        code: 'CAPACITY_EXCEEDED',
+                        message: `مبيعات مستحيلة مادياً: الخطة تتطلب ${cc.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميلاً/شهرياً بينما طاقتك القصوى ${cc.maxUnitsPerMonth.toLocaleString('ar-SA')} (${Math.round(cc.utilizationOfMax * 100)}% من الطاقة). خفّض توقعات المبيعات أو وسّع الطاقة (مقاعد/دورات/أيام).`,
+                        path: 'technical.capacityModel'
+                    });
+                } else if (cc && cc.utilizationOfMax > 0.85) {
+                    qaResults.softWarnings.push({
+                        code: 'CAPACITY_TIGHT',
+                        message: `الخطة تستهلك ${Math.round(cc.utilizationOfMax * 100)}% من الطاقة القصوى منذ السنة الأولى — لا هامش لذروة الطلب أو النمو؛ المدقق سيعتبرها متفائلة.`,
+                        path: 'technical.capacityModel'
+                    });
+                }
+                // مشروع بمبيعات كبيرة بلا نموذج طاقة أصلاً — لا يمكن إثبات القابلية للتحقيق
+                const plannedMonthly = cc ? null : (() => {
+                    const streams = state?.revenue?.streams || [];
+                    const items = state?.services?.items || [];
+                    const src = items.length ? items : streams;
+                    return src.reduce((a, s) => a + (Number(s.customersPerMonth) || 0), 0);
+                })();
+                if (!cc && plannedMonthly > 1000) {
+                    qaResults.softWarnings.push({
+                        code: 'CAPACITY_MODEL_MISSING',
+                        message: `تخطط لـ ${plannedMonthly.toLocaleString('ar-SA')} عميل/شهر دون نموذج طاقة (مقاعد × دورات × أيام) — أضِفه في الدراسة الفنية لإثبات أن المبيعات قابلة للتحقيق مادياً.`,
+                        path: 'technical.capacityModel'
+                    });
+                }
+            }
+
+            // 11) منحنى التصاعد — مشروع جديد يبيع بكامل الخطة من الشهر الأول = غير واقعي
+            {
+                const ramp = Number(results?.rampUpMonths || 0);
+                const util1 = Number(results?.incomeStatement?.[0]?.utilizationRate ?? 1);
+                if (ramp <= 1 && util1 >= 1) {
+                    qaResults.softWarnings.push({
+                        code: 'NO_RAMP_UP',
+                        message: 'الإيراد يبدأ بكامل الخطة من الشهر الأول — غير واقعي لمشروع جديد. حدد «أشهر التصاعد» في الافتراضات (المعتاد 6–12 شهراً) أو استغلال طاقة أقل للسنة الأولى.',
+                        path: 'assumptions.rampUpMonths'
+                    });
+                }
+            }
+
+            // 12) معايير «السائقين» القطاعية (تكلفة متغيرة، إيجار/مبيعات، عمالة/مبيعات)
+            try {
+                checkDriversAgainstBenchmarks(state, results).forEach(w => qaResults.softWarnings.push(w));
+            } catch (benchErr) {
+                console.warn('Benchmark checks failed:', benchErr);
             }
         } catch (coherenceErr) {
             console.warn('Coherence checks failed:', coherenceErr);

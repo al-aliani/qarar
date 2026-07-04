@@ -102,6 +102,10 @@ export const FIELD_HINTS = {
     interestRate: { hint: 'فائدة القروض التجارية في السعودية ~٦–٨٪ سنوياً.', placeholder: 'مثال: 7' },
     termYears: { hint: 'مدة سداد القرض المعتادة ٣–٧ سنوات.', placeholder: 'مثال: 5' },
     gracePeriodMonths: { hint: 'فترة سماح معتادة ٦–١٢ شهراً قبل بدء السداد.', placeholder: 'مثال: 6' },
+    rampUpMonths: { hint: 'أشهر بلوغ كامل المبيعات المخططة — مشروع جديد يحتاج عادة ٦–١٢ شهراً؛ البدء بكامل الخطة من الشهر الأول غير واقعي.', placeholder: 'مثال: 6' },
+    dsoDays: { hint: 'أيام تحصيل المبيعات الآجلة (DSO). نشاط كاش = ٠؛ عملاء شركات = ٣٠–٩٠ يوماً.', placeholder: '0' },
+    dpoDays: { hint: 'أيام سداد الموردين (DPO) — المعتاد ٣٠ يوماً.', placeholder: '30' },
+    dioDays: { hint: 'أيام بقاء المخزون (DIO) — مطاعم ٧–١٥ يوماً، تجزئة ٣٠–٦٠.', placeholder: '15' },
 };
 
 /**

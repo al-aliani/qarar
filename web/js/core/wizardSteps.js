@@ -25,7 +25,7 @@ export const STEPS = [
   { id: SECTIONS.SMART_GOALS, label: "الأهداف الذكية", isSmartGoals: true },
 
   // المرحلة 2: الدراسة الفنية والتشغيلية (3-10)
-  { id: SECTIONS.TECHNICAL, label: "الدراسة الفنية (الأصول)", tables: ['establishmentCosts', 'capacityUtilization', 'buildings', 'equipment', 'furniture', 'locationAssessment'] },
+  { id: SECTIONS.TECHNICAL, label: "الدراسة الفنية (الأصول)", tables: ['establishmentCosts', 'capacityModel', 'capacityUtilization', 'buildings', 'equipment', 'furniture', 'locationAssessment'] },
   { id: SECTIONS.HR, label: "الموارد البشرية (الرواتب)", tables: ['positions', 'advisoryBoard'] },
   { id: SECTIONS.TECH_RESOURCES, label: "الموارد التقنية", tables: ['techResources'] },
   { id: SECTIONS.LOGISTICS, label: "الموارد اللوجستية", tables: ['logistics'] },

@@ -536,10 +536,23 @@ export class ReportGenerator {
                                 <td>${exIn.paybackPeriod ? exIn.paybackPeriod.toFixed(1) + ' سنة' : '—'}</td>
                                 <td>${exDecision}</td>
                             </tr></tbody></table>`;
+                // القيمة النهائية (استرشادية) + مصالحة الطاقة — إجابتان مسبقتان على سؤالي المدقق:
+                // «لماذا مشروعك بلا قيمة بعد سنوات الدراسة؟» و«هل المبيعات قابلة للتحقيق مادياً؟»
+                const exFootnotes = [];
+                if ((exIn.terminalValue || 0) > 0) {
+                    exFootnotes.push(`القرار أعلاه مبني على NPV المتحفظ (بلا قيمة نهائية). استرشادياً، بافتراض استمرار المشروع بنمو مستدام بعد فترة الدراسة، تُقدَّر القيمة النهائية المخصومة بـ ${fmt(exIn.terminalValue)} ويصبح NPV الشامل ${fmt(exIn.npvWithTerminal)}.`);
+                }
+                if (results.capacityCheck && !results.capacityCheck.exceeded) {
+                    exFootnotes.push(`مصالحة الطاقة: المبيعات المخططة (${results.capacityCheck.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر) تعادل ${Math.round((results.capacityCheck.utilizationOfMax || 0) * 100)}% من الطاقة القصوى الفعلية (${results.capacityCheck.maxUnitsPerMonth.toLocaleString('ar-SA')}) — قابلة للتحقيق مادياً.`);
+                }
+                const exFootnotesHtml = exFootnotes.length
+                    ? `<div style="font-size:9pt; color:#6C766E; line-height:1.8; margin-top:8px;">${exFootnotes.map(f => `• ${f}`).join('<br>')}</div>`
+                    : '';
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>الملخص التنفيذي</h3>
                         <div class="section-content">
                             ${exHighlights}
+                            ${exFootnotesHtml}
                             <p>${state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText || `يعرض هذا التقرير دراسة جدوى مشروع «${info.name || 'المشروع'}»${info.city ? ' في ' + info.city : ''}، شاملةً الجوانب الفنية والتسويقية والمالية، مع تحليل حساسية وسيناريوهات وقرار استثماري مبني على مؤشرات مالية محسوبة من مدخلات الدراسة.`}</p>
                         </div>
                     </div>`;
@@ -748,7 +761,10 @@ export class ReportGenerator {
                 if (!(results.sensitivity && results.sensitivity.length > 0)) return null;
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>تحليل الحساسية</h3>
-                        <div class="section-content">${this.renderSensitivity(results.sensitivity)}</div>
+                        <div class="section-content">
+                            ${this.renderTornado(results.tornado)}
+                            ${this.renderSensitivity(results.sensitivity)}
+                        </div>
                     </div>`;
                 break;
             case 'recommendation':
@@ -946,6 +962,32 @@ export class ReportGenerator {
                 </tbody>
             </table>
         `;
+    }
+
+    /**
+     * رسم Tornado: أشرطة أفقية HTML خالصة (تعمل في الطباعة بلا مكتبات) —
+     * تُري القارئ أي متغير يهيمن على NPV فيعرف أين يركّز دقته وتفاوضه.
+     */
+    static renderTornado(tornado) {
+        if (!Array.isArray(tornado) || tornado.length === 0) return '';
+        const maxSwing = Math.max(...tornado.map(t => t.swing), 1);
+        const bars = tornado.map(t => {
+            const width = Math.max(4, Math.round((t.swing / maxSwing) * 100));
+            return `
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:7px;">
+                    <div style="width:150px; font-size:9.5pt; text-align:left; flex-shrink:0;">${t.variable}</div>
+                    <div style="flex:1; background:#f1f0e9; border-radius:4px; height:18px; position:relative;">
+                        <div style="width:${width}%; height:100%; background:linear-gradient(90deg, #0e5b44, #3ecf9a); border-radius:4px;"></div>
+                    </div>
+                    <div style="width:130px; font-size:8.5pt; color:#6C766E; flex-shrink:0;">±10% → تأرجح ${formatCurrency(t.swing)}</div>
+                </div>`;
+        }).join('');
+        return `
+            <div style="margin-bottom: 22px;">
+                <h4 style="margin-bottom: 8px; color: var(--accent-blue);">المتغيرات الأكثر تأثيراً على صافي القيمة الحالية (Tornado)</h4>
+                <p style="font-size: 9pt; color: #6C766E; margin-bottom: 10px;">أثر تغيّر كل متغير منفرداً بنسبة ±10% — الأعلى تأرجحاً هو ما يستحق أعلى دقة في التقدير والتفاوض.</p>
+                ${bars}
+            </div>`;
     }
 
     static renderSensitivity(sensitivity) {

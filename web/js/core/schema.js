@@ -242,6 +242,11 @@ export function createEmptyStudy() {
             vehicles: [
                 // { name: "سيارة توصيل", quantity: 1, price: 50000, depreciationRate: 0.20, notes: "" }
             ],
+            // نموذج الطاقة القصوى (مصالحة الطاقة): سقف مادي للمبيعات —
+            // المحرك يرفض إيراداً يتطلب عملاء أكثر مما تسمح به الطاقة
+            capacityModel: [
+                // { seats: 40, turnsPerDay: 4, daysPerMonth: 26, notes: "" }
+            ],
             // تقييم المختص الفني (الفجوة المعيارية)
             technicalSpecialistEvaluation: {
                 specialistName: '',
@@ -444,6 +449,20 @@ export function createEmptyStudy() {
             taxRate: 0.20,
             discountRate: 0.10, // معدل خصم متحفظ يناسب مخاطر مشروع مطعمي سعودي (كان 0.05 — يضخّم NPV)
             workingCapitalMonths: 3,
+            // منحنى التصاعد: عدد الأشهر حتى بلوغ كامل المبيعات المخططة في السنة الأولى
+            // (0 = بلا تصاعد — غير واقعي لمشروع جديد؛ المعتاد 6–12 شهراً)
+            rampUpMonths: 0,
+            // القيمة النهائية (استرشادية — القرار يبقى على NPV المتحفظ بدونها)
+            terminalValue: {
+                method: 'gordon',   // gordon | none
+                growthRate: 0.02    // نمو مستدام بعد سنوات الدراسة (يُقص دون معدل الخصم)
+            },
+            // دورة رأس المال العامل الفعلية (اختياري — يتفوق على workingCapitalMonths عند تعبئته)
+            workingCapitalPolicy: {
+                dsoDays: null, // أيام تحصيل المبيعات الآجلة (DSO) — 0 لنشاط كاش
+                dpoDays: null, // أيام سداد الموردين (DPO)
+                dioDays: null  // أيام بقاء المخزون (DIO)
+            },
             contingencyRate: 0.10,
             projectionYears: 5,
             revenueGrowthJustification: '', // مبرر نمو/تثبيت/انخفاض المبيعات
@@ -885,6 +904,20 @@ export const TABLE_SCHEMAS = {
         ],
         showTotal: true,
         totalColumn: 'total'
+    },
+    capacityModel: {
+        title: 'الطاقة القصوى (مصالحة المبيعات مع الطاقة الفعلية)',
+        columns: [
+            { key: 'seats', label: 'المقاعد/الوحدات المتاحة', type: 'number', placeholder: 'مثال: 40 مقعداً أو 5 غرف' },
+            { key: 'turnsPerDay', label: 'دورات الاستخدام/اليوم', type: 'number', placeholder: 'مثال: 4' },
+            { key: 'daysPerMonth', label: 'أيام التشغيل/الشهر', type: 'number', default: 26 },
+            {
+                key: 'maxUnitsPerMonth', label: 'أقصى عملاء/شهر', type: 'computed',
+                formula: r => Math.round((r.seats || 0) * (r.turnsPerDay || 0) * (r.daysPerMonth || 26))
+            },
+            { key: 'notes', label: 'ملاحظات', type: 'text' }
+        ],
+        showTotal: false
     },
     consumables: {
         title: 'المواد المستهلكة (التشغيلية)',

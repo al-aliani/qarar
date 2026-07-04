@@ -130,11 +130,14 @@ describe('تصدير Excel — اتساق الملف المُسلَّم للعم
         });
     });
 
-    it('الزكاة فقط لمشروع سعودي: بند الزكاة/الضريبة = 2.5% من الصافي قبل الزكاة', () => {
+    it('بند الزكاة/الضريبة في الملف يطابق زكاة المحرك (الوعاء النظامي) تماماً', () => {
         const ws = wb.getWorksheet('قائمة_الدخل');
-        const ebt = cellNum(ws, 'B18');
         const levy = cellNum(ws, 'B19');
-        expect(Math.abs(levy - Math.max(0, ebt) * 0.025)).toBeLessThanOrEqual(1);
+        const y1 = results.incomeStatement[0];
+        expect(Math.abs(levy - (y1.zakat + y1.tax))).toBeLessThanOrEqual(1);
+        // ولمشروع سعودي 100%: الزكاة = 2.5% من الوعاء النظامي المُصدَّر من المحرك
+        expect(y1.tax).toBe(0);
+        expect(y1.zakat).toBeCloseTo(y1.zakatBase * 0.025, 4);
     });
 
     it('المؤشرات: IRR كسر بتنسيق مئوي (لا يُقرأ 1.02%)', () => {
