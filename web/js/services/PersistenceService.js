@@ -9,11 +9,14 @@ async function _getAuditLogger() {
 }
 
 const COMPRESS_PREFIX = 'LZ:';
-// CDN لتجنب خطأ 500 من Vite عند تحويل الملف إن لم يُحلّ lz-string من node_modules
-const LZ_CDN = 'https://cdn.jsdelivr.net/npm/lz-string@1.5.0/+esm';
+// lz-string تبعية محلية مُجمَّعة عبر Vite (optimizeDeps.include). لا CDN.
 
+// تُصدَّر دوال lz-string أحياناً في الأعلى (بناء ESM) وأحياناً تحت .default (npm CJS).
+// نُعيد الكائن الذي يحمل الدوال فعلاً حتى يعمل الضغط في الحالتين.
 function getLZ(LZ) {
-    return LZ && (LZ.compressToUTF16 || (LZ.default && LZ.default.compressToUTF16)) ? LZ : LZ?.default || LZ;
+    if (LZ && typeof LZ.compressToUTF16 === 'function') return LZ;
+    if (LZ && LZ.default && typeof LZ.default.compressToUTF16 === 'function') return LZ.default;
+    return LZ;
 }
 
 /**
@@ -21,7 +24,7 @@ function getLZ(LZ) {
  */
 async function compress(str) {
     try {
-        const mod = await import(/* @vite-ignore */ LZ_CDN);
+        const mod = await import('lz-string');
         const LZ = getLZ(mod);
         const c = LZ.compressToUTF16(str);
         return c ? COMPRESS_PREFIX + c : str;
@@ -33,7 +36,7 @@ async function compress(str) {
 async function decompress(str) {
     if (!str || !str.startsWith(COMPRESS_PREFIX)) return str;
     try {
-        const mod = await import(/* @vite-ignore */ LZ_CDN);
+        const mod = await import('lz-string');
         const LZ = getLZ(mod);
         return LZ.decompressFromUTF16(str.slice(COMPRESS_PREFIX.length)) || str;
     } catch {

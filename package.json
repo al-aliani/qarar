@@ -24,6 +24,7 @@
   "dependencies": {
     "@fontsource/ibm-plex-sans-arabic": "^5.2.9",
     "@fontsource/jetbrains-mono": "^5.2.8",
+    "@supabase/supabase-js": "^2.110.0",
     "chart.js": "^4.5.1",
     "docx": "^9.5.1",
     "exceljs": "^4.4.0",

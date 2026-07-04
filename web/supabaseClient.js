@@ -1,19 +1,29 @@
 /**
- * Supabase client (browser, ESM).
+ * Supabase client (browser, ESM — مُجمَّع عبر Vite).
  *
- * This project is a static site (no bundler). So we:
- * - Load supabase-js via CDN ESM import.
- * - Read config from:
- *   - window.SUPABASE_URL / window.SUPABASE_ANON_KEY
- *   - OR localStorage keys: SUPABASE_URL / SUPABASE_ANON_KEY
- *   - OR defaults below (مشروع feasibility-platform)
+ * - supabase-js تبعية محلية مُجمَّعة (لا CDN) — يعمل دون اتصال ولا يُكسره حجب CDN.
+ * - يُقرأ الإعداد بالأولوية التالية:
+ *   1. متغيّرات بناء Vite: import.meta.env.VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
+ *   2. window.SUPABASE_URL / window.SUPABASE_ANON_KEY (حقن وقت التشغيل)
+ *   3. localStorage: SUPABASE_URL / SUPABASE_ANON_KEY (تجاوز يدوي)
+ *   4. القيم الافتراضية أدناه (مشروع feasibility-platform)
  *
  * Notes:
  * - RLS policies require authenticated user for studies/study_inputs.
  * - If not configured or not authenticated, app will fall back to local draft cache.
  */
+import { createClient } from "@supabase/supabase-js";
 
-/** قيم افتراضية لمشروع Supabase (feasibility-platform) — يمكن تجاوزها عبر window أو localStorage */
+/** قراءة متغيّر بيئة Vite بأمان (import.meta.env قد لا يوجد في بيئة اختبار Node) */
+function envVar(name) {
+  try {
+    return (typeof import.meta !== "undefined" && import.meta.env && import.meta.env[name]) || "";
+  } catch (_) {
+    return "";
+  }
+}
+
+/** قيم افتراضية لمشروع Supabase (feasibility-platform) — تُتجاوز عبر env أو window أو localStorage */
 const DEFAULT_SUPABASE_URL = "https://ljvskvzvgrpawyexetzv.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdnNrdnp2Z3JwYXd5ZXhldHp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NDE1NDMsImV4cCI6MjA4NTQxNzU0M30.UzitNpUhroHsoMXAqZmaal34N9eHrly4A_IzAmi1lbM";
@@ -24,12 +34,16 @@ let _lastError = "";
 let _clientPromise = null;
 
 function readConfig() {
+  const fromEnvUrl = String(envVar("VITE_SUPABASE_URL") || "").trim();
   const fromWindowUrl = typeof window !== "undefined" && (window.SUPABASE_URL || window.__SUPABASE_URL__);
   const fromStorageUrl = typeof localStorage !== "undefined" ? (localStorage.getItem("SUPABASE_URL") || "").trim() : "";
-  const url = (fromWindowUrl && String(fromWindowUrl).trim()) || (fromStorageUrl || DEFAULT_SUPABASE_URL);
+  const url = fromEnvUrl || (fromWindowUrl && String(fromWindowUrl).trim()) || (fromStorageUrl || DEFAULT_SUPABASE_URL);
+
+  const fromEnvKey = String(envVar("VITE_SUPABASE_ANON_KEY") || "").trim();
   const fromWindowKey = typeof window !== "undefined" && (window.SUPABASE_ANON_KEY || window.__SUPABASE_ANON_KEY__);
   const fromStorageKey = typeof localStorage !== "undefined" ? (localStorage.getItem("SUPABASE_ANON_KEY") || "").trim() : "";
-  const anonKey = (fromWindowKey && String(fromWindowKey).trim()) || (fromStorageKey || DEFAULT_SUPABASE_ANON_KEY);
+  const anonKey = fromEnvKey || (fromWindowKey && String(fromWindowKey).trim()) || (fromStorageKey || DEFAULT_SUPABASE_ANON_KEY);
+
   return {
     url: (String(url || "").trim() || DEFAULT_SUPABASE_URL),
     anonKey: (String(anonKey || "").trim() || DEFAULT_SUPABASE_ANON_KEY)
@@ -50,8 +64,7 @@ export async function getSupabaseClient() {
 
   _clientPromise = (async () => {
     try {
-      const mod = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
-      const supabase = mod.createClient(url, anonKey, {
+      const supabase = createClient(url, anonKey, {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
@@ -63,7 +76,7 @@ export async function getSupabaseClient() {
       return { supabase, ok: true, error: "" };
     } catch (e) {
       _clientPromise = null;
-      _lastError = `تعذر تحميل supabase-js من CDN: ${String(e?.message || e)}`;
+      _lastError = `تعذر تهيئة عميل Supabase: ${String(e?.message || e)}`;
       return { supabase: null, ok: false, error: _lastError };
     }
   })();
