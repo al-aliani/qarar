@@ -171,6 +171,7 @@ export class BankReportGenerator {
                 <tr><td>${L('irr')}</td><td>${((ind.irr || 0) * 100).toFixed(2)}%</td><td>${(ind.irr || 0) >= 0.15 ? 'مقبول للتمويل' : 'تحت الحد المفضل'}</td></tr>
                 <tr><td>${L('paybackPeriod')}</td><td>${SAFE.payback(ind.paybackPeriod ?? ind.payback)}</td><td>${(() => { const p = ind.paybackPeriod ?? ind.payback; if (p == null || !Number.isFinite(p) || p <= 0) return 'غير محقق — يحتاج مراجعة'; return p < 5 ? 'مناسب' : 'طويل نسبياً'; })()}</td></tr>
                 <tr><td>${L('totalCapex')}</td><td>${_fmt(cap.total || financing.totalInvestment || 0)}</td><td>ريال</td></tr>
+                ${results?.saudization?.totalHeads > 0 ? `<tr><td>نسبة التوطين (سعودة)</td><td>${Math.round((results.saudization.rate || 0) * 100)}% (${results.saudization.saudiHeads} من ${results.saudization.totalHeads})</td><td>${(results.saudization.rate || 0) > 0 ? 'يدعم متطلبات نطاقات' : 'راجع متطلبات نطاقات'}</td></tr>` : ''}
             </table>
         </div>`;
             case 'financing_structure':

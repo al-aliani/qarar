@@ -164,6 +164,106 @@ export async function runQAChecks(state, results) {
                     path: 'kpis.dscr'
                 });
             }
+
+            // ═══ فحوصات الجاهزية التمويلية (إطار معايير دراسات الجدوى + أعراف البنوك) ═══
+
+            // 6) نسبة الإيرادات التراكمية للاستثمار حسب القطاع (معيار 4 في الإطار المعياري)
+            //    النسبة = مجموع إيرادات سنوات الدراسة ÷ إجمالي الاستثمار
+            const sectorText = String(state?.projectInfo?.sector || state?.projectInfo?.concept || '');
+            const cumRevenue = (results?.incomeStatement || []).reduce((a, y) => a + (Number(y.revenue) || 0), 0);
+            if (Number.isFinite(capexTotal) && capexTotal > 0 && cumRevenue > 0) {
+                const ratio = cumRevenue / capexTotal;
+                const SECTOR_RATIOS = [
+                    { test: /saas|منصة|تطبيق|برمجي|تقني/i, label: 'منصة رقمية/SaaS', min: 2, max: 10, red: 20 },
+                    { test: /تجارة إلكترونية|متجر إلكتروني|ecommerce/i, label: 'تجارة إلكترونية', min: 5, max: 15, red: 30 },
+                    { test: /مطعم|كافيه|مقهى|قهوة|فود|مأكولات|برجر|مطاعم/i, label: 'مطعم/مقهى', min: 10, max: 30, red: 50 },
+                    { test: /رياضي|ترفيه|نادي|صالة|بادل|ملعب/i, label: 'نادي رياضي/ترفيهي', min: 20, max: 50, red: 100 },
+                    { test: /مصنع|صناع|إنتاج|تصنيع/i, label: 'مصنع/إنتاج', min: 30, max: 80, red: 150 }
+                ];
+                const bench = SECTOR_RATIOS.find(s => s.test.test(sectorText));
+                if (bench) {
+                    if (ratio > bench.red) {
+                        qaResults.softWarnings.push({
+                            code: 'REVENUE_TO_CAPEX_EXTREME',
+                            message: `إيرادات الدراسة التراكمية = ${ratio.toFixed(1)}× الاستثمار — فوق الخط الأحمر لقطاع ${bench.label} (${bench.red}×). ممول متمرس سيعتبرها غير مبررة؛ راجع توقعات المبيعات أو اكتمال الاستثمار.`,
+                            path: 'revenue'
+                        });
+                    } else if (ratio > bench.max) {
+                        qaResults.softWarnings.push({
+                            code: 'REVENUE_TO_CAPEX_HIGH',
+                            message: `إيرادات الدراسة التراكمية = ${ratio.toFixed(1)}× الاستثمار — أعلى من نطاق قطاع ${bench.label} المعتاد (${bench.min}–${bench.max}×). وثّق مبررات النمو قبل التقديم.`,
+                            path: 'revenue'
+                        });
+                    } else if (ratio < bench.min) {
+                        qaResults.softWarnings.push({
+                            code: 'REVENUE_TO_CAPEX_LOW',
+                            message: `إيرادات الدراسة التراكمية = ${ratio.toFixed(1)}× الاستثمار فقط — أدنى من نطاق قطاع ${bench.label} (${bench.min}–${bench.max}×). راجع الطاقة التشغيلية أو التسعير أو حجم الاستثمار.`,
+                            path: 'revenue'
+                        });
+                    }
+                }
+            }
+
+            // 7) توثيق مصادر بنود CAPEX الكبيرة (معيار التتبعية — SIDF والبنوك تطلب عروض أسعار)
+            {
+                const tech = state?.technical || {};
+                const techRes = state?.techResources || {};
+                const assetGroups = [
+                    ['المباني/الإنشاءات', tech.buildings],
+                    ['المعدات', tech.equipment],
+                    ['الأثاث', tech.furniture],
+                    ['المركبات', tech.vehicles],
+                    ['الموارد التقنية', techRes.techResources]
+                ];
+                const bigThreshold = Math.max(50000, 0.15 * (Number(results?.capex?.subtotal) || 0));
+                const undocumented = [];
+                assetGroups.forEach(([groupLabel, arr]) => {
+                    (Array.isArray(arr) ? arr : []).forEach(item => {
+                        const cost = (Number(item?.price ?? item?.cost) || 0) * (Number(item?.quantity ?? item?.count) || 1);
+                        const hasSource = String(item?.source || item?.notes || '').trim().length > 0;
+                        if (cost >= bigThreshold && !hasSource) {
+                            undocumented.push(`${item?.name || groupLabel} (${Math.round(cost).toLocaleString('ar-SA')} ريال)`);
+                        }
+                    });
+                });
+                if (undocumented.length) {
+                    qaResults.softWarnings.push({
+                        code: 'CAPEX_SOURCE_MISSING',
+                        message: `بنود رأسمالية كبيرة بلا مصدر سعر موثق (عرض سعر مورد/رابط): ${undocumented.slice(0, 3).join('، ')}${undocumented.length > 3 ? ` و${undocumented.length - 3} أخرى` : ''} — جهات التمويل تطلب تتبع كل رقم كبير لمصدره.`,
+                        path: 'technical'
+                    });
+                }
+            }
+
+            // 8) مساهمة التمويل الذاتي — البنوك تتوقع 20–30% على الأقل بجانب القرض
+            {
+                const sources = state?.financing?.sources || {};
+                const loanAmt = Number(sources.bankLoan?.amount || 0);
+                const equityAmt = Number(sources.equity?.amount || 0) + Number(sources.investors?.amount || 0);
+                const totalFunding = loanAmt + equityAmt;
+                if (loanAmt > 0 && totalFunding > 0) {
+                    const equityShare = equityAmt / totalFunding;
+                    if (equityShare < 0.20) {
+                        qaResults.softWarnings.push({
+                            code: 'EQUITY_SHARE_LOW',
+                            message: `المساهمة الذاتية ${(equityShare * 100).toFixed(0)}% فقط من هيكل التمويل — البنوك تتوقع عادة 20–30% كحد أدنى («جلد في اللعبة»)؛ طلب دين شبه كامل علامة حمراء ائتمانية.`,
+                            path: 'financing'
+                        });
+                    }
+                }
+            }
+
+            // 9) نسبة التوطين (السعودة) — صفر سعوديين مع فريق عامل = خطر نطاقات أمام الجهات
+            {
+                const saud = results?.saudization;
+                if (saud && saud.totalHeads >= 3 && saud.saudiHeads === 0) {
+                    qaResults.softWarnings.push({
+                        code: 'SAUDIZATION_ZERO',
+                        message: `فريق من ${saud.totalHeads} موظفين بلا أي سعودي — راجع متطلبات نطاقات لنشاطك؛ جهات التمويل الحكومية تسأل عن خطة التوطين.`,
+                        path: 'hr'
+                    });
+                }
+            }
         } catch (coherenceErr) {
             console.warn('Coherence checks failed:', coherenceErr);
         }

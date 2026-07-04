@@ -173,6 +173,25 @@ describe('تعادل الوحدات — أساس موحد', () => {
     });
 });
 
+describe('نسبة التوطين (السعودة) — مخرج جديد للمحرك', () => {
+    it('تُحسب من جنسيات الوظائف وتُعاد في النتائج', () => {
+        const r = calculateStudy(makeStudy({
+            [SECTIONS.HR]: {
+                positions: [
+                    { position: 'مدير', count: 1, salary: 8000, months: 12, nationality: 'saudi' },
+                    { position: 'باريستا', count: 3, salary: 4500, months: 12, nationality: 'expat' }
+                ]
+            }
+        }));
+        expect(r.saudization).toEqual({ saudiHeads: 1, totalHeads: 4, rate: 0.25 });
+    });
+
+    it('بلا موظفين: rate = null (لا قسمة على صفر)', () => {
+        const r = calculateStudy(makeStudy());
+        expect(r.saudization.rate).toBeNull();
+    });
+});
+
 describe('استيفاء استغلال الطاقة', () => {
     it('سنة غير معرفة بين سنتين تُستوفى خطياً (كانت تقفز إلى 100%)', () => {
         const r = calculateStudy(makeStudy({

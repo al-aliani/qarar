@@ -82,6 +82,14 @@ export function calculateStudy(study, overrides) {
 
     const annualPayroll = totalSalaries + gosiCost + insuranceCost + annualExpatFees;
 
+    // نسبة التوطين (السعودة) — تطلبها جهات التمويل (منشآت/نطاقات) وتظهر في التقارير
+    const saudiHeadcount = positions.reduce((acc, pos) => acc + (pos.nationality === 'saudi' ? Number(pos.count || 1) : 0), 0);
+    const saudization = {
+        saudiHeads: saudiHeadcount,
+        totalHeads: totalHeadcount,
+        rate: totalHeadcount > 0 ? saudiHeadcount / totalHeadcount : null
+    };
+
     const annualLogistics = toArray(logistics.logistics).reduce((acc, item) => acc + (Number(item.monthly || 0) * 12), 0);
     const hasGovtFees = toArray(admin.administrative).some(i => i.name && i.name.includes('حكوم'));
     let annualAdmin = toArray(admin.administrative).reduce((acc, item) => acc + (Number(item.monthly || 0) * 12), 0);
@@ -616,6 +624,7 @@ export function calculateStudy(study, overrides) {
         scenarios,
         loanSchedule,
         balanceSheets,
+        saudization,
         cashFlow: cashFlowRows,
         assumptionsApplied: {
             zakatRate,

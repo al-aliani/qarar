@@ -175,6 +175,7 @@ export class MonshaatReportGenerator {
                 <tr><td>المساحة / الحجم</td><td>${area}</td></tr>
                 <tr><td>مدة الإنشاء (شهر)</td><td>${timeline}</td></tr>
                 <tr><td>بدء التشغيل</td><td>${info.timeline?.operationStart || '—'}</td></tr>
+                ${results?.saudization?.totalHeads > 0 ? `<tr><td>الوظائف ونسبة التوطين</td><td>${results.saudization.totalHeads} وظيفة — توطين ${Math.round((results.saudization.rate || 0) * 100)}% (${results.saudization.saudiHeads} سعودي)</td></tr>` : ''}
                 </table>`);
             }
             case 'financial_kpis': {
