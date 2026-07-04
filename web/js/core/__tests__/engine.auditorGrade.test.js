@@ -52,6 +52,9 @@ describe('أ. مصالحة الطاقة', () => {
         const qa = await runQAChecks(study, r);
         expect(qa.hardErrors.map(e => e.code)).toContain('CAPACITY_EXCEEDED');
         expect(qa.passed).toBe(false);
+        // مبيعات مستحيلة مادياً لا يمكن أن تكون GO مهما كانت المؤشرات
+        expect(r.decision).not.toBe('GO');
+        expect(r.decisionReasons.join(' ')).toContain('الطاقة القصوى');
     });
 
     it('خطة ضمن الطاقة تمر بلا خطأ طاقة', async () => {

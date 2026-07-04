@@ -831,11 +831,22 @@ export function calculateStudy(study, overrides) {
             npvWithTerminal: npv + terminalValueDiscounted
         },
         dscrAnalysis,
-        ...computeDecision(study.assumptions?.thresholds, {
-            npv, irr,
-            paybackPeriod: paybackOut,
-            roi: roi / 100
-        }),
+        ...(() => {
+            const d = computeDecision(study.assumptions?.thresholds, {
+                npv, irr,
+                paybackPeriod: paybackOut,
+                roi: roi / 100
+            });
+            // مبيعات تتجاوز الطاقة القصوى المادية لا يمكن أن تكون GO مهما كانت
+            // المؤشرات — الأرقام مبنية على حجم مستحيل التحقيق
+            if (capacityCheck?.exceeded && d.decision === 'GO') {
+                d.decision = 'REVISE';
+                d.decisionReasons.unshift(
+                    `المبيعات المخططة (${capacityCheck.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر) تتجاوز الطاقة القصوى (${capacityCheck.maxUnitsPerMonth.toLocaleString('ar-SA')}) — خفّض التوقعات أو وسّع الطاقة`
+                );
+            }
+            return d;
+        })(),
         get kpis() { return this.indicators; }
     };
 }

@@ -173,7 +173,9 @@ export class Wizard {
                     // Nested object (like timeline, swot)
                     html += `<h4 class="mt-4 text-gold font-medium" style="margin-bottom: 8px; border-bottom: 1px solid var(--c-border); padding-bottom: 8px;">${getLabel(key)}</h4>`;
                     Object.entries(val).forEach(([subKey, subVal]) => {
-                        if (!Array.isArray(subVal) && typeof subVal !== 'object') {
+                        // null قيمة مشروعة لحقل رقمي اختياري (dsoDays مثلاً) —
+                        // typeof null === 'object' كان يتخطاها فلا تظهر إطلاقاً
+                        if (!Array.isArray(subVal) && (subVal === null || typeof subVal !== 'object')) {
                             html += this.renderField(stepId, `${key}.${subKey}`, subKey, subVal);
                         }
                     });
@@ -559,6 +561,23 @@ export class Wizard {
         if (lowerKey.includes('date') || lowerKey.includes('start') || lowerKey.includes('end') || lowerKey.includes('timeline')) {
             inputType = 'date';
         }
+        // حقل رقمي اختياري قيمته null (dsoDays مثلاً) — النية رقمية من اسم المفتاح
+        if (value === null && /days|months|rate|amount|years|count/i.test(labelKey)) {
+            inputType = 'number';
+        }
+        // طريقة القيمة النهائية: قائمة اختيار بدل نص حر
+        if (fullKey === 'terminalValue.method') {
+            const arabicLbl = getLabelSDB(labelKey, getLabel(labelKey));
+            return `
+                <div class="form-group">
+                    <label for="field-${fullKey}">${arabicLbl}</label>
+                    <select id="field-${fullKey}" data-key="${fullKey}" class="input" style="width:100%; max-width:320px;">
+                        <option value="gordon" ${value !== 'none' ? 'selected' : ''}>استرشادية (نمو Gordon) — القرار يبقى على NPV المتحفظ</option>
+                        <option value="none" ${value === 'none' ? 'selected' : ''}>بدون قيمة نهائية</option>
+                    </select>
+                </div>
+            `;
+        }
 
         const displayValue = value === null || value === undefined ? '' : value;
         const checked = value === true ? 'checked' : '';
@@ -652,7 +671,7 @@ export class Wizard {
 
     /** المفاتيح المخزّنة ككسر (0–1) وتُعرض كنسبة مئوية (0–100). */
     static isFractionPercentKey(keyPath) {
-        const PERCENT_FRACTION_KEYS = ['discountRate', 'taxRate', 'inflationRate', 'contingencyRate', 'gosiRate', 'foreignOwnershipRate'];
+        const PERCENT_FRACTION_KEYS = ['discountRate', 'taxRate', 'inflationRate', 'contingencyRate', 'gosiRate', 'foreignOwnershipRate', 'growthRate'];
         return PERCENT_FRACTION_KEYS.some(p => keyPath === p || keyPath.endsWith('.' + p));
     }
 

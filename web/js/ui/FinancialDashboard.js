@@ -195,6 +195,9 @@ export class FinancialDashboard {
                 </div>
             </div>
 
+            <!-- نظرة المدقق: مصالحة الطاقة + المتغير المهيمن + القيمة النهائية -->
+            ${this.renderAuditorPanel(this.results)}
+
             <!-- Smart Advisor Section -->
             <div class="card glass-card mt-4 advisor-panel">
                 <div class="flex-between mb-4">
@@ -859,6 +862,47 @@ export class FinancialDashboard {
     formatPercent(n) {
         if (!Number.isFinite(n)) return '--';
         return (n * 100).toFixed(1) + '%';
+    }
+
+    /**
+     * بطاقة «نظرة المدقق» — تعرض للمستخدم ما سيراه مقيّم التمويل قبل أن يراه:
+     * مصالحة الطاقة، المتغير المهيمن على NPV (من Tornado)، والقيمة النهائية الاسترشادية.
+     */
+    renderAuditorPanel(results) {
+        if (!results) return '';
+        const rows = [];
+
+        const cc = results.capacityCheck;
+        if (cc) {
+            const pctOfMax = Math.round((cc.utilizationOfMax || 0) * 100);
+            const tone = cc.exceeded ? 'text-danger' : (pctOfMax > 85 ? 'text-gold' : 'text-success');
+            const verdict = cc.exceeded
+                ? `❌ مستحيلة مادياً — الخطة ${cc.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر وطاقتك ${cc.maxUnitsPerMonth.toLocaleString('ar-SA')}`
+                : pctOfMax > 85
+                    ? `⚠️ ضيّقة — ${pctOfMax}% من الطاقة القصوى منذ السنة الأولى (لا هامش للذروة)`
+                    : `✅ قابلة للتحقيق — ${pctOfMax}% من الطاقة القصوى (${cc.plannedUnitsPerMonth.toLocaleString('ar-SA')} من ${cc.maxUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر)`;
+            rows.push(`<div class="flex-between py-2" style="border-bottom:1px solid var(--c-border);"><span class="text-sm">مصالحة الطاقة (هل المبيعات ممكنة مادياً؟)</span><span class="text-sm ${tone}">${verdict}</span></div>`);
+        } else {
+            rows.push(`<div class="flex-between py-2" style="border-bottom:1px solid var(--c-border);"><span class="text-sm">مصالحة الطاقة</span><span class="text-sm text-muted">لم يُدخل نموذج طاقة (مقاعد × دورات × أيام) — أضِفه في الدراسة الفنية لإقناع المدقق</span></div>`);
+        }
+
+        const top = Array.isArray(results.tornado) && results.tornado.length ? results.tornado[0] : null;
+        if (top) {
+            rows.push(`<div class="flex-between py-2" style="border-bottom:1px solid var(--c-border);"><span class="text-sm">المتغير المهيمن على النتيجة</span><span class="text-sm"><strong>${top.variable}</strong> — تغيّره ±10% يؤرجح NPV بمقدار ${this.formatCurrency(top.swing)}؛ ركّز دقتك هنا</span></div>`);
+        }
+
+        const tv = results.indicators?.terminalValue || 0;
+        if (tv > 0) {
+            rows.push(`<div class="flex-between py-2"><span class="text-sm">القيمة النهائية (استرشادية)</span><span class="text-sm">${this.formatCurrency(tv)} — NPV الشامل ${this.formatCurrency(results.indicators.npvWithTerminal)} (القرار يبقى على المتحفظ)</span></div>`);
+        }
+
+        if (!rows.length) return '';
+        return `
+            <div class="card glass-card mt-4" id="auditorPanel" aria-label="نظرة المدقق">
+                <h3 class="card-title mb-1">🔍 نظرة المدقق</h3>
+                <p class="text-xs text-muted mb-3">ما سيفحصه مقيّم التمويل أولاً — اعرفه قبل أن يراه.</p>
+                ${rows.join('')}
+            </div>`;
     }
 
     formatDscr(dscr) {
