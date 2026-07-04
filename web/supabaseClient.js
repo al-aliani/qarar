@@ -23,10 +23,11 @@ function envVar(name) {
   }
 }
 
-/** قيم افتراضية لمشروع Supabase (feasibility-platform) — تُتجاوز عبر env أو window أو localStorage */
-const DEFAULT_SUPABASE_URL = "https://ljvskvzvgrpawyexetzv.supabase.co";
+/** قيم افتراضية لمشروع Supabase (قرار) — المفتاح anon عمومي وآمن في بناء الواجهة (محمي بـ RLS).
+ *  تُتجاوز عبر env (VITE_SUPABASE_*) أو window أو localStorage. */
+const DEFAULT_SUPABASE_URL = "https://ykvcshxcjjicujayfwxg.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdnNrdnp2Z3JwYXd5ZXhldHp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NDE1NDMsImV4cCI6MjA4NTQxNzU0M30.UzitNpUhroHsoMXAqZmaal34N9eHrly4A_IzAmi1lbM";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrdmNzaHhjamppY3VqYXlmd3hnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNjM1MjksImV4cCI6MjA5ODczOTUyOX0.VJ0_MQeYX9Audzjg1F9pqW3b1NdL5HnsFBxH3snG3lw";
 
 let _client = null;
 let _lastError = "";
