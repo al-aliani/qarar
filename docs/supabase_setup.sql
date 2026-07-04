@@ -1,7 +1,12 @@
 -- ============================================
--- Supabase Database Schema for FeasSimulator
+-- ✅ Supabase Database Schema for FeasSimulator — الملف الكنسي الوحيد (CANONICAL)
 -- ============================================
--- تنفيذ هذا الملف في SQL Editor على Supabase
+-- هذا هو مصدر الحقيقة الوحيد لمخطط قاعدة البيانات. ملفات SQL الأخرى في docs/
+-- (supabase_schema.sql، supabase_add_data_column.sql) مُتقاعدة — لا تُنفّذها.
+-- المخطط هنا (studies: user_id + data JSONB) يطابق تماماً كود التطبيق في
+-- web/js/services/PersistenceService.js و web/supabaseClient.js.
+--
+-- تنفيذ: Supabase → SQL Editor → New query → الصق الملف كاملاً → Run.
 
 -- 1. Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

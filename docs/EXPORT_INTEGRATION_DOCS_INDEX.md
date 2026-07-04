@@ -196,7 +196,7 @@
 
 ### الوثائق الموجودة مسبقاً
 - [إعداد_Supabase.md](./إعداد_Supabase.md) - إعداد قاعدة البيانات
-- [supabase_schema.sql](./supabase_schema.sql) - Schema الحالي
+- [supabase_setup.sql](./supabase_setup.sql) - ✅ المخطط الكنسي الوحيد (supabase_schema.sql مُتقاعد)
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - هيكل المشروع
 - [FAQ.md](./FAQ.md) - الأسئلة الشائعة
 

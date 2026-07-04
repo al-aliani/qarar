@@ -1,5 +1,11 @@
 # Persistence Flow (Supabase Source of Truth + Local Draft Cache)
 
+> ⚠️ **تحديث ٢٠٢٦-٠٧-٠٤ — تم توحيد المخطط:** هذا المستند يصف التدفق القديم
+> (`owner_id` + جدول `study_inputs`). الكود الآن موحّد على جدول `studies` واحد
+> بعمودَي `user_id` + `data` (JSONB) — انظر `docs/supabase_setup.sql` (الكنسي)
+> و`web/js/services/PersistenceService.js`. تجاهل إشارات `study_inputs`/`owner_id`
+> أدناه؛ الجوهر (سحابة كمصدر حقيقة + كاش محلي) ما يزال صحيحاً.
+
 ## الهدف
 نجعل **قاعدة البيانات (Supabase)** هي مصدر الحقيقة للدراسة (Study Inputs)، مع إبقاء `localStorage` كـ **Draft Cache** للاسترجاع عند:
 - انقطاع الشبكة

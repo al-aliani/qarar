@@ -9,7 +9,7 @@
  *   4. القيم الافتراضية أدناه (مشروع feasibility-platform)
  *
  * Notes:
- * - RLS policies require authenticated user for studies/study_inputs.
+ * - RLS policies require authenticated user for studies (see docs/supabase_setup.sql).
  * - If not configured or not authenticated, app will fall back to local draft cache.
  */
 import { createClient } from "@supabase/supabase-js";

@@ -57,7 +57,6 @@ async function decompress(str) {
 
 const LOCAL_STORAGE_KEY_PREFIX = 'feas_project_';
 const SUPA_TABLE_STUDIES = 'studies';
-const SUPA_TABLE_INPUTS = 'study_inputs';
 
 export class PersistenceService {
 
@@ -273,33 +272,22 @@ export class PersistenceService {
         const { supabase } = await getSupabaseClient();
         if (!supabase) throw new Error("Supabase client not available");
 
-        // 1. Upsert Study Metadata
-        // 1. Upsert Study Metadata
-        const studyMeta = {
+        // كتابة واحدة إلى جدول studies الكنسي (user_id + data) — المخطط الموحّد.
+        // data كاملة الدراسة تُخزَّن في عمود data (JSONB). لا نكتب status لتفادي
+        // مخالفة قيد CHECK إن حملت projectInfo.status قيمة خارج المسموح.
+        const studyRow = {
             id: id,
-            owner_id: userId,
-            template_slug: 'modelR',
-            status: data.projectInfo?.status || 'draft',
-            title: data.projectInfo?.name || 'Untitled Project', // Assuming DB has 'title' or 'name' column now or allows extra props
+            user_id: userId,
+            title: data.projectInfo?.name || 'مشروع جديد',
+            data: data,
             updated_at: new Date().toISOString()
         };
 
-        const { error: metaErr } = await supabase
+        const { error } = await supabase
             .from(SUPA_TABLE_STUDIES)
-            .upsert(studyMeta);
+            .upsert(studyRow);
 
-        if (metaErr) throw metaErr;
-
-        // 2. Upsert Inputs
-        const { error: inputErr } = await supabase
-            .from(SUPA_TABLE_INPUTS)
-            .upsert({
-                study_id: id,
-                inputs: data, // JSONB
-                updated_at: new Date().toISOString()
-            });
-
-        if (inputErr) throw inputErr;
+        if (error) throw error;
     }
 
     static async _loadCloud(id) {
@@ -313,13 +301,13 @@ export class PersistenceService {
         if (!supabase) return null;
 
         const { data, error } = await supabase
-            .from(SUPA_TABLE_INPUTS)
-            .select('inputs, updated_at')
-            .eq('study_id', id)
+            .from(SUPA_TABLE_STUDIES)
+            .select('data, updated_at')
+            .eq('id', id)
             .single();
 
         if (error) throw error;
-        return { data: data?.inputs || null, updatedAt: data?.updated_at };
+        return { data: data?.data || null, updatedAt: data?.updated_at };
     }
 
     static async _deleteCloud(id) {
@@ -340,7 +328,7 @@ export class PersistenceService {
         const { data, error } = await supabase
             .from(SUPA_TABLE_STUDIES)
             .select('id, title, updated_at, status')
-            .eq('owner_id', userId)
+            .eq('user_id', userId)
             .order('updated_at', { ascending: false });
 
         if (error) throw error;

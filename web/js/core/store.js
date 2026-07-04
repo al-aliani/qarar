@@ -24,7 +24,6 @@ class StudyStore {
         this.state = createEmptyStudy();
         this.listeners = new Set();
         this.saveStatusListeners = new Set(); // For save status updates (Saving/Saved/Offline)
-        this._saveTimeout = null;
         this._localSaveTimeout = null;
         this._cloudSyncTimeout = null; // Debounce timer for cloud sync
         this._lastSaveStatus = { location: 'local', success: true };
@@ -203,8 +202,9 @@ class StudyStore {
     save() {
         if (!this.state) return;
         this.state.updatedAt = new Date().toISOString();
-        this.saveLocalDebounced(); // Async handled internally
-        this.saveCloudDebounced();
+        // الحفظ المحلي ثم المزامنة السحابية عبر مسار واحد موحّد:
+        // saveLocal → _syncToCloud → PersistenceService (studies: user_id + data).
+        this.saveLocalDebounced();
     }
 
     saveLocalDebounced() {
@@ -363,37 +363,6 @@ class StudyStore {
         await this.saveLocal();
         this.notify();
         return true;
-    }
-
-    // Simple debounce for cloud save — لا يحاول الحفظ السحابي إلا عند تسجيل الدخول
-    saveCloudDebounced() {
-        if (this._saveTimeout) clearTimeout(this._saveTimeout);
-        this._saveTimeout = setTimeout(async () => {
-            try {
-                const supabase = await import('../../supabaseClient.js');
-                const { user } = await supabase.getAuthUser();
-                if (!user) {
-                    // غير مسجّل دخول — الحفظ المحلي كافٍ، لا نعرض تحذيراً
-                    return;
-                }
-                const { saveStudy } = supabase;
-                const { ok, error } = await saveStudy(this.state.id, this.state);
-                if (ok) {
-                    console.log('Cloud save successful');
-                    this.notify('sync_status'); // Notify sidebar to show green check
-                } else {
-                    // لا تحذير عند "User not authenticated" أو "غير مهيأ" (قد يكون كاش قديم أو تأخر جلسة)
-                    const errStr = String(error || '').toLowerCase();
-                    if (error && !errStr.includes('not authenticated') && !errStr.includes('غير مهيأ')) {
-                        console.warn('Cloud save failed:', error);
-                    }
-                }
-            } catch (e) {
-                if (!String(e?.message || e).toLowerCase().includes('not authenticated')) {
-                    console.error('Cloud save error:', e);
-                }
-            }
-        }, 2000); // 2 seconds debounce
     }
 
     get() {
