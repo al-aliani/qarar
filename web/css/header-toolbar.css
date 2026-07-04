@@ -1,0 +1,140 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   App Header Toolbar (A): Save, Export, Theme, KPI mini
+   Visible in workspace only; hidden when .app-shell.dashboard-mode
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.app-shell {
+  grid-template-rows: auto 1fr;
+}
+
+.app-header {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4);
+  background-color: var(--c-bg-panel);
+  border-bottom: 1px solid var(--c-border);
+  min-height: 48px;
+  flex-wrap: wrap;
+}
+
+/* Hide header when landing dashboard is shown */
+.app-shell.dashboard-mode .app-header {
+  display: none !important;
+}
+
+.app-header__brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--c-p-500);
+}
+
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+
+/* Stage bar (Phases/Stages) */
+.stage-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 240px;
+  padding: 4px 8px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.03);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.stage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--c-text-muted);
+  font-size: 0.75rem;
+}
+
+.stage-chip.is-active {
+  border-color: var(--c-border);
+  color: var(--c-text-main);
+  background: var(--c-p-subtle);
+}
+
+.stage-chip.is-complete {
+  color: var(--c-text-main);
+}
+
+.stage-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.stage-chip.is-active .stage-chip__dot {
+  background: var(--c-p-500);
+}
+
+.stage-chip.is-complete .stage-chip__dot {
+  background: var(--c-success);
+}
+
+.app-header__kpi {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 0.85rem;
+}
+
+.kpi-mini {
+  white-space: nowrap;
+}
+
+.kpi-mini.badge {
+  padding: 2px 8px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--c-text-muted);
+  font-size: 0.75rem;
+}
+
+.app-header #headerKpiNpv.text-danger,
+.app-header #headerKpiIrr.text-danger {
+  color: var(--c-danger);
+}
+
+.app-header #headerKpiIrr.text-gold {
+  color: var(--c-gold-500);
+}
+
+/* Desktop: show app-header; on small/mobile hide it (mobile-header is used) */
+@media (max-width: 768px) {
+  .app-header {
+    display: none !important;
+  }
+}
+
+/* When app-header is shown on desktop, ensure sidebar/main/live-panel are in row 2 */
+.sidebar {
+  grid-row: 2;
+}
+
+.main-stage {
+  grid-row: 2;
+}
+
+.live-panel {
+  grid-row: 2;
+}

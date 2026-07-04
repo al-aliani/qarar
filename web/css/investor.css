@@ -1,0 +1,273 @@
+/**
+ * لوحة المستثمر (Pitch View) — أنماط صفحة "بروفايل شركة"
+ * للقراءة فقط، تصميم بسيط ونظيف
+ */
+
+.pitch-view {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  font-family: var(--font-ui, 'IBM Plex Sans Arabic', system-ui, sans-serif);
+  direction: rtl;
+}
+
+.pitch-view--empty {
+  min-height: 40vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pitch-view__empty-message {
+  text-align: center;
+  color: var(--c-text-muted);
+}
+
+.pitch-view__empty-message p:first-child {
+  font-size: 1.125rem;
+  color: var(--c-text-main);
+  margin-bottom: 0.5rem;
+}
+
+/* Header: شعار + اسم المشروع */
+.pitch-view__header {
+  margin-bottom: 1.5rem;
+}
+
+.pitch-view__brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pitch-view__logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: var(--r-md, 10px);
+}
+
+.pitch-view__logo-placeholder {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background: var(--grad-glass, linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)));
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md, 10px);
+}
+
+.pitch-view__title-wrap {
+  flex: 1;
+}
+
+.pitch-view__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--c-text-main);
+  letter-spacing: -0.02em;
+}
+
+.pitch-view__meta {
+  font-size: 0.875rem;
+  color: var(--c-text-muted);
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* فيديو تعريفي */
+.pitch-view__video {
+  margin-bottom: 1.5rem;
+}
+
+.pitch-view__video-wrap {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  border-radius: var(--r-lg, 16px);
+  background: var(--c-bg-card);
+  border: 1px solid var(--c-border);
+}
+
+.pitch-view__video-wrap iframe {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ملخص: المشكلة / الحل / لماذا نربح */
+.pitch-view__summary {
+  margin-bottom: 1.5rem;
+}
+
+.pitch-view__desc {
+  color: var(--c-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin: 0 0 1rem 0;
+}
+
+.pitch-view__hypothesis {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pitch-view__block {
+  padding: 1rem;
+  background: var(--c-bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md, 10px);
+}
+
+.pitch-view__block h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--c-p-500, #d4af37);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pitch-view__block p {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--c-text-main);
+}
+
+/* شبكة المؤشرات المالية الأربعة */
+.pitch-view__kpis {
+  margin-bottom: 1.5rem;
+}
+
+.pitch-view__kpis-title {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--c-text-main);
+}
+
+.pitch-view__kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 520px) {
+  .pitch-view__kpis-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.pitch-view__kpi {
+  padding: 1rem;
+  background: var(--c-bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md, 10px);
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pitch-view__kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.pitch-view__kpi-label {
+  font-size: 0.75rem;
+  color: var(--c-text-muted);
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.pitch-view__kpi-value {
+  font-family: var(--font-mono, monospace);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--c-p-500, #d4af37);
+}
+
+.pitch-view__kpi-unit {
+  font-size: 0.75rem;
+  color: var(--c-text-muted);
+  margin-top: 0.25rem;
+}
+
+/* قرار التقييم */
+.pitch-view__decision {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--c-bg-panel);
+  border-radius: var(--r-md, 10px);
+  border: 1px solid var(--c-border);
+}
+
+.pitch-view__decision-badge {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  margin-left: 0.5rem;
+}
+
+.pitch-view__decision-badge--go {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--c-success);
+  border: 1px solid var(--c-success);
+}
+
+.pitch-view__decision-badge--no-go {
+  background: var(--c-danger-subtle);
+  color: var(--c-danger);
+  border: 1px solid var(--c-danger);
+}
+
+.pitch-view__decision-badge--revise {
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--c-p-500);
+  border: 1px solid var(--c-p-500);
+}
+
+.pitch-view__decision-reasons {
+  margin: 0.75rem 0 0 0;
+  padding-right: 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--c-text-muted);
+  line-height: 1.5;
+}
+
+/* Footer */
+.pitch-view__footer {
+  padding-top: 1rem;
+  border-top: 1px solid var(--c-border);
+  font-size: 0.75rem;
+  color: var(--c-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* دخول الصفحة */
+.pitch-view.animate-entry {
+  animation: pitchFadeIn 0.4s ease-out;
+}
+
+@keyframes pitchFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

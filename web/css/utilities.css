@@ -1,0 +1,170 @@
+.d-flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.gap-2 {
+    gap: var(--s-2);
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.mt-2 {
+    margin-top: var(--s-2);
+}
+
+.mt-4 {
+    margin-top: var(--s-4);
+}
+
+.w-full {
+    width: 100%;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.text-lg {
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.text-mono {
+    font-family: var(--font-mono);
+}
+
+.text-gold {
+    color: var(--c-gold-500);
+}
+
+.text-muted {
+    color: var(--c-text-muted);
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    background-color: var(--c-bg-card);
+    border: 1px solid var(--c-border);
+}
+
+/* Additional Utilities */
+.mb-2 {
+    margin-bottom: var(--s-2);
+}
+
+.mb-4 {
+    margin-bottom: var(--s-4);
+}
+
+.mr-2 {
+    margin-right: var(--s-2);
+}
+
+.ml-2 {
+    margin-left: var(--s-2);
+}
+
+.gap-4 {
+    gap: var(--s-4);
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-success {
+    color: var(--c-success);
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.font-medium {
+    font-weight: 500;
+}
+
+.opacity-50 {
+    opacity: 0.5;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.overflow-hidden {
+    overflow: hidden;
+}
+
+.rounded {
+    border-radius: var(--r-md);
+}
+
+.shadow {
+    box-shadow: var(--shadow-sm);
+}
+
+.shadow-lg {
+    box-shadow: var(--shadow-lg);
+}
+
+/* Transitions */
+.transition {
+    transition: all 0.2s ease;
+}
+
+.transition-fast {
+    transition: all 0.1s ease;
+}
+
+/* Visibility */
+.hidden {
+    display: none !important;
+}
+
+.visible {
+    visibility: visible;
+}
+
+.invisible {
+    visibility: hidden;
+}
+
+/* Position */
+.relative {
+    position: relative;
+}
+
+.absolute {
+    position: absolute;
+}
+
+/* Sizing */
+.h-full {
+    height: 100%;
+}
+
+.min-h-screen {
+    min-height: 100vh;
+}

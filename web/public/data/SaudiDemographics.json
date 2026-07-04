@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "source": "الهيئة العامة للإحصاء (GASTAT)",
+    "sourceEn": "General Authority for Statistics",
+    "url": "https://www.stats.gov.sa",
+    "year": 2022,
+    "description": "بيانات سكانية واقتصادية للمدن الرئيسية — تعداد ومسوح هيئة الإحصاء",
+    "updatedAt": "2024-01"
+  },
+  "cities": {
+    "الرياض": { "population": 7676654, "perCapitaIncomeSAR": 98500, "region": "منطقة الرياض", "notes": "تعداد 2022" },
+    "جدة": { "population": 4685000, "perCapitaIncomeSAR": 92000, "region": "منطقة مكة المكرمة", "notes": "تقدير 2022" },
+    "مكة المكرمة": { "population": 2042000, "perCapitaIncomeSAR": 78000, "region": "منطقة مكة المكرمة", "notes": "تقدير 2022" },
+    "مكة": { "population": 2042000, "perCapitaIncomeSAR": 78000, "region": "منطقة مكة المكرمة", "notes": "مرجع لمكة المكرمة" },
+    "المدينة المنورة": { "population": 1481000, "perCapitaIncomeSAR": 82000, "region": "منطقة المدينة المنورة", "notes": "تقدير 2022" },
+    "المدينة": { "population": 1481000, "perCapitaIncomeSAR": 82000, "region": "منطقة المدينة المنورة", "notes": "مرجع للمدينة المنورة" },
+    "الدمام": { "population": 1208000, "perCapitaIncomeSAR": 95000, "region": "المنطقة الشرقية", "notes": "تقدير 2022" },
+    "الخبر": { "population": 573000, "perCapitaIncomeSAR": 102000, "region": "المنطقة الشرقية", "notes": "تقدير 2022" },
+    "الطائف": { "population": 993000, "perCapitaIncomeSAR": 72000, "region": "منطقة مكة المكرمة", "notes": "تقدير 2022" },
+    "تبوك": { "population": 569797, "perCapitaIncomeSAR": 68000, "region": "منطقة تبوك", "notes": "تقدير 2022" },
+    "بريدة": { "population": 614093, "perCapitaIncomeSAR": 75000, "region": "منطقة القصيم", "notes": "تقدير 2022" },
+    "خميس مشيط": { "population": 512599, "perCapitaIncomeSAR": 71000, "region": "منطقة عسير", "notes": "تقدير 2022" },
+    "أبها": { "population": 366551, "perCapitaIncomeSAR": 74000, "region": "منطقة عسير", "notes": "تقدير 2022" },
+    "القطيف": { "population": 524182, "perCapitaIncomeSAR": 88000, "region": "المنطقة الشرقية", "notes": "تقدير 2022" },
+    "حائل": { "population": 412758, "perCapitaIncomeSAR": 70000, "region": "منطقة حائل", "notes": "تقدير 2022" },
+    "جازان": { "population": 173569, "perCapitaIncomeSAR": 65000, "region": "منطقة جازان", "notes": "تقدير 2022" },
+    "نجران": { "population": 329112, "perCapitaIncomeSAR": 66000, "region": "منطقة نجران", "notes": "تقدير 2022" },
+    "أخرى": { "population": 5000000, "perCapitaIncomeSAR": 70000, "region": "مختلف المناطق", "notes": "متوسط تقديري" }
+  },
+  "sectorConsumptionShare": {
+    "default": 0.02,
+    "مطعم": 0.025, "قهوة": 0.015, "كافي": 0.015, "مشروبات": 0.01,
+    "تجزئة": 0.05, "بقالة": 0.04, "متجر": 0.04, "بيع": 0.04,
+    "تعليم": 0.03, "تدريب": 0.02, "صحي": 0.04, "عيادة": 0.035,
+    "استشار": 0.015, "خدمي": 0.02, "لوجستي": 0.025, "شحن": 0.02, "نقل": 0.02,
+    "صناع": 0.03, "إنتاج": 0.03
+  }
+}

@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- CSP: لا inline scripts (theme + SW في ملفات خارجية). style-src unsafe-inline للسماح بسمات style في HTML. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; frame-src https://www.openstreetmap.org https://www.google.com https://www.recaptcha.net; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://*.jsdelivr.net https://*.cloudflare.com https://www.google.com https://www.recaptcha.net https:; base-uri 'self'; form-action 'self';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>محاكي الجدوى | دراسة الجدوى الذكية</title>
+  <meta name="description" content="منصة دراسة الجدوى الذكية: أنشئ دراسات جدوى احترافية مع النماذج المالية، التحليل الاستراتيجي، والتقارير الجاهزة للطباعة.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1e3a5f">
+
+  <!-- Fonts: مستضافة محلياً (/fonts) — لا اعتماد على Google CDN. انظر css/fonts.css -->
+  <link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="./css/main.css" />
+  <link rel="stylesheet" href="./css/ai.css" />
+  <link rel="stylesheet" href="./css/simple-mode.css" />
+  <link rel="stylesheet" href="./css/timeline.css" />
+  <link rel="stylesheet" href="./css/toast.css" />
+  <link rel="stylesheet" href="./css/tooltip.css" />
+  <link rel="stylesheet" href="./css/scenario-switcher.css" />
+  <style>
+    :root {
+      --font-ui: 'IBM Plex Sans Arabic', 'Inter', system-ui, sans-serif;
+    }
+    /* إخفاء بصري لا يُنتج تجاوزاً أفقياً — تقنية clip بدل left:-9999px التي كانت
+       تُضيف ~10000px تمرير جانبي في وضع RTL وتكسر تجربة الجوّال. */
+    .skip-link {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+      z-index: 9999;
+      padding: 0.5rem 1rem;
+      background: #d4af37;
+      color: #000;
+      font-weight: 600;
+      border-radius: 4px;
+      text-decoration: none;
+    }
+    .skip-link:focus {
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip: auto;
+      clip-path: none;
+    }
+  </style>
+</head>
+
+<body>
+  <a href="#wizardContainer" class="skip-link">انتقل للمحتوى</a>
+
+  <div class="app-shell">
+
+    <!-- App Header Toolbar (visible in workspace: save, export, theme, KPI mini) -->
+    <header class="app-header" id="appHeader" role="banner">
+      <div class="app-header__brand">⚡ محاكي الجدوى</div>
+      <div id="headerStageBar" class="stage-bar" aria-label="مراحل الدراسة"></div>
+      <div class="app-header__actions">
+        <button type="button" id="headerThemeToggle" class="btn-icon" aria-label="تبديل المظهر" title="المظهر: داكن / فاتح / تلقائي">
+          <span data-theme-icon="dark">🌙</span><span data-theme-icon="light" style="display:none">☀️</span><span data-theme-icon="auto" style="display:none">🔄</span>
+        </button>
+        <button type="button" id="headerSaveStudy" class="btn btn--secondary btn-sm" title="حفظ الدراسة">💾 حفظ</button>
+        <button type="button" id="headerExportMenu" class="btn btn--primary btn-sm" title="تصدير">📥 تصدير</button>
+        <div class="app-header__kpi" aria-label="مؤشرات سريعة">
+          <span id="headerKpiNpv" class="kpi-mini text-mono">--</span>
+          <span id="headerKpiIrr" class="kpi-mini text-mono">--</span>
+          <span id="headerKpiQuality" class="kpi-mini badge">--</span>
+          <button type="button" id="headerKpiDetails" class="btn btn--ghost btn-sm">تفاصيل</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mobile Header (Visible only on mobile) -->
+    <header class="mobile-header">
+      <button id="btnToggleSidebar" class="btn-icon" aria-label="Toggle Menu" aria-expanded="false" aria-controls="mainSidebar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+      <span class="brand-name-mobile">⚡ محاكي الجدوى</span>
+      <button id="btnToggleLivePanel" class="btn-icon" aria-label="Toggle Live Panel" aria-expanded="false" aria-controls="livePanel" title="النظرة الحية">
+        📊
+      </button>
+      <!-- شريط مؤشرات حيّ للجوّال: يبقي القيمة الحالية والقرار ظاهرَين دائماً أثناء الإدخال -->
+      <button type="button" id="btnMobileKpiBar" class="mobile-kpi-bar" aria-label="النظرة الحية — اضغط لعرض التفاصيل">
+        <span class="mkpi"><span class="mkpi-label">القيمة الحالية (NPV)</span><span id="mobileKpiNpv" class="mkpi-val text-mono">--</span></span>
+        <span class="mkpi-sep" aria-hidden="true">·</span>
+        <span id="mobileKpiDecision" class="mkpi-val">في انتظار البيانات</span>
+        <span class="mkpi-more" aria-hidden="true">التفاصيل ↑</span>
+      </button>
+    </header>
+
+    <!-- Sidebar Overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <!-- Live Panel Overlay -->
+    <div id="livePanelOverlay" class="live-panel-overlay"></div>
+
+    <button id="btnToggleLivePanelFab" class="btn-icon live-panel-fab" aria-label="Toggle Live Panel" aria-expanded="false" aria-controls="livePanel" title="النظرة الحية">
+      📊
+    </button>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="mainSidebar">
+      <div class="brand">
+        <span class="brand-name">⚡ محاكي الجدوى</span>
+        <span class="brand-accent">لوحة القرار الذكية</span>
+        <button id="btnThemeToggle" type="button" class="btn-icon ml-1" title="المظهر: داكن / فاتح / تلقائي" aria-label="تبديل المظهر" style="margin-top: 4px;">
+          <span data-theme-icon="dark">🌙</span><span data-theme-icon="light" style="display:none">☀️</span><span data-theme-icon="auto" style="display:none">🔄</span>
+        </button>
+      </div>
+
+
+      <nav id="stepperNav" class="flex-col gap-2">
+        <!-- Injected via JS -->
+      </nav>
+
+      <!-- Auth Component Container (Bottom Sidebar) -->
+      <div id="authContainer" class="mt-4 mb-4"></div>
+
+      <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--c-border);">
+        <!-- Multi-Project Support: Save/Load -->
+        <button id="btnSaveStudy" class="btn btn--secondary w-full mb-2" title="حفظ الدراسة كملف JSON">
+          <span id="saveStudyText">💾 حفظ الدراسة</span>
+          <span id="saveStudyProgress" class="text-xs opacity-75" style="display: none;"></span>
+        </button>
+        <div id="lastUpdateStatus" class="text-xs text-muted mt-1 px-2" aria-live="polite">—</div>
+        <input type="file" id="fileLoadStudy" accept=".json" style="display: none;">
+        <input type="file" id="fileImportCSV" accept=".csv,.txt" style="display: none;">
+
+        <button id="btnMoreActions" class="btn btn--ghost w-full mb-2" aria-expanded="false" aria-controls="sidebarSecondaryActions" title="عرض/إخفاء الأدوات الثانوية">
+          ⋯ المزيد
+        </button>
+        <div id="sidebarSecondaryActions" style="display: none;">
+          <button id="btnLoadStudy" class="btn btn--ghost w-full mb-2" title="تحميل دراسة من ملف JSON">
+            📤 تحميل دراسة
+          </button>
+          <button id="btnImportCSV" class="btn btn--ghost w-full mb-2" title="استيراد بيانات أساسية من CSV">
+            📋 استيراد من CSV
+          </button>
+          <button id="btnReset" class="btn btn--ghost w-full mb-2" title="مسح جميع البيانات والبدء من جديد">
+            🔄 إعادة ضبط
+          </button>
+          <button id="btnVersionHistory" class="btn btn--ghost w-full mb-2" title="عرض آخر 10 نسخ واستعادة واحدة">
+            📜 تاريخ الإصدارات
+          </button>
+          <button id="btnShareStudy" class="btn btn--ghost w-full mb-2" title="مشاركة الدراسة مع آخرين (محرر/مشاهد)">
+            🔗 مشاركة الدراسة
+          </button>
+        </div>
+
+        <!-- Unified Export Menu -->
+        <div class="export-menu-container" style="position: relative;">
+          <button id="btnExportMenu" class="btn btn--primary w-full"
+            style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span>📥 تصدير</span>
+            <span style="font-size: 10px;">▼</span>
+          </button>
+          <div id="exportDropdown" class="export-dropdown"
+            style="display: none; position: absolute; bottom: 100%; left: 0; right: 0; background: var(--c-bg-card); border: 1px solid var(--c-border); border-radius: 8px; margin-bottom: 8px; box-shadow: 0 -4px 12px rgba(0,0,0,0.15); z-index: 100;">
+            <button class="export-option" data-export="pdf"
+              style="width: 100%; text-align: right; padding: 12px 16px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; transition: background 0.2s;">
+              <span style="font-size: 18px;">📄</span>
+              <div style="flex: 1; text-align: right;">
+                <div style="font-weight: 500;">تقرير PDF</div>
+                <div style="font-size: 12px; color: var(--c-text-muted);">تقرير شامل للطباعة</div>
+              </div>
+            </button>
+            <div style="height: 1px; background: var(--c-border); margin: 0 12px;"></div>
+            <button class="export-option" data-export="excel"
+              style="width: 100%; text-align: right; padding: 12px 16px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; transition: background 0.2s;">
+              <span style="font-size: 18px;">📊</span>
+              <div style="flex: 1; text-align: right;">
+                <div style="font-weight: 500;">ملف Excel</div>
+                <div style="font-size: 12px; color: var(--c-text-muted);">قوائم مالية تفصيلية</div>
+              </div>
+            </button>
+            <div style="height: 1px; background: var(--c-border); margin: 0 12px;"></div>
+            <button class="export-option" data-export="pptx"
+              style="width: 100%; text-align: right; padding: 12px 16px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; transition: background 0.2s;">
+              <span style="font-size: 18px;">📽️</span>
+              <div style="flex: 1; text-align: right;">
+                <div style="font-weight: 500;">PowerPoint</div>
+                <div style="font-size: 12px; color: var(--c-text-muted);">عرض تقديمي PPTX</div>
+              </div>
+            </button>
+            <div style="height: 1px; background: var(--c-border); margin: 0 12px;"></div>
+            <button class="export-option" data-export="word"
+              style="width: 100%; text-align: right; padding: 12px 16px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; transition: background 0.2s;">
+              <span style="font-size: 18px;">📝</span>
+              <div style="flex: 1; text-align: right;">
+                <div style="font-weight: 500;">Word</div>
+                <div style="font-size: 12px; color: var(--c-text-muted);">تقرير DOCX قابل للتعديل</div>
+              </div>
+            </button>
+            <div style="height: 1px; background: var(--c-border); margin: 0 12px;"></div>
+            <button class="export-option" data-export="bank"
+              style="width: 100%; text-align: right; padding: 12px 16px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; transition: background 0.2s;">
+              <span style="font-size: 18px;">🏦</span>
+              <div style="flex: 1; text-align: right;">
+                <div style="font-weight: 500;">التقرير البنكي</div>
+                <div style="font-size: 12px; color: var(--c-text-muted);">عرض HTML للمصرف</div>
+              </div>
+            </button>
+            <div style="height: 1px; background: var(--c-border); margin: 0 12px;"></div>
+            <button class="export-option" data-export="json"
+              style="width: 100%; text-align: right; padding: 12px 16px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; transition: background 0.2s;">
+              <span style="font-size: 18px;">💾</span>
+              <div style="flex: 1; text-align: right;">
+                <div style="font-weight: 500;">نسخة JSON</div>
+                <div style="font-size: 12px; color: var(--c-text-muted);">للنسخ الاحتياطي</div>
+              </div>
+            </button>
+          </div>
+        </div>
+        <p class="text-xs text-muted mt-2 px-2">ربط محاسبة (QuickBooks، Xero): قريباً</p>
+        <p class="text-xs text-gold/90 mt-2 px-2" id="bankComplianceSentence" title="متوافق مع متطلبات بنك التنمية ومنشآت">✓ هيكل التقرير متوافق مع متطلبات بنك التنمية ومنشآت</p>
+        <div class="text-xs text-muted mt-2 px-2" style="border-top:1px solid var(--c-border);padding-top:8px;">
+          <span>نحن نطوّر المنصة باستمرار.</span>
+          <a href="docs/شروط_الاستخدام.md" target="_blank" rel="noopener" class="text-muted">مساعدة</a>
+          <span> | </span>
+          <a href="docs/شروط_الاستخدام.md" target="_blank" rel="noopener" class="text-muted">مركز المساعدة</a>
+          <span> | </span>
+          <a href="docs/شروط_الاستخدام.md#اتصل-بنا" target="_blank" rel="noopener" class="text-muted">اتصل بنا</a>
+          <br>
+          <a href="docs/سياسة_الخصوصية.md" target="_blank" rel="noopener" class="text-muted">سياسة الخصوصية</a>
+          <span> | </span>
+          <a href="docs/شروط_الاستخدام.md" target="_blank" rel="noopener" class="text-muted">شروط الاستخدام</a>
+          <span> | </span>
+          <a href="#" id="linkRefundPolicy" class="text-gold/90 hover:text-gold" title="ضمان استرداد خلال 15 يوم">🛡️ ضمان الاسترداد</a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Wizard Stage -->
+    <main class="main-stage">
+      <nav id="breadcrumbBar" class="breadcrumb-bar" aria-label="مسار التنقل" style="display:none; padding: 8px 16px; font-size: 14px; color: var(--c-text-muted); border-bottom: 1px solid var(--c-border);">
+        <span class="breadcrumb-item"><a href="#" data-breadcrumb-home>الرئيسية</a></span>
+        <span class="breadcrumb-sep"> / </span>
+        <span id="breadcrumbCurrent" class="breadcrumb-current"></span>
+      </nav>
+      <div id="wizardContainer" class="wizard-container" tabindex="-1">
+        <!-- Active Step Content Injected Here -->
+      </div>
+    </main>
+
+    <!-- Live Dashboard Panel -->
+    <aside class="live-panel" id="livePanel">
+      <div class="live-panel-handle" aria-hidden="true"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap: 8px; margin:0 0 10px 0;">
+        <h3 class="text-gold" style="margin:0;">النظرة الحية</h3>
+        <button id="btnCloseLivePanel" type="button" class="btn-icon live-panel-close" aria-label="إغلاق النظرة الحية" title="إغلاق">×</button>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="card">
+        <div class="text-muted text-sm">صافي القيمة الحالية</div>
+        <div id="liveNPV" class="text-lg text-mono text-gold">--</div>
+      </div>
+
+      <div class="card">
+        <div class="text-muted text-sm">معدل العائد الداخلي</div>
+        <div id="liveIRR" class="text-lg text-mono">--</div>
+      </div>
+
+      <!-- Chart Canvas -->
+      <div class="card">
+        <canvas id="liveChart" width="300" height="200"></canvas>
+      </div>
+
+      <!-- Health Checks -->
+      <div class="card">
+        <div class="text-muted text-sm mb-2">فحص الجودة</div>
+        <div id="qaStatusList" class="text-sm">
+          <span class="badge">جاري الانتظار...</span>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Overlays/Modals خارج app-shell لتجنب تراكب الشبكة -->
+  <div id="exportMenuOverlay"></div>
+  <div id="shareStudyOverlay"></div>
+  <div id="consultationModalOverlay"></div>
+  <div id="authModalContainer"></div>
+
+  <!-- زر تصدير عائم (Sticky): ظاهر دوماً لفتح قائمة التصدير -->
+  <button id="btnFabExport" class="fab-export" title="تصدير الدراسة" aria-label="تصدير">
+    📥
+  </button>
+
+  <!-- Scripts -->
+  <!-- Chart.js وExcelJS وSheetJS(XLSX) تُحمَّل كوحدات مُجمَّعة (bundled) بدل CDN — تعمل بلا إنترنت.
+       انظر vendor-globals.js. (jsPDF وhtml2canvas أُزيلا — لا استخدام لهما؛ تصدير PDF عبر window.print) -->
+  <script type="module" src="./js/vendor-globals.js"></script>
+
+  <!-- Theme init (external file: enables CSP without 'unsafe-inline' for scripts) -->
+  <script src="./js/theme-init.js"></script>
+  <!-- App Logic -->
+  <script type="module" src="./app.js"></script>
+  <script src="./js/sw-register.js"></script>
+</body>
+
+</html>

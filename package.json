@@ -1,0 +1,44 @@
+{
+  "name": "feasibility-simulator",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "start": "start_all.bat",
+    "start:single": "npm run build && set PORT=5173&& set DIRECTORY=web/dist&& python ai_server_enhanced.py",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:visual": "playwright test e2e/visual.spec.js",
+    "test:e2e:all-browsers": "playwright test --project=chromium --project=firefox --project=webkit",
+    "lint": "eslint web",
+    "lint:fix": "eslint web --fix",
+    "format": "prettier --write \"web/**/*.{js,json,css,html,md}\"",
+    "format:check": "prettier --check \"web/**/*.{js,json,css,html,md}\""
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans-arabic": "^5.2.9",
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "chart.js": "^4.5.1",
+    "docx": "^9.5.1",
+    "exceljs": "^4.4.0",
+    "lz-string": "^1.5.0",
+    "pptxgenjs": "^3.12.0",
+    "qrcode": "^1.5.3",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.1",
+    "@vitest/coverage-v8": "^2.1.9",
+    "eslint": "^9.15.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.3",
+    "vite": "^6.0.0",
+    "vitest": "^2.0.0"
+  }
+}

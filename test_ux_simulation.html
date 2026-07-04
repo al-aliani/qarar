@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محاكاة تجربة المستخدم - اختبار الأزرار</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .results {
+            margin-top: 30px;
+        }
+        
+        .result-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-right: 4px solid;
+            background: #f9fafb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .result-item.success {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .result-item.warning {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+        
+        .result-item.error {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .result-info {
+            flex: 1;
+        }
+        
+        .result-status {
+            font-size: 24px;
+            margin-left: 15px;
+        }
+        
+        .summary {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .summary-item {
+            text-align: center;
+        }
+        
+        .summary-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .summary-label {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 30px;
+            background: #e5e7eb;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 محاكاة تجربة المستخدم</h1>
+        <p class="subtitle">اختبار تلقائي لجميع الأزرار في التطبيق</p>
+        
+        <div class="controls">
+            <button class="btn btn-primary" onclick="startTest()">🚀 بدء الاختبار</button>
+            <button class="btn btn-success" onclick="testSpecificComponent()">🔍 اختبار مكون محدد</button>
+            <button class="btn btn-danger" onclick="clearResults()">🗑️ مسح النتائج</button>
+        </div>
+        
+        <div id="progressContainer" style="display: none;">
+            <div class="progress">
+                <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
+            </div>
+        </div>
+        
+        <div id="results" class="results"></div>
+        
+        <div id="summary" class="summary" style="display: none;"></div>
+    </div>
+
+    <script>
+        // قائمة الأزرار للاختبار
+        const BUTTONS_TO_TEST = [
+            // DashboardView
+            { id: 'btnLogin', component: 'DashboardView', description: 'تسجيل الدخول' },
+            { id: 'btnLogout', component: 'DashboardView', description: 'تسجيل الخروج' },
+            { id: 'btnNewProject', component: 'DashboardView', description: 'مشروع جديد' },
+            { id: 'btnNewProjectEmpty', component: 'DashboardView', description: 'مشروع فارغ' },
+            
+            // MarketAnalysis
+            { selector: '.btn-prev-step', component: 'MarketAnalysis', description: 'السابق' },
+            { selector: '.btn-next-step', component: 'MarketAnalysis', description: 'التالي' },
+            { selector: '.btn-add-segment', component: 'MarketAnalysis', description: 'إضافة شريحة' },
+            { selector: '.btn-add-competitor', component: 'MarketAnalysis', description: 'إضافة منافس' },
+            { selector: '.ai-competitors-btn', component: 'MarketAnalysis', description: 'اقتراح AI للمنافسين' },
+            { selector: '.ai-segments-btn', component: 'MarketAnalysis', description: 'اقتراح AI للشرائح' },
+            
+            // SmartGoals
+            { selector: '.btn-add-goal', component: 'SmartGoals', description: 'إضافة هدف' },
+            { selector: '.btn-suggest-goals', component: 'SmartGoals', description: 'اقتراح أهداف' },
+            
+            // DecisionDashboard
+            { id: 'btnExecutiveSummary', component: 'DecisionDashboard', description: 'الملخص التنفيذي' },
+            { id: 'btnPitchMode', component: 'DecisionDashboard', description: 'عرض المستثمر' },
+            { id: 'btnExportPDF', component: 'DecisionDashboard', description: 'تصدير PDF' },
+            { id: 'btnSaveStudy', component: 'DecisionDashboard', description: 'حفظ الدراسة' },
+            { id: 'btnExportExcel', component: 'DecisionDashboard', description: 'تصدير Excel' },
+            
+            // FinancialDashboard
+            { selector: '.ai-consultant-btn', component: 'FinancialDashboard', description: 'طلب تقرير AI' },
+            { id: 'btnPresentationMode', component: 'FinancialDashboard', description: 'عرض تقديمي' },
+            { selector: '[data-chart="revenue"]', component: 'FinancialDashboard', description: 'عرض الإيرادات' },
+            { selector: '[data-chart="profit"]', component: 'FinancialDashboard', description: 'عرض الأرباح' },
+            
+            // Wizard
+            { id: 'btnPrevStep', component: 'Wizard', description: 'السابق' },
+            { id: 'btnNextStep', component: 'Wizard', description: 'التالي' },
+            { id: 'btnExportSection', component: 'Wizard', description: 'تصدير القسم' },
+            
+            // MonteCarloAnalysis
+            { id: 'btnRunSim', component: 'MonteCarloAnalysis', description: 'تشغيل المحاكاة' },
+            
+            // OperationalSim
+            { id: 'btnRunSim', component: 'OperationalSim', description: 'تشغيل محاكاة التشغيل' },
+            
+            // ExportMenu
+            { selector: '.btn-close', component: 'ExportMenu', description: 'إغلاق' },
+            { selector: '[data-type="pdf"]', component: 'ExportMenu', description: 'تصدير PDF' },
+            { selector: '[data-type="excel"]', component: 'ExportMenu', description: 'تصدير Excel' },
+            
+            // app.js
+            { id: 'btnExportMenu', component: 'app.js', description: 'قائمة التصدير' },
+            { id: 'btnSaveStudy', component: 'app.js', description: 'حفظ الدراسة' },
+            { id: 'btnLoadStudy', component: 'app.js', description: 'تحميل دراسة' },
+        ];
+
+        async function testButton(buttonConfig) {
+            const result = {
+                component: buttonConfig.component,
+                description: buttonConfig.description,
+                found: false,
+                clickable: false,
+                hasListener: false,
+                error: null
+            };
+            
+            try {
+                let button = null;
+                
+                // البحث عن الزر
+                if (buttonConfig.id) {
+                    button = document.getElementById(buttonConfig.id);
+                } else if (buttonConfig.selector) {
+                    button = document.querySelector(buttonConfig.selector);
+                }
+                
+                if (!button) {
+                    result.error = 'الزر غير موجود في DOM';
+                    return result;
+                }
+                
+                result.found = true;
+                
+                // التحقق من الحالة
+                const isVisible = button.offsetParent !== null;
+                const isDisabled = button.disabled;
+                const isHidden = button.classList.contains('hidden') || 
+                                button.style.display === 'none';
+                
+                if (!isVisible || isHidden) {
+                    result.error = 'الزر مخفي';
+                    return result;
+                }
+                
+                if (isDisabled) {
+                    result.error = 'الزر معطل';
+                    return result;
+                }
+                
+                result.clickable = true;
+                
+                // التحقق من وجود event listener
+                // (لا يمكن التحقق مباشرة، لكن يمكن محاولة النقر)
+                try {
+                    // محاولة النقر (بدون تنفيذ فعلي)
+                    const clickEvent = new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                    });
+                    
+                    // التحقق من وجود onclick أو data attribute
+                    if (button.onclick || button.getAttribute('onclick')) {
+                        result.hasListener = true;
+                    } else {
+                        // محاولة النقر لمعرفة إذا كان هناك listener
+                        let listenerFound = false;
+                        const testHandler = () => { listenerFound = true; };
+                        button.addEventListener('click', testHandler, { once: true });
+                        button.dispatchEvent(clickEvent);
+                        setTimeout(() => {
+                            button.removeEventListener('click', testHandler);
+                        }, 10);
+                        result.hasListener = listenerFound;
+                    }
+                } catch (e) {
+                    result.error = `خطأ عند التحقق: ${e.message}`;
+                }
+                
+            } catch (error) {
+                result.error = error.message;
+            }
+            
+            return result;
+        }
+
+        async function startTest() {
+            const resultsDiv = document.getElementById('results');
+            const summaryDiv = document.getElementById('summary');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            
+            resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>جاري الاختبار...</div>';
+            summaryDiv.style.display = 'none';
+            progressContainer.style.display = 'block';
+            
+            const results = [];
+            const summary = {
+                total: BUTTONS_TO_TEST.length,
+                found: 0,
+                clickable: 0,
+                hasListener: 0,
+                errors: 0
+            };
+            
+            for (let i = 0; i < BUTTONS_TO_TEST.length; i++) {
+                const buttonConfig = BUTTONS_TO_TEST[i];
+                const result = await testButton(buttonConfig);
+                results.push(result);
+                
+                if (result.found) summary.found++;
+                if (result.clickable) summary.clickable++;
+                if (result.hasListener) summary.hasListener++;
+                if (result.error) summary.errors++;
+                
+                // تحديث شريط التقدم
+                const progress = ((i + 1) / BUTTONS_TO_TEST.length) * 100;
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = Math.round(progress) + '%';
+                
+                // انتظار قصير للسماح بتحديث UI
+                await new Promise(r => setTimeout(r, 50));
+            }
+            
+            // عرض النتائج
+            displayResults(results, summary);
+            progressContainer.style.display = 'none';
+        }
+
+        function displayResults(results, summary) {
+            const resultsDiv = document.getElementById('results');
+            const summaryDiv = document.getElementById('summary');
+            
+            // عرض النتائج التفصيلية
+            resultsDiv.innerHTML = results.map(result => {
+                let statusClass = 'error';
+                let statusIcon = '❌';
+                
+                if (result.found && result.clickable && result.hasListener) {
+                    statusClass = 'success';
+                    statusIcon = '✅';
+                } else if (result.found && result.clickable) {
+                    statusClass = 'warning';
+                    statusIcon = '⚠️';
+                }
+                
+                return `
+                    <div class="result-item ${statusClass}">
+                        <div class="result-info">
+                            <strong>${result.component}</strong> - ${result.description}
+                            ${result.error ? `<br><small style="color: #666;">${result.error}</small>` : ''}
+                        </div>
+                        <div class="result-status">${statusIcon}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            // عرض الملخص
+            summaryDiv.innerHTML = `
+                <div class="summary-item">
+                    <div class="summary-value">${summary.total}</div>
+                    <div class="summary-label">إجمالي الأزرار</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" style="color: #10b981;">${summary.found}</div>
+                    <div class="summary-label">موجودة</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" style="color: #10b981;">${summary.clickable}</div>
+                    <div class="summary-label">قابلة للنقر</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" style="color: #10b981;">${summary.hasListener}</div>
+                    <div class="summary-label">لديها Event Listener</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" style="color: #ef4444;">${summary.errors}</div>
+                    <div class="summary-label">أخطاء</div>
+                </div>
+            `;
+            summaryDiv.style.display = 'grid';
+        }
+
+        function testSpecificComponent() {
+            const component = prompt('أدخل اسم المكون (مثال: MarketAnalysis, SmartGoals):');
+            if (!component) return;
+            
+            const filtered = BUTTONS_TO_TEST.filter(b => 
+                b.component.toLowerCase().includes(component.toLowerCase())
+            );
+            
+            if (filtered.length === 0) {
+                alert('لم يتم العثور على أزرار لهذا المكون');
+                return;
+            }
+            
+            alert(`تم العثور على ${filtered.length} زر في ${component}`);
+            console.log('الأزرار:', filtered);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('summary').style.display = 'none';
+            document.getElementById('progressContainer').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

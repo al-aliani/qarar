@@ -1,0 +1,35 @@
+# === Dependencies ===
+node_modules/
+__pycache__/
+*.pyc
+
+# === Build output ===
+web/dist/
+dist/
+coverage/
+
+# === Test artifacts ===
+test-results/
+playwright-report/
+
+# === Environment & secrets ===
+.env
+.env.local
+.env.*.local
+
+# === Logs & OS junk ===
+debug.log
+*.log
+nul
+.DS_Store
+Thumbs.db
+
+# === Editor/tooling local state ===
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.cursor/
+
+# === Local databases ===
+*.db
+experience_brain.db

@@ -1,0 +1,265 @@
+/* Live Scenario Switcher Styles */
+
+.scenario-switcher-panel {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1));
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0;
+    border: 1px solid var(--c-border);
+}
+
+.scenario-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.scenario-header h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.5rem;
+    color: var(--c-text);
+}
+
+.scenario-header p {
+    margin: 0;
+    opacity: 0.8;
+}
+
+/* Scenario Buttons */
+.scenario-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.scenario-btn {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 16px;
+    background: var(--c-bg-card, #f8fafc);
+    color: var(--c-text-main, #1e293b);
+    border: 2px solid var(--c-border, #e2e8f0);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: var(--font-ui);
+}
+
+.scenario-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    border-color: var(--c-primary);
+}
+
+.scenario-btn.active {
+    background: linear-gradient(135deg, var(--c-primary), var(--c-success));
+    border-color: var(--c-primary);
+    color: white;
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+}
+
+.scenario-icon {
+    font-size: 2rem;
+}
+
+.scenario-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.active-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    color: #10b981;
+    font-size: 1.5rem;
+    animation: pulse-badge 2s infinite;
+}
+
+.scenario-btn.active .active-badge {
+    color: white;
+}
+
+@keyframes pulse-badge {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.6;
+        transform: scale(1.2);
+    }
+}
+
+/* Impact Summary */
+.scenario-impact {
+    background: var(--c-bg-app, #f1f5f9);
+    border: 1px solid var(--c-border, #e2e8f0);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.impact-neutral {
+    text-align: center;
+    color: var(--c-text-muted);
+}
+
+.impact-active {
+    display: flex;
+    justify-content: space-around;
+    gap: 16px;
+}
+
+.impact-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.impact-label {
+    font-size: 0.875rem;
+    color: var(--c-text-muted);
+}
+
+.impact-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.impact-value.positive {
+    color: #10b981;
+}
+
+.impact-value.negative {
+    color: #ef4444;
+}
+
+/* Comparison Table */
+.comparison-header {
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.comparison-header h4 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--c-text);
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--c-bg-card, #f1f5f9);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.comparison-table thead {
+    background: var(--c-bg-app, #e2e8f0);
+}
+
+.comparison-table th {
+    padding: 12px 16px;
+    text-align: right;
+    font-weight: 600;
+    color: var(--c-text-main, #1e293b);
+    border-bottom: 2px solid var(--c-border, #e2e8f0);
+}
+
+.comparison-table td {
+    padding: 12px 16px;
+    text-align: right;
+    border-bottom: 1px solid var(--c-border, #e2e8f0);
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--c-bg-card, #f8fafc);
+}
+
+.comparison-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.comparison-table td:first-child {
+    font-family: var(--font-ui);
+    font-weight: 500;
+    color: var(--c-text-muted);
+}
+
+.comparison-table td.positive {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.comparison-table td.negative {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+/* Highlight the active scenario column */
+.comparison-table th:nth-child(2),
+.comparison-table td:nth-child(2) {
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.comparison-table th:nth-child(3),
+.comparison-table td:nth-child(3) {
+    background: rgba(59, 130, 246, 0.05);
+    font-weight: 600;
+}
+
+.comparison-table th:nth-child(4),
+.comparison-table td:nth-child(4) {
+    background: rgba(16, 185, 129, 0.05);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .scenario-switcher-panel {
+        padding: 16px;
+    }
+
+    .scenario-buttons {
+        grid-template-columns: 1fr;
+    }
+
+    .impact-active {
+        flex-direction: column;
+    }
+
+    .comparison-table {
+        font-size: 0.875rem;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+        padding: 8px 12px;
+    }
+}
+
+/* Animation for scenario switch */
+@keyframes scenario-switch {
+    0% {
+        opacity: 0.5;
+        transform: scale(0.98);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.scenario-impact,
+.scenario-comparison-table {
+    animation: scenario-switch 0.3s ease-out;
+}

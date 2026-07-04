@@ -1,0 +1,149 @@
+/**
+ * Break-even Analysis Component
+ */
+import { calculateStudy as runFullModel } from '../core/engine.js';
+
+export class BreakEvenAnalysis {
+    constructor(containerId, store) {
+        this.container = document.getElementById(containerId);
+        this.store = store;
+    }
+
+    render() {
+        const state = this.store.getState();
+        let results = null;
+        try {
+            results = runFullModel(state);
+        } catch (e) {
+            console.error('Financial Model Error:', e);
+        }
+
+        if (!results) {
+            this.container.innerHTML = `
+                <div class="break-even-analysis">
+                    <h2 class="section-title">⚖️ تحليل نقطة التعادل</h2>
+                    <div class="card analysis-card">
+                        <p class="text-muted">⚠️ لا توجد بيانات كافية لحساب نقطة التعادل. يرجى إكمال البيانات المالية الأساسية.</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // Get data from income statement or indicators
+        const incomeStatement = results.incomeStatement || [];
+        const year1 = incomeStatement[0];
+        
+        if (!year1) {
+            this.container.innerHTML = `
+                <div class="break-even-analysis">
+                    <h2 class="section-title">⚖️ تحليل نقطة التعادل</h2>
+                    <div class="card analysis-card">
+                        <p class="text-muted">⚠️ لا توجد بيانات للسنة الأولى. يرجى إكمال البيانات المالية الأساسية.</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // Calculate break-even using contribution margin
+        const fixedCosts = (year1.fixedCosts || 0) + (year1.depreciation || 0);
+        const totalRevenue = year1.revenue || 0;
+        const variableCosts = year1.variableCosts || 0;
+        const contributionMargin = totalRevenue - variableCosts;
+        const contributionMarginRatio = totalRevenue > 0 ? (contributionMargin / totalRevenue) : 0;
+        
+        // Break-even revenue = Fixed Costs / Contribution Margin Ratio
+        const bepValue = contributionMarginRatio > 0 ? (fixedCosts / contributionMarginRatio) : fixedCosts;
+        const bepPercentage = totalRevenue > 0 ? (bepValue / totalRevenue) : 0;
+
+        this.container.innerHTML = `
+            <div class="break-even-analysis">
+                <h2 class="section-title">⚖️ تحليل نقطة التعادل</h2>
+                
+                <div class="card bep-hero animate-entry">
+                    <div class="bep-chart-container">
+                        <canvas id="bepCanvas"></canvas>
+                    </div>
+                    <div class="bep-summary">
+                        <div class="bep-stat">
+                            <span class="label">نقطة التعادل (سنوياً)</span>
+                            <span class="value text-gold">${this.formatCurrency(bepValue)}</span>
+                        </div>
+                        <div class="bep-stat">
+                            <span class="label">نسبة التعادل من الإيراد</span>
+                            <span class="value">${(bepPercentage * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="bep-stat">
+                            <span class="label">هامش الأمان</span>
+                            <span class="value text-success">${((1 - bepPercentage) * 100).toFixed(1)}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card analysis-card">
+                    <h3 class="card-title">توزيع التكاليف (سنوياً)</h3>
+                    <div class="cost-breakdown">
+                        <div class="cost-item">
+                            <span>التكاليف الثابتة (Fixed Costs)</span>
+                            <span>${this.formatCurrency(fixedCosts)}</span>
+                        </div>
+                        <div class="cost-item">
+                            <span>الإيراد المتوقع (السنة الأولى)</span>
+                            <span>${this.formatCurrency(totalRevenue)}</span>
+                        </div>
+                    </div>
+                    <div class="bep-interpretation">
+                        <p>💡 يحتاج المشروع لتحقيق مبيعات لا تقل عن <strong>${this.formatCurrency(bepValue)}</strong> سنوياً لتغطية كافة تكاليفه دون ربح أو خسارة.</p>
+                        <p>المشروع في منطقة الأمان بنسبة <strong>${((1 - bepPercentage) * 100).toFixed(0)}%</strong> من إيراداته المستهدفة.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.renderChart(fixedCosts, totalRevenue);
+    }
+
+    renderChart(fixed, total) {
+        const ctx = document.getElementById('bepCanvas')?.getContext('2d');
+        if (!ctx || typeof Chart === 'undefined') return;
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['0', '25%', '50%', '75%', '100%', '125%'],
+                datasets: [
+                    {
+                        label: 'الإيرادات',
+                        data: [0, total * 0.25, total * 0.5, total * 0.75, total, total * 1.25],
+                        borderColor: '#d4af37',
+                        borderWidth: 3,
+                        fill: false
+                    },
+                    {
+                        label: 'التكاليف المدمجة',
+                        data: [fixed, fixed + (total * 0.1), fixed + (total * 0.2), fixed + (total * 0.3), fixed + (total * 0.4), fixed + (total * 0.5)],
+                        borderColor: '#ef4444',
+                        borderDash: [5, 5],
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#fff' } }
+                },
+                scales: {
+                    x: { ticks: { color: '#8b949e' } },
+                    y: { ticks: { color: '#8b949e' } }
+                }
+            }
+        });
+    }
+
+    formatCurrency(n) {
+        return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n || 0);
+    }
+}

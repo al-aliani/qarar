@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>منصة الهيمنة الرقمية - لوحة التحكم</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #e5e7eb;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+      }
+      header {
+        padding: 1.5rem 2rem;
+        background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+        color: #f9fafb;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+      main {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      h1,
+      h2,
+      h3,
+      h4 {
+        margin-top: 0;
+      }
+      .grid {
+        display: grid;
+        gap: 1.5rem;
+      }
+      @media (min-width: 900px) {
+        .grid-2 {
+          grid-template-columns: 1.3fr 1fr;
+        }
+        .grid-3 {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      .card {
+        background: rgba(2, 6, 23, 0.8);
+        backdrop-filter: blur(10px);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+      }
+      .tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .tab {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        color: #9ca3af;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+      }
+      .tab.active {
+        color: #3b82f6;
+        border-bottom-color: #3b82f6;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+      label {
+        display: block;
+        font-size: 0.82rem;
+        margin-bottom: 0.15rem;
+        color: #9ca3af;
+        font-weight: 500;
+      }
+      input[type="number"],
+      input[type="text"],
+      select {
+        width: 100%;
+        padding: 0.5rem 0.7rem;
+        border-radius: 0.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.6);
+        color: #e5e7eb;
+        font-size: 0.85rem;
+        box-sizing: border-box;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s;
+      }
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        background: rgba(15, 23, 42, 0.8);
+      }
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 0.6rem 1.4rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: #f9fafb;
+        font-weight: 600;
+        margin-top: 0.5rem;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+      }
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+      }
+      button.secondary {
+        background: rgba(17, 24, 39, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: none;
+      }
+      button.secondary:hover {
+        background: rgba(17, 24, 39, 1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+      .flex {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+      .flex > div {
+        flex: 1 1 140px;
+        min-width: 120px;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+      }
+      .metric {
+        background: rgba(15, 23, 42, 0.9);
+        border-radius: 0.75rem;
+        padding: 0.8rem 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        text-align: center;
+      }
+      .metric label {
+        margin-bottom: 0.3rem;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .metric-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #f9fafb;
+      }
+      .metric-value.positive {
+        color: #22c55e;
+      }
+      .metric-value.negative {
+        color: #f97316;
+      }
+      pre {
+        background: rgba(2, 6, 23, 0.9);
+        border-radius: 0.75rem;
+        padding: 0.9rem 1.1rem;
+        font-size: 0.75rem;
+        overflow-x: auto;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        color: #e5e7eb;
+        background: rgba(15, 23, 42, 0.5);
+      }
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        margin-left: 0.35rem;
+        background: #22c55e;
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+      .note {
+        font-size: 0.8rem;
+        color: #9ca3af;
+        margin-top: 0.5rem;
+        padding: 0.6rem;
+        background: rgba(15, 23, 42, 0.5);
+        border-radius: 0.5rem;
+        border-right: 3px solid #3b82f6;
+      }
+      .note.success {
+        border-right-color: #22c55e;
+      }
+      .note.warning {
+        border-right-color: #f97316;
+      }
+      .note.error {
+        border-right-color: #ef4444;
+      }
+      hr {
+        border: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        margin: 1.5rem 0;
+      }
+      .scenario-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+      .scenario-card {
+        background: rgba(15, 23, 42, 0.6);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .scenario-card.best {
+        border-color: rgba(34, 197, 94, 0.3);
+      }
+      .scenario-card.worst {
+        border-color: rgba(249, 115, 22, 0.3);
+      }
+      .loading {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-left: 0.5rem;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .section-title {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+        color: #f9fafb;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .section-title::before {
+        content: "";
+        width: 4px;
+        height: 20px;
+        background: linear-gradient(135deg, #3b82f6, #7c3aed);
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="flex" style="align-items: center; justify-content: space-between; flex-wrap: wrap">
+        <div>
+          <h1 style="margin: 0; font-size: 1.8rem">🚀 منصة الهيمنة الرقمية</h1>
+          <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9">
+            العقل الداخلي المتكامل + Digital Twin + التمويل الآلي + النظام البيئي الوطني
+          </p>
+        </div>
+        <div class="tag">
+          <span class="status-dot"></span>
+          Core API متصل (يفترض تشغيل FastAPI على 8000)
+        </div>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card">
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('coffee')">☕ كوفي شوب</button>
+          <button class="tab" onclick="switchTab('restaurant')">🍽️ مطعم</button>
+          <button class="tab" onclick="switchTab('laundry')">🧺 مغسلة</button>
+        </div>
+
+        <div id="coffee" class="tab-content active">
+          <h2>دراسة جدوى كوفي شوب</h2>
+          <div class="flex">
+            <div>
+              <label>الاستثمار الابتدائي (ريال)</label>
+              <input id="inv" type="number" value="300000" />
+            </div>
+            <div>
+              <label>الإيجار الشهري (ريال)</label>
+              <input id="rent" type="number" value="25000" />
+            </div>
+            <div>
+              <label>رواتب شهرية (ريال)</label>
+              <input id="salaries" type="number" value="35000" />
+            </div>
+            <div>
+              <label>مصروفات ثابتة أخرى (ريال)</label>
+              <input id="otherFixed" type="number" value="8000" />
+            </div>
+          </div>
+          <div class="flex">
+            <div>
+              <label>متوسط فاتورة الزبون (ريال)</label>
+              <input id="ticket" type="number" step="1" value="22" />
+            </div>
+            <div>
+              <label>عدد العملاء في اليوم</label>
+              <input id="customers" type="number" value="120" />
+            </div>
+            <div>
+              <label>أيام التشغيل في الشهر</label>
+              <input id="days" type="number" value="30" />
+            </div>
+            <div>
+              <label>نسبة تكلفة المواد (0-1)</label>
+              <input id="costRatio" type="number" step="0.01" value="0.35" />
+            </div>
+          </div>
+          <div class="flex">
+            <div>
+              <label>معدل الخصم السنوي (0-1)</label>
+              <input id="discount" type="number" step="0.01" value="0.1" />
+            </div>
+            <div>
+              <label>معدل النمو الشهري (0-1)</label>
+              <input id="growth" type="number" step="0.005" value="0.02" />
+            </div>
+            <div>
+              <label>نسبة الضريبة على الأرباح (0-1)</label>
+              <input id="tax" type="number" step="0.01" value="0.15" />
+            </div>
+            <div>
+              <label>مدة الدراسة (أشهر)</label>
+              <input id="months" type="number" value="60" />
+            </div>
+          </div>
+          <div class="flex">
+            <div>
+              <label>قرض تمويلي (ريال)</label>
+              <input id="loanAmount" type="number" value="150000" />
+            </div>
+            <div>
+              <label>فائدة سنوية على القرض (0-1)</label>
+              <input id="loanRate" type="number" step="0.01" value="0.07" />
+            </div>
+            <div>
+              <label>مدة القرض (سنوات)</label>
+              <input id="loanYears" type="number" value="5" />
+            </div>
+          </div>
+          <button onclick="runScenarios('coffee_shop')">📊 حساب NPV / IRR / Payback + السيناريوهات</button>
+          <div id="scenarioMetrics" class="metrics"></div>
+        </div>
+
+        <div id="restaurant" class="tab-content">
+          <h2>دراسة جدوى مطعم</h2>
+          <p style="color: #9ca3af; font-size: 0.85rem; margin-bottom: 1rem">
+            استخدم نفس الحقول أعلاه (يمكن نسخ القيم من كوفي شوب وتعديلها)
+          </p>
+          <button onclick="runScenarios('restaurant')">📊 حساب NPV / IRR / Payback + السيناريوهات</button>
+          <div id="scenarioMetricsRestaurant" class="metrics"></div>
+        </div>
+
+        <div id="laundry" class="tab-content">
+          <h2>دراسة جدوى مغسلة ملابس</h2>
+          <p style="color: #9ca3af; font-size: 0.85rem; margin-bottom: 1rem">
+            استخدم نفس الحقول أعلاه (يمكن نسخ القيم من كوفي شوب وتعديلها)
+          </p>
+          <button onclick="runScenarios('laundry')">📊 حساب NPV / IRR / Payback + السيناريوهات</button>
+          <div id="scenarioMetricsLaundry" class="metrics"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3 class="section-title">Experience Brain + Digital Twin</h3>
+
+        <div class="flex">
+          <div>
+            <label>نوع النشاط</label>
+            <select id="projType">
+              <option value="coffee_shop">كوفي شوب</option>
+              <option value="restaurant">مطعم</option>
+              <option value="laundry">مغسلة</option>
+            </select>
+          </div>
+          <div>
+            <label>اسم المشروع</label>
+            <input id="projName" type="text" placeholder="مثال: كوفي شوب النخبة" />
+          </div>
+          <div>
+            <label>المدينة</label>
+            <input id="projCity" type="text" placeholder="الرياض" />
+          </div>
+        </div>
+        <button class="secondary" onclick="createProject()">
+          💾 حفظ المشروع في Experience Brain
+        </button>
+        <div class="note" id="createProjectNote"></div>
+
+        <hr />
+
+        <h4 class="section-title">إدخال أداء شهري فعلي (Digital Twin Snapshot)</h4>
+        <div class="flex">
+          <div>
+            <label>رقم المشروع (ID)</label>
+            <input id="snapProjectId" type="number" />
+          </div>
+          <div>
+            <label>رقم الشهر</label>
+            <input id="snapMonth" type="number" value="1" />
+          </div>
+        </div>
+        <div class="flex">
+          <div>
+            <label>إيراد فعلي (ريال)</label>
+            <input id="snapRev" type="number" value="90000" />
+          </div>
+          <div>
+            <label>تكلفة مواد (COGS) (ريال)</label>
+            <input id="snapCogs" type="number" value="32000" />
+          </div>
+          <div>
+            <label>تكاليف ثابتة فعلية (ريال)</label>
+            <input id="snapFixed" type="number" value="65000" />
+          </div>
+        </div>
+        <button class="secondary" onclick="createSnapshot()">📸 حفظ Snapshot ومقارنة الواقع بالخطة</button>
+        <div id="snapshotResult" class="note"></div>
+
+        <hr />
+
+        <h4 class="section-title">تحليل الاتجاه (Trend Analysis)</h4>
+        <div class="flex">
+          <div>
+            <label>رقم المشروع (ID)</label>
+            <input id="trendProjectId" type="number" />
+          </div>
+        </div>
+        <button class="secondary" onclick="analyzeTrend()">📈 تحليل الاتجاه والتنبؤ</button>
+        <div id="trendResult" class="note"></div>
+      </section>
+
+      <section class="card">
+        <h3 class="section-title">التمويل الآلي + النظام البيئي</h3>
+
+        <h4 class="section-title">درجة التمويل الآلي (Auto-Funding)</h4>
+        <div class="flex">
+          <div>
+            <label>رقم المشروع (ID)</label>
+            <input id="fundProjectId" type="number" />
+          </div>
+        </div>
+        <button class="secondary" onclick="fundingScore()">💰 حساب درجة التمويل</button>
+        <div id="fundResult" class="note"></div>
+
+        <hr />
+
+        <h4 class="section-title">تحليل التشبّع الوطني (Saturation Analysis)</h4>
+        <div class="flex">
+          <div>
+            <label>نوع النشاط</label>
+            <select id="satType">
+              <option value="coffee_shop">كوفي شوب</option>
+              <option value="restaurant">مطعم</option>
+              <option value="laundry">مغسلة</option>
+            </select>
+          </div>
+          <div>
+            <label>المدينة (اختياري)</label>
+            <input id="satCity" type="text" placeholder="الرياض" />
+          </div>
+        </div>
+        <button class="secondary" onclick="analyzeSaturation()">🌍 تحليل التشبّع</button>
+        <div id="satResult" class="note"></div>
+
+        <hr />
+
+        <h4 class="section-title">محفظة المشاريع (Experience Brain Portfolio)</h4>
+        <button class="secondary" onclick="loadPortfolio()">🔄 تحديث قائمة المشاريع</button>
+        <pre id="portfolio" style="margin-top: 0.5rem"></pre>
+      </section>
+    </main>
+
+    <script>
+      const API_BASE = "http://127.0.0.1:8000";
+
+      function switchTab(type) {
+        document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach((c) => c.classList.remove("active"));
+        event.target.classList.add("active");
+        document.getElementById(type).classList.add("active");
+      }
+
+      function getInputs() {
+        return {
+          discount_rate: parseFloat(document.getElementById("discount").value),
+          investment_initial: parseFloat(document.getElementById("inv").value),
+          monthly_rent: parseFloat(document.getElementById("rent").value),
+          monthly_salaries: parseFloat(document.getElementById("salaries").value),
+          monthly_other_fixed: parseFloat(document.getElementById("otherFixed").value),
+          avg_ticket: parseFloat(document.getElementById("ticket").value),
+          customers_per_day: parseInt(document.getElementById("customers").value, 10),
+          days_per_month: parseInt(document.getElementById("days").value, 10),
+          cost_ratio: parseFloat(document.getElementById("costRatio").value),
+          months: parseInt(document.getElementById("months").value, 10),
+          monthly_growth_rate: parseFloat(document.getElementById("growth").value),
+          tax_rate: parseFloat(document.getElementById("tax").value),
+          loan_amount: parseFloat(document.getElementById("loanAmount").value),
+          loan_annual_rate: parseFloat(document.getElementById("loanRate").value),
+          loan_years: parseInt(document.getElementById("loanYears").value, 10),
+        };
+      }
+
+      async function runScenarios(type) {
+        const elId = type === "coffee_shop" ? "scenarioMetrics" : type === "restaurant" ? "scenarioMetricsRestaurant" : "scenarioMetricsLaundry";
+        const el = document.getElementById(elId);
+        el.innerHTML = '<div class="loading"></div> جارٍ الحساب...';
+
+        const payload = getInputs();
+        const endpoint = type === "coffee_shop" ? "/feasibility/coffee-shop/scenarios" : type === "restaurant" ? "/feasibility/restaurant" : "/feasibility/laundry";
+
+        try {
+          let data;
+          if (type === "coffee_shop") {
+            const res = await fetch(API_BASE + endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            data = await res.json();
+          } else {
+            const res = await fetch(API_BASE + endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            const single = await res.json();
+            data = { base: single, best: single, worst: single };
+          }
+
+          const fmt = (x) => (x === null || x === undefined ? "-" : x.toFixed ? x.toFixed(1) : x);
+          const fmtPct = (x) => (x === null || x === undefined ? "-" : x.toFixed ? (x * 100).toFixed(1) + "%" : x);
+
+          el.innerHTML = `
+            <div class="scenario-grid">
+              <div class="scenario-card">
+                <h4 style="margin: 0 0 0.5rem 0; color: #9ca3af">Base</h4>
+                <div class="metric-value ${data.base.npv >= 0 ? "positive" : "negative"}">NPV: ${fmt(data.base.npv)}</div>
+                <div style="font-size: 0.8rem; margin-top: 0.3rem">IRR: ${fmtPct(data.base.irr)}</div>
+                <div style="font-size: 0.8rem">Payback: ${fmt((data.base.payback_period || 0) / 12)} سنة</div>
+              </div>
+              ${type === "coffee_shop" ? `
+              <div class="scenario-card best">
+                <h4 style="margin: 0 0 0.5rem 0; color: #22c55e">Best</h4>
+                <div class="metric-value positive">NPV: ${fmt(data.best.npv)}</div>
+                <div style="font-size: 0.8rem; margin-top: 0.3rem">IRR: ${fmtPct(data.best.irr)}</div>
+                <div style="font-size: 0.8rem">Payback: ${fmt((data.best.payback_period || 0) / 12)} سنة</div>
+              </div>
+              <div class="scenario-card worst">
+                <h4 style="margin: 0 0 0.5rem 0; color: #f97316">Worst</h4>
+                <div class="metric-value ${data.worst.npv >= 0 ? "positive" : "negative"}">NPV: ${fmt(data.worst.npv)}</div>
+                <div style="font-size: 0.8rem; margin-top: 0.3rem">IRR: ${fmtPct(data.worst.irr)}</div>
+                <div style="font-size: 0.8rem">Payback: ${fmt((data.worst.payback_period || 0) / 12)} سنة</div>
+              </div>
+              ` : ""}
+            </div>
+          `;
+        } catch (err) {
+          el.innerHTML = `<div class="note error">خطأ: ${err.message}</div>`;
+        }
+      }
+
+      async function createProject() {
+        const note = document.getElementById("createProjectNote");
+        note.textContent = "جارٍ إنشاء المشروع...";
+        note.className = "note";
+
+        const payload = {
+          ...getInputs(),
+          name: document.getElementById("projName").value || null,
+          city: document.getElementById("projCity").value || null,
+        };
+
+        const projType = document.getElementById("projType").value;
+        const endpoint = `/experience-brain/${projType === "coffee_shop" ? "coffee-shop" : projType}`;
+
+        try {
+          const res = await fetch(API_BASE + endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          note.className = "note success";
+          note.textContent = `✅ تم إنشاء المشروع بنجاح! ID = ${data.id}, NPV = ${data.npv.toFixed(1)}, IRR = ${data.irr ? (data.irr * 100).toFixed(1) + "%" : "-"}`;
+          document.getElementById("snapProjectId").value = data.id;
+          document.getElementById("trendProjectId").value = data.id;
+          document.getElementById("fundProjectId").value = data.id;
+        } catch (err) {
+          note.className = "note error";
+          note.textContent = `❌ خطأ: ${err.message}`;
+        }
+      }
+
+      async function createSnapshot() {
+        const note = document.getElementById("snapshotResult");
+        note.textContent = "جارٍ حفظ Snapshot...";
+        note.className = "note";
+
+        const payload = {
+          project_id: parseInt(document.getElementById("snapProjectId").value, 10),
+          period_index: parseInt(document.getElementById("snapMonth").value, 10),
+          actual_revenue: parseFloat(document.getElementById("snapRev").value),
+          actual_cogs: parseFloat(document.getElementById("snapCogs").value),
+          actual_fixed_costs: parseFloat(document.getElementById("snapFixed").value),
+        };
+
+        try {
+          const res = await fetch(API_BASE + "/digital-twin/coffee-shop/snapshot", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          const fmt = (x) => (x === null || x === undefined ? "-" : x.toFixed ? x.toFixed(1) : x);
+          note.className = "note success";
+          note.textContent = `✅ التدفق المخطط: ${fmt(data.planned_cash_flow)} | التدفق الفعلي: ${fmt(data.actual_cash_flow)} | الانحراف: ${fmt(data.variance)} (${data.variance_ratio ? (data.variance_ratio * 100).toFixed(1) + "%" : "-"})`;
+        } catch (err) {
+          note.className = "note error";
+          note.textContent = `❌ خطأ: ${err.message}`;
+        }
+      }
+
+      async function analyzeTrend() {
+        const note = document.getElementById("trendResult");
+        note.textContent = "جارٍ تحليل الاتجاه...";
+        note.className = "note";
+
+        const projectId = parseInt(document.getElementById("trendProjectId").value, 10);
+
+        try {
+          const res = await fetch(API_BASE + `/digital-twin/trend/${projectId}`);
+          const data = await res.json();
+          const trendText = data.trend === "improving" ? "📈 تحسن" : data.trend === "declining" ? "📉 تراجع" : "➡️ مستقر";
+          note.className = "note success";
+          note.textContent = `✅ ${data.note} | متوسط الانحراف: ${data.avg_variance_ratio ? (data.avg_variance_ratio * 100).toFixed(1) + "%" : "-"} | التنبؤ للشهر القادم: ${data.forecast_next_month ? data.forecast_next_month.toFixed(1) : "-"} | الاتجاه: ${trendText}`;
+        } catch (err) {
+          note.className = "note error";
+          note.textContent = `❌ خطأ: ${err.message}`;
+        }
+      }
+
+      async function fundingScore() {
+        const note = document.getElementById("fundResult");
+        note.textContent = "جارٍ حساب درجة التمويل...";
+        note.className = "note";
+
+        const payload = {
+          project_id: parseInt(document.getElementById("fundProjectId").value, 10),
+        };
+
+        try {
+          const res = await fetch(API_BASE + "/funding/score", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          const riskEmoji = data.risk_level === "low" ? "🟢" : data.risk_level === "medium" ? "🟡" : "🔴";
+          note.className = data.risk_level === "low" ? "note success" : data.risk_level === "medium" ? "note warning" : "note error";
+          note.textContent = `${riskEmoji} Score = ${data.score.toFixed(1)} | مستوى المخاطر: ${data.risk_level} | ${data.note}`;
+        } catch (err) {
+          note.className = "note error";
+          note.textContent = `❌ خطأ: ${err.message}`;
+        }
+      }
+
+      async function analyzeSaturation() {
+        const note = document.getElementById("satResult");
+        note.textContent = "جارٍ تحليل التشبّع...";
+        note.className = "note";
+
+        const payload = {
+          business_type: document.getElementById("satType").value,
+          city: document.getElementById("satCity").value || null,
+        };
+
+        try {
+          const res = await fetch(API_BASE + "/ecosystem/saturation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          const satEmoji = data.saturation_level === "high" ? "🔴" : data.saturation_level === "medium" ? "🟡" : "🟢";
+          note.className = data.saturation_level === "high" ? "note error" : data.saturation_level === "medium" ? "note warning" : "note success";
+          note.textContent = `${satEmoji} عدد المشاريع: ${data.total_projects} | متوسط NPV: ${data.avg_npv ? data.avg_npv.toFixed(1) : "-"} | ${data.recommendation}`;
+        } catch (err) {
+          note.className = "note error";
+          note.textContent = `❌ خطأ: ${err.message}`;
+        }
+      }
+
+      async function loadPortfolio() {
+        const box = document.getElementById("portfolio");
+        box.textContent = "جارٍ تحميل المشاريع...";
+        try {
+          const res = await fetch(API_BASE + "/experience-brain/projects");
+          const data = await res.json();
+          box.textContent = JSON.stringify(data, null, 2);
+        } catch (err) {
+          box.textContent = `خطأ: ${err.message}`;
+        }
+      }
+    </script>
+  </body>
+</html>

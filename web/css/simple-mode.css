@@ -1,0 +1,42 @@
+
+/* Simple Mode / Focus Mode Styles */
+
+/* 1. Sidebar Decluttering handled by JS (removing DOM elements) */
+
+/* 2. Form Field Decluttering (CSS Hiding) */
+
+/* Mini Mode: Hide almost everything non-essential */
+body.mode-mini .advanced-only,
+body.mode-mini .simple-hidden {
+    display: none !important;
+}
+
+/* Simple Mode: Hide complex tables and advanced optional fields */
+body.mode-simple .advanced-only {
+    display: none !important;
+}
+
+/* Visual cues for modes */
+body.mode-mini #appHeader {
+    background: linear-gradient(to right, #1a1d24, #2c3e50); /* Calm blue */
+}
+
+body.mode-mini .sidebar {
+    background: #f8f9fa;
+    border-right: 1px solid #ddd;
+}
+body.mode-mini .sidebar .nav-section-title {
+    color: #333;
+}
+body.mode-mini .step-item {
+    color: #555;
+}
+body.mode-mini .step-item.is-active {
+    background: #e9ecef;
+    color: #000;
+}
+
+/* Focus Mode Animations */
+.nav-section {
+    transition: all 0.3s ease;
+}

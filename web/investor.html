@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https://www.youtube.com https://player.vimeo.com; connect-src 'self'; base-uri 'self';">
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>لوحة المستثمر | ملخص دراسة الجدوى</title>
+  <meta name="description" content="عرض ملخص دراسة الجدوى للمستثمر — للقراءة فقط." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/variables.css" />
+  <link rel="stylesheet" href="./css/investor.css" />
+  <style>
+    :root { --font-ui: 'IBM Plex Sans Arabic', system-ui, sans-serif; }
+    body { margin: 0; background: var(--c-bg-app); color: var(--c-text-main); min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="pitchRoot"></div>
+  <script type="module">
+    import { InvestorDashboard, getPitchFromStorage } from './js/ui/InvestorDashboard.js';
+
+    function getPayloadFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      const dataB64 = params.get('data');
+
+      if (dataB64) {
+        try {
+          const json = atob(dataB64.replace(/-/g, '+').replace(/_/g, '/'));
+          return JSON.parse(json);
+        } catch (e) {
+          console.warn('Invalid data param:', e);
+          return null;
+        }
+      }
+
+      if (token) {
+        return getPitchFromStorage(token);
+      }
+
+      return null;
+    }
+
+    const payload = getPayloadFromUrl();
+    const dashboard = new InvestorDashboard('pitchRoot', { animate: true });
+    dashboard.render(payload);
+  </script>
+</body>
+</html>

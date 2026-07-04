@@ -1,0 +1,824 @@
+/**
+ * Unified Export Menu (Modal)
+ * Provides centralized export options: PDF, Excel, Bank Report, JSON.
+ */
+import { PDFGenerator } from '../../export/pdfGenerator.js';
+import { ReportGenerator } from '../services/ReportGenerator.js';
+import { BankReportGenerator } from '../../export/BankReportGenerator.js';
+import { MonshaatReportGenerator } from '../../export/MonshaatReportGenerator.js';
+import { sanitizeFilename, exportDateISO, downloadBlob } from '../../export/utils.js';
+import { calculateStudy as runFullModel } from '../core/engine.js';
+import { runQAChecks } from '../utils/qaChecks.js';
+import { toast } from '../utils/toast.js';
+import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
+import { APP_CONFIG, BANK_COMPLIANCE_SENTENCE } from '../config.js';
+import { ConsultationModal } from './ConsultationModal.js';
+import { generatePitchScript } from '../services/AIConnector.js';
+
+export class ExportMenu {
+    constructor(overlayId, store) {
+        this.overlay = document.getElementById(overlayId);
+        // Create overlay if missing
+        if (!this.overlay) {
+            this.overlay = document.createElement('div');
+            this.overlay.id = overlayId || 'exportMenuOverlay';
+            this.overlay.className = 'modal-overlay';
+            document.body.appendChild(this.overlay);
+        }
+        this.store = store;
+        this.pdfGenerator = new PDFGenerator(store);
+    }
+
+    open() {
+        this.render();
+        this.overlay.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+        this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
+        document.addEventListener('keydown', this._onEscape);
+
+        const first = this.overlay.querySelector('.export-card');
+        if (first) setTimeout(() => first.focus(), 0);
+
+        (async () => {
+            const state = this.store.getState();
+            let results = null;
+            try { results = runFullModel(state); } catch (_) { }
+            const qa = await runQAChecks(state, results);
+            const el = this.overlay?.querySelector('#export-qa-badge');
+            if (el) {
+                if (qa.hardErrors.length > 0) el.innerHTML = '<span class="text-danger">❌ أخطاء حرجة: ' + qa.hardErrors.length + ' — راجع لوحة القرار.</span>';
+                else if (qa.softWarnings.length > 0) el.innerHTML = '<span class="text-warning">⚠️ تحذيرات: ' + qa.softWarnings.length + '</span>';
+                else el.innerHTML = '<span class="text-success">✅ اجتازت فحص الجودة (QA)</span>';
+            }
+        })();
+    }
+
+    close() {
+        this.overlay.classList.remove('is-open');
+        document.body.style.overflow = '';
+        if (this._onEscape) {
+            document.removeEventListener('keydown', this._onEscape);
+            this._onEscape = null;
+        }
+    }
+
+    render() {
+        this.overlay.innerHTML = `
+            <div class="modal-card export-modal animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
+                <div class="modal-header">
+                    <h3 id="export-modal-title">📥 تصدير الدراسة</h3>
+                    <button type="button" class="btn-close" aria-label="إغلاق قائمة التصدير">×</button>
+                </div>
+                <div class="modal-body">
+                    <div id="export-qa-badge" class="mb-4 text-sm text-muted">جاري فحص الجودة...</div>
+                    <div id="export-auto-text-bar" class="mb-4 p-3 rounded-lg border border-white/10 bg-white/5">
+                        <p class="text-xs text-muted mb-2">عند حفظ أو قبل التصدير: المنصة يمكنها توليد نصوص الأقسام (الملخص، السوق، المخاطر) من المدخلات تلقائياً. يمكنك مراجعتها وتعديلها بعد التوليد.</p>
+                        <button type="button" id="btnExportAutoGenerateText" class="btn btn--sm btn--secondary">✨ توليد النصوص تلقائياً</button>
+                    </div>
+                    <p class="text-sm text-muted mb-3">صدّر الدراسة — اختر PDF، Word، Excel، أو PPT (ملخص شرائح) حسب حاجتك.</p>
+                    <p class="text-xs text-muted mb-2">نطاق التصدير: الدراسة الحالية فقط، أو جميع الدراسات في المجلد (إن وُجد).</p>
+                    <p id="export-financing-checklist-hint" class="text-xs text-gold mb-2">للتقديم للتمويل: راجع قائمة تحقق متطلبات التقديم في صفحة «الجدوى والتمويل» من القائمة الرئيسية.</p>
+                    <p id="export-accelerator-checklist-hint" class="text-xs text-gold mb-2">للتقديم للمسرّعات والحاضنات: راجع قائمة تحقق متطلبات التقديم في صفحة «نصائح المسرّعات» من لوحة التحكم.</p>
+                    <p id="export-bank-report-hint" class="text-xs text-gold mb-2">تقرير جاهز للإقراض: اختر «نسخة للممول» أو «تقرير جاهز للإقراض» — ملخص، استخدام القرض، مالي، ضمانات.</p>
+                    <p class="text-xs text-gold/90 mb-3 px-3 py-2 rounded-lg border border-gold/20 bg-gold/5" id="export-compliance-sentence">✓ ${BANK_COMPLIANCE_SENTENCE}</p>
+                    <div class="export-grid">
+                        <button type="button" class="export-card" data-type="pdf" aria-label="تصدير تقرير PDF شامل جاهز للطباعة">
+                            <div class="icon">📄</div>
+                            <div class="info">
+                                <h4>تقرير PDF شامل</h4>
+                                <p>تقرير احترافي جاهز للطباعة مع الرسوم البيانية</p>
+                            </div>
+                        </button>
+                        
+                        <button type="button" class="export-card" data-type="excel" aria-label="تصدير ملف Excel بجداول مالية تفصيلية">
+                            <div class="icon">📊</div>
+                            <div class="info">
+                                <h4>ملف Excel</h4>
+                                <p>جداول مالية تفصيلية بصيغة XLSX</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="pptx" aria-label="تصدير عرض تقديمي PowerPoint PPTX">
+                            <div class="icon">📽️</div>
+                            <div class="info">
+                                <h4>PowerPoint (PPTX)</h4>
+                                <p>عرض تقديمي احترافي 7 شرائح للمستثمرين</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="word" aria-label="تصدير تقرير Word DOCX">
+                            <div class="icon">📝</div>
+                            <div class="info">
+                                <h4>Word (DOCX)</h4>
+                                <p>تقرير نصي قابل للتعديل</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="bank" aria-label="تصدير تقرير التمويل البنكي وتنزيل HTML">
+                            <div class="icon">🏦</div>
+                            <div class="info">
+                                <h4>تقرير التمويل البنكي</h4>
+                                <p>نموذج مخصص لبنك التنمية وجهات التمويل (HTML)</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="financier" aria-label="نسخة للممول — تقرير جاهز للتمويل PDF">
+                            <div class="icon">📑</div>
+                            <div class="info">
+                                <h4>نسخة للممول</h4>
+                                <p>تقرير جاهز للتمويل: ملخص، مالي، مخاطر، توصية — طباعة PDF</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="review_copy" aria-label="نسخة للمراجعة — للمراجعة من قبل استشاري">
+                            <div class="icon">📋</div>
+                            <div class="info">
+                                <h4>نسخة للمراجعة</h4>
+                                <p>تقرير نظيف للمراجعة من قبل استشاري — أرسلها لمكتبك</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="professional_review" aria-label="نسخة احترافية للمراجعة — هيكل مرقّم وفهرس وإخلاء مسؤولية">
+                            <div class="icon">📑</div>
+                            <div class="info">
+                                <h4>نسخة احترافية للمراجعة</h4>
+                                <p>هيكل أقسام مرقّم وفهرس؛ إخلاء: قابلة للمراجعة من جهة مستقلة — بدون إعلانات</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="financier" aria-label="تقرير جاهز للإقراض — بنك التنمية والمؤسسات التمويلية">
+                            <div class="icon">🏦</div>
+                            <div class="info">
+                                <h4>تقرير جاهز للإقراض</h4>
+                                <p>بنية متوافقة مع متطلبات بنك التنمية الاجتماعية: ملخص، استخدام التمويل، القوائم المالية، الضمانات</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="monshaat" aria-label="تصدير بهيكل متوافق مع متطلبات منشآت">
+                            <div class="icon">📋</div>
+                            <div class="info">
+                                <h4>هيكل متوافق مع منشآت</h4>
+                                <p>تقرير بأقسام وعناوين مطابقة للنموذج الاسترشادي — طباعة PDF</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="pitch" aria-label="تصدير Pitch Deck كـ PDF">
+                            <div class="icon">📽️</div>
+                            <div class="info">
+                                <h4>Pitch Deck (عرض المستثمر)</h4>
+                                <p>شرائح جاهزة للطباعة PDF للمستثمرين</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="investor_one_pager" aria-label="عرض للمستثمر/المسرّعة — صفحة واحدة">
+                            <div class="icon">📄</div>
+                            <div class="info">
+                                <h4>عرض للمستثمر/المسرّعة</h4>
+                                <p>صفحة واحدة: الطلب، المؤشرات، المخاطر، جهة اتصال — طباعة PDF</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="accelerator_pitch" aria-label="عرض للمسرّعة — صفحة واحدة">
+                            <div class="icon">🚀</div>
+                            <div class="info">
+                                <h4>عرض للمسرّعة</h4>
+                                <p>نفس المحتوى بعنوان «للمسرّعة» — ملخص، مالي، مخاطر، الطلب</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="incubator_pitch" aria-label="عرض للحاضنة — صفحة واحدة">
+                            <div class="icon">🏢</div>
+                            <div class="info">
+                                <h4>عرض للحاضنة</h4>
+                                <p>نفس المحتوى بعنوان «للحاضنة» — ملخص، مالي، مخاطر، الطلب</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="crowdfunding_pitch" aria-label="عرض تمويل جماعي — ملخص، طلب، استخدامات، جدول، مكافآت">
+                            <div class="icon">👥</div>
+                            <div class="info">
+                                <h4>عرض تمويل جماعي</h4>
+                                <p>صفحة واحدة جاهزة للرفع على منصة تمويل جماعي — ملخص، الطلب، الاستخدامات، الجدول الزمني، المكافآت</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="feasibility_plan_summary" aria-label="تقرير جدوى + ملخص خطة عمل">
+                            <div class="icon">📋</div>
+                            <div class="info">
+                                <h4>تقرير جدوى + ملخص خطة عمل</h4>
+                                <p>ملخص صفحة واحدة (رؤية، أهداف، منتج، سوق، مالي، الطلب) ثم التقرير الكامل</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="investor_dashboard" aria-label="عرض لوحة المستثمر التفاعلية">
+                            <div class="icon">💼</div>
+                            <div class="info">
+                                <h4>لوحة المستثمر (Dashboard)</h4>
+                                <p>عرض ويب احترافي للقراءة والمشاركة</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="pitch_script" aria-label="توليد سكربت العرض التقديمي بالذكاء الاصطناعي">
+                            <div class="icon">🎤</div>
+                            <div class="info">
+                                <h4>Pitch Script بالـ AI</h4>
+                                <p>نص عرض تقديمي 1–2 دقيقة للمستثمرين (مولّد آلي)</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="grant" aria-label="تصدير بطاقة المنح لتقديم جهات التمويل">
+                            <div class="icon">📑</div>
+                            <div class="info">
+                                <h4>بطاقة المنح</h4>
+                                <p>نموذج مبسط متوافق مع بنك التنمية وغيره (Excel)</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="csv" aria-label="تصدير ملخص CSV للإكسل أو الجداول">
+                            <div class="icon">📋</div>
+                            <div class="info">
+                                <h4>ملف CSV (ملخص)</h4>
+                                <p>ملخص بالمؤشرات بصيغة CSV قابلة للاستيراد</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="json" aria-label="تنزيل ملف المشروع JSON للنسخ الاحتياطي">
+                            <div class="icon">💾</div>
+                            <div class="info">
+                                <h4>ملف المشروع (JSON)</h4>
+                                <p>للحفظ والنسخ الاحتياطي</p>
+                            </div>
+                        </button>
+
+                        ${(this.store.getState?.()?.projectInfo?.folderId) ? `
+                        <button type="button" class="export-card" data-type="folder_json" aria-label="تصدير جميع الدراسات في المجلد كـ JSON">
+                            <div class="icon">📁</div>
+                            <div class="info">
+                                <h4>جميع الدراسات في المجلد (JSON)</h4>
+                                <p>حزمة واحدة تحتوي كل الدراسات في مجلد هذه الدراسة</p>
+                            </div>
+                        </button>
+                        ` : ''}
+
+                        <button type="button" class="export-card" data-type="gsheets" aria-label="تصدير إلى Google Sheets">
+                            <div class="icon">📗</div>
+                            <div class="info">
+                                <h4>Google Sheets</h4>
+                                <p>نشر البيانات المالية في جدول Google</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card export-card-consultation" data-type="consultation" aria-label="احجز استشارة Zoom مع خبير">
+                            <div class="icon">📞</div>
+                            <div class="info">
+                                <h4>احجز استشارة مع خبير</h4>
+                                <p>اجتماع Zoom مع محللين خبراء في السوق السعودي</p>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="export-next-step mt-4 p-3 rounded-lg border border-border bg-card" style="font-size: 0.9rem;">
+                        <strong class="text-gold">الخطوة التالية / استشارة بعد الدراسة:</strong>
+                        <p class="text-muted mt-1 mb-0">للمراجعة من قبل استشاري، صدّر <strong>نسخة للمراجعة</strong> وأرسلها لمكتبك. يمكنك أيضاً الرجوع إلى لوحة التحكم وفتح قسم «ما بعد الجدوى» لمراجعة استشاري أو حجز جلسة.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <p class="text-xs text-muted text-center w-full">يتم معالجة جميع البيانات محلياً على جهازك. (Escape للإغلاق)</p>
+                    <p class="text-xs text-muted text-center w-full mt-1">للاطلاع على فحص الجودة (QA) الكامل، راجع لوحة القرار قبل التصدير.</p>
+                </div>
+            </div>
+        `;
+
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        // Close actions
+        const closeBtn = this.overlay.querySelector('.btn-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.close());
+        }
+
+        this.overlay.addEventListener('click', (e) => {
+            if (e.target === this.overlay) this.close();
+        });
+
+        // Enloop: توليد النصوص تلقائياً (الملخص، السوق، المخاطر)
+        const btnAutoText = this.overlay.querySelector('#btnExportAutoGenerateText');
+        if (btnAutoText) {
+            btnAutoText.addEventListener('click', async () => {
+                btnAutoText.disabled = true;
+                btnAutoText.textContent = 'جاري التوليد...';
+                const state = this.store.getState();
+                const { AIConnector } = await import('../services/AIConnector.js');
+                const connector = new AIConnector();
+                if (!connector) {
+                    toast.warning('خدمة التوليد غير متاحة.');
+                    btnAutoText.disabled = false;
+                    btnAutoText.textContent = '✨ توليد النصوص تلقائياً';
+                    return;
+                }
+                try {
+                    let results = null;
+                    try {
+                        const { calculateStudy } = await import('../core/engine.js');
+                        results = calculateStudy(state);
+                    } catch (_) {}
+                    const execText = await connector.generateExecutiveSummary(state, results);
+                    if (typeof execText === 'string' && execText.trim()) {
+                        const prev = (this.store.getState().executiveSummary || {});
+                        this.store.update('executiveSummary', { ...prev, projectOverview: execText });
+                    }
+                    const marketText = await connector.generateMarketAnalysisText(state);
+                    if (typeof marketText === 'string' && marketText.trim()) {
+                        const marketing = this.store.getState().marketing || {};
+                        const marketAnalysis = marketing.marketAnalysis || {};
+                        this.store.update('marketing', { ...marketing, marketAnalysis: { ...marketAnalysis, summary: marketText } });
+                    }
+                    const risksData = await connector.generateRisksForReport(this.store.getState());
+                    if (Array.isArray(risksData) && risksData.length > 0) {
+                        const riskAnalysis = this.store.getState().riskAnalysis || {};
+                        const existing = riskAnalysis.risks || [];
+                        const merged = risksData.map(r => ({ ...r, id: r.id || crypto.randomUUID() }));
+                        this.store.update('riskAnalysis', { ...riskAnalysis, risks: existing.length ? existing : merged });
+                    }
+                    if (this.store.notify) this.store.notify();
+                    toast.success('تم توليد النصوص تلقائياً. راجع الأقسام أو صدّر التقرير.');
+                } catch (err) {
+                    console.error('Auto-generate text failed:', err);
+                    toast.error('فشل التوليد: ' + (err?.message || 'خطأ'));
+                } finally {
+                    btnAutoText.disabled = false;
+                    btnAutoText.textContent = '✨ توليد النصوص تلقائياً';
+                }
+            });
+        }
+
+        // Export actions
+        this.overlay.querySelectorAll('.export-card').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const type = btn.dataset.type;
+                if (!type) return;
+                if (type === 'consultation') {
+                    this.close();
+                    const modal = new ConsultationModal('consultationModalOverlay', this.store);
+                    modal.open();
+                    return;
+                }
+                await this.handleExport(type, btn);
+            });
+        });
+    }
+
+    async handleExport(type, btn) {
+        const state = this.store.getState();
+
+        // احسب نتائج النموذج مرة واحدة (تُستخدم في بوابة الجودة وفي التصدير)
+        let results = null;
+        try { results = runFullModel(state); } catch (e) { }
+        if (results && this.store?.update) this.store.update('results', results);
+
+        // ═══ بوابة الجودة الصارمة (QA Gate) ═══
+        // لا يخرج أي تقرير موجَّه للعميل/الممول إذا كانت الدراسة ناقصة أو متناقضة.
+        // تُستثنى النسخ الاحتياطية للبيانات الخام فقط (JSON / مجلد / تصدير خارجي).
+        const RAW_EXPORTS = new Set(['json', 'folder_json', 'investor_dashboard', 'gsheets']);
+        if (!RAW_EXPORTS.has(type)) {
+            let qa = null;
+            try { qa = await runQAChecks(state, results); } catch (e) { console.warn('QA gate error:', e); }
+            if (qa) {
+                const hasHard = (qa.hardErrors || []).length > 0;
+                const hasSoft = (qa.softWarnings || []).length > 0
+                    || (qa.validationErrors || []).length > 0
+                    || (qa.validationWarnings || []).length > 0;
+                if (hasHard || hasSoft) {
+                    const proceed = await this._qaGate(qa, hasHard);
+                    if (!proceed) return; // أُلغي التصدير — الأزرار لم تتغيّر بعد
+                }
+            }
+        }
+
+        const originalText = btn.innerHTML;
+        const cards = this.overlay.querySelectorAll('.export-card');
+        cards.forEach((c) => { c.disabled = true; c.setAttribute('aria-busy', 'true'); });
+        btn.classList.add('loading');
+        btn.innerHTML = `<div class="spinner"></div> جاري التصدير...`;
+
+        try {
+
+            switch (type) {
+                case 'pdf': {
+                    const pdfName = await this.pdfGenerator.generate();
+                    toast.success(pdfName ? `تم تصدير PDF: ${pdfName}` : 'تم تصدير PDF بنجاح!');
+                    break;
+                }
+
+                case 'pptx': {
+                    const { PPTXExporter } = await import('../../export/pptxExporter.js');
+                    const pptx = new PPTXExporter(this.store);
+                    const pptxResult = await pptx.export();
+                    if (pptxResult.success) {
+                        toast.success(`تم تصدير PowerPoint: ${pptxResult.fileName}`);
+                    } else {
+                        toast.error('فشل تصدير PowerPoint: ' + (pptxResult.error || 'خطأ غير معروف'));
+                    }
+                    break;
+                }
+
+                case 'word': {
+                    const { WordExporter } = await import('../../export/wordExporter.js');
+                    const { downloadBlob } = await import('../../export/utils.js');
+                    const exporter = new WordExporter(this.store);
+                    const result = await exporter.export();
+                    if (result.success) {
+                        downloadBlob(result.blob, result.fileName);
+                        toast.success(`تم تصدير Word: ${result.fileName}`);
+                    } else {
+                        toast.error('فشل تصدير Word: ' + (result.error || 'خطأ غير معروف'));
+                    }
+                    break;
+                }
+
+                case 'excel': {
+                    let excelName = null;
+                    try {
+                        const { exportExcel } = await import('../../export/excel.js');
+                        if (results?.incomeStatement?.length) {
+                            excelName = await exportExcel(state, results);
+                            toast.success(excelName ? `تم تصدير Excel: ${excelName}` : 'تم تصدير Excel بالقالب المعياري بنجاح!');
+                        } else {
+                            throw new Error('لا توجد نتائج للتصدير.');
+                        }
+                    } catch (templateError) {
+                        console.warn('Standard template export failed, using simple export:', templateError);
+                        const { exportToExcel } = await import('../../export/excelExporter.js');
+                        const fn = state.projectInfo?.name || 'feasibility_study';
+                        excelName = await exportToExcel(state, results, fn);
+                        toast.success(excelName ? `تم تصدير Excel: ${excelName}` : 'تم تصدير Excel بنجاح!');
+                    }
+                    break;
+                }
+
+                case 'bank': {
+                    const html = BankReportGenerator.generateHTML(this.store);
+                    const win = window.open('', '_blank');
+                    if (win) {
+                        win.document.write(html);
+                        win.document.close();
+                        win.focus();
+                    }
+                    const projName = sanitizeFilename(state.projectInfo?.name || 'تقرير_تمويل_بنكي');
+                    const bankName = `bank_report_${projName}_${exportDateISO()}.html`;
+                    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+                    downloadBlob(blob, bankName);
+                    if (win) toast.success(`تم فتح التقرير وتنزيل: ${bankName}`);
+                    else toast.warning(`تم تنزيل ${bankName}. لفتح التقرير، اسمح بالنوافذ المنبثقة ثم أعد التصدير.`);
+                    break;
+                }
+
+                case 'financier': {
+                    const finHtml = BankReportGenerator.generateHTML(this.store);
+                    const finWin = window.open('', '_blank');
+                    if (finWin) {
+                        finWin.document.write(finHtml);
+                        finWin.document.close();
+                        finWin.focus();
+                        setTimeout(() => finWin.print(), 350);
+                        toast.success('تم فتح نسخة للممول — اختر «حفظ كـ PDF» في نافذة الطباعة');
+                    } else {
+                        toast.error('تعذر فتح النافذة. يرجى السماح بالنوافذ المنبثقة.');
+                    }
+                    break;
+                }
+
+                case 'review_copy': {
+                    const baseHtml = BankReportGenerator.generateHTML(this.store);
+                    const reviewBanner = '<div style="background:#f0f4f8;border:1px solid #2c5282;padding:10px 20px;margin:0 0 16px;text-align:center;font-weight:600;font-size:11pt;">نسخة للمراجعة — للمراجعة من قبل استشاري. تاريخ التصدير: ' + new Date().toLocaleDateString('ar-SA', { dateStyle: 'long' }) + '</div>';
+                    const reviewHtml = baseHtml.replace(/<body([^>]*)>/i, '<body$1>' + reviewBanner);
+                    const reviewWin = window.open('', '_blank');
+                    if (reviewWin) {
+                        reviewWin.document.write(reviewHtml);
+                        reviewWin.document.close();
+                        reviewWin.focus();
+                        setTimeout(() => reviewWin.print(), 350);
+                        toast.success('تم فتح نسخة للمراجعة — أرسلها لمكتبك أو اختر «حفظ كـ PDF»');
+                    } else {
+                        toast.error('تعذر فتح النافذة. يرجى السماح بالنوافذ المنبثقة.');
+                    }
+                    const projName = sanitizeFilename(state.projectInfo?.name || 'مراجعة');
+                    const reviewName = `نسخة_للمراجعة_${projName}_${exportDateISO()}.html`;
+                    const reviewBlob = new Blob([reviewHtml], { type: 'text/html;charset=utf-8' });
+                    downloadBlob(reviewBlob, reviewName);
+                    break;
+                }
+
+                case 'professional_review': {
+                    const { ProfessionalReviewReportGenerator } = await import('../../export/ProfessionalReviewReportGenerator.js');
+                    const proHtml = ProfessionalReviewReportGenerator.generateHTML(this.store);
+                    const proWin = window.open('', '_blank');
+                    if (proWin) {
+                        proWin.document.write(proHtml);
+                        proWin.document.close();
+                        proWin.focus();
+                        setTimeout(() => proWin.print(), 350);
+                        toast.success('تم فتح نسخة احترافية للمراجعة — هيكل مرقّم وفهرس؛ اطبع كـ PDF');
+                    } else {
+                        toast.error('تعذر فتح النافذة. يرجى السماح بالنوافذ المنبثقة.');
+                    }
+                    const projName = sanitizeFilename(state.projectInfo?.name || 'نسخة_مراجعة');
+                    const proName = `نسخة_احترافية_للمراجعة_${projName}_${exportDateISO()}.html`;
+                    downloadBlob(new Blob([proHtml], { type: 'text/html;charset=utf-8' }), proName);
+                    break;
+                }
+
+                case 'monshaat': {
+                    const monshaatHtml = MonshaatReportGenerator.generateHTML(this.store);
+                    const monshaatWin = window.open('', '_blank');
+                    if (monshaatWin) {
+                        monshaatWin.document.write(monshaatHtml);
+                        monshaatWin.document.close();
+                        monshaatWin.focus();
+                        setTimeout(() => monshaatWin.print(), 350);
+                        toast.success('تم فتح تقرير بهيكل منشآت — اختر «حفظ كـ PDF». يُوصى بمراجعة المتطلبات على بوابة منشآت.');
+                    } else {
+                        toast.error('تعذر فتح النافذة. يرجى السماح بالنوافذ المنبثقة.');
+                    }
+                    break;
+                }
+
+                case 'csv': {
+                    const { exportToCSV } = await import('../../export/csvExporter.js');
+                    const fn = state.projectInfo?.name || 'feasibility_study';
+                    const csvName = exportToCSV(state, results, fn);
+                    toast.success(csvName ? `تم تصدير CSV: ${csvName}` : 'تم تصدير CSV بنجاح!');
+                    break;
+                }
+
+                case 'pitch': {
+                    const { PitchDeckExporter } = await import('../../export/PitchDeckExporter.js');
+                    const pitchHtml = PitchDeckExporter.generateHTML(this.store);
+                    const win = window.open('', '_blank');
+                    if (win) {
+                        win.document.write(pitchHtml);
+                        win.document.close();
+                        win.focus();
+                    }
+                    const projName = sanitizeFilename(state.projectInfo?.name || 'pitch_deck');
+                    const pitchName = `pitch_deck_${projName}_${exportDateISO()}.html`;
+                    const pitchBlob = new Blob([pitchHtml], { type: 'text/html;charset=utf-8' });
+                    downloadBlob(pitchBlob, pitchName);
+                    toast.success(`تم فتح Pitch Deck وتنزيل: ${pitchName} — اختر "حفظ كـ PDF" عند الطباعة`);
+                    break;
+                }
+
+                case 'investor_one_pager': {
+                    const { InvestorAcceleratorOnePager } = await import('../../export/InvestorAcceleratorOnePager.js');
+                    const onePagerHtml = InvestorAcceleratorOnePager.generateHTML(this.store, { audience: 'investor' });
+                    const win = window.open('', '_blank');
+                    if (win) {
+                        win.document.write(onePagerHtml);
+                        win.document.close();
+                        win.focus();
+                    }
+                    const projName = sanitizeFilename(state.projectInfo?.name || 'investor_pitch');
+                    const onePagerName = `عرض_مستثمر_${projName}_${exportDateISO()}.html`;
+                    const onePagerBlob = new Blob([onePagerHtml], { type: 'text/html;charset=utf-8' });
+                    downloadBlob(onePagerBlob, onePagerName);
+                    toast.success(`تم فتح عرض المستثمر/المسرّعة وتنزيل: ${onePagerName} — اطبع كـ PDF`);
+                    break;
+                }
+
+                case 'accelerator_pitch': {
+                    const { InvestorAcceleratorOnePager } = await import('../../export/InvestorAcceleratorOnePager.js');
+                    const accHtml = InvestorAcceleratorOnePager.generateHTML(this.store, { audience: 'accelerator' });
+                    const accWin = window.open('', '_blank');
+                    if (accWin) {
+                        accWin.document.write(accHtml);
+                        accWin.document.close();
+                        accWin.focus();
+                    }
+                    const projName = sanitizeFilename(state.projectInfo?.name || 'عرض_مسرعة');
+                    const accName = `عرض_مسرعة_${projName}_${exportDateISO()}.html`;
+                    downloadBlob(new Blob([accHtml], { type: 'text/html;charset=utf-8' }), accName);
+                    toast.success(`تم فتح عرض للمسرّعة وتنزيل: ${accName} — اطبع كـ PDF`);
+                    break;
+                }
+
+                case 'incubator_pitch': {
+                    const { InvestorAcceleratorOnePager } = await import('../../export/InvestorAcceleratorOnePager.js');
+                    const incHtml = InvestorAcceleratorOnePager.generateHTML(this.store, { audience: 'incubator' });
+                    const incWin = window.open('', '_blank');
+                    if (incWin) {
+                        incWin.document.write(incHtml);
+                        incWin.document.close();
+                        incWin.focus();
+                    }
+                    const projName = sanitizeFilename(state.projectInfo?.name || 'عرض_حاضنة');
+                    const incName = `عرض_حاضنة_${projName}_${exportDateISO()}.html`;
+                    downloadBlob(new Blob([incHtml], { type: 'text/html;charset=utf-8' }), incName);
+                    toast.success(`تم فتح عرض للحاضنة وتنزيل: ${incName} — اطبع كـ PDF`);
+                    break;
+                }
+
+                case 'crowdfunding_pitch': {
+                    const { CrowdfundingPitchExporter } = await import('../../export/CrowdfundingPitchExporter.js');
+                    const cfHtml = CrowdfundingPitchExporter.generateHTML(this.store);
+                    const cfWin = window.open('', '_blank');
+                    if (cfWin) {
+                        cfWin.document.write(cfHtml);
+                        cfWin.document.close();
+                        cfWin.focus();
+                    }
+                    const projName = sanitizeFilename(state.projectInfo?.name || 'تمويل_جماعي');
+                    const cfName = `عرض_تمويل_جماعي_${projName}_${exportDateISO()}.html`;
+                    downloadBlob(new Blob([cfHtml], { type: 'text/html;charset=utf-8' }), cfName);
+                    toast.success(`تم فتح عرض تمويل جماعي وتنزيل: ${cfName} — اطبع كـ PDF للرفع على المنصة`);
+                    break;
+                }
+
+                case 'feasibility_plan_summary': {
+                    const { BusinessPlanFeasibilityExporter } = await import('../../export/BusinessPlanFeasibilityExporter.js');
+                    const combinedHtml = BusinessPlanFeasibilityExporter.generateHTML(this.store);
+                    const win = window.open('', '_blank');
+                    if (win) {
+                        win.document.write(combinedHtml);
+                        win.document.close();
+                        win.focus();
+                    }
+                    const projName = sanitizeFilename(state.projectInfo?.name || 'خطة_جدوى');
+                    const combinedName = `تقرير_جدوى_ملخص_خطة_${projName}_${exportDateISO()}.html`;
+                    const combinedBlob = new Blob([combinedHtml], { type: 'text/html;charset=utf-8' });
+                    downloadBlob(combinedBlob, combinedName);
+                    toast.success(`تم فتح تقرير جدوى + ملخص خطة عمل وتنزيل: ${combinedName} — اطبع كـ PDF`);
+                    break;
+                }
+
+                case 'pitch_script': {
+                    const scriptText = await generatePitchScript(state, results);
+                    if (!scriptText) {
+                        toast.error('لم يتم توليد السكربت. تحقق من بيانات المشروع أو الخادم.');
+                        break;
+                    }
+                    const scriptBlob = new Blob([scriptText], { type: 'text/plain;charset=utf-8' });
+                    const scriptName = `pitch_script_${sanitizeFilename(state.projectInfo?.name || 'project')}_${exportDateISO()}.txt`;
+                    downloadBlob(scriptBlob, scriptName);
+                    toast.success('تم توليد Pitch Script وتنزيله: ' + scriptName);
+                    break;
+                }
+
+                case 'grant': {
+                    const { exportGrantCard } = await import('../../export/excelExporter.js');
+                    const grantName = await exportGrantCard(state, results);
+                    toast.success(grantName ? `تم تصدير بطاقة المنح: ${grantName}` : 'تم تصدير بطاقة المنح بنجاح!');
+                    break;
+                }
+
+                case 'json': {
+                    const projName = sanitizeFilename(state.projectInfo?.name || 'study');
+                    const jsonName = `study_backup_${projName}_${exportDateISO()}.json`;
+                    const json = JSON.stringify(state, null, 2);
+                    const blob = new Blob([json], { type: 'application/json' });
+                    downloadBlob(blob, jsonName);
+                    toast.success(`تم تنزيل ملف المشروع: ${jsonName}`);
+                    break;
+                }
+
+                case 'folder_json': {
+                    const folderId = state.projectInfo?.folderId;
+                    if (!folderId) {
+                        toast.warning('هذه الدراسة غير مرتبطة بمجلد.');
+                        break;
+                    }
+                    const { ProjectManager } = await import('../services/ProjectManager.js');
+                    const all = await ProjectManager.getAllProjects();
+                    const inFolder = (all || []).filter(p => (p.folderId || null) === folderId);
+                    if (inFolder.length === 0) {
+                        toast.warning('لا توجد دراسات أخرى في هذا المجلد.');
+                        break;
+                    }
+                    let folders = [];
+                    try {
+                        folders = JSON.parse(localStorage.getItem('feas_folders') || '[]');
+                    } catch (_) {}
+                    const folderName = (folders.find(f => f.id === folderId)?.name || 'مجلد').replace(/\s+/g, '_');
+                    const studies = [];
+                    for (const p of inFolder) {
+                        try {
+                            const res = await ProjectManager.loadProject(p.id);
+                            if (res?.data) studies.push({ id: p.id, name: p.name || 'بدون اسم', data: res.data });
+                        } catch (_) {}
+                    }
+                    const payload = { folderId, folderName, exportedAt: new Date().toISOString(), count: studies.length, studies };
+                    const jsonName = `folder_${sanitizeFilename(folderName)}_${exportDateISO()}.json`;
+                    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                    downloadBlob(blob, jsonName);
+                    toast.success(`تم تنزيل حزمة المجلد: ${studies.length} دراسة — ${jsonName}`);
+                    break;
+                }
+
+                case 'gsheets': {
+                    const { exportToGoogleSheets, showGoogleSheetsSetup } = await import('../services/GoogleSheetsService.js');
+                    const hasUrl = localStorage.getItem('GOOGLE_SHEETS_WEB_APP_URL');
+                    if (!hasUrl) {
+                        this.close();
+                        showGoogleSheetsSetup();
+                        toast.info('يرجى إعداد Google Sheets أولاً');
+                        break;
+                    }
+                    const result = await exportToGoogleSheets(state, results);
+                    if (result.ok) {
+                        toast.success('تم التصدير إلى Google Sheets');
+                    } else {
+                        toast.error('فشل التصدير: ' + result.error);
+                    }
+                    break;
+                }
+
+                case 'investor_dashboard': {
+                    window.dispatchEvent(new CustomEvent('feasibility:showInvestorDashboard'));
+                    this.close();
+                    break;
+                }
+            }
+            try {
+                const { WebhookService } = await import('../services/WebhookService.js');
+                WebhookService.triggerEvent('report.exported', {
+                    format: type,
+                    study_id: state.projectInfo?.id,
+                    project_name: state.projectInfo?.name,
+                });
+            } catch (_) { }
+            auditLog(ACTIONS.EXPORT, { type });
+        } catch (error) {
+            console.error('Export failed:', error);
+            const msg = error?.message && /تحميل|Excel|load|فشل|مهلة/.test(String(error.message))
+                ? 'فشل تحميل مكتبة التصدير أو اكتمال البيانات. تحقق من الاتصال وحاول مجدداً.'
+                : 'حدث خطأ أثناء التصدير. إن استمر تحقق من اكتمال البيانات.';
+            toast.error(msg);
+        } finally {
+            btn.innerHTML = originalText;
+            btn.classList.remove('loading');
+            const cards = this.overlay.querySelectorAll('.export-card');
+            cards.forEach((c) => { c.disabled = false; c.removeAttribute('aria-busy'); });
+            if (type !== 'bank') this.close();
+        }
+    }
+
+    /**
+     * بوابة الجودة: حوار يمنع التصدير عند وجود أخطاء جوهرية (hard)،
+     * أو يطلب إقراراً صريحاً عند وجود تنبيهات (soft). تُرجع Promise<boolean> (true = أكمل).
+     */
+    _qaGate(qa, hasHard) {
+        return new Promise((resolve) => {
+            const esc = (s) => String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const msgs = (arr) => (arr || [])
+                .map((x) => (typeof x === 'string' ? x : (x && (x.message || x.code)) || ''))
+                .filter(Boolean);
+            const hard = msgs(qa.hardErrors);
+            const soft = [...msgs(qa.softWarnings), ...msgs(qa.validationErrors), ...msgs(qa.validationWarnings)];
+
+            const li = (items, color) => items.map((m) =>
+                `<li style="position:relative;padding:8px 20px 8px 0;font-size:14px;line-height:1.6;color:#3B463F;border-bottom:1px solid #ECEBE2;"><span style="position:absolute;right:0;top:12px;width:7px;height:7px;border-radius:2px;background:${color};"></span>${esc(m)}</li>`).join('');
+
+            const sections = [];
+            if (hard.length) sections.push(
+                `<div style="font-weight:800;font-size:13px;color:#B4453B;margin:6px 0 4px;">أخطاء تمنع التصدير — يجب إصلاحها:</div><ul style="list-style:none;margin:0 0 10px;padding:0;">${li(hard, '#B4453B')}</ul>`);
+            if (soft.length) sections.push(
+                `<div style="font-weight:800;font-size:13px;color:#C0982E;margin:10px 0 4px;">تنبيهات تحتاج مراجعتك:</div><ul style="list-style:none;margin:0;padding:0;">${li(soft, '#C0982E')}</ul>`);
+
+            const title = hasHard ? '🚫 لا يمكن تصدير الدراسة بعد' : '⚠️ مراجعة الجودة قبل التصدير';
+            const subtitle = hasHard
+                ? 'حمايةً لسمعتك: الدراسة غير مكتملة أو تحتوي تناقضاً. أصلِح النقاط التالية ثم أعِد التصدير.'
+                : 'الدراسة قابلة للتصدير، لكن راجِع هذه التنبيهات أولاً. تقدر تُكمل إذا كنت متأكداً.';
+
+            const buttons = hasHard
+                ? `<button data-act="cancel" style="flex:1;font-family:inherit;font-size:14px;font-weight:800;padding:12px;border-radius:10px;border:0;background:#0E5B44;color:#fff;cursor:pointer;">الرجوع لإصلاح الدراسة</button>`
+                : `<button data-act="cancel" style="flex:1;font-family:inherit;font-size:14px;font-weight:700;padding:12px;border-radius:10px;border:1px solid #DBD9CE;background:#fff;color:#3B463F;cursor:pointer;">مراجعة أولاً</button><button data-act="proceed" style="flex:1;font-family:inherit;font-size:14px;font-weight:800;padding:12px;border-radius:10px;border:0;background:#0E5B44;color:#fff;cursor:pointer;">أوافق وأكمل التصدير</button>`;
+
+            const ov = document.createElement('div');
+            ov.className = 'qa-gate-overlay';
+            ov.setAttribute('role', 'dialog');
+            ov.setAttribute('aria-modal', 'true');
+            ov.style.cssText = 'position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(10,33,28,.55);backdrop-filter:blur(4px);padding:20px;';
+            ov.innerHTML =
+                `<div dir="rtl" style="max-width:520px;width:100%;background:#FBFAF6;border-radius:16px;box-shadow:0 24px 60px -20px rgba(10,33,28,.6);overflow:hidden;font-family:inherit;">
+                   <div style="padding:22px 24px 6px;">
+                     <div style="font-size:18px;font-weight:800;color:#16211C;">${title}</div>
+                     <div style="font-size:13.5px;color:#6C766E;margin-top:8px;line-height:1.7;">${subtitle}</div>
+                   </div>
+                   <div style="padding:8px 24px 4px;max-height:46vh;overflow-y:auto;">${sections.join('')}</div>
+                   <div style="display:flex;gap:10px;padding:16px 24px 22px;">${buttons}</div>
+                 </div>`;
+            document.body.appendChild(ov);
+
+            const done = (val) => { document.removeEventListener('keydown', onKey); ov.remove(); resolve(val); };
+            const onKey = (e) => { if (e.key === 'Escape') done(false); };
+            document.addEventListener('keydown', onKey);
+            ov.addEventListener('click', (e) => { if (e.target === ov) done(false); });
+            ov.querySelectorAll('button[data-act]').forEach((b) => {
+                b.addEventListener('click', () => done(b.dataset.act === 'proceed'));
+            });
+            const focusBtn = ov.querySelector('button[data-act="proceed"]') || ov.querySelector('button[data-act="cancel"]');
+            if (focusBtn) setTimeout(() => focusBtn.focus(), 0);
+        });
+    }
+}

@@ -1,0 +1,112 @@
+[
+    {
+        "id": "case_001",
+        "name": "Specialty Coffee Hive",
+        "sector": "coffee shop",
+        "category": "F&B",
+        "budget": 350000,
+        "margin": 0.22,
+        "marketing_percent": 0.08,
+        "rent_percent_of_rev": 0.12,
+        "success_factor": "الموقع بالقرب من الجامعات والتركيز على القهوة الباردة"
+    },
+    {
+        "id": "case_002",
+        "name": "Burger Station",
+        "sector": "restaurant burger",
+        "category": "F&B",
+        "budget": 500000,
+        "margin": 0.18,
+        "marketing_percent": 0.12,
+        "rent_percent_of_rev": 0.10,
+        "success_factor": "قائمة طعام مختصرة (Menu Engineering) وسرعة التحضير"
+    },
+    {
+        "id": "case_003",
+        "name": "Trendy Abaya",
+        "sector": "retail abaya",
+        "category": "Retail",
+        "budget": 200000,
+        "margin": 0.35,
+        "marketing_percent": 0.15,
+        "rent_percent_of_rev": 0.15,
+        "success_factor": "التسويق المؤثر عبر تيك توك وتصاميم موسمية"
+    },
+    {
+        "id": "case_004",
+        "name": "Gents Lounge",
+        "sector": "barber shop salon",
+        "category": "Service",
+        "budget": 150000,
+        "margin": 0.40,
+        "marketing_percent": 0.05,
+        "rent_percent_of_rev": 0.18,
+        "success_factor": "العمالة الماهرة والحجز الإلكتروني"
+    },
+    {
+        "id": "case_005",
+        "name": "Family Supermarket",
+        "sector": "grocery market",
+        "category": "Retail",
+        "budget": 800000,
+        "margin": 0.12,
+        "marketing_percent": 0.02,
+        "rent_percent_of_rev": 0.08,
+        "success_factor": "التوصيل المنزلي المجاني وتنوع الأصناف"
+    },
+    {
+        "id": "case_006",
+        "name": "Tech Fix",
+        "sector": "mobile repair",
+        "category": "Service",
+        "budget": 80000,
+        "margin": 0.45,
+        "marketing_percent": 0.05,
+        "rent_percent_of_rev": 0.15,
+        "success_factor": "الضمان على الصيانة والسرعة"
+    },
+    {
+        "id": "case_007",
+        "name": "Cozy Cafe",
+        "sector": "coffee shop",
+        "category": "F&B",
+        "budget": 250000,
+        "margin": 0.25,
+        "marketing_percent": 0.07,
+        "rent_percent_of_rev": 0.15,
+        "success_factor": "الديكور المريح (Instagrammable) والحلويات المنزلية"
+    },
+    {
+        "id": "case_008",
+        "name": "Healthy Bowl",
+        "sector": "restaurant healthy",
+        "category": "F&B",
+        "budget": 400000,
+        "margin": 0.20,
+        "marketing_percent": 0.10,
+        "rent_percent_of_rev": 0.12,
+        "success_factor": "الاشتراكات الشهرية للوجبات"
+    },
+    {
+        "id": "case_009",
+        "name": "Car Wash Pro",
+        "sector": "car wash",
+        "category": "Service",
+        "budget": 600000,
+        "margin": 0.30,
+        "marketing_percent": 0.08,
+        "rent_percent_of_rev": 0.10,
+        "success_factor": "استخدام تقنيات الغسيل بالبخار والخدمة المتنقلة"
+    },
+    {
+        "id": "case_010",
+        "name": "Perfume Lab",
+        "sector": "retail perfume",
+        "category": "Retail",
+        "budget": 120000,
+        "margin": 0.50,
+        "marketing_percent": 0.20,
+        "rent_percent_of_rev": 0.10,
+        "success_factor": "الخلطات الخاصة والتغليف الفاخر"
+    }
+]

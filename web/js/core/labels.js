@@ -1,0 +1,387 @@
+/**
+ * Arabic Labels Dictionary - Full Edition
+ * Maps English schema keys to Arabic display labels
+ */
+export const LABELS = {
+    // ═══════════════════════════════════════════════════════════
+    // الأقسام الرئيسية
+    // ═══════════════════════════════════════════════════════════
+    project_info: "بيانات المشروع",
+    furniture: "الأثاث والمفروشات",
+
+    // Transcript 8: Environmental Classification
+    environmentalClass: "التصنيف البيئي للمشروع",
+    environmentalMitigationCost: "تكلفة معالجة الأثر البيئي (Mitigation Cost)",
+    Green: "أخضر (صديق للبيئة - مدعوم)",
+    Grey: "رمادي (يتطلب معالجة - Grey List)",
+    Black_List: "أسود (قائمة سوداء - مرفوض/ضرائب عالية)",
+
+    techResources: "الموارد التقنية",
+    hr: "الموارد البشرية",
+    legal: "الدراسة القانونية",
+    financial: "الدراسة المالية",
+    indicators: "مؤشرات الجدوى",
+    risk: "تحليل المخاطر",
+    appendices: "الملاحق",
+
+    // ═══════════════════════════════════════════════════════════
+    // 0️⃣ بيانات المشروع
+    // ═══════════════════════════════════════════════════════════
+    ideaCriteria: "معاير الفكرة (التقييم الأولي)",
+    feasibility: "جدوى الفكرة",
+    uniqueness: "التفرد والتميز",
+    marketFit: "ملاءمة السوق",
+    resourceAvailability: "توفر الموارد",
+
+    identityStatement: "بيان الهوية",
+    valueProposition: "القيمة المقترحة",
+    products: "المنتجات/الخدمات الرئيسية",
+
+    locationAnalysis: "تحليل الموقع والمفاضلة",
+    selectionFactors: "عوامل الاختيار",
+    alternativesComparison: "مقارنة البدائل",
+    chosenReason: "سبب الاختيار النهائي",
+
+    // القديم
+    name: "اسم المشروع",
+    description: "وصف المشروع",
+    location: "الموقع",
+    city: "المدينة",
+    district: "الحي",
+    concept: "نوع المفهوم",
+    areaSize: "المساحة (م²)",
+    businessModel: "نموذج العمل",
+    Corporate_Venture: "مشروع ريادي تابع لشركة (Corporate Venture)",
+    franchiseDetails: "تفاصيل الامتياز التجاري",
+    entryFee: "رسوم الامتياز (تأسيس)",
+    royaltyRate: "نسبة الإتاوة (% من المبيعات)",
+    marketingFee: "نسبة التسويق (% من المبيعات)",
+
+    // Transcript 7: Corporate Venture & Asset Savings
+    corporateAssets: "الأصول الموروثة (الميزة غير العادلة)",
+    assetName: "اسم الأصل (مثال: قاعدة عملاء)",
+    costSavingType: "بند التوفير (مثال: Marketing)",
+    savingPercentage: "نسبة التوفير (0.1 - 1.0)",
+    estimatedValue: "القيمة التقديرية للأصل",
+
+    // Transcript 7: Venture Builder Fees
+    validationBudget: "ميزانية التحقق (Validation Budget)",
+    ventureBuilderFees: "أتعاب بناء المشروع (Venture Builder)",
+    fixedFee: "رسوم الإدارة (Fixed Fee)",
+    successFee: "رسوم النجاح (% من الأرباح)",
+    equityShare: "حصة الملكية للشركة المشغلة (%)",
+    hasDineIn: "صالة طعام",
+    hasDelivery: "توصيل",
+    hasPickup: "استلام",
+    timeline: "الجدول الزمني",
+    projectStart: "تاريخ بدء المشروع",
+    operationStart: "تاريخ بدء التشغيل",
+    constructionMonths: "مدة التجهيز (أشهر)",
+
+    // ═══════════════════════════════════════════════════════════
+    // 1️⃣ الدراسة التسويقية
+    // ═══════════════════════════════════════════════════════════
+    marketAnalysis: "تحليل السوق",
+    marketSize: "حجم السوق",
+    growthRate: "معدل النمو",
+    trends: "الاتجاهات",
+    competitors: "تحليل المنافسين",
+    targetSegment: "الشريحة المستهدفة",
+    ageRange: "الفئة العمرية",
+    incomeLevel: "مستوى الدخل",
+    behavior: "السلوك الشرائي",
+    swot: "التحليل الرباعي (SWOT)",
+    strengths: "نقاط القوة",
+    weaknesses: "نقاط الضعف",
+    opportunities: "الفرص",
+    threats: "التهديدات",
+    pricingStrategy: "استراتيجية التسعير",
+    pricingCostPlus: "التكلفة + الهامش (Cost-Plus)",
+    pricingValueBased: "التسعير على أساس القيمة (Value-Based)",
+    pricingPenetration: "اختراق السوق (Penetration)",
+    pricingSkimming: "كشط السوق (Skimming)",
+
+    historicalData: "بيانات الطلب التاريخية (لآخر 5 سنوات)",
+    demand: "حجم الطلب",
+
+    distributionStrategy: "استراتيجية التوزيع",
+    distIntensive: "توزيع مكثف (Intensive)",
+    distSelective: "توزيع انتقائي (Selective)",
+    distExclusive: "توزيع وحيد (Exclusive)",
+
+    launchStrategy: "استراتيجية الدخول",
+    launchFull: "تشغيل كامل (Full Launch)",
+    launchPilot: "تشغيل تجريبي (Soft Launch)",
+    launchOutsource: "تصنيع خارجي (Outsourcing)",
+
+    environmentalRisks: "المخاطر البيئية (PESTEL)",
+    factor: "عامل الخطر",
+    impact: "التأثير",
+    probability: "الاحتمالية",
+    mitigation: "إجراءات التخفيف",
+
+    marketGap: "نوع الفجوة السوقية",
+    gapQuantity: "فجوة كمية (نقص العرض)",
+    gapTime: "فجوة زمنية (الوقت)",
+    gapPlace: "فجوة مكانية (الموقع)",
+    gapQuality: "فجوة الجودة",
+    gapValue: "فجوة القيمة (السعر)",
+
+    approach: "المنهج",
+    comparisonNotes: "ملاحظات المقارنة",
+    marketingMix: "المزيج التسويقي (4Ps)",
+    product: "المنتج",
+    price: "السعر",
+    place: "المكان",
+    promotion: "الترويج",
+    promotionPlan: "خطة الترويج",
+    channels: "القنوات",
+    campaigns: "الحملات",
+    monthlyBudget: "الميزانية الشهرية",
+    salesProjection: "توقعات المبيعات",
+
+    // Transcript 8: Market Structure & Pricing
+    marketStructure: "هيكل السوق (Market Structure)",
+    pricingPower: "القدرة على التسعير",
+    Perfect_Competition: "منافسة تامة (Perfect Competition)",
+    Monopolistic_Competition: "منافسة احتكارية (Monopolistic Competition)",
+    Oligopoly: "احتكار القلة (Oligopoly)",
+    Monopoly: "احتكار تام (Monopoly)",
+
+    Price_Taker: "متقبل للسعر (السوق يحدد السعر)",
+    Price_Maker: "صانع للسعر (أنت تحدد السعر)",
+
+    customersPerMonth: "عدد العملاء/شهر",
+    customersPerYear: "عدد العملاء/سنة",
+
+    // ═══════════════════════════════════════════════════════════
+    // 2️⃣ الدراسة الفنية
+    // ═══════════════════════════════════════════════════════════
+    siteDetails: "تفاصيل الموقع",
+    area: "المساحة",
+    selectionReason: "سبب اختيار الموقع",
+    designLayout: "التصميم والتخطيط",
+    buildingPlan: "مخطط المبنى",
+    facilitiesDistribution: "توزيع المرافق",
+    equipment: "التجهيزات والمعدات",
+    capacity: "الطاقة الاستيعابية",
+    dailyCustomers: "عدد العملاء/يوم",
+    monthlyCustomers: "عدد العملاء/شهر",
+    seatingCapacity: "عدد المقاعد",
+    techRequirements: "المتطلبات التقنية",
+    systems: "الأنظمة",
+    software: "البرامج",
+    servers: "السيرفرات",
+    implementationPhases: "مراحل التنفيذ",
+    maintenance: "الصيانة والتشغيل",
+    plan: "الخطة",
+    productionProcessDescription: "وصف عملية التشغيل/الإنتاج",
+    productionCapacity: "الطاقة الإنتاجية",
+    annualCapacity: "السعة السنوية",
+    unitOrMeasure: "وحدة القياس",
+    marketShareLink: "ربط بالسوق المستهدف",
+    locationAssessment: "مصفوفة تقييم الموقع",
+    competitorBenchmarking: "مصفوفة المنافسة المعيارية",
+    detailedGoals: "مؤشرات الأداء التفصيلية (KPIs)",
+    goal: "الهدف الاستراتيجي",
+    kpi: "مؤشر القياس",
+    formula: "معادلة الاحتساب",
+    target: "المستهدف (Benchmark)",
+    frequency: "التواتر",
+    criterion: "معيار المقارنة",
+    myRank: "ترتيبي",
+    comp1Rank: "منافس 1",
+    comp2Rank: "منافس 2",
+    sensitivity: "تحليل الحساسية (ماذا لو؟)",
+    consumables: "المواد المستهلكة (التشغيلية)",
+    vehicles: "وسائل النقل والمواصلات",
+    marketSurveyResults: "نتائج الاستبيان الميداني",
+    monthlyCost: "التكلفة الشهرية",
+    annualCost: "التكلفة السنوية",
+    quantity: "العدد",
+    question: "السؤال",
+    answer: "الإجابة",
+    percentage: "النسبة",
+    coordinates: "الإحداثيات",
+    address: "العنوان التفصيلي",
+    locationAlternatives: "المواقع البديلة",
+    factor: "المعيار",
+    rating: "التقييم (من 5)",
+    weight: "الوزن النسبي",
+    score: "الدرجة",
+
+    productionCapacity: "الطاقة الإنتاجية",
+    annualCapacity: "الطاقة السنوية",
+    unitOrMeasure: "وحدة القياس",
+    marketShareLink: "الربط بالحصة السوقية",
+    capacityUtilization: "جدول تدرج الطاقة التشغيلية",
+    year: "السنة",
+    rate: "نسبة التشغيل",
+    utilizationNotes: "ملاحظات التشغيل",
+
+    // ═══════════════════════════════════════════════════════════
+    // 3️⃣ الموارد البشرية
+    // ═══════════════════════════════════════════════════════════
+    organizationalStructure: "الهيكل التنظيمي",
+    advisoryBoard: "المجلس الاستشاري",
+    role: "الدور/المنصب",
+    positions: "الوظائف",
+    responsibilities: "المهام والمسؤوليات الرئيسية",
+    totalEmployees: "إجمالي الموظفين",
+    salaryScale: "سلم الرواتب",
+    minSalary: "الحد الأدنى للراتب",
+    maxSalary: "الحد الأعلى للراتب",
+    includesAllowances: "يشمل البدلات",
+    includesInsurance: "يشمل التأمينات",
+    recruitmentPlan: "خطة التوظيف",
+    sources: "مصادر التوظيف",
+    training: "التدريب والتطوير",
+    programs: "البرامج",
+    budget: "الميزانية",
+    totalAnnualCost: "إجمالي التكلفة السنوية",
+    annualIncreaseRate: "نسبة الزيادة السنوية",
+    gosiRate: "نسبة التأمينات (GOSI)",
+    healthInsurancePerHead: "التأمين الصحي/فرد",
+
+    // ═══════════════════════════════════════════════════════════
+    // 4️⃣ الدراسة القانونية
+    // ═══════════════════════════════════════════════════════════
+    legalForm: "الشكل القانوني",
+    licenses: "التراخيص المطلوبة",
+    commercialRegistration: "السجل التجاري",
+    municipalLicense: "رخصة البلدية",
+    civilDefense: "الدفاع المدني",
+    healthLicense: "الرخصة الصحية",
+    sectorSpecific: "تراخيص قطاعية",
+    required: "مطلوب",
+    cost: "التكلفة",
+    obtained: "تم الحصول عليه",
+    contracts: "العقود",
+    leaseContract: "عقد الإيجار",
+    exists: "موجود",
+    value: "القيمة",
+    duration: "المدة",
+    employmentContracts: "عقود التوظيف",
+    count: "العدد",
+    supplierContracts: "عقود الموردين",
+    partnershipContracts: "عقود الشراكة",
+    intellectualProperty: "الملكية الفكرية",
+    trademarkRegistered: "العلامة التجارية مسجلة",
+    trademarkCost: "تكلفة تسجيل العلامة",
+    patents: "براءات الاختراع",
+    compliance: "الامتثال",
+    vatRegistered: "مسجل في ضريبة القيمة المضافة",
+    dataProtection: "حماية البيانات",
+    safetyStandards: "معايير السلامة",
+    insurance: "التأمينات",
+    propertyInsurance: "تأمين الممتلكات",
+    employeeInsurance: "تأمين الموظفين",
+    liabilityInsurance: "تأمين المسؤولية",
+    legalFoundationCosts: "تكاليف التأسيس القانوني",
+    fees: "الرسوم",
+    lawyerFees: "أتعاب المحاماة",
+    total: "الإجمالي",
+
+    // ═══════════════════════════════════════════════════════════
+    // 5️⃣ الدراسة المالية
+    // ═══════════════════════════════════════════════════════════
+    capitalCosts: "التكاليف الرأسمالية",
+    constructionAndFitout: "الإنشاءات والتجهيزات",
+    equipmentAndAssets: "المعدات والأصول",
+    techCosts: "التكاليف التقنية",
+    legalCosts: "التكاليف القانونية",
+    launchMarketing: "تسويق الإطلاق",
+    workingCapital: "رأس المال العامل",
+    contingencyReserve: "احتياطي الطوارئ",
+    totalCapex: "إجمالي الاستثمار",
+    operatingCosts: "التكاليف التشغيلية",
+    salariesAndWages: "الرواتب والأجور",
+    rent: "الإيجار",
+    utilities: "المرافق",
+    electricity: "الكهرباء",
+    water: "المياه",
+    internet: "الإنترنت",
+    ongoingMarketing: "التسويق المستمر",
+    subscriptions: "الاشتراكات",
+    administrative: "المصاريف الإدارية",
+    totalOpex: "إجمالي التشغيل",
+    revenue: "الإيرادات",
+    streams: "مصادر الدخل",
+    totalMonthlyRevenue: "إجمالي الإيرادات الشهرية",
+    seasonalityNotes: "ملاحظات الموسمية",
+    funding: "مصادر التمويل",
+    personalEquity: "رأس المال الشخصي",
+    investors: "المستثمرون",
+    loans: "القروض",
+    loanTerms: "شروط القرض",
+    amount: "المبلغ",
+    interestRate: "معدل الفائدة",
+    tenureMonths: "مدة السداد (أشهر)",
+    gracePeriodMonths: "فترة السماح (أشهر)",
+    taxes: "الضرائب",
+    vat: "ضريبة القيمة المضافة",
+    zakat: "الزكاة",
+    corporateTax: "ضريبة الشركات",
+
+    // ═══════════════════════════════════════════════════════════
+    // 🔟 الافتراضات المالية
+    // ═══════════════════════════════════════════════════════════
+    assumptions: "الافتراضات المالية",
+    currency: "العملة (عرض المبالغ)",
+    inflationRate: "معدل التضخم السنوي",
+    taxRate: "معدل الضريبة/الزكاة",
+    discountRate: "معدل الخصم",
+    workingCapitalMonths: "أشهر رأس المال العامل",
+    contingencyRate: "نسبة الاحتياطي",
+    projectionYears: "سنوات التوقع",
+    revenueGrowthJustification: "مبرر نمو/تثبيت/انخفاض المبيعات",
+    thresholds: "الحدود الدنيا للمؤشرات",
+    minNPV: "الحد الأدنى لصافي القيمة الحالية",
+    minIRR: "الحد الأدنى لمعدل العائد الداخلي",
+    maxPayback: "الحد الأقصى لفترة الاسترداد (سنوات)",
+    minROI: "الحد الأدنى للعائد على الاستثمار",
+    hiddenOverheadsRate: "احتياطي مخاطر التشغيل (Hidden Overheads %)",
+
+    // Transcript 9: New Indicators
+    profitabilityIndex: "دليل الربحية (PI)",
+    discountedPaybackPeriod: "فترة الاسترداد المخصومة (سنة)",
+    arr: "معدل العائد المحاسبي (ARR)",
+
+    // ═══════════════════════════════════════════════════════════
+    // 6️⃣ مؤشرات الجدوى
+    // ═══════════════════════════════════════════════════════════
+    npv: "صافي القيمة الحالية",
+    irr: "معدل العائد الداخلي",
+    paybackPeriod: "فترة الاسترداد",
+    breakevenPoint: "نقطة التعادل",
+    roi: "العائد على الاستثمار",
+    profitMargin: "نسبة الربحية",
+    dscr: "نسبة تغطية خدمة الدين",
+
+    // ═══════════════════════════════════════════════════════════
+    // 7️⃣ تحليل المخاطر
+    // ═══════════════════════════════════════════════════════════
+    marketRisks: "مخاطر السوق",
+    operationalRisks: "مخاطر تشغيلية",
+    financialRisks: "مخاطر مالية",
+    legalRisks: "مخاطر قانونية",
+    mitigation: "خطة المواجهة",
+    sensitivityAnalysis: "تحليل الحساسية",
+    revenueDropScenario: "سيناريو انخفاض الإيرادات",
+    costIncreaseScenario: "سيناريو ارتفاع التكاليف",
+    worstCaseNotes: "ملاحظات أسوأ سيناريو",
+
+    // ═══════════════════════════════════════════════════════════
+    // 8️⃣ الملاحق
+    // ═══════════════════════════════════════════════════════════
+    detailedCostTables: "جداول تفصيلية للتكاليف",
+    supplierQuotes: "عروض أسعار من الموردين",
+    teamCVs: "السير الذاتية للفريق",
+    lettersOfIntent: "خطابات النوايا",
+    referenceStudies: "الدراسات المرجعية",
+    notes: "ملاحظات"
+};
+
+export function getLabel(key) {
+    return LABELS[key] || key;
+}

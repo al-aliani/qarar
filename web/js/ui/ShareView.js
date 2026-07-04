@@ -1,0 +1,162 @@
+/**
+ * Investor Share View
+ * A read-only, premium "Pitch Deck" style view for sharing with stakeholders.
+ * Hides editing controls, focuses on "The Story" (Problem -> Solution -> Market -> Financials).
+ */
+import { generateExecutiveSummary } from '../services/InternalAIGenerator.js'; // Re-use summary logic
+import { toast } from '../utils/toast.js';
+
+export class ShareView {
+    constructor(containerId, store, onNavigate) {
+        this.container = document.getElementById(containerId);
+        this.store = store;
+        this.onNavigate = onNavigate;
+    }
+
+    async render(projectId) {
+        // 1. Load Project Data
+        const state = this.store.getState();
+
+        // If viewing specific project (in a real backend scenario, we'd fetch by ID). 
+        // For local, we assume the store determines the current project or we load it.
+        // Here we assume 'state' is already the target project or we just use current state.
+
+        const pi = state.projectInfo || {};
+        const revenue = state.revenue || {};
+        const costs = state.costs || {};
+        const engineResults = state.engineResults || {};
+
+        // Generate Executive Summary if missing
+        const execSummary = generateExecutiveSummary(state, engineResults);
+
+        this.container.innerHTML = `
+            <div class="share-view bg-gray-50 min-h-screen font-sans">
+                <!-- Header / Navigation -->
+                <div class="fixed top-0 w-full bg-white/90 backdrop-blur-md shadow-sm z-50 px-6 py-3 flex justify-between items-center print:hidden">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">🚀</span>
+                        <h1 class="font-bold text-lg text-gray-800">${pi.name || 'مشروع جديد'} <span class="text-xs text-muted font-normal px-2 py-1 bg-gray-100 rounded-full">Investor Mode</span></h1>
+                    </div>
+                    <div class="flex gap-3">
+                        <button id="btnExitShare" class="btn btn--sm btn--ghost text-gray-600">خروج</button>
+                        <button id="btnPrintShare" class="btn btn--sm btn--primary">🖨️ طباعة / PDF</button>
+                    </div>
+                </div>
+
+                <!-- Hero Section (Cover Slide) -->
+                <header class="min-h-[80vh] flex flex-col justify-center items-center text-center p-10 bg-gradient-to-br from-slate-900 to-slate-800 text-white relative overflow-hidden">
+                    <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                    <div class="z-10 max-w-4xl animate-fade-in-up">
+                        <h1 class="text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-gold to-yellow-200">${pi.name || 'اسم المشروع'}</h1>
+                        <p class="text-2xl text-gray-300 font-light mb-8">${pi.concept || 'فكرة المشروع'}</p>
+                        <div class="inline-block border-t border-gold/50 pt-8 mt-4">
+                            <p class="text-lg text-gold/90">${pi.city || 'المدينة المستهدفة'}</p>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Section 1: The Opportunity (Problem & Solution) -->
+                <section class="py-20 px-6 max-w-5xl mx-auto">
+                    <div class="grid md:grid-cols-2 gap-12 items-center">
+                        <div class="p-8 bg-white rounded-3xl shadow-xl border border-gray-100 transform hover:-translate-y-2 transition-transform duration-500">
+                            <div class="text-4xl mb-4">🔥</div>
+                            <h2 class="text-2xl font-bold mb-4 text-red-500">المشكلة</h2>
+                            <p class="text-lg text-gray-600 leading-relaxed">
+                                ${pi.startupHypothesis?.problem || 'لم يتم تحديد المشكلة بالتفصيل.'}
+                            </p>
+                        </div>
+                        <div class="p-8 bg-white rounded-3xl shadow-xl border border-gray-100 transform hover:-translate-y-2 transition-transform duration-500 delay-100">
+                            <div class="text-4xl mb-4">💡</div>
+                            <h2 class="text-2xl font-bold mb-4 text-green-500">الحل المقترح</h2>
+                            <p class="text-lg text-gray-600 leading-relaxed">
+                                ${pi.startupHypothesis?.solution || 'لم يتم تحديد الحل بالتفصيل.'}
+                            </p>
+                            <div class="mt-4 pt-4 border-t border-gray-100">
+                                <strong class="text-sm text-gray-400">السر الخاص (Unfair Advantage):</strong>
+                                <p class="text-sm text-gray-600 mt-1">${pi.unfairAdvantage?.insightText || pi.startupHypothesis?.insight || 'غير محدد'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 2: Market Snapshot -->
+                <section class="py-20 bg-white shadow-inner">
+                    <div class="max-w-6xl mx-auto px-6">
+                        <h2 class="section-title text-center mb-16 relative">
+                            <span class="relative z-10 bg-white px-4 text-3xl font-bold text-gray-800">حجم السوق والفرصة</span>
+                            <div class="absolute top-1/2 left-0 w-full h-px bg-gray-200 -z-0"></div>
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                            <div class="p-6 rounded-2xl bg-gray-50 border border-gray-100">
+                                <div class="text-sm text-gray-400 uppercase tracking-widest mb-2">TAM (السوق الكلي)</div>
+                                <div class="text-3xl font-bold text-gray-800 mb-2">${state.marketSizing?.tam ? Number(state.marketSizing.tam).toLocaleString() : '-'}</div>
+                                <p class="text-xs text-gray-500">ريال/سنة</p>
+                            </div>
+                            <div class="p-6 rounded-2xl bg-gray-50 border border-gray-100">
+                                <div class="text-sm text-gray-400 uppercase tracking-widest mb-2">SAM (السوق المتاح)</div>
+                                <div class="text-3xl font-bold text-gray-800 mb-2">${state.marketSizing?.sam ? Number(state.marketSizing.sam).toLocaleString() : '-'}</div>
+                                <p class="text-xs text-gray-500">ريال/سنة</p>
+                            </div>
+                            <div class="p-6 rounded-2xl bg-gold/10 border border-gold/30 relative overflow-hidden">
+                                <div class="absolute top-0 right-0 bg-gold text-white text-[10px] px-2 py-1 rounded-bl-lg">مستهدف</div>
+                                <div class="text-sm text-gold-dark uppercase tracking-widest mb-2">SOM (حصتنا)</div>
+                                <div class="text-4xl font-bold text-gold-dark mb-2">${state.marketSizing?.som ? Number(state.marketSizing.som).toLocaleString() : '-'}</div>
+                                <p class="text-xs text-gold-dark/80">ريال/سنة</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-12 p-8 bg-gray-50 rounded-2xl border-l-4 border-gold">
+                            <h3 class="font-bold text-lg mb-2">ملخص استراتيجي</h3>
+                            <p class="text-gray-600 leading-relaxed">${execSummary.split('\n')[0]}</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 3: Financial Highlights (The "Ask") -->
+                <section class="py-20 px-6 max-w-5xl mx-auto">
+                    <h2 class="section-title text-center mb-12 text-3xl font-bold text-gray-800">المؤشرات المالية (5 سنوات)</h2>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+                        <div class="kpi-card text-center p-6 bg-white rounded-2xl shadow-lg border-b-4 border-blue-500">
+                            <div class="text-gray-400 text-xs mb-1">صافي القيمة الحالية (NPV)</div>
+                            <div class="text-xl font-bold text-blue-600">${engineResults.npv ? Math.round(engineResults.npv).toLocaleString() : '-'}</div>
+                        </div>
+                        <div class="kpi-card text-center p-6 bg-white rounded-2xl shadow-lg border-b-4 border-green-500">
+                            <div class="text-gray-400 text-xs mb-1">العائد الداخلي (IRR)</div>
+                            <div class="text-xl font-bold text-green-600">${engineResults.irr ? engineResults.irr + '%' : '-'}</div>
+                        </div>
+                        <div class="kpi-card text-center p-6 bg-white rounded-2xl shadow-lg border-b-4 border-purple-500">
+                            <div class="text-gray-400 text-xs mb-1">فترة الاسترداد</div>
+                            <div class="text-xl font-bold text-purple-600">${engineResults.paybackPeriod ? engineResults.paybackPeriod + ' سنوات' : '-'}</div>
+                        </div>
+                        <div class="kpi-card text-center p-6 bg-white rounded-2xl shadow-lg border-b-4 border-orange-500">
+                            <div class="text-gray-400 text-xs mb-1">هامش الربح (السنة 1)</div>
+                            <div class="text-xl font-bold text-orange-600">${engineResults.profitMargin ? engineResults.profitMargin + '%' : '-'}</div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-12 print:hidden">
+                         <div class="inline-block p-1 rounded-full bg-gray-100">
+                            <span class="px-6 py-2 rounded-full bg-white shadow text-sm font-medium text-gray-500">تم إعداد هذه الدراسة عبر منصة الجدوى</span>
+                         </div>
+                    </div>
+                </section>
+            </div>
+        `;
+
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        this.container.querySelector('#btnExitShare')?.addEventListener('click', () => {
+            // Navigate back to dashboard or project view
+            window.location.hash = '';
+            window.location.reload(); // Simple reload to clear "Share Mode" visually
+        });
+
+        this.container.querySelector('#btnPrintShare')?.addEventListener('click', () => {
+            window.print();
+        });
+    }
+}

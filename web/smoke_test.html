@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Smoke Test — Restaurants Wizard</title>
+  <link rel="stylesheet" href="./css/main.css" /> <!-- Fixed: use actual CSS path -->
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand__title">Smoke Test</div>
+      <div class="brand__subtitle">إنشاء دراسة → إدخال → نتائج → تصدير (تحقق)</div>
+    </div>
+    <div class="topbar__actions">
+      <a class="btn btn--ghost" href="./">العودة للمنصة</a>
+      <button id="btnRun" class="btn btn--primary">تشغيل الاختبار</button>
+    </div>
+  </header>
+
+  <main class="layout" style="grid-template-columns: 1fr">
+    <section class="content">
+      <div class="card">
+        <h2>النتيجة</h2>
+        <pre id="out" class="pre">جاهز.</pre>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script type="module">
+    import { getSupabaseClient, getAuthUser } from "./supabaseClient.js";
+
+    const out = document.getElementById("out");
+    const log = (s) => (out.textContent += `\n${s}`);
+
+    async function loadCalcEngine() {
+      const candidates = ["../lib/calc/index.js", "/lib/calc/index.js"];
+      for (const url of candidates) {
+        try {
+          await import(/* @vite-ignore */ url);
+          if (window.CalcEngine) return;
+        } catch (e) { /* try next */ }
+      }
+      throw new Error("CalcEngine missing: could not load ../lib/calc/index.js (شغّل الخادم من جذر المشروع).");
+    }
+
+    async function dbRoundtripTest() {
+      const { supabase, ok, error } = await getSupabaseClient();
+      if (!ok || !supabase) {
+        log(`DB roundtrip: SKIP (Supabase not configured) — ${error || ""}`);
+        return;
+      }
+
+      const au = await getAuthUser();
+      if (!au?.user) {
+        log(`DB roundtrip: SKIP (not authenticated) — افتح المنصة وسجّل الدخول ثم أعد الاختبار`);
+        return;
+      }
+
+      const userId = au.user.id;
+      const templateSlug = "restaurants-sa-standard";
+      const templateId = "restaurants-sa-standard";
+      const templateVersion = "v1.0.0";
+
+      // 1) Create study
+      const { data: studyRow, error: e1 } = await supabase
+        .from("studies")
+        .insert({
+          owner_id: userId,
+          template_slug: templateSlug,
+          template_id: templateId,
+          template_version: templateVersion,
+        })
+        .select("id")
+        .single();
+      if (e1) throw new Error(`DB create study failed: ${e1.message}`);
+      const studyId = studyRow.id;
+      log(`DB create study OK: ${studyId}`);
+
+      // 2) Save inputs (prefer inputs_json, fallback to inputs)
+      const payload = {
+        data: { fields: { test_note: "hello" }, tables: {} },
+        settings: { smoke: true },
+        templateSlug,
+        templateVersion,
+        updatedAt: new Date().toISOString(),
+      };
+
+      let upsertErr = null;
+      {
+        const { error } = await supabase.from("study_inputs").upsert({ study_id: studyId, inputs_json: payload }, { onConflict: "study_id" });
+        upsertErr = error || null;
+      }
+      if (upsertErr) {
+        const { error } = await supabase.from("study_inputs").upsert({ study_id: studyId, inputs: payload }, { onConflict: "study_id" });
+        if (error) throw new Error(`DB upsert study_inputs failed: ${error.message}`);
+      }
+      log("DB save inputs OK");
+
+      // 3) Reload inputs
+      const { data: inRow, error: e3 } = await supabase.from("study_inputs").select("*").eq("study_id", studyId).maybeSingle();
+      if (e3) throw new Error(`DB fetch study_inputs failed: ${e3.message}`);
+      const loaded = (inRow && (inRow.inputs_json || inRow.inputs)) || null;
+      if (!loaded) throw new Error("DB fetch study_inputs returned empty payload");
+      if (loaded?.settings?.smoke !== true) throw new Error("DB roundtrip mismatch: settings.smoke");
+      if (loaded?.data?.fields?.test_note !== "hello") throw new Error("DB roundtrip mismatch: data.fields.test_note");
+      log("DB reload inputs OK (roundtrip matched)");
+    }
+
+    async function run() {
+      out.textContent = "Running...";
+      await loadCalcEngine();
+      if (!window.ExcelJS) throw new Error("ExcelJS missing (CDN)");
+
+      // Build a minimal restaurant model and ensure outputs exist
+      const model = {
+        years: 5,
+        discountRate: 0.12,
+        taxRate: 0.15,
+        inflationRate: 0.02,
+        daysPerMonth: 30,
+        channels: {
+          dineIn: { ordersPerDay: 80, avgTicket: 55, growthAnnual: 0.03 },
+          takeaway: { ordersPerDay: 35, avgTicket: 45, growthAnnual: 0.03 },
+          delivery: { ordersPerDay: 40, avgTicket: 50, growthAnnual: 0.03, commissionRate: 0.22 },
+        },
+        costs: { foodCostPct: 0.3, packagingPerOrder: 1.5, wastePct: 0.02 },
+        labor: { fixedMonthly: 45000, variablePerOrder: 0.5, variablePctOfRevenue: 0 },
+        opexFixedMonthly: [{ name: "إيجار", monthly: 18000 }, { name: "خدمات", monthly: 4000 }],
+        capex: [{ name: "تجهيزات", cost: 450000, year: 0, lifeYears: 5 }],
+        workingCapital: { initial: 80000, releaseAtEnd: true },
+      };
+
+      const base = window.CalcEngine.computeRestaurantBase(model);
+      if (!base || !base.kpis) throw new Error("Engine output missing");
+      log(`KPIs: NPV=${base.kpis.npv} IRR=${base.kpis.irr} Payback=${base.kpis.payback}`);
+      if (!Array.isArray(base.pnl) || base.pnl.length < 1) throw new Error("P&L missing");
+      if (!Array.isArray(base.cashflow) || base.cashflow.length < 1) throw new Error("Cashflow missing");
+
+      // Excel export sanity: load template + write some cells + export buffer
+      const tplCandidates = [
+        "../assets/templates/excel/قالب_دراسة_الجدوى_المعياري.xlsx",
+        "/assets/templates/excel/قالب_دراسة_الجدوى_المعياري.xlsx",
+      ];
+      let res = null;
+      for (const url of tplCandidates) {
+        res = await fetch(url, { cache: "no-store" });
+        if (res.ok) break;
+      }
+      if (!res || !res.ok) throw new Error("Template excel missing. جرّب: ../assets/templates/excel/ أو /assets/ (شغّل الخادم من جذر المشروع).");
+      const buf = await res.arrayBuffer();
+      const wb = new window.ExcelJS.Workbook();
+      await wb.xlsx.load(buf);
+      const ws = wb.getWorksheet("20_KPIs");
+      if (!ws) throw new Error("Sheet 20_KPIs not found in template");
+      ws.getCell("B3").value = base.kpis.npv;
+      ws.getCell("B4").value = base.kpis.irr;
+      ws.getCell("B5").value = base.kpis.payback;
+      const outBuf = await wb.xlsx.writeBuffer();
+      if (!outBuf || outBuf.byteLength < 1000) throw new Error("Excel buffer too small");
+      log(`Excel buffer OK: ${outBuf.byteLength} bytes`);
+
+      // DB test (create study + save + reload) — skipped if not configured/authed
+      await dbRoundtripTest();
+
+      out.textContent += "\n\nPASS";
+    }
+
+    document.getElementById("btnRun").addEventListener("click", () => {
+      run().catch((e) => {
+        out.textContent += `\n\nFAIL: ${String(e?.message || e)}`;
+      });
+    });
+  </script>
+</body>
+
+</html>

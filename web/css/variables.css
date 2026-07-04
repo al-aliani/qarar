@@ -1,0 +1,93 @@
+/**
+ * نظام تصميم «قرار» — رموز الهوية الموحّدة.
+ * الهوية: أخضر صنوبري (قرار/ثقة) + نحاسي (ضيافة/قيمة) على أرضية ورقية دافئة.
+ * قاعدة: الأخضر للأفعال والتنقّل، النحاسي للتمييز والأرقام البارزة،
+ * وألوان الحالة (نجاح/خطر) مستقلة عن لون الهوية.
+ */
+:root {
+  /* --- الأرضية: ورق دافئ بدل الرمادي البارد العام --- */
+  --c-bg-app: #f6f5f0;
+  --c-bg-panel: #eeece4;
+  --c-bg-card: #fdfcf9;
+
+  /* --- الأساسي: أخضر صنوبري (هوية قرار) بدل أزرق Tailwind العام --- */
+  --c-p-500: #0e5b44;
+  --c-p-600: #0a4634;
+  --c-p-subtle: rgba(14, 91, 68, 0.14);
+  /* لون النص فوق الأساسي (أزرار/شارات) — يتبدّل مع الثيم لضمان القراءة */
+  --c-p-contrast: #ffffff;
+
+  /* النحاسي: داكن بما يكفي ليُقرأ نصاً على الفاتح (كان #d4af37 بتباين ~1.9 غير مقروء) */
+  --c-gold-500: #8a5f1c;
+  --c-gold-subtle: rgba(176, 125, 44, 0.16);
+  /* درجة زخرفية أفتح للخلفيات والتدرجات فقط — ليست للنصوص */
+  --c-gold-deco: #b07d2c;
+
+  --c-accent-blue: #2563eb;
+  --c-accent-green: #10b981;
+  --c-accent-red: #dc2626;
+  --c-accent-purple: #7c3aed;
+
+  --grad-gold: linear-gradient(135deg, #b07d2c, #d9a84e);
+  --grad-emerald: linear-gradient(135deg, #0a4634, #0e5b44);
+  --grad-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+
+  /* نص فحمي دافئ متناسق مع الأرضية الورقية */
+  --c-text-main: #1c2420;
+  --c-text-muted: #5b665f;
+  --c-border: rgba(28, 36, 32, 0.14);
+
+  --c-success: #157f5f;
+  --c-danger: #c2382e;
+  --c-danger-subtle: rgba(194, 56, 46, 0.1);
+
+  --font-ui: 'IBM Plex Sans Arabic', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 1rem;
+  --s-4: 1.5rem;
+  --s-5: 2.25rem;
+  --s-6: 3rem;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+
+  /* ظلال ناعمة متعددة الطبقات بميل أخضر خفيف — بدل الأسود الصريح */
+  --shadow-sm: 0 1px 2px rgba(20, 33, 28, 0.06), 0 2px 8px -2px rgba(20, 33, 28, 0.08);
+  --shadow-lg: 0 4px 12px -2px rgba(20, 33, 28, 0.08), 0 16px 32px -12px rgba(20, 33, 28, 0.18);
+  --focus-ring: 0 0 0 3px rgba(14, 91, 68, 0.28);
+  --glass-blur: blur(16px);
+}
+
+/* الوضع الداكن: أخضر غابي عميق — الحدود محايدة (كانت ذهبية في كل مكان = ضجيج بصري) */
+[data-theme="dark"] {
+  --c-bg-app: #0b1512;
+  --c-bg-panel: #101d18;
+  --c-bg-card: #16261f;
+
+  --c-p-500: #3ecf9a;
+  --c-p-600: #2bb384;
+  --c-p-subtle: rgba(62, 207, 154, 0.16);
+  /* الأساسي فاتح في الداكن → النص فوقه داكن */
+  --c-p-contrast: #06231a;
+
+  /* على الداكن الذهبي الفاتح مقروء وجميل */
+  --c-gold-500: #d9a84e;
+  --c-gold-subtle: rgba(217, 168, 78, 0.14);
+  --c-gold-deco: #d9a84e;
+
+  --c-text-main: #eef5f0;
+  --c-text-muted: #93a39a;
+  --c-border: rgba(238, 245, 240, 0.12);
+
+  --c-success: #34d399;
+  --c-danger: #f87171;
+  --c-danger-subtle: rgba(248, 113, 113, 0.12);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 10px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 20px -6px rgba(0, 0, 0, 0.45), 0 24px 48px -16px rgba(0, 0, 0, 0.5);
+  --focus-ring: 0 0 0 3px rgba(62, 207, 154, 0.35);
+}

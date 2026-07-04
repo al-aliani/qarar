@@ -1,0 +1,370 @@
+/**
+ * Strategic Analysis Component
+ * Displays PESTEL, SWOT, and Porter's Five Forces analysis
+ */
+
+import { AIWriter } from '../services/AIWriter.js';
+import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
+import { toast } from '../utils/toast.js';
+
+export class StrategicAnalysis {
+    constructor(containerId, store, onNavigate) {
+        this.container = document.getElementById(containerId);
+        this.store = store;
+        this.onNavigate = onNavigate;
+        this.isGenerating = false;
+        this.stepIndex = 0;
+    }
+
+    render(stepIndex) {
+        if (typeof stepIndex === 'number') this.stepIndex = stepIndex;
+        const state = this.store.getState();
+        const strategic = state.strategic || {};
+
+        this.container.innerHTML = `
+            <div class="strategic-analysis">
+                <h2 class="section-title">📊 التحليل الاستراتيجي</h2>
+                
+                <!-- PESTEL Analysis -->
+                <div class="card analysis-card">
+                    <div class="flex-between">
+                        <div>
+                            <h3 class="card-title">تحليل بيستل (PESTEL)</h3>
+                            <p class="text-muted text-sm mb-3">تحليل البيئة الخارجية للمشروع</p>
+                        </div>
+                        <button type="button" class="btn-xs btn-magic btn-generate-pestel" title="توليد PESTEL من بيانات المشروع (بدون اتصال خارجي)">✨ توليد تلقائي من البيانات</button>
+                    </div>
+                    ${this.renderPESTEL(strategic.pestel || [])}
+                </div>
+
+                <!-- SWOT Analysis -->
+                <div class="card analysis-card">
+                    <div class="flex-between">
+                        <div>
+                            <h3 class="card-title">التحليل الرباعي (SWOT)</h3>
+                            <p class="text-muted text-sm mb-3">نقاط القوة والضعف والفرص والتهديدات</p>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button type="button" class="btn-xs btn-magic btn-generate-swot" title="توليد SWOT من بيانات المشروع (بدون اتصال خارجي)">✨ توليد تلقائي من البيانات</button>
+                            <button class="btn-xs btn-magic ai-swot-btn">✨ اقتراح تلقائي (AI)</button>
+                        </div>
+                    </div>
+                    ${this.renderSWOT(strategic.swot || {})}
+                </div>
+
+                <!-- Porter's Five Forces -->
+                <div class="card analysis-card">
+                    <div class="flex-between">
+                        <div>
+                            <h3 class="card-title">القوى الخمس لبورتر</h3>
+                            <p class="text-muted text-sm mb-3">تحليل القوى التنافسية في الصناعة</p>
+                        </div>
+                        <button type="button" class="btn-xs btn-magic btn-generate-porter" title="توليد تحليل بورتر من بيانات المشروع (بدون اتصال خارجي)">✨ توليد تلقائي من البيانات</button>
+                    </div>
+                    ${this.renderPorter(strategic.porter || {})}
+                </div>
+
+                <!-- Navigation -->
+                <div class="wizard-nav margin-top-lg">
+                    <button class="btn btn--secondary btn-prev-step">السابق</button>
+                    <button class="btn btn--primary btn-next-step">التالي</button>
+                </div>
+            </div>
+        `;
+
+        this.bindEvents();
+    }
+
+    renderPESTEL(pestel) {
+        const factors = pestel.length > 0 ? pestel : [
+            { factor: 'political', label: 'سياسي', description: '', impact: 'neutral', notes: '' },
+            { factor: 'economic', label: 'اقتصادي', description: '', impact: 'neutral', notes: '' },
+            { factor: 'social', label: 'اجتماعي', description: '', impact: 'neutral', notes: '' },
+            { factor: 'technological', label: 'تقني', description: '', impact: 'neutral', notes: '' },
+            { factor: 'environmental', label: 'بيئي', description: '', impact: 'neutral', notes: '' },
+            { factor: 'legal', label: 'قانوني', description: '', impact: 'neutral', notes: '' }
+        ];
+
+        const icons = {
+            political: '🏛️',
+            economic: '💰',
+            social: '👥',
+            technological: '💻',
+            environmental: '🌍',
+            legal: '⚖️'
+        };
+
+        const impactLabels = {
+            positive: { label: 'إيجابي', class: 'badge--success' },
+            negative: { label: 'سلبي', class: 'badge--danger' },
+            neutral: { label: 'محايد', class: 'badge--neutral' }
+        };
+
+        return `
+            <div class="pestel-grid">
+                ${factors.map((f, idx) => `
+                    <div class="pestel-item" data-factor="${f.factor}">
+                        <div class="pestel-header">
+                            <span class="pestel-icon">${icons[f.factor] || '📌'}</span>
+                            <span class="pestel-label">${f.label}</span>
+                        </div>
+                        <textarea 
+                            class="input pestel-desc" 
+                            data-idx="${idx}" 
+                            data-field="description"
+                            placeholder="وصف التأثير..."
+                            rows="2"
+                        >${f.description || ''}</textarea>
+                        <div class="pestel-impact">
+                            <label class="text-sm text-muted" for="pestel-impact-${idx}">التأثير:</label>
+                            <select id="pestel-impact-${idx}" class="input input--sm pestel-impact-select" data-idx="${idx}" data-field="impact">
+                                <option value="positive" ${f.impact === 'positive' ? 'selected' : ''}>✅ إيجابي</option>
+                                <option value="negative" ${f.impact === 'negative' ? 'selected' : ''}>❌ سلبي</option>
+                                <option value="neutral" ${f.impact === 'neutral' ? 'selected' : ''}>➖ محايد</option>
+                            </select>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    renderSWOT(swot) {
+        const categories = [
+            { key: 'strengths', label: 'نقاط القوة', icon: '💪', class: 'swot-strengths' },
+            { key: 'weaknesses', label: 'نقاط الضعف', icon: '⚠️', class: 'swot-weaknesses' },
+            { key: 'opportunities', label: 'الفرص', icon: '🎯', class: 'swot-opportunities' },
+            { key: 'threats', label: 'التهديدات', icon: '🔥', class: 'swot-threats' }
+        ];
+
+        return `
+            <div class="swot-grid">
+                ${categories.map(cat => `
+                    <div class="swot-quadrant ${cat.class}">
+                        <div class="swot-quadrant-header">
+                            <span>${cat.icon}</span>
+                            <span>${cat.label}</span>
+                        </div>
+                        <div class="swot-items" data-category="${cat.key}">
+                            ${(swot[cat.key] || []).map((item, idx) => `
+                                <div class="swot-item">
+                                    <span class="swot-item-text">${item}</span>
+                                    <button class="btn-icon btn-remove-swot" data-category="${cat.key}" data-idx="${idx}">×</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="swot-add">
+                            <input type="text" class="input input--sm swot-input" data-category="${cat.key}" placeholder="إضافة بند جديد...">
+                            <button class="btn btn--sm btn--ghost btn-add-swot" data-category="${cat.key}">+</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    renderPorter(porter) {
+        const forces = [
+            { key: 'newEntrants', label: 'تهديد الداخلين الجدد', icon: '🚪', position: 'top' },
+            { key: 'supplierPower', label: 'قوة الموردين', icon: '📦', position: 'left' },
+            { key: 'rivalry', label: 'التنافس في الصناعة', icon: '⚔️', position: 'center' },
+            { key: 'buyerPower', label: 'قوة المشترين', icon: '🛒', position: 'right' },
+            { key: 'substitutes', label: 'تهديد البدائل', icon: '🔄', position: 'bottom' }
+        ];
+
+        const levelLabels = { low: 'منخفض', medium: 'متوسط', high: 'عالي' };
+        const levelColors = { low: 'success', medium: 'warning', high: 'danger' };
+
+        return `
+            <div class="porter-diagram">
+                ${forces.map(f => {
+            const data = porter[f.key] || { level: 'medium', description: '' };
+            return `
+                        <div class="porter-force porter-${f.position}" data-force="${f.key}">
+                            <div class="porter-force-icon">${f.icon}</div>
+                            <div class="porter-force-label">${f.label}</div>
+                            <select class="input input--sm porter-level" data-force="${f.key}">
+                                <option value="low" ${data.level === 'low' ? 'selected' : ''}>🟢 منخفض</option>
+                                <option value="medium" ${data.level === 'medium' ? 'selected' : ''}>🟡 متوسط</option>
+                                <option value="high" ${data.level === 'high' ? 'selected' : ''}>🔴 عالي</option>
+                            </select>
+                            <input type="text" class="input input--sm porter-desc" data-force="${f.key}" 
+                                   placeholder="وصف..." value="${data.description || ''}">
+                        </div>
+                    `;
+        }).join('')}
+            </div>
+        `;
+    }
+
+    bindEvents() {
+        // Navigation
+        this.container.querySelector('.btn-prev-step')?.addEventListener('click', () => {
+            if (this.onNavigate) this.onNavigate(this.stepIndex - 1);
+        });
+        this.container.querySelector('.btn-next-step')?.addEventListener('click', () => {
+            if (this.onNavigate) this.onNavigate(this.stepIndex + 1);
+        });
+        // PESTEL events
+        this.container.querySelectorAll('.pestel-desc, .pestel-impact-select').forEach(el => {
+            el.addEventListener('change', (e) => this.updatePESTEL(e));
+        });
+
+        // توليد تلقائي لـ PESTEL (داخلي، بدون API)
+        this.container.querySelector('.btn-generate-pestel')?.addEventListener('click', () => {
+            try {
+                const state = this.store.getState();
+                const pestel = InternalAIGenerator.generatePESTEL(state);
+                this.store.update('strategic', { ...state.strategic, pestel });
+                this.render();
+                toast.success('تم توليد تحليل بيستل (PESTEL) من بيانات المشروع.');
+            } catch (e) {
+                console.error('generatePESTEL error:', e);
+                toast.error('فشل التوليد: ' + (e?.message || 'خطأ'));
+            }
+        });
+
+        // SWOT events
+        this.container.querySelectorAll('.btn-add-swot').forEach(btn => {
+            btn.addEventListener('click', (e) => this.addSWOTItem(e));
+        });
+        this.container.querySelectorAll('.swot-input').forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.addSWOTItem(e);
+            });
+        });
+        this.container.querySelectorAll('.btn-remove-swot').forEach(btn => {
+            btn.addEventListener('click', (e) => this.removeSWOTItem(e));
+        });
+
+        // Porter events
+        this.container.querySelectorAll('.porter-level, .porter-desc').forEach(el => {
+            el.addEventListener('change', (e) => this.updatePorter(e));
+        });
+
+        // توليد تلقائي لـ بورتر (داخلي، بدون API)
+        this.container.querySelector('.btn-generate-porter')?.addEventListener('click', () => {
+            try {
+                const state = this.store.getState();
+                const porter = InternalAIGenerator.generatePorter(state);
+                this.store.update('strategic', { ...state.strategic, porter });
+                this.render();
+                toast.success('تم توليد القوى الخمس لبورتر من بيانات المشروع.');
+            } catch (e) {
+                console.error('generatePorter error:', e);
+                toast.error('فشل التوليد: ' + (e?.message || 'خطأ'));
+            }
+        });
+
+        // توليد تلقائي للـ SWOT (داخلي، بدون API)
+        this.container.querySelector('.btn-generate-swot')?.addEventListener('click', () => {
+            try {
+                const state = this.store.getState();
+                const swot = InternalAIGenerator.generateSWOT(state);
+                this.store.update('strategic', { ...state.strategic, swot });
+                this.render();
+                toast.success('تم توليد التحليل الرباعي (SWOT) من بيانات المشروع.');
+            } catch (e) {
+                console.error('generateSWOT error:', e);
+                toast.error('فشل التوليد: ' + (e?.message || 'خطأ'));
+            }
+        });
+
+        // AI SWOT Handler (خارجي)
+        this.container.querySelectorAll('.ai-swot-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                if (this.isGenerating) return;
+
+                e.target.disabled = true;
+                e.target.textContent = 'جاري التحليل... 🧠';
+                this.isGenerating = true;
+
+                const state = this.store.getState();
+                const projectInfo = state.projectInfo || {};
+
+                try {
+                    // Call AI
+                    const rawResult = await AIWriter.generate('swot', projectInfo);
+
+                    // Parse result (AI Server currently sends JSON string)
+                    let swotData;
+                    try {
+                        swotData = typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult;
+                    } catch (parseErr) {
+                        console.error('SWOT Parse Error', parseErr);
+                        swotData = {};
+                    }
+
+                    // Update Store
+                    if (swotData.strengths) {
+                        this.store.update('strategic', {
+                            ...state.strategic,
+                            swot: swotData
+                        });
+                        this.render(); // Re-render to show new items
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+
+                e.target.disabled = false;
+                e.target.textContent = '✨ اقتراح تلقائي';
+                this.isGenerating = false;
+            });
+        });
+    }
+
+    updatePESTEL(e) {
+        const idx = parseInt(e.target.dataset.idx);
+        const field = e.target.dataset.field;
+        const value = e.target.value;
+
+        const state = this.store.getState();
+        const pestel = [...(state.strategic?.pestel || [])];
+
+        if (pestel[idx]) {
+            pestel[idx] = { ...pestel[idx], [field]: value };
+            this.store.update('strategic', { ...state.strategic, pestel });
+        }
+    }
+
+    addSWOTItem(e) {
+        const category = e.target.dataset.category;
+        const input = this.container.querySelector(`.swot-input[data-category="${category}"]`);
+        const value = input.value.trim();
+
+        if (!value) return;
+
+        const state = this.store.getState();
+        const swot = { ...state.strategic?.swot } || {};
+        swot[category] = [...(swot[category] || []), value];
+
+        this.store.update('strategic', { ...state.strategic, swot });
+        input.value = '';
+        this.render();
+    }
+
+    removeSWOTItem(e) {
+        const category = e.target.dataset.category;
+        const idx = parseInt(e.target.dataset.idx);
+
+        const state = this.store.getState();
+        const swot = { ...state.strategic?.swot } || {};
+        swot[category] = swot[category].filter((_, i) => i !== idx);
+
+        this.store.update('strategic', { ...state.strategic, swot });
+        this.render();
+    }
+
+    updatePorter(e) {
+        const force = e.target.dataset.force;
+        const field = e.target.classList.contains('porter-level') ? 'level' : 'description';
+        const value = e.target.value;
+
+        const state = this.store.getState();
+        const porter = { ...state.strategic?.porter } || {};
+        porter[force] = { ...porter[force], [field]: value };
+
+        this.store.update('strategic', { ...state.strategic, porter });
+    }
+}

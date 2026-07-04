@@ -1,0 +1,541 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   DECISION DASHBOARD - PREMIUM POLISH
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Glass Card Effect */
+.glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(212, 175, 55, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Decision Banner Premium */
+.decision-banner-premium {
+    position: relative;
+    overflow: hidden;
+}
+
+.decision-banner-premium::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+    animation: rotate 20s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Score Gauge Animation */
+.decision-dashboard .score-gauge {
+    position: relative;
+    filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));
+}
+
+.decision-dashboard .score-gauge circle {
+    transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* KPI Cards Hover Effect */
+.kpi-mini-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi-mini-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.kpi-mini-card:hover::before {
+    left: 100%;
+}
+
+.kpi-mini-card.positive {
+    border-left: 3px solid #10b981;
+}
+
+.kpi-mini-card.negative {
+    border-left: 3px solid #ef4444;
+}
+
+/* Readiness Items */
+.readiness-item {
+    position: relative;
+    padding: 12px 16px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: default;
+}
+
+.readiness-item.status-ready {
+    background: rgba(16, 185, 129, 0.1);
+    border-right: 3px solid #10b981;
+}
+
+.readiness-item.status-needs_work {
+    background: rgba(245, 158, 11, 0.1);
+    border-right: 3px solid #f59e0b;
+}
+
+.readiness-item.status-critical {
+    background: rgba(239, 68, 68, 0.1);
+    border-right: 3px solid #ef4444;
+}
+
+.readiness-item:hover {
+    transform: translateX(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Scenario Table Rows */
+.row-pessimistic {
+    background: rgba(239, 68, 68, 0.05);
+    border-right: 3px solid rgba(239, 68, 68, 0.3);
+}
+
+.row-base {
+    background: rgba(156, 163, 175, 0.05);
+    border-right: 3px solid rgba(156, 163, 175, 0.3);
+}
+
+.row-optimistic {
+    background: rgba(16, 185, 129, 0.05);
+    border-right: 3px solid rgba(16, 185, 129, 0.3);
+}
+
+.row-pessimistic:hover,
+.row-base:hover,
+.row-optimistic:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: scale(1.01);
+}
+
+/* Factors List */
+.factors-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.factors-list li {
+    padding: 12px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border-right: 3px solid var(--c-p-500);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.factors-list li:hover {
+    background: rgba(212, 175, 55, 0.1);
+    transform: translateX(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.factors-list .bullet {
+    font-size: 1.2rem;
+    filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.6));
+}
+
+/* Decision Actions */
+.decision-actions {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 16px;
+    margin-top: 32px;
+}
+
+.decision-actions .btn {
+    min-width: 180px;
+    padding: 14px 24px;
+    font-weight: 600;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.decision-actions .btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.decision-actions .btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.decision-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Animate Entry */
+.animate-entry {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dashboard Grid Stagger Animation */
+.dashboard-grid>*:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.dashboard-grid>*:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.dashboard-grid>*:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.dashboard-grid>*:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .decision-actions {
+        flex-direction: column;
+    }
+
+    .decision-actions .btn {
+        width: 100%;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRESENTATION VIEW - PREMIUM POLISH
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+#presentationOverlay {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+}
+
+.slide-in-right {
+    animation: slideInRight 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-out-left {
+    animation: slideOutLeft 0.3s ease-in;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOutLeft {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(-50px);
+    }
+}
+
+/* Presentation Controls */
+#presentationOverlay .btn--circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+#presentationOverlay .btn--circle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EXECUTIVE SUMMARY - PREMIUM POLISH
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.executive-summary {
+    animation: fadeIn 0.6s ease-out;
+}
+
+.executive-summary .card {
+    transition: all 0.3s ease;
+}
+
+.executive-summary .card:hover {
+    border-color: var(--c-p-500);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Score Circle Pulse */
+.score-circle {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4);
+    }
+
+    50% {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 10px rgba(212, 175, 55, 0);
+    }
+}
+
+/* Breakdown Bar Animation */
+.breakdown-fill {
+    animation: fillBar 1s ease-out;
+    transform-origin: left;
+}
+
+@keyframes fillBar {
+    from {
+        transform: scaleX(0);
+    }
+
+    to {
+        transform: scaleX(1);
+    }
+}
+
+/* Highlight Cards */
+.highlight-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.highlight-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.highlight-card.positive:hover {
+    border-color: #10b981;
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+}
+
+.highlight-card.negative:hover {
+    border-color: #ef4444;
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+}
+
+/* Risk Items */
+.risk-item {
+    transition: all 0.3s ease;
+}
+
+.risk-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateX(-4px);
+    border-right: 3px solid var(--c-p-500);
+}
+
+/* Recommendation Box */
+.recommendation-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.recommendation-container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+    animation: rotate 15s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FINANCIAL DASHBOARD - PREMIUM POLISH
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.advisor-panel {
+    position: relative;
+    overflow: hidden;
+}
+
+.advisor-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--c-p-500), transparent);
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+
+    0%,
+    100% {
+        transform: translateX(-100%);
+    }
+
+    50% {
+        transform: translateX(100%);
+    }
+}
+
+.insight-item {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.insight-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.insight-item:hover::before {
+    left: 100%;
+}
+
+.insight-item:hover {
+    transform: translateX(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Income Statement Table */
+.income-statement tbody tr {
+    transition: all 0.2s ease;
+}
+
+.income-statement tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+    transform: scale(1.01);
+}
+
+/* Chart Container */
+#cashFlowChart {
+    transition: all 0.3s ease;
+}
+
+#cashFlowChart:hover {
+    filter: brightness(1.1);
+}
+
+/* Chart Toggle Buttons */
+.btn[data-chart] {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.btn[data-chart].active {
+    background: var(--c-p-500);
+    color: #000;
+    font-weight: 600;
+}
+
+.btn[data-chart]:not(.active):hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--c-p-500);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILITY CLASSES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.shadow-glow {
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+}
+
+.shadow-glow:hover {
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+}
+
+.text-glow {
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+/* Loading States */
+.loading-shimmer {
+    background: linear-gradient(90deg,
+            rgba(255, 255, 255, 0.05) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0.05) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Smooth Transitions */
+* {
+    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}

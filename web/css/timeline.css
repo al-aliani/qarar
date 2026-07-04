@@ -1,0 +1,311 @@
+/* Timeline / Gantt Chart Styles */
+
+.timeline-container {
+    animation: fadeIn 0.5s ease;
+}
+
+.gantt-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-md);
+    background: var(--c-bg-card);
+}
+
+.gantt-header {
+    display: flex;
+    border-bottom: 1px solid var(--c-border);
+    background: var(--c-bg-app);
+    font-size: 0.85rem;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.gantt-label-col {
+    width: 200px;
+    flex-shrink: 0;
+    padding: 12px;
+    border-left: 1px solid var(--c-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--c-bg-app);
+    position: sticky;
+    right: 0;
+    /* RTL sticky handling might be tricky, let's test */
+    z-index: 11;
+}
+
+.gantt-months-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    /* 12 Months */
+    flex-grow: 1;
+    min-width: 600px;
+    /* Ensure scrolling on small screens */
+}
+
+.month-label {
+    text-align: center;
+    padding: 12px 4px;
+    border-left: 1px solid var(--c-border);
+    font-size: 0.8rem;
+    color: var(--c-text-muted);
+}
+
+.gantt-body {
+    position: relative;
+}
+
+.gantt-row {
+    display: flex;
+    border-bottom: 1px solid var(--c-border);
+    transition: background 0.2s;
+}
+
+.gantt-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.gantt-row .gantt-label-col {
+    background: var(--c-bg-card);
+    /* Keep sticky opaque */
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.gantt-bar-container {
+    flex-grow: 1;
+    min-width: 600px;
+    position: relative;
+    padding: 10px 0;
+    display: flex;
+    align-items: center;
+    /* Grid background lines */
+    background-image: linear-gradient(to right, var(--c-border) 1px, transparent 1px);
+    background-size: calc(100% / 12) 100%;
+}
+
+.gantt-bar {
+    height: 24px;
+    border-radius: 12px;
+    position: absolute;
+    /* In RTL, left/right logic is flipped. We'll set via inline styles or utility classes. */
+    /* Assuming we set right: X%; width: Y%; for RTL */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: transform 0.2s;
+    white-space: nowrap;
+    padding: 0 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gantt-bar:hover {
+    transform: scaleY(1.1);
+    z-index: 5;
+}
+
+/* Categories Colors */
+.cat-legal {
+    background: linear-gradient(135deg, #64748b, #475569);
+}
+
+.cat-technical {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.cat-hr {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.cat-marketing {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.cat-launch {
+    background: linear-gradient(135deg, #ec4899, #db2777);
+}
+
+.bar-text {
+    z-index: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.btn-delete-act {
+    background: none;
+    border: none;
+    color: var(--c-text-muted);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.gantt-row:hover .btn-delete-act {
+    opacity: 1;
+}
+
+.btn-delete-act:hover {
+    color: #ef4444;
+}
+
+.timeline-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.timeline-form .form-control {
+    padding: 8px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--c-border);
+    background: var(--c-bg-app);
+    color: var(--c-text-main);
+    flex: 1;
+    min-width: 150px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TimelineChart — خارطة الطريق المرئية (دوائر + خط زمني + سحب وإفلات)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.timeline-chart-wrapper {
+    padding: var(--s-4);
+}
+
+.timeline-chart-root {
+    min-height: 140px;
+}
+
+.timeline-chart {
+    position: relative;
+    width: 100%;
+}
+
+.timeline-chart__axis {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 2%;
+    margin-bottom: 8px;
+    font-size: 0.7rem;
+    color: var(--c-text-muted);
+}
+
+.timeline-chart__month {
+    flex: 1;
+    text-align: center;
+}
+
+.timeline-chart__track {
+    position: relative;
+    height: 72px;
+    padding: 0 2%;
+}
+
+.timeline-chart__line {
+    position: absolute;
+    top: 50%;
+    left: 2%;
+    right: 2%;
+    height: 3px;
+    background: var(--c-border);
+    border-radius: 2px;
+    transform: translateY(-50%);
+}
+
+.timeline-chart__node {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: grab;
+    user-select: none;
+    z-index: 2;
+    transition: transform 0.15s;
+}
+
+.timeline-chart__node:active {
+    cursor: grabbing;
+}
+
+.timeline-chart__node.is-dragging {
+    z-index: 10;
+    cursor: grabbing;
+}
+
+.timeline-chart__node.is-dragging .timeline-chart__dot {
+    transform: scale(1.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.timeline-chart__dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 3px solid var(--c-bg-card);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.timeline-chart__node--legal .timeline-chart__dot { background: linear-gradient(135deg, #64748b, #475569); }
+.timeline-chart__node--technical .timeline-chart__dot { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.timeline-chart__node--hr .timeline-chart__dot { background: linear-gradient(135deg, #10b981, #059669); }
+.timeline-chart__node--marketing .timeline-chart__dot { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.timeline-chart__node--launch .timeline-chart__dot { background: linear-gradient(135deg, #ec4899, #db2777); }
+
+.timeline-chart__label {
+    position: absolute;
+    top: 100%;
+    margin-top: 6px;
+    font-size: 0.7rem;
+    color: var(--c-text-muted);
+    max-width: 90px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.timeline-phases-list .timeline-phase-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--c-bg-app);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    font-size: 0.8rem;
+}
+
+.timeline-phases-list .btn-delete-act {
+    background: none;
+    border: none;
+    color: var(--c-text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.timeline-phases-list .btn-delete-act:hover {
+    color: var(--c-danger);
+}
+
+.btn-icon-sm {
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
