@@ -343,7 +343,7 @@
             <li><span class="ck">✓</span> توصيات موثّقة ترفع ثقة الممول</li>
             <li><span class="ck">✓</span> تسليم خلال ٢٤–٤٨ ساعة</li>
           </ul>
-          <a href="#" class="btn btn-wa" data-wa>اطلب عبر واتساب</a>
+          <a href="#" class="btn btn-wa" data-wa data-pkg="مراجَع بخبير — ٩٩٠ ﷼">اطلب عبر واتساب</a>
         </div>
         <div class="price">
           <div class="tname">خدمة كاملة</div>
@@ -355,7 +355,7 @@
             <li><span class="ck">✓</span> جلسة عرض للنتائج</li>
             <li><span class="ck">✓</span> مقابل ٥ﻙ–٢٥ﻙ للمكاتب التقليدية</li>
           </ul>
-          <a href="#" class="btn btn-wa" data-wa>اطلب عبر واتساب</a>
+          <a href="#" class="btn btn-wa" data-wa data-pkg="خدمة كاملة — ٢٬٩٠٠ ﷼">اطلب عبر واتساب</a>
         </div>
       </div>
       <p class="price-note">الأسعار بالريال السعودي وتشمل ضريبة القيمة المضافة حيثما تنطبق · تُصدر فاتورة ضريبية.</p>
@@ -404,7 +404,7 @@
         <p>اعرف رقمك الحقيقي قبل أن تصرف ريالاً — ابدأ تقديراً مجانياً الآن، أو اطلب دراستك الكاملة.</p>
         <div class="hero-cta">
           <a href="./index.html" class="btn btn-primary btn-lg" style="background:#fff;color:var(--pine-deep)">جرّب مجاناً الآن</a>
-          <a href="#" class="btn btn-wa btn-lg" data-wa>اطلب دراسة كاملة — واتساب</a>
+          <a href="#" class="btn btn-wa btn-lg" data-wa data-pkg="استفسار / دراسة كاملة">اطلب دراسة كاملة — واتساب</a>
         </div>
       </div>
     </div>
@@ -436,12 +436,33 @@
   <script>
     // سنة التذييل
     document.getElementById('year').textContent = new Date().getFullYear();
-    // رقم الواتساب — استبدله برقمك (بصيغة دولية بلا +، مثال 9665XXXXXXXX)
+    // ══════════════════════════════════════════════════════════════
+    // إعداد المالك: ضع رقم واتساب عملك هنا (صيغة دولية بلا +، مثال 9665XXXXXXXX)
+    // هذا هو المكان الوحيد الذي تغيّره لتفعيل كل أزرار الطلب في الصفحة.
     var WHATSAPP_NUMBER = '9665XXXXXXXX';
-    var msg = encodeURIComponent('السلام عليكم، أرغب في طلب دراسة جدوى لمشروعي عبر منصة قرار.');
+    // ══════════════════════════════════════════════════════════════
+
+    var NUMBER_IS_SET = /^\d{11,15}$/.test(WHATSAPP_NUMBER);
+
+    // رسالة طلب مُهيّأة: تصل المالك مُصنّفة بالباقة ومعها حقول جاهزة للتعبئة،
+    // فيتحوّل النقر إلى طلب مؤهّل بدل رسالة عامة.
     document.querySelectorAll('a[data-wa]').forEach(function (a) {
-      a.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + msg;
+      var pkg = a.getAttribute('data-pkg') || 'استفسار عام';
+      var text =
+        'السلام عليكم، أرغب في طلب دراسة جدوى عبر منصة «قرار».\n' +
+        '• الباقة: ' + pkg + '\n' +
+        '• اسم المشروع: \n' +
+        '• النشاط (مطعم/كافيه): \n' +
+        '• المدينة: ';
+      a.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(text);
       a.target = '_blank'; a.rel = 'noopener';
+      // حارس أثناء الإعداد: إن لم يُضبط الرقم بعد، نبّه المالك بدل إرسال العميل لرقم وهمي.
+      if (!NUMBER_IS_SET) {
+        a.addEventListener('click', function (e) {
+          e.preventDefault();
+          alert('لتفعيل الطلب: ضع رقم واتساب عملك في متغيّر WHATSAPP_NUMBER داخل landing.html.');
+        });
+      }
     });
   </script>
 </body>

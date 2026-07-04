@@ -3,6 +3,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "web/dist",
   "framework": null,
+  "redirects": [
+    { "source": "/", "destination": "/landing.html", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],

@@ -2,6 +2,15 @@
   command = "npm run build"
   publish = "web/dist"
 
+# الواجهة العامة: الجذر يعرض صفحة الهبوط التسويقية (لا الأداة الخام).
+# force = true يتجاوز index.html الثابت في dist مع إبقاء الرابط نظيفاً على "/".
+# الأداة تبقى مباشرةً على /index.html، وروابط الهبوط النسبية (./index.html) تفتحها.
+[[redirects]]
+  from = "/"
+  to = "/landing.html"
+  status = 200
+  force = true
+
 # SPA fallback: paths without matching static files → index.html
 [[redirects]]
   from = "/*"
