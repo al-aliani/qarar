@@ -57,6 +57,16 @@ export default defineConfig({
         {
             name: 'configure-server',
             configureServer(server) {
+                // الجذر "/" يعرض صفحة الهبوط (الرئيسية) في التطوير — مطابقةً للإنتاج.
+                // الأداة (المحاكي) تبقى على /index.html، وروابط الرئيسية النسبية تفتحها.
+                server.middlewares.use((req, res, next) => {
+                    const p = (req.url || '/').split('?')[0];
+                    if (p === '/') {
+                        const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+                        req.url = '/landing.html' + qs;
+                    }
+                    next();
+                });
                 server.middlewares.use('/assets', (req, res, next) => {
                     // fetch()/المتصفح يُرسل المسار مُرمَّزاً بالنسبة المئوية (%D9%82...) لأي حرف غير ASCII
                     // (أسماء الملفات العربية هنا). بدون فك الترميز، resolve() يبحث عن اسم ملف حرفي

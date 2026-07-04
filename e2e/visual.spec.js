@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Visual regression — محاكي الجدوى', () => {
     test('الصفحة الرئيسية — الهيكل العام', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
         const main = page.locator('#app, body').first();
         await expect(main).toBeVisible({ timeout: 10000 });
@@ -19,7 +19,7 @@ test.describe('Visual regression — محاكي الجدوى', () => {
     });
 
     test('الشريط الجانبي والتنقل', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
         const sidebar = page.locator('.sidebar').first();
         await expect(sidebar).toBeVisible({ timeout: 10000 });
@@ -29,7 +29,7 @@ test.describe('Visual regression — محاكي الجدوى', () => {
     });
 
     test('منطقة المحتوى الرئيسي (Wizard)', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
         const wizard = page.locator('#wizardContainer');
         await expect(wizard).toBeVisible({ timeout: 10000 });

@@ -4,7 +4,7 @@ test.describe('Critical Path: Full User Journey', () => {
 
   test('User can create a project, add revenue, and see calculations', async ({ page }) => {
     // 1. Landing Page
-    await page.goto('/');
+    await page.goto('/index.html');
     await expect(page).toHaveTitle(/محاكي الجدوى/);
     await page.waitForLoadState('domcontentloaded');
 
@@ -92,7 +92,7 @@ test.describe('Critical Path: Full User Journey', () => {
   });
 
   test('Export Menu triggers download options', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/index.html');
     await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('#btnExportMenu')).toBeVisible({ timeout: 10000 });
     await page.click('#btnExportMenu');

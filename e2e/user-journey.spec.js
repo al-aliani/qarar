@@ -5,7 +5,7 @@
 import { test, expect } from '@playwright/test';
 
 test('يمكن فتح المنصة وعرض الصفحة الرئيسية وفتح قائمة التصدير', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/index.html');
   // تحقق من عرض العلامة التجارية
   await expect(page.locator('.brand-name')).toContainText('محاكي الجدوى');
 

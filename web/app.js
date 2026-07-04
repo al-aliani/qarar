@@ -71,6 +71,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   console.log('[App] Auth initialized:', authResult);
 
+  // وصول من الصفحة الرئيسية عبر زر «دخول/تسجيل» (index.html?auth=1):
+  // نفتح شاشة المصادقة فوراً. بعد نجاح الدخول تُغلق الشاشة ويكمل المستخدم إلى الدراسة.
+  // إن كان مسجّلاً مسبقاً لا نعرضها. وننظّف المعامل من الرابط حتى لا تتكرر عند التحديث.
+  const wantsAuth = new URLSearchParams(window.location.search).get('auth');
+  if (wantsAuth && !authResult?.authenticated) {
+    AuthGuard.showAuthPrompt();
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('auth');
+    window.history.replaceState({}, '', cleanUrl);
+  }
+
   const btnToggleSidebar = document.getElementById('btnToggleSidebar');
   const sidebarOverlay = document.getElementById('sidebarOverlay');
   const sidebarDom = document.querySelector('.sidebar');

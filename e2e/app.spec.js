@@ -5,12 +5,12 @@ import { test, expect } from '@playwright/test';
 
 test.describe('محاكي الجدوى — E2E', () => {
     test('تحميل الصفحة الرئيسية وعرض العنوان', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/index.html');
         await expect(page).toHaveTitle(/محاكي|جدوى|دراسة/i);
     });
 
     test('وجود الشريط الجانبي وزر التصدير', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
         const sidebar = page.locator('.sidebar').first();
         await expect(sidebar).toBeVisible({ timeout: 10000 });
@@ -19,21 +19,21 @@ test.describe('محاكي الجدوى — E2E', () => {
     });
 
     test('الانتقال للمحتوى الرئيسي (wizardContainer)', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
         const main = page.locator('#wizardContainer').first();
         await expect(main).toBeAttached();
     });
 
     test('زر تبديل المظهر (Dark/Light) موجود', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
         const themeBtn = page.locator('#btnThemeToggle');
         await expect(themeBtn).toBeVisible({ timeout: 8000 });
     });
 
     test('شريط التنقل (Breadcrumb) أو المحتوى الرئيسي ظاهر', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
         const breadcrumb = page.locator('#breadcrumbBar');
         const wizard = page.locator('#wizardContainer');
@@ -41,7 +41,7 @@ test.describe('محاكي الجدوى — E2E', () => {
     });
 
     test('حاوية المصادقة أو زر الدخول ظاهرة', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.sidebar, #app')).toBeVisible({ timeout: 8000 });
         const authContainer = page.locator('#authContainer');
