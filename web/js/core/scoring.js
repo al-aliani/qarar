@@ -1,3 +1,5 @@
+import { resolveDecisionThresholds } from './engine.js';
+
 /**
  * Project Scoring Engine
  * يقيّم الدراسة ويعطي درجة (0–100) وتوصية GO/NO-GO/REVISE
@@ -23,15 +25,23 @@ export function calculateProjectScore(state, results) {
     const irr = ind.irr ?? 0;
     const payback = ind.paybackPeriod ?? ind.payback ?? 999;
     const roi = ind.roi ?? 0;
-    const margin = ind.profitMargin ?? (results.incomeStatement?.[0]
-        ? (results.incomeStatement[0].netIncome || 0) / ((results.incomeStatement[0].revenue || 1))
-        : 0);
+    // تدقيق 2026-07-08 (ملاحظة منخفضة #44): كان المسار الاحتياطي يقسم على
+    // (الإيرادات || 1) — إيراد صفري فعلي (لا مفقود) كان يقسم صافي الدخل على 1
+    // فيُنتج هامشاً غير منطقي (مثال: صافي دخل ‎-50,000‏ / 1 = ‎-5,000,000%‏).
+    const y1 = results.incomeStatement?.[0];
+    const margin = ind.profitMargin ?? (y1 && y1.revenue > 0 ? (y1.netIncome || 0) / y1.revenue : 0);
 
-    const th = (state && state.assumptions && state.assumptions.thresholds) ? state.assumptions.thresholds : {};
-    const minNPV = th.minNPV != null ? Number(th.minNPV) : 0;
-    const minIRR = th.minIRR != null ? Number(th.minIRR) : 0.15;
-    const maxPayback = th.maxPayback != null ? Number(th.maxPayback) : 7;
-    const minROI = th.minROI != null ? Number(th.minROI) : 0.20;
+    // تدقيق 2026-07-08 (ملاحظة متوسطة #7): كانت هذه العتبات تُشتق محلياً (استرداد
+    // احتياطي 7 سنوات) بدل resolveDecisionThresholds الموحّدة في engine.js (استرداد
+    // احتياطي 3.5 سنة فعلياً) — فتتناقض بطاقة تفاصيل التقييم مع شارة القرار الفعلية
+    // في نفس شاشة لوحة القرار لنفس المشروع. نقرأ الآن العتبات المُحلَّلة فعلياً من
+    // نتيجة المحرك (results.assumptionsApplied.thresholds) حين تتوفر.
+    const resolvedThresholds = results.assumptionsApplied?.thresholds
+        || resolveDecisionThresholds(state?.assumptions?.thresholds, state?.financing);
+    const minNPV = resolvedThresholds.minNPV;
+    const minIRR = resolvedThresholds.minIRR;
+    const maxPayback = resolvedThresholds.maxPayback;
+    const minROI = resolvedThresholds.minROI;
 
     const details = [];
     let score = 0;

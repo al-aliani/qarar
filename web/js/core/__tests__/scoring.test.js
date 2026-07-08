@@ -63,9 +63,11 @@ describe('calculateProjectScore — بند IRR (25 نقطة)', () => {
 });
 
 describe('calculateProjectScore — بند فترة الاسترداد (25 نقطة)', () => {
-    it('استرداد ضمن الحد الأقصى (7 سنوات افتراضياً) يمنح 25 كاملة', () => {
-        const r = calculateProjectScore({}, { indicators: ind({ paybackPeriod: 5 }) });
-        expect(r.details.find(d => d.label.includes('≤ 7 سنوات'))?.score).toBe(25);
+    // تدقيق 2026-07-08 (ملاحظة متوسطة #7): الحد الأقصى الافتراضي الفعلي أصبح 3.5
+    // سنة (resolveDecisionThresholds الموحّدة في engine.js) لا 7 كما كان محلياً هنا.
+    it('استرداد ضمن الحد الأقصى (3.5 سنة افتراضياً) يمنح 25 كاملة', () => {
+        const r = calculateProjectScore({}, { indicators: ind({ paybackPeriod: 3 }) });
+        expect(r.details.find(d => d.label.includes('≤ 3.5 سنوات'))?.score).toBe(25);
     });
 
     it('استرداد أطول من الحد لكن أقل من 10 سنوات يمنح 10 جزئية', () => {

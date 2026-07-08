@@ -678,12 +678,16 @@ export function calculateStudy(study, overrides) {
             return { year: y.year, outputVat, inputVat, netPayable, avgFloat: netPayable * (45 / 365) };
         })
     };
-    const roi = (incomeStatement.reduce((acc, y) => acc + y.netIncome, 0) / totalInvestment) * 100;
+    // تدقيق 2026-07-08 (ملاحظة متوسطة #6): roi/arr كانا يقسمان على totalInvestment
+    // بلا حارس صفر (خلافاً لـ pi/roa/roe المجاورة أدناه) — دراسة جديدة بلا بيانات
+    // فنية بعد (totalInvestment=0) كانت تُنتج NaN/Infinity تُعرض حرفياً في الملخص
+    // التنفيذي وتحليل المستثمر (فحوصات `?? 0`/`!= null` الموجودة لا تلتقط NaN).
+    const roi = totalInvestment > 0 ? (incomeStatement.reduce((acc, y) => acc + y.netIncome, 0) / totalInvestment) * 100 : 0;
     // مؤشر الربحية على نفس أساس سلسلة NPV (حصة المالك) — كان يقسم على إجمالي الاستثمار
     // بينما NPV محسوبة على المساهمة فيختل المؤشر عند وجود قرض.
     const pi = equityOutlay > 0 ? (npv + equityOutlay) / equityOutlay : 0;
     const avgAnnualProfit = incomeStatement.reduce((acc, y) => acc + y.netIncome, 0) / incomeStatement.length;
-    const arr = (avgAnnualProfit / totalInvestment) * 100;
+    const arr = totalInvestment > 0 ? (avgAnnualProfit / totalInvestment) * 100 : 0;
 
     const year1 = incomeStatement[0];
     const year1Revenue = year1 ? year1.revenue : 0;
