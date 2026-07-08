@@ -5,6 +5,7 @@
 
 import { generateTableSuggestions } from '../services/AIConnector.js';
 import { escapeHtml } from '../utils/escape.js';
+import { getRiskScore, classifyRiskScore } from '../core/riskScoring.js';
 
 export class RiskMatrix {
     constructor(containerId, store, onNavigate) {
@@ -68,15 +69,7 @@ export class RiskMatrix {
             }
         });
 
-        const getCellClass = (prob, impact) => {
-            const probScore = { low: 1, medium: 2, high: 3 };
-            const impactScore = { low: 1, medium: 3, high: 5 };
-            const score = probScore[prob] * impactScore[impact];
-            if (score >= 9) return 'risk-critical';
-            if (score >= 6) return 'risk-high';
-            if (score >= 3) return 'risk-medium';
-            return 'risk-low';
-        };
+        const getCellClass = (prob, impact) => `risk-${classifyRiskScore(getRiskScore(prob, impact))}`;
 
         return `
             <div class="risk-matrix-container">
@@ -145,18 +138,10 @@ export class RiskMatrix {
         const residualLabels = { low: 'منخفض', medium: 'متوسط', high: 'عالي' };
         const horizonLabels = { immediate: 'فوري', short: 'قصير (< سنة)', medium: 'متوسط (1-3 سنوات)', long: 'طويل (> 3 سنوات)' };
 
-        const getScore = (prob, impact) => {
-            const probScore = { low: 1, medium: 2, high: 3 };
-            const impactScore = { low: 1, medium: 3, high: 5 };
-            return probScore[prob] * impactScore[impact];
-        };
+        const getScore = getRiskScore;
 
-        const getScoreBadge = (score) => {
-            if (score >= 9) return 'badge--danger';
-            if (score >= 6) return 'badge--warning';
-            if (score >= 3) return 'badge--info';
-            return 'badge--success';
-        };
+        const BADGE_BY_CLASS = { critical: 'badge--danger', high: 'badge--warning', medium: 'badge--info', low: 'badge--success' };
+        const getScoreBadge = (score) => BADGE_BY_CLASS[classifyRiskScore(score)];
 
         // إجمالي الأثر المالي السنوي المقدّر (يقبله البنك بدل التصنيف النوعي)
         const totalFinancialImpact = risks.reduce((sum, r) => sum + (Number(r.estimatedFinancialImpact) || 0), 0);

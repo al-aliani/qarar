@@ -74,9 +74,31 @@ export class Wizard {
         this.tables = {};
         this.currentStepIndex = 0;
         this.steps = options.steps || [];
+        // خريطة فهرس محلي(داخل this.steps المُصفّاة)→فهرس مطلق(داخل STEPS الكامل) —
+        // يضبطها app.js عبر applyMode() عند تفعيل وضع مصغّر/سريع/بسيط. null في الوضع
+        // المتقدم (this.steps === STEPS الكاملة، فالمحلي=المطلق أصلاً).
+        this.stepIndexMap = options.stepIndexMap || null;
         this.onNavigate = options.onNavigate || (() => { });
         this.lastValidationError = null; // Track last validation error to prevent spam
         this.validationDebounce = null; // Debounce timer
+    }
+
+    // تدقيق 2026-07-08 (ملاحظة عالية #25): التنقل التالي/السابق كان يحسب
+    // this.currentStepIndex±1 مباشرة — لكن currentStepIndex فهرس مطلق (من STEPS
+    // الكاملة عبر app.js) بينما this.steps في وضع مصغّر/سريع/بسيط مصفوفة مُصفّاة
+    // قصيرة غير متجاورة بالضرورة مع الفهرسة المطلقة. فكانت الخطوة «التالية»
+    // تقفز فعلياً لأي خطوة مطلقة تالية (قد تكون متقدمة/مخفية) لا للخطوة التالية
+    // ضمن المسار المُصفّى فعلياً. هاتان الدالتان تترجمان بين الفضاءين عبر
+    // stepIndexMap (يضبطه app.js)، فتعملان بشكل صحيح في كل الأوضاع.
+    _localStepIndex() {
+        if (!this.stepIndexMap) return this.currentStepIndex;
+        const idx = this.stepIndexMap.indexOf(this.currentStepIndex);
+        return idx === -1 ? this.currentStepIndex : idx;
+    }
+
+    _absoluteStepIndex(localIndex) {
+        if (!this.stepIndexMap) return localIndex;
+        return this.stepIndexMap[localIndex] ?? localIndex;
     }
 
     renderStep(stepId, metadata, stepIndex = 0) {
@@ -277,9 +299,11 @@ export class Wizard {
             html += `<div id="table-${tableKey}" class="mt-4"></div>`;
         });
 
-        // Navigation buttons
-        const isFirstStep = stepIndex === 0;
-        const isLastStep = stepIndex === this.steps.length - 1;
+        // Navigation buttons — الفهرس المحلي ضمن this.steps المُصفّاة، لا stepIndex
+        // المطلق (تدقيق 2026-07-08، ملاحظة عالية #25: راجع _localStepIndex أعلاه).
+        const navLocalIdx = this._localStepIndex();
+        const isFirstStep = navLocalIdx === 0;
+        const isLastStep = navLocalIdx === this.steps.length - 1;
         const showNav = this.steps.length > 1;
 
         if (showNav) {
@@ -294,7 +318,7 @@ export class Wizard {
                         <button type="button" class="btn btn--ghost btn-sm" id="btnExportSection" title="تصدير هذا القسم">تصدير إكسل</button>
                         <div class="nav-indicator">
                             <span class="nav-indicator__caption">الخطوة التالية</span>
-                            <span class="nav-indicator__label">${isLastStep ? 'إنهاء الدراسة' : this.steps[stepIndex + 1]?.label}</span>
+                            <span class="nav-indicator__label">${isLastStep ? 'إنهاء الدراسة' : this.steps[navLocalIdx + 1]?.label}</span>
                         </div>
                     </div>
                     <button type="button" class="btn btn--primary" id="btnNextStep" ${isLastStep ? 'disabled' : ''}>
@@ -409,17 +433,19 @@ export class Wizard {
 
         if (prevBtn) {
             prevBtn.addEventListener('click', () => {
-                if (this.currentStepIndex > 0) {
-                    this.onNavigate(this.currentStepIndex - 1);
+                const localIdx = this._localStepIndex();
+                if (localIdx > 0) {
+                    this.onNavigate(this._absoluteStepIndex(localIdx - 1));
                 }
             });
         }
 
         if (nextBtn) {
             nextBtn.addEventListener('click', () => {
-                if (this.currentStepIndex < this.steps.length - 1) {
-                    if (this.validateStep(this.steps[this.currentStepIndex])) {
-                        this.onNavigate(this.currentStepIndex + 1);
+                const localIdx = this._localStepIndex();
+                if (localIdx < this.steps.length - 1) {
+                    if (this.validateStep(this.steps[localIdx])) {
+                        this.onNavigate(this._absoluteStepIndex(localIdx + 1));
                     }
                 }
             });
@@ -427,7 +453,7 @@ export class Wizard {
 
         if (exportBtn) {
             exportBtn.addEventListener('click', async (e) => {
-                const currentStep = this.steps[this.currentStepIndex];
+                const currentStep = this.steps[this._localStepIndex()];
                 const sectionId = currentStep?.id || 'section';
                 const sectionLabel = currentStep?.label || 'القسم';
 
@@ -461,8 +487,9 @@ export class Wizard {
 
     appendNav(stepIndex) {
         this.currentStepIndex = stepIndex;
-        const isFirstStep = stepIndex === 0;
-        const isLastStep = stepIndex === this.steps.length - 1;
+        const localIdx = this._localStepIndex();
+        const isFirstStep = localIdx === 0;
+        const isLastStep = localIdx === this.steps.length - 1;
         const showNav = this.steps.length > 1;
 
         if (!showNav) return;
@@ -473,7 +500,7 @@ export class Wizard {
             nav.remove();
         }
 
-        const nextStepLabel = isLastStep ? 'إنهاء الدراسة' : this.steps[stepIndex + 1]?.label;
+        const nextStepLabel = isLastStep ? 'إنهاء الدراسة' : this.steps[localIdx + 1]?.label;
         const navHtml = `
             <div class="wizard-nav">
                 <button type="button" class="btn btn--secondary" id="btnPrevStep" ${isFirstStep ? 'disabled' : ''}>

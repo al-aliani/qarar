@@ -1540,6 +1540,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     sidebar.steps = visibleSteps;
     sidebar.stepIndexMap = stepIndexMap;
     wizard.steps = visibleSteps;
+    // تدقيق 2026-07-08 (ملاحظة عالية #25): بدون هذا، كان الويزارد يحسب التالي/السابق
+    // بجمع/طرح 1 من فهرس مطلق مباشرة على مصفوفة مُصفّاة قصيرة — يوصل المستخدم لخطوة
+    // متقدمة/مخفية بدل الخطوة التالية ضمن المسار المُصفّى فعلياً. راجع Wizard.js
+    // _localStepIndex/_absoluteStepIndex.
+    wizard.stepIndexMap = stepIndexMap;
 
     // Save effective mode to store for persistence
     if (store.getState().appSettings?.mode !== effective) {

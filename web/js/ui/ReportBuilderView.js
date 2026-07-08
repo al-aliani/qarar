@@ -29,6 +29,7 @@ const REPORT_SECTION_LABELS = {
     loan_schedule: 'جدول سداد القرض',
     balance_sheet: 'الميزانية العمومية (قائمة المركز المالي)',
     business_model: 'نموذج العمل',
+    org_structure: 'الهيكل التنظيمي وخطة التوطين',
     risks: 'تحليل المخاطر',
     appendices: 'الملاحق والمصادر وعروض الأسعار',
     scenarios: 'مقارنة السيناريوهات',

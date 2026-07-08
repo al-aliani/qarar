@@ -5,6 +5,7 @@
  * الإيراد = المصروف×1.2 — فيُنتج «أشهر بقاء» وهمية لا علاقة لها بالتدفق النقدي الحقيقي.
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
+import { computeStressSurvival } from '../core/financial/stressTestMath.js';
 
 // سيناريوهات صدمة جاهزة (إزاحة المبيعات %، إزاحة التكاليف %)
 const PRESETS = [
@@ -140,14 +141,7 @@ export class StressTest {
     }
 
     calculateSurvival(salesDropPct, costHikePct, base) {
-        const sd = salesDropPct / 100, ch = costHikePct / 100;
-        const impactedRevenue = base.monthlyRevenue * (1 - sd);
-        // المتغيرة تتبع المبيعات هبوطاً وترتفع بصدمة التكاليف؛ الثابتة ترتفع بصدمة التكاليف فقط
-        const impactedVariable = base.monthlyVariable * (1 - sd) * (1 + ch);
-        const impactedFixed = base.monthlyFixed * (1 + ch);
-        const netBurn = impactedFixed + impactedVariable + base.monthlyDebt - impactedRevenue;
-
-        const months = netBurn <= 0 ? Infinity : (base.cashReserve / netBurn);
+        const { netBurn, months } = computeStressSurvival(base, salesDropPct, costHikePct);
 
         // حفظ في الحالة كي يظهر في التقرير ولوحة القرار
         try {

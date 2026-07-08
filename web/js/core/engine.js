@@ -9,6 +9,8 @@ import { calculateZakatAndTax } from './financial/tax.js';
 import { calculateNPV, calculateIRR, calculateMIRR, calculateTerminalValue } from './financial/cashflow.js';
 import { buildDepreciationModel } from './financial/depreciation.js';
 import { buildRevenueModel } from './financial/revenue.js';
+import { computeStressSurvival } from './financial/stressTestMath.js';
+import { getRiskScore, classifyRiskScore } from './riskScoring.js';
 function toArray(v) {
     if (v == null) return [];
     return Array.isArray(v) ? v : [v];
@@ -1010,6 +1012,50 @@ export function calculateStudy(study, overrides) {
                     `المشروع مجدٍ في الحالة الأساسية لكنه يخسر (NPV سلبي) تحت السيناريو المتشائم — راجع هامش الأمان قبل الاعتماد على القرار`
                 );
             }
+
+            // اختبار التحمل: صدمة معيارية موحّدة (نفس سيناريو «أزمة حادة» الجاهز في
+            // StressTest.js: -50% مبيعات و+20% تكاليف) — لا نقرأ آخر إعداد سلايدر محفوظ
+            // (تعسفي وقد يختلف بين تشغيلتين لنفس المشروع)، بل سيناريو ثابت قابل لإعادة
+            // الإنتاج (تدقيق 2026-07-08: القرار كان لا يدمج نتيجة اختبار التحمل إطلاقاً).
+            const stressBase = {
+                monthlyRevenue: year1Revenue / 12,
+                monthlyFixed: totalFixedOpexYear1 / 12,
+                monthlyVariable: year1VariableCosts / 12,
+                monthlyDebt: (loanSchedule?.annualSummary?.find(s => s.year === 1)?.totalPayment || 0) / 12,
+                cashReserve: Math.max(Number(workingCapital) || 0, Number(balanceSheets?.[0]?.assets?.current?.cash) || 0)
+            };
+            const stress = computeStressSurvival(stressBase, 50, 20);
+            if (d.decision === 'GO' && Number.isFinite(stress.months) && stress.months < 3) {
+                d.decision = 'REVISE';
+                d.decisionReasons.unshift(
+                    `أشهر البقاء تحت أزمة حادة (اختبار التحمل: -50% مبيعات و+20% تكاليف) = ${stress.months.toFixed(1)} شهراً فقط (أقل من 3) — خطر سيولة حرج قبل أي صدمة سوق معتادة`
+                );
+            }
+
+            // مونت كارلو: تُقرأ من آخر تشغيل محفوظ فعلياً (لا نعيد تشغيل 1000 تكرار هنا —
+            // مكلف حسابياً وقد يجمّد كل شاشة تستدعي calculateStudy). استشارية فقط: غياب
+            // تشغيل سابق لا يخفّض القرار (المستخدم لم يفتح الشاشة بعد، لا خلل في المشروع).
+            const mcLastRun = study[SECTIONS.MONTE_CARLO]?.lastRun;
+            if (d.decision === 'GO' && mcLastRun && Number.isFinite(mcLastRun.successProbability) && mcLastRun.successProbability < 0.5) {
+                d.decision = 'REVISE';
+                d.decisionReasons.unshift(
+                    `احتمالية النجاح في محاكاة مونت كارلو (آخر تشغيل: ${Math.round(mcLastRun.successProbability * 100)}%) أقل من 50% — نصف السيناريوهات العشوائية المعقولة تخسر`
+                );
+            }
+
+            // سجل المخاطر: خطر حرج (احتمالية×أثر ≥9، نفس تصنيف RiskMatrix.js) بلا خطة
+            // مواجهة موثَّقة لا يمكن تجاهله في القرار — خطر موثَّق ومُخفَّف لا يوقف GO.
+            const risks = toArray(study[SECTIONS.RISK_ANALYSIS]?.risks);
+            const unmitigatedCritical = risks.find(r =>
+                classifyRiskScore(getRiskScore(r.probability, r.impact)) === 'critical' && !String(r.mitigation || '').trim()
+            );
+            if (d.decision === 'GO' && unmitigatedCritical) {
+                d.decision = 'REVISE';
+                d.decisionReasons.unshift(
+                    `خطر حرج بلا خطة مواجهة موثَّقة في سجل المخاطر: «${unmitigatedCritical.name || 'بلا اسم'}» — أضف خطة مواجهة أو أعد تقييم احتماليته/أثره قبل الاعتماد`
+                );
+            }
+
             return d;
         })(),
         get kpis() { return this.indicators; }

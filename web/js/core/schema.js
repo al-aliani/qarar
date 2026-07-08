@@ -66,6 +66,7 @@ export const DEFAULT_REPORT_SECTION_ORDER = [
     'loan_schedule',
     'balance_sheet',
     'business_model',
+    'org_structure',
     'risks',
     'scenarios',
     'sensitivity',

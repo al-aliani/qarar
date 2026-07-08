@@ -33,6 +33,7 @@ const REPORT_SECTION_LABELS = {
     loan_schedule: 'جدول سداد القرض',
     balance_sheet: 'الميزانية العمومية التقديرية',
     business_model: 'نموذج العمل',
+    org_structure: 'الهيكل التنظيمي وخطة التوطين',
     risks: 'سجل المخاطر وخطط التخفيف',
     appendices: 'الملاحق والمصادر وعروض الأسعار',
     scenarios: 'مقارنة السيناريوهات',
@@ -931,6 +932,21 @@ export class ReportGenerator {
                         <div class="section-content">${this.renderBusinessModel(state.businessModel || {})}</div>
                     </div>`;
                 break;
+            case 'org_structure': {
+                const orgStructure = state.orgStructure;
+                const hasDepts = Array.isArray(orgStructure?.departments) && orgStructure.departments.some(d => (d.name || '').trim());
+                const saud = orgStructure?.saudization;
+                // targetPercentage/currentPercentage الافتراضيان كلاهما 0 (createEmptyStudy) —
+                // لا يميّزان «لم يُدخَل شيء» عن «أدخل المستخدم صفراً فعلاً». targetPercentage>0
+                // أو نص خطة فعلي هما الإشارتان الوحيدتان اللتان لا تظهران صدفة في دراسة بكر.
+                const hasSaud = !!(saud && (saud.targetPercentage > 0 || (saud.plan || '').trim()));
+                if (!hasDepts && !hasSaud) return null;
+                html = `<div class="section">
+                        <h3 class="section-title"><span class="section-number">${num}</span>الهيكل التنظيمي وخطة التوطين</h3>
+                        <div class="section-content">${this.renderOrgStructure(orgStructure)}</div>
+                    </div>`;
+                break;
+            }
             case 'scenarios':
                 if (!(results.scenarios && Object.keys(results.scenarios).length > 0)) return null;
                 html = `<div class="section">
@@ -1272,6 +1288,43 @@ export class ReportGenerator {
                 </tbody>
             </table>
         `;
+    }
+
+    /**
+     * تدقيق 2026-07-08 (ملاحظة عالية #16): خطوة «الهيكل التنظيمي والحوكمة» كانت
+     * تجمع المخطط التنظيمي (departments) وخطة التوطين (saudization) دون أن يظهر
+     * أي منهما في التقرير النهائي المُصدَّر — يعرض هنا فقط ما دخله المستخدم فعلياً
+     * (لا حدّ أدنى مفترض، ولا نسبة سعودة مُختلَقة عند غياب البيانات).
+     */
+    static renderOrgStructure(orgStructure) {
+        const depts = Array.isArray(orgStructure?.departments) ? orgStructure.departments.filter(d => (d.name || '').trim()) : [];
+        const saud = orgStructure?.saudization || {};
+        const hasSaud = saud.targetPercentage > 0 || (saud.plan || '').trim();
+
+        if (!depts.length && !hasSaud) {
+            return '<p style="color: #a0aec0; font-style: italic;">لم يُدخَل مخطط تنظيمي أو خطة توطين بعد.</p>';
+        }
+
+        const deptsById = new Map(depts.map(d => [d.id, d]));
+        const parentName = (d) => (d.parentId != null && deptsById.has(d.parentId)) ? (deptsById.get(d.parentId).name || '') : '—';
+
+        const orgTable = depts.length ? `
+            <h4 style="margin: 12px 0 6px;">المخطط التنظيمي</h4>
+            <table><thead><tr><th>القسم/المنصب</th><th>المسؤول</th><th>المسؤوليات</th><th>يتبع لـ</th></tr></thead><tbody>
+                ${depts.map(d => `<tr><td>${escapeHtml(d.name)}</td><td>${escapeHtml(d.head || '—')}</td><td>${escapeHtml(d.responsibilities || '—')}</td><td>${escapeHtml(parentName(d))}</td></tr>`).join('')}
+            </tbody></table>
+        ` : '';
+
+        const saudTable = hasSaud ? `
+            <h4 style="margin: 16px 0 6px;">خطة التوطين (السعودة)</h4>
+            <table><tbody>
+                ${saud.currentPercentage != null ? `<tr><td style="width:180px;font-weight:600;">النسبة الحالية</td><td>${escapeHtml(saud.currentPercentage)}%</td></tr>` : ''}
+                ${saud.targetPercentage ? `<tr><td style="font-weight:600;">النسبة المستهدفة</td><td>${escapeHtml(saud.targetPercentage)}%</td></tr>` : ''}
+                ${(saud.plan || '').trim() ? `<tr><td style="font-weight:600;vertical-align:top;">خطة التحقيق</td><td>${escapeHtml(saud.plan)}</td></tr>` : ''}
+            </tbody></table>
+        ` : '';
+
+        return orgTable + saudTable;
     }
 
     static renderMarketSegments(segments) {
