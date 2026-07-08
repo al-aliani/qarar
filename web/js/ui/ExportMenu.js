@@ -13,7 +13,34 @@ import { toast } from '../utils/toast.js';
 import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
 import { APP_CONFIG, BANK_COMPLIANCE_SENTENCE } from '../config.js';
 import { ConsultationModal } from './ConsultationModal.js';
+import { PaywallModal } from './PaywallModal.js';
 import { generatePitchScript } from '../services/AIConnector.js';
+
+// تدقيق 2026-07-08 (ملاحظة عالية #39): صيغ التقرير النهائي الاحترافي (قرار المالك:
+// قفلها فعلياً، لا مجرد رسائل تسويقية) — الأدوات الخام/المشاركة (JSON/CSV/Sheets/
+// لوحة المستثمر) تبقى مجانية عمداً، وكذلك حجز الاستشارة (مسار منفصل أصلاً).
+// ملاحظة: لا تكتب هنا اسم الصيغة الإنجليزي (PDF/Excel/Word/PowerPoint...) — installArabicUiGuard
+// في app.js يستبدلها تلقائياً بترجمتها العربية في كل نص بالصفحة، فكتابتها هنا يدوياً
+// بجانب ترجمتها العربية يُنتج تكراراً («تقرير PDF شامل» ← «تقرير تقرير شامل»).
+export const PREMIUM_EXPORT_TYPES = new Map([
+    ['pdf', 'التقرير الشامل'],
+    ['excel', 'ملف الجداول المالية التفصيلي'],
+    ['pptx', 'العرض التقديمي'],
+    ['word', 'الملف القابل للتعديل'],
+    ['bank', 'تقرير التمويل البنكي'],
+    ['financier', 'نسخة الممول'],
+    ['review_copy', 'نسخة المراجعة'],
+    ['professional_review', 'النسخة الاحترافية للمراجعة'],
+    ['monshaat', 'الهيكل المتوافق مع منشآت'],
+    ['pitch', 'عرض المستثمرين'],
+    ['investor_one_pager', 'عرض المستثمر بصفحة واحدة'],
+    ['accelerator_pitch', 'عرض المسرّعة'],
+    ['incubator_pitch', 'عرض الحاضنة'],
+    ['crowdfunding_pitch', 'عرض التمويل الجماعي'],
+    ['feasibility_plan_summary', 'ملخص خطة العمل والجدوى'],
+    ['pitch_script', 'نص العرض التقديمي'],
+    ['grant', 'بطاقة المنح'],
+]);
 
 export class ExportMenu {
     constructor(overlayId, store) {
@@ -370,6 +397,15 @@ export class ExportMenu {
     }
 
     async handleExport(type, btn) {
+        // بوابة الترقية (Paywall) — تسبق حتى بوابة الجودة: لا داعٍ لتشغيل المحرك
+        // إن كانت الصيغة مقفلة أصلاً.
+        if (PREMIUM_EXPORT_TYPES.has(type)) {
+            this.close();
+            const modal = new PaywallModal('paywallModalOverlay', this.store);
+            modal.open(PREMIUM_EXPORT_TYPES.get(type));
+            return;
+        }
+
         const state = this.store.getState();
 
         // احسب نتائج النموذج مرة واحدة (تُستخدم في بوابة الجودة وفي التصدير)

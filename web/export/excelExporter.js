@@ -95,10 +95,10 @@ export class ExcelExporter {
         // الفهرس يُبنى بعد إضافة الأوراق من أسمائها الفعلية —
         // كان قائمة مصمتة تعِد بأوراق (جدول القرض، التحليل الجغرافي…) قد لا تكون موجودة
         this.addIndexSheet(workbook);
-        workbook.SheetNames.unshift(workbook.SheetNames.pop());
+        XLSX.utils.move_last_sheet_to_front(workbook);
 
         const outFilename = `${baseName}_${exportDateISO()}.xlsx`;
-        XLSX.writeFile(workbook, outFilename);
+        await XLSX.writeFile(workbook, outFilename);
         return outFilename;
     }
 
@@ -731,6 +731,6 @@ export async function exportGrantCard(studyData, financialResults) {
 
     const base = sanitizeFilename(pi.name || 'بطاقة_منح');
     const filename = `${base}_${exportDateISO()}.xlsx`;
-    XLSX.writeFile(workbook, filename);
+    await XLSX.writeFile(workbook, filename);
     return filename;
 }

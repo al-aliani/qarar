@@ -78,6 +78,22 @@ export const TRUST_TAGLINE = 'منصة معيارية لدراسات الجدو�
 export const BANK_COMPLIANCE_SENTENCE = 'هيكل التقرير متوافق مع متطلبات بنك التنمية ومنشآت';
 
 /**
+ * رقم واتساب الأعمال لطلب ترقية الباقات الثلاث (نافذة القفل — PaywallModal).
+ * تدقيق 2026-07-08 (ملاحظة عالية #39، قرار المالك): لا بوابة دفع فعلية بعد — الترقية
+ * عبر تواصل واتساب يدوي للباقات الثلاث كلها (لا فرق بين 249/990/2900 هنا).
+ * نفس الشغرة المُعلَنة سابقاً في web/landing.html (متغيّر WHATSAPP_NUMBER هناك) —
+ * حدِّث القيمة في كلا المكانين معاً عند توفر الرقم الفعلي.
+ */
+export const WHATSAPP_NUMBER = '9665XXXXXXXX';
+
+/** رابط واتساب برسالة مُعبَّأة مسبقاً؛ يتجاهل الرقم إن كان لا يزال الشغرة (غير مضبوط). */
+export function buildWhatsAppLink(text) {
+    const isConfigured = /^\d{10,15}$/.test(WHATSAPP_NUMBER);
+    const num = isConfigured ? WHATSAPP_NUMBER : '';
+    return `https://wa.me/${num}?text=${encodeURIComponent(text || '')}`;
+}
+
+/**
  * موارد وإرشاد — جهات مفيدة (غرف تجارية، تمويل، منشآت)
  * للربط بالمستخدم دون التعهد بخدمات طرف ثالث. نبرة مساعدة ومحايدة.
  */

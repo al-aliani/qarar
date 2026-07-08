@@ -94,7 +94,7 @@ export async function exportSectionToExcel(studyData, sectionId, sectionLabel) {
     const base = sanitizeFilename(projectName || 'مشروع');
     const section = sanitizeFilename(sectionLabel || 'قسم');
     const filename = `${base}_${section}_${exportDateISO()}.xlsx`;
-    XLSX.writeFile(workbook, filename);
+    await XLSX.writeFile(workbook, filename);
     return filename;
 }
 

@@ -108,16 +108,20 @@ export function downloadBlob(blob, filename) {
 let _xlsxLoadPromise = null;
 
 /**
- * تأكيد جاهزية SheetJS (XLSX) على window.XLSX — عبر استيراد ديناميكي (npm package مُجمَّع)
- * لا عبر CDN، ولا يُحمَّل إلا عند أول استدعاء فعلي للتصدير (lazy) حتى لا يُثقِل الحزمة الأساسية.
- * الاسم القديم أُبقي عليه للتوافق مع كل استدعاءات excelExporter.js/sectionExporter.js
- * التي تستخدم المتغيّر العام `XLSX` مباشرة.
+ * تأكيد جاهزية واجهة Excel المتوافقة مع SheetJS على window.XLSX — عبر استيراد
+ * ديناميكي، ولا يُحمَّل إلا عند أول استدعاء فعلي للتصدير (lazy) حتى لا يُثقِل الحزمة
+ * الأساسية. الاسم القديم أُبقي عليه للتوافق مع كل استدعاءات excelExporter.js/
+ * sectionExporter.js التي تستخدم المتغيّر العام `XLSX` مباشرة.
+ * تدقيق 2026-07-08 (ملاحظة أمنية عالية #45): كانت تستورد حزمة `xlsx` مباشرة —
+ * بها ثغرة Prototype Pollution عالية الخطورة (CVSS 7.8) بلا إصلاح متاح عبر سجل
+ * npm. استُبدلت بـ xlsxShim.js (مبني على exceljs الآمنة، بنفس واجهة الاستخدام
+ * الفعلية هنا فقط: book_new/aoa_to_sheet/book_append_sheet/writeFile).
  * @returns {Promise<void>}
  */
 export function loadXLSX() {
     if (typeof globalThis.XLSX !== 'undefined') return Promise.resolve();
     if (_xlsxLoadPromise) return _xlsxLoadPromise;
-    _xlsxLoadPromise = import('xlsx')
+    _xlsxLoadPromise = import('./xlsxShim.js')
         .then(({ utils, writeFile }) => { window.XLSX = { utils, writeFile }; })
         .catch((e) => {
             _xlsxLoadPromise = null; // اسمح بإعادة المحاولة عند فشل التحميل

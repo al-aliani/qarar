@@ -12,7 +12,9 @@
  * - set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
  *
  * تشغيل مقترح:
- * - npm i xlsx @supabase/supabase-js
+ * - npm i xlsx @supabase/supabase-js  (تدقيق 2026-07-08: xlsx أُزيلت من تبعيات
+ *   المشروع الرئيسي بعد اكتشاف ثغرة Prototype Pollution فيها بلا إصلاح متاح —
+ *   هذا السكربت المستقل وحده ما زال يحتاجها، ثبّتها محلياً/مؤقتاً قبل التشغيل)
  * - npx tsx scripts/extract-excel-templates.ts
  */
 
