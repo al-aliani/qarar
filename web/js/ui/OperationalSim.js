@@ -14,7 +14,9 @@ export class OperationalSim {
     render(stepIndex) {
         if (typeof stepIndex === 'number') this.stepIndex = stepIndex;
         const state = this.store.getState(); // Fix typo: store.get() -> store.getState()
-        // Defaults or load from store
+        // تدقيق 2026-07-08 (ملاحظة عالية #26): operational قسم معرَّف الآن في
+        // SECTIONS/createEmptyStudy (schema.js) — الاحتياطي هنا فقط لدراسات محفوظة
+        // قبل هذا التسجيل.
         const operational = state.operational || { arrivalRate: 30, serviceTime: 5, servers: 2 };
 
         this.container.innerHTML = `

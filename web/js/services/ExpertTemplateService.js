@@ -248,7 +248,10 @@ function createFastFoodStudy() {
     };
     data[SECTIONS.FINANCING] = {
         ...data[SECTIONS.FINANCING],
-        totalInvestment: 817700, targetDSCR: 1.25,
+        // تدقيق 2026-07-08 (ملاحظة عالية #38): بعد ربط «% متغير» اللوجستيات بالمحرك
+        // (تُفصل الآن حصتها المتغيرة إلى غطاء رأس مال عامل بتغطية COGS لا الإيجار)
+        // تغيّر رأس المال العامل المحسوب فعلياً — الرقم مطابق لـresults.capex.total الحقيقي.
+        totalInvestment: 812900, targetDSCR: 1.25,
         sources: {
             ...data[SECTIONS.FINANCING].sources,
             equity: { amount: 367700, percentage: 45.0 },
@@ -332,11 +335,10 @@ function createCasualDiningStudy() {
     };
     data[SECTIONS.FINANCING] = {
         ...data[SECTIONS.FINANCING],
-        // تدقيق 2026-07-08 (وجده التحقق العدائي): totalInvestment المُعلَن هنا كان
-        // يفارق results.capex.total الفعلي (الذي يشمل رأس المال العامل) بنسبة 6.8% —
-        // نفس نمط "أرقام استثمار متضاربة" الذي حاربته تقارير سابقة. الرقم الآن مطابق
-        // لما يحسبه المحرك فعلياً (تحقّق عبر calculateStudy مباشرة، لا تقدير يدوي).
-        totalInvestment: 2265000, targetDSCR: 1.25,
+        // تدقيق 2026-07-08 (وجده التحقق العدائي، محدَّث بعد ربط «% متغير» اللوجستيات
+        // بالمحرك #38): totalInvestment مطابق لـresults.capex.total الفعلي (تحقّق عبر
+        // calculateStudy مباشرة، لا تقدير يدوي) — يتغيّر كلما تغيّر منطق رأس المال العامل.
+        totalInvestment: 2258600, targetDSCR: 1.25,
         sources: {
             ...data[SECTIONS.FINANCING].sources,
             equity: { amount: 1000000, percentage: 44.1 },
@@ -418,7 +420,9 @@ function createCloudKitchenStudy() {
     };
     data[SECTIONS.FINANCING] = {
         ...data[SECTIONS.FINANCING],
-        totalInvestment: 737000, targetDSCR: 1.25,
+        // تدقيق 2026-07-08 (ملاحظة عالية #38): مطابق لـresults.capex.total الفعلي بعد
+        // ربط «% متغير» اللوجستيات بالمحرك (انظر ملاحظة createFastFoodStudy أعلاه).
+        totalInvestment: 725960, targetDSCR: 1.25,
         sources: {
             ...data[SECTIONS.FINANCING].sources,
             equity: { amount: 412000, percentage: 55.9 },

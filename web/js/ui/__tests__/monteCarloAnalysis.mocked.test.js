@@ -62,7 +62,9 @@ describe('MonteCarloAnalysis — run(): بيانات غير كافية لا تُ
         expect(alertSpy).toHaveBeenCalledWith('حدث خطأ أثناء المحاكاة');
         expect(store.updatePath).not.toHaveBeenCalled();
         expect(document.getElementById('btnRunSim').disabled).toBe(false);
-        expect(document.getElementById('btnRunSim').textContent).toBe('تشغيل المحاكاة 🚀');
+        // تدقيق 2026-07-08 (#29): الزر يستخدم الآن أيقونة SVG بدل إيموجي 🚀 (انظر
+        // monteCarloAnalysis.iconSprite.test.js للتحقق التفصيلي من الأيقونة).
+        expect(document.getElementById('btnRunSim').textContent.trim()).toBe('تشغيل المحاكاة');
 
         alertSpy.mockRestore();
     });

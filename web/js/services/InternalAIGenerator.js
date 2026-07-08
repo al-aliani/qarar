@@ -998,20 +998,23 @@ export function generateLogistics(state) {
     const isIndustrial = /صناع|مصنع|إنتاج|تصنيع/i.test(sector);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
 
+    // تدقيق 2026-07-08 (ملاحظة عالية #38): variablePercent يُخزَّن ككسر (0–1) مثل
+    // variableCostRate تماماً (الآن مسجَّل في DynamicTable.isFractionPercentColumn) —
+    // كانت هذه القيم مكتوبة كنسبة مئوية خام (30، 50، 60...) فتُقرأ 3000%/5000% وتُدمّر الدراسة.
     const base = [
         { name: 'إيجار الموقع', monthly: 8000, variablePercent: 0, notes: 'قدر حسب المتر والموقع' },
-        { name: 'كهرباء ومياه', monthly: 1500, variablePercent: 30, notes: '' },
-        { name: 'نقل وتوزيع', monthly: 1200, variablePercent: 50, notes: isFandB || isRetail ? 'توصيل وتوريد' : '' }
+        { name: 'كهرباء ومياه', monthly: 1500, variablePercent: 0.30, notes: '' },
+        { name: 'نقل وتوزيع', monthly: 1200, variablePercent: 0.50, notes: isFandB || isRetail ? 'توصيل وتوريد' : '' }
     ];
     if (isRetail) base.push({ name: 'تأمين مخزن', monthly: 300, variablePercent: 0, notes: '' });
     if (isLogistics) {
         base.push({ name: 'إيجار مستودع/منصة', monthly: 12000, variablePercent: 0, notes: '' });
-        base.push({ name: 'وقود وصيانة أسطول', monthly: 8000, variablePercent: 60, notes: '' });
+        base.push({ name: 'وقود وصيانة أسطول', monthly: 8000, variablePercent: 0.60, notes: '' });
         base.push({ name: 'تأمين شحن وبضائع', monthly: 1500, variablePercent: 0, notes: '' });
     }
     if (isIndustrial) {
-        base.push({ name: 'طاقة (كهرباء صناعية)', monthly: 5000, variablePercent: 40, notes: '' });
-        base.push({ name: 'تخزين مواد خام', monthly: 2000, variablePercent: 30, notes: '' });
+        base.push({ name: 'طاقة (كهرباء صناعية)', monthly: 5000, variablePercent: 0.40, notes: '' });
+        base.push({ name: 'تخزين مواد خام', monthly: 2000, variablePercent: 0.30, notes: '' });
     }
     if (isHealth) {
         base.push({ name: 'إيجار عيادة/مقر', monthly: 15000, variablePercent: 0, notes: '' });
@@ -1454,6 +1457,9 @@ export function generateTechResources(state) {
  * مصادر إيرادات مقترحة (داخلي، بدون API)
  * @param {object} state - { projectInfo }
  * @returns {Array<{ service, customersPerMonth, avgPrice, growthRate }>}
+ * ASSUMPTION (تدقيق 2026-07-08، ملاحظة عالية #22): كل قيم growthRate أدناه (6-12%)
+ * تقديرات داخلية اجتهادية بحسب القطاع — لا مصدر خارجي منشور لها. هذه اقتراحات
+ * أولية قابلة للتعديل الكامل من المستخدم (وليست بيانات نهائية معتمدة للدراسة).
  */
 export function generateRevenueStreams(state) {
     const p = state?.projectInfo || {};

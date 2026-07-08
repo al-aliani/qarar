@@ -738,11 +738,12 @@ export class ReportGenerator {
                 break;
             }
             case 'intro_feasibility':
-                if (!(state.keyPeople?.keyPeople?.length > 0 || info.products?.length > 0 || info.introServices?.length > 0 || info.customerValues?.length > 0 || info.locationAnalysis?.selectionFactors || info.investorProfile || (info.startupHypothesis?.problem || info.startupHypothesis?.solution) || (info.unfairAdvantage?.types?.length > 0 || info.unfairAdvantage?.insightText))) return null;
+                if (!(state.keyPeople?.keyPeople?.length > 0 || state.keyPeople?.partnershipContracts?.length > 0 || info.products?.length > 0 || info.introServices?.length > 0 || info.customerValues?.length > 0 || info.locationAnalysis?.selectionFactors || info.investorProfile || (info.startupHypothesis?.problem || info.startupHypothesis?.solution) || (info.unfairAdvantage?.types?.length > 0 || info.unfairAdvantage?.insightText))) return null;
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>مقدمة الجدوى</h3>
                         <div class="section-content">
-                            ${state.keyPeople?.keyPeople?.length > 0 ? `<h4 style="margin-bottom:8px;">الأشخاص الرئيسون</h4><table style="margin-bottom:16px;"><thead><tr><th>الاسم</th><th>الدور</th><th>الخبرة</th></tr></thead><tbody>${(state.keyPeople.keyPeople || []).map(p => `<tr><td>${(p.name || '-')}</td><td>${(p.role || '-')}</td><td>${(p.experience || '-')}</td></tr>`).join('')}</tbody></table>` : ''}
+                            ${state.keyPeople?.keyPeople?.length > 0 ? `<h4 style="margin-bottom:8px;">الأشخاص الرئيسون</h4><table style="margin-bottom:16px;"><thead><tr><th>الاسم</th><th>الدور</th><th>الخبرة</th><th>المؤهلات</th></tr></thead><tbody>${(state.keyPeople.keyPeople || []).map(p => `<tr><td>${escapeHtml(p.name || '-')}</td><td>${escapeHtml(p.role || '-')}</td><td>${escapeHtml(p.experience || '-')}</td><td>${escapeHtml(p.qualifications || '-')}</td></tr>`).join('')}</tbody></table>` : ''}
+                            ${state.keyPeople?.partnershipContracts?.length > 0 ? `<h4 style="margin-bottom:8px;">عقود الشراكة</h4><table style="margin-bottom:16px;"><thead><tr><th>اسم الشريك</th><th>الدور/المسؤولية</th><th>النسبة %</th><th>ملاحظات</th></tr></thead><tbody>${(state.keyPeople.partnershipContracts || []).map(p => `<tr><td>${escapeHtml(p.partnerName || '-')}</td><td>${escapeHtml(p.role || '-')}</td><td>${p.sharePercent != null ? escapeHtml(String(p.sharePercent)) + '%' : '-'}</td><td>${escapeHtml(p.notes || '-')}</td></tr>`).join('')}</tbody></table>` : ''}
                             ${info.products?.length > 0 ? `<h4 style="margin-bottom:8px;">المنتجات</h4><table style="margin-bottom:12px;"><thead><tr><th>النوع</th><th>المنتج</th><th>الوصف</th><th>الخصائص الفريدة</th><th>القيمة المضافة</th></tr></thead><tbody>${(info.products || []).map(p => `<tr><td>${p.type === 'primary' ? 'أولي' : p.type === 'semi' ? 'نصف مصنع' : 'نهائي'}</td><td>${(p.name || '-')}</td><td>${(p.description || '-')}</td><td>${(p.uniqueFeatures || '-')}</td><td>${(p.valueAdded || '-')}</td></tr>`).join('')}</tbody></table>` : ''}
                             ${(info.startupHypothesis?.problem || info.startupHypothesis?.solution || info.unfairAdvantage?.insightText) ? `<h4 style="margin-bottom:8px;">الفرضية وتقييم الفكرة</h4><ul>${info.startupHypothesis?.problem ? `<li><strong>المشكلة:</strong> ${String(info.startupHypothesis.problem).replace(/</g, '&lt;')}</li>` : ''}${info.startupHypothesis?.solution ? `<li><strong>الحل:</strong> ${String(info.startupHypothesis.solution).replace(/</g, '&lt;')}</li>` : ''}${info.unfairAdvantage?.insightText ? `<li><strong>الاستبصار:</strong> ${String(info.unfairAdvantage.insightText).replace(/</g, '&lt;')}</li>` : ''}</ul>` : ''}
                         </div>
@@ -859,6 +860,12 @@ export class ReportGenerator {
                 const isYears = (results.incomeStatement || []).slice(0, 7);
                 if (isYears.length === 0) return null;
                 const isRow = (label, key, opts = {}) => `<tr class="${opts.highlight ? 'financial-highlight' : ''}"><td>${label}</td>${isYears.map(y => `<td>${formatCurrency(y[key] || 0)}</td>`).join('')}</tr>`;
+                // تدقيق 2026-07-08 (ملاحظة عالية #30): "المصاريف التشغيلية الثابتة" كانت تُعرض
+                // كرقم مجمّع واحد رغم أن المحرك يحسب تفصيلها فعلياً (fixedCostsBreakdown لكل
+                // سنة: رواتب/إيجار وإداري/تسويق/تكاليف خدمات ثابتة) — التقرير لم يكن يقرأه.
+                const bdRow = (label, bdKey, opts = {}) => `<tr class="${opts.sub ? 'report-subrow' : ''}"><td>${opts.sub ? '&nbsp;&nbsp;↳ ' : ''}${label}</td>${isYears.map(y => `<td>${formatCurrency((y.fixedCostsBreakdown || {})[bdKey] || 0)}</td>`).join('')}</tr>`;
+                const hasHiddenOverheads = isYears.some(y => (y.fixedCostsBreakdown?.hiddenOverheads || 0) > 0);
+                const hasServicesFixed = isYears.some(y => (y.fixedCostsBreakdown?.servicesFixed || 0) > 0);
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>قائمة الدخل التقديرية (${isYears.length} سنوات)</h3>
                         <div class="section-content">
@@ -868,6 +875,11 @@ export class ReportGenerator {
                                 ${isRow('(-) التكاليف المتغيرة', 'variableCosts')}
                                 ${isRow('(=) مجمل الربح', 'grossProfit')}
                                 ${isRow('(-) المصاريف التشغيلية الثابتة', 'fixedCosts')}
+                                ${bdRow('رواتب وأجور (شامل التأمينات ورسوم العمالة)', 'payroll', { sub: true })}
+                                ${bdRow('إيجار ولوجستيات وإداري', 'rentAndAdmin', { sub: true })}
+                                ${bdRow('تسويق', 'marketing', { sub: true })}
+                                ${hasServicesFixed ? bdRow('تكاليف ثابتة لكل خدمة', 'servicesFixed', { sub: true }) : ''}
+                                ${hasHiddenOverheads ? bdRow('طوارئ تشغيلية مخفية', 'hiddenOverheads', { sub: true }) : ''}
                                 ${isRow('(=) الأرباح قبل الفوائد والضرائب والإهلاك والإطفاء (EBITDA)', 'ebitda')}
                                 ${isRow('(-) الإهلاك والإطفاء', 'depreciation')}
                                 ${isRow('(-) الفوائد', 'interest')}

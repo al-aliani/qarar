@@ -29,7 +29,7 @@ export class Timeline {
         this.container.innerHTML = `
             <div class="timeline-container animate-entry">
                 <div class="section-header">
-                    <h2 class="text-xl font-bold">📅 الجدول الزمني للتنفيذ</h2>
+                    <h2 class="text-xl font-bold"><svg class="ic" aria-hidden="true"><use href="#i-history"/></svg> الجدول الزمني للتنفيذ</h2>
                     <p class="text-muted">خطة عمل مرحلة التأسيس قبل التشغيل الفعلي. اسحب المراحل لتعديل شهر البدء.</p>
                 </div>
 
@@ -53,7 +53,7 @@ export class Timeline {
                 <div class="card analysis-card mt-4">
                     <div class="flex-between mb-3">
                         <h3 class="card-title">إضافة / تعديل مرحلة</h3>
-                        <button class="btn-xs btn-magic ai-timeline-btn">✨ اقتراح خطة تنفيذية</button>
+                        <button class="btn-xs btn-magic ai-timeline-btn"><svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg> اقتراح خطة تنفيذية</button>
                     </div>
                     <div class="timeline-form">
                         <input type="text" id="newActName" placeholder="اسم المرحلة (مثلاً: التأسيس، الافتتاح، التوسع)" class="form-control">
@@ -127,7 +127,7 @@ export class Timeline {
                 }
 
                 e.target.disabled = true;
-                e.target.textContent = 'جاري التخطيط... 🏗️';
+                e.target.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-reset"/></svg> جاري التخطيط...';
                 this.isGenerating = true;
 
                 const projectInfo = state.projectInfo || {};
@@ -147,7 +147,7 @@ export class Timeline {
                 }
 
                 e.target.disabled = false;
-                e.target.textContent = '✨ اقتراح خطة تنفيذية';
+                e.target.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg> اقتراح خطة تنفيذية';
                 this.isGenerating = false;
             });
         });

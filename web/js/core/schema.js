@@ -42,6 +42,7 @@ export const SECTIONS = {
     TIMELINE: 'timeline',
     MONTE_CARLO: 'monteCarlo',
     VALUATION: 'valuation',
+    OPERATIONAL: 'operational',
     ACTUALS: 'actuals',
     APPENDICES: 'appendices'
 };
@@ -758,6 +759,23 @@ export function createEmptyStudy() {
         },
 
         // ═══════════════════════════════════════════════════════════
+        // محاكاة التشغيل والازدحام (Queueing Simulation) — OperationalSim.js
+        // تدقيق 2026-07-08 (ملاحظة عالية #26): كانت OperationalSim.js تكتب مباشرة
+        // إلى store.update('operational', ...) دون أن يكون هذا القسم معرَّفاً في
+        // SECTIONS/createEmptyStudy، فيهبط كمفتاح يتيم يُنشئه مسار "Section missing،
+        // initializing..." الاحتياطي بدل أن يكون جزءاً موثَّقاً من مخطط الدراسة.
+        // ملاحظة: هذه محاكاة استرشادية (queueing theory) لأوقات الانتظار/الازدحام
+        // فقط — لا تُغذّي حالياً hr.positions أو أي تكلفة رواتب فعلية في المحرك؛
+        // اقتراح "عدد الموظفين الأمثل" هنا تقريبي لنقاط الخدمة، وليس قراراً تلقائياً
+        // بتعديل الكادر الحقيقي بالتكلفة المالية.
+        // ═══════════════════════════════════════════════════════════
+        [SECTIONS.OPERATIONAL]: {
+            arrivalRate: 30,  // عميل/ساعة
+            serviceTime: 5,   // دقيقة لكل عميل
+            servers: 2        // نقاط خدمة متزامنة
+        },
+
+        // ═══════════════════════════════════════════════════════════
         // 2️⃣4️⃣ تقييم الشركة (Company Valuation)
         // ═══════════════════════════════════════════════════════════
         [SECTIONS.VALUATION]: {
@@ -1115,6 +1133,9 @@ export const TABLE_SCHEMAS = {
         aiPrompt: 'suggest_revenue',
         // ملاحظة: عمود «تكلفة متغيرة %» يُخزَّن ككسر (0–1) ويقرأه المحرك (revenue.js). إبقاؤه ظاهراً يمنع
         // اقتطاع 30% صامتاً بلا علم المستخدم — أدخل تكلفتك الفعلية (استشارات ≈ 0٪، تجزئة أعلى).
+        // ASSUMPTION (تدقيق 2026-07-08، ملاحظة عالية #22): افتراضي growthRate=7% تقدير
+        // داخلي عام لا مصدر خارجي منشور له (بخلاف variableCostRate الموثَّق أعلاه) —
+        // عدّله بحسب نمو قطاعك الفعلي، ولا تعتمد عليه كرقم مرجعي.
         columns: [
             { key: 'service', label: 'الخدمة', type: 'text' },
             { key: 'customersPerMonth', label: 'العملاء/شهر', type: 'number' },
@@ -1137,6 +1158,8 @@ export const TABLE_SCHEMAS = {
             { key: 'variableCostPerUnit', label: 'تكلفة/عميل', type: 'number' },
             { key: 'pricePerUnit', label: 'سعر الخدمة', type: 'number' },
             { key: 'customersPerMonth', label: 'عملاء/شهر', type: 'number' },
+            // ASSUMPTION (تدقيق 2026-07-08، ملاحظة عالية #22): نفس تقدير growthRate الداخلي
+            // في revenueStreams أعلاه — لا مصدر خارجي، عدّله بحسب قطاعك الفعلي.
             { key: 'growthRate', label: 'نمو سنوي %', type: 'number', default: 0.07 },
             {
                 key: 'annualRevenue', label: 'الإيراد السنوي', type: 'computed',

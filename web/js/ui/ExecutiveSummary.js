@@ -6,7 +6,7 @@
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
 import { calculateProjectScore } from '../core/scoring.js';
-import { checkDriversAgainstBenchmarks } from '../core/sectorBenchmarks.js';
+import { checkDriversAgainstBenchmarks, SECTOR_BENCHMARKS, resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
 import { aiConnector } from '../services/AIConnector.js'; // Updated: use unified AI service
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
@@ -191,7 +191,7 @@ export class ExecutiveSummary {
                     <label for="projectOverview" class="overview-label">وصف المشروع</label>
                     <div class="ai-toolbar">
                         <small class="text-muted">يمكنك كتابة الوصف يدوياً أو استخدام الذكاء الاصطناعي:</small>
-                        <button type="button" class="btn-xs btn-magic ai-generate-btn" data-target="projectOverview" title="يعمل بدون مفتاح API؛ يمكنك إضافة مفتاح OpenAI لنتائج أوضح">
+                        <button type="button" class="btn-xs btn-magic ai-generate-btn" data-target="projectOverview" title="توليد محلي بالكامل من بيانات دراستك — لا اتصال بأي مزوّد ذكاء اصطناعي خارجي">
                             ✨ توليد بالذكاء الاصطناعي
                         </button>
                     </div>
@@ -370,14 +370,13 @@ export class ExecutiveSummary {
     }
 
     renderIndustryBenchmarks(state, results) {
-        // Local Saudi industry benchmarks
-        const benchmarks = {
-            restaurants: { name: 'المطاعم', profitMargin: [8, 12], roi: [15, 25], payback: [2, 4] },
-            fitness: { name: 'النوادي الرياضية', profitMargin: [15, 20], roi: [20, 35], payback: [2, 3] },
-            retail: { name: 'البيع بالتجزئة', profitMargin: [5, 10], roi: [10, 20], payback: [3, 5] },
-            services: { name: 'الخدمات المهنية', profitMargin: [20, 30], roi: [30, 50], payback: [1, 2] },
-            tech: { name: 'التقنية', profitMargin: [15, 25], roi: [25, 40], payback: [2, 4] }
-        };
+        // تدقيق 2026-07-08 (ملاحظة عالية #32): كانت هذه قائمة "صناعات" مستقلة ومختلَقة
+        // (مطاعم/نوادي رياضية/تجزئة/خدمات مهنية/تقنية) بأرقام هامش/ROI/استرداد بلا أي مصدر،
+        // وأغلبها غير ذي صلة بمنصة مطاعم سعودية (نوادي رياضية، تقنية عامة) — وتتناقض مع
+        // sectorBenchmarks.js (المصدر الموحّد المستخدم في SmartAdvisor وبوابة QA لنفس الغرض).
+        // الآن تُستخدم نفس القطاعات الستة المعتمدة، وعمود الهامش فقط (الحقل الوحيد المتوفر
+        // فعلياً في ذلك المصدر) — لا اختلاق أرقام ROI/استرداد قطاعية لا مصدر لها.
+        const detected = resolveSectorBenchmark(state);
 
         const projectMargin = results?.indicators?.profitMargin ?? (results?.incomeStatement?.[0]?.revenue > 0 ? (results?.incomeStatement?.[0]?.netIncome ?? 0) / results.incomeStatement[0].revenue : 0);
         const projectAnnualROI = results?.indicators?.annualROI ?? results?.indicators?.arr ?? 0;
@@ -390,7 +389,7 @@ export class ExecutiveSummary {
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>الصناعة</th>
+                                <th>القطاع</th>
                                 <th>هامش الربح</th>
                                 <th>العائد السنوي على الاستثمار</th>
                                 <th>فترة الاسترداد</th>
@@ -403,17 +402,17 @@ export class ExecutiveSummary {
                                 <td class="${projectAnnualROI >= 0.20 ? 'text-success' : 'text-danger'}">${(projectAnnualROI * 100).toFixed(0)}%</td>
                                 <td class="${Number.isFinite(projectPayback) && projectPayback <= 4 ? 'text-success' : 'text-danger'}">${projectPaybackText}</td>
                             </tr>
-                            ${Object.entries(benchmarks).map(([key, b]) => `
-                                <tr>
-                                    <td>${b.name}</td>
-                                    <td>${b.profitMargin[0]}-${b.profitMargin[1]}%</td>
-                                    <td>${b.roi[0]}-${b.roi[1]}%</td>
-                                    <td>${b.payback[0]}-${b.payback[1]} سنة</td>
+                            ${Object.values(SECTOR_BENCHMARKS).map(b => `
+                                <tr${!detected.isGeneric && b.label === detected.label ? ' class="benchmark-match"' : ''}>
+                                    <td>${b.label}${!detected.isGeneric && b.label === detected.label ? ' (قطاعك)' : ''}</td>
+                                    <td>${Math.round(b.netProfitToRevenue[0] * 100)}-${Math.round(b.netProfitToRevenue[1] * 100)}%</td>
+                                    <td>—</td>
+                                    <td>—</td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>
-                    <p class="text-xs text-muted mt-2">المقارنة القطاعية تستخدم عائداً سنوياً قابلاً للمقارنة، وليس العائد التراكمي لكامل فترة الدراسة.</p>
+                    <p class="text-xs text-muted mt-2">المقارنة القطاعية تستخدم عائداً سنوياً قابلاً للمقارنة، وليس العائد التراكمي لكامل فترة الدراسة. نطاقات هامش الربح تقديرات داخلية من ممارسات محلية متعارف عليها (ليست رقماً رسمياً منشوراً)؛ العائد وفترة الاسترداد القطاعيان لا يتوفر لهما مصدر موثوق حالياً فتُركا فارغين بدل اختلاقهما.</p>
                 </div>
             </div>
         `;

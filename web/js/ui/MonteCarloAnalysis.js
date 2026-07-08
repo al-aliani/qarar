@@ -18,7 +18,7 @@ export class MonteCarloAnalysis {
 
         this.container.innerHTML = `
             <div class="monte-carlo-section">
-                <h2 class="section-title">🎲 محاكاة مونت كارلو (تحليل المخاطر)</h2>
+                <h2 class="section-title"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> محاكاة مونت كارلو (تحليل المخاطر)</h2>
 
                 <div class="card">
                     <div class="flex-between mb-4">
@@ -27,7 +27,7 @@ export class MonteCarloAnalysis {
                             ${saved ? `<p class="text-xs text-muted mt-1">آخر تشغيل: ${new Date(saved.runAt).toLocaleString('ar-SA')} — بذرة ثابتة (نفس المدخلات = نفس النتيجة)</p>` : ''}
                         </div>
                         <button id="btnRunSim" class="btn btn--primary btn-magic">
-                            تشغيل المحاكاة 🚀
+                            <svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg> تشغيل المحاكاة
                         </button>
                     </div>
 
@@ -115,7 +115,7 @@ export class MonteCarloAnalysis {
         const resultsDiv = this.container.querySelector('#simResults');
 
         btn.disabled = true;
-        btn.textContent = 'جاري المعالجة... 🎲';
+        btn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-reset"/></svg> جاري المعالجة...';
 
         // Allow UI to update
         await new Promise(r => setTimeout(r, 100));
@@ -146,7 +146,7 @@ export class MonteCarloAnalysis {
             alert('حدث خطأ أثناء المحاكاة');
         } finally {
             btn.disabled = false;
-            btn.textContent = 'تشغيل المحاكاة 🚀';
+            btn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg> تشغيل المحاكاة';
         }
     }
 

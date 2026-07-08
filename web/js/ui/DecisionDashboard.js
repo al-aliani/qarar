@@ -1138,11 +1138,14 @@ export class DecisionDashboard {
         `;
     }
 
+    // تدقيق 2026-07-08 (ملاحظة عالية #27): كانت hex ثابتة (#10b981...) لا تتبع متغيرات
+    // CSS الخاصة بالثيم (variables.css) — فتبقى نفس الدرجة اللونية حرفياً بين الفاتح
+    // والداكن بدل استخدام --c-success/--c-warning/--c-danger المُعرَّفة لكل ثيم.
     getScoreColor(score) {
-        if (score >= 80) return '#10b981';
-        if (score >= 60) return '#3b82f6';
-        if (score >= 40) return '#f59e0b';
-        return '#ef4444';
+        if (score >= 80) return 'var(--c-success)';
+        if (score >= 60) return 'var(--c-accent-blue)';
+        if (score >= 40) return 'var(--c-warning)';
+        return 'var(--c-danger)';
     }
 
     formatCurrency(n) {

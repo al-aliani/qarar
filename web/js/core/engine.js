@@ -134,7 +134,19 @@ export function calculateStudy(study, overrides) {
         rate: totalHeadcount > 0 ? saudiHeadcount / totalHeadcount : null
     };
 
-    const annualLogistics = toArray(logistics.logistics).reduce((acc, item) => acc + (Number(item.monthly || 0) * 12), 0);
+    // تدقيق 2026-07-08 (ملاحظة عالية #38): عمود «% متغير» باللوجستيات كان معروضاً في
+    // الواجهة (schema.js) لكن المحرك يحسب annualLogistics كاملاً كتكلفة ثابتة دائماً،
+    // متجاهلاً variablePercent تماماً — الآن يُقسَّم كل بند إلى حصة ثابتة (تدخل fixedCosts)
+    // وحصة متغيرة تتبع الحجم فعلياً (تدخل totalVariableCosts) بحسب نسبته المُدخلة.
+    const logisticsItemsList = toArray(logistics.logistics);
+    const annualLogisticsFixed = logisticsItemsList.reduce((acc, item) => {
+        const vPct = Math.max(0, Math.min(1, Number(item.variablePercent) || 0));
+        return acc + (Number(item.monthly || 0) * 12 * (1 - vPct));
+    }, 0);
+    const annualLogisticsVariable = logisticsItemsList.reduce((acc, item) => {
+        const vPct = Math.max(0, Math.min(1, Number(item.variablePercent) || 0));
+        return acc + (Number(item.monthly || 0) * 12 * vPct);
+    }, 0);
     let annualAdmin = toArray(admin.administrative).reduce((acc, item) => acc + (Number(item.monthly || 0) * 12), 0);
     // ملاحظة: أُزيلت إضافة 2,500 ريال «رسوم حكومية» الصامتة — كانت تُحقَن في OPEX دون علم
     // المستخدم أو إفصاح، فيجد فرقاً لا يفسَّر عند مطابقة تكاليفه بقائمة الدخل (نقض لشفافية المعادلات).
@@ -149,7 +161,7 @@ export function calculateStudy(study, overrides) {
     // التكاليف الثابتة الشهرية المعرفة على مستوى كل خدمة
     const annualServiceFixed = serviceItems.reduce((acc, s) => acc + (Number(s.fixedCosts || 0) * 12), 0);
 
-    let totalFixedOpexYear1 = annualPayroll + annualLogistics + annualAdmin + annualMarketing + annualServiceFixed;
+    let totalFixedOpexYear1 = annualPayroll + annualLogisticsFixed + annualAdmin + annualMarketing + annualServiceFixed;
     if (opexMult !== 1) totalFixedOpexYear1 *= opexMult;
 
     // ═══════════════════════════════════════════════════════════
@@ -313,13 +325,16 @@ export function calculateStudy(study, overrides) {
         other: baseMonths
     };
 
-    const monthlyRentAndAdmin = (annualLogistics + annualAdmin) / 12;
+    const monthlyRentAndAdmin = (annualLogisticsFixed + annualAdmin) / 12;
     const wcRent = monthlyRentAndAdmin * coverage.rent;
     const monthlyPayroll = annualPayroll / 12;
     const wcSalaries = monthlyPayroll * coverage.salaries;
     const monthlyMarketing = annualMarketing / 12;
     const wcMarketing = monthlyMarketing * coverage.marketing;
-    const monthlyVariable = year1OperatingVCBase / 12;
+    // تدقيق 2026-07-08 (ملاحظة عالية #38): annualLogisticsVariable لم تكن تُغطَّى بأي
+    // مخزون رأس مال عامل بعد فصلها عن monthlyRentAndAdmin — كانت تختفي من حساب
+    // الاستثمار الكلي بدل أن تنتقل لتغطية COGS (نفس منطق: تكلفة تتبع الحجم تحتاج غطاء نقدياً).
+    const monthlyVariable = (year1OperatingVCBase + annualLogisticsVariable) / 12;
     let wcCOGS = monthlyVariable * coverage.cogs;
 
     // سياسة الدورة النقدية: AR + مخزون − ذمم موردين تحل محل مخزون «الأشهر» —
@@ -462,14 +477,18 @@ export function calculateStudy(study, overrides) {
         const opVC = sourcesAtYear(true, 'vc1', yearIndex) * costInflation * revMult * volumeMult * vcRateMult * utilRate * rampFactor;
         const nonOpRev = sourcesAtYear(false, 'rev1', yearIndex) * revMult * priceMult;
         const nonOpVC = 0;
+        // تدقيق 2026-07-08 (ملاحظة عالية #38): الحصة المتغيرة من اللوجستيات (variablePercent)
+        // تتبع الحجم الفعلي فعلياً (لا سعر البيع) — نفس منطق مضاعِف opVC بلا vcRateMult/priceMult
+        // لأنها تكلفة تشغيلية مباشرة لا تكلفة بضاعة مرتبطة بمعدل تكلفة الإيراد.
+        const logisticsVC = annualLogisticsVariable * costInflation * volumeMult * utilRate * rampFactor;
 
         const totalRevenue = opRev + nonOpRev;
-        const totalVariableCosts = (opVC + nonOpVC) * opexMult;
+        const totalVariableCosts = (opVC + nonOpVC + logisticsVC) * opexMult;
         const grossProfit = totalRevenue - totalVariableCosts;
 
         // المصاريف الثابتة تتضخم مع الزمن
         const payroll = annualPayroll * costInflation * (1 - getSaving('HR'));
-        const rentAndAdmin = (annualLogistics + annualAdmin) * costInflation * (1 - getSaving('AdminLogistics'));
+        const rentAndAdmin = (annualLogisticsFixed + annualAdmin) * costInflation * (1 - getSaving('AdminLogistics'));
         const mkt = annualMarketing * costInflation * (1 - getSaving('Marketing'));
         const svcFixed = annualServiceFixed * costInflation;
 
@@ -892,7 +911,7 @@ export function calculateStudy(study, overrides) {
             totalAnnual: totalFixedOpexYear1 + year1VariableCosts,
             // مكونات السنة الأولى — تستهلكها فحوصات معايير «السائقين» القطاعية
             payrollAnnual: annualPayroll,
-            rentAdminAnnual: annualLogistics + annualAdmin,
+            rentAdminAnnual: annualLogisticsFixed + annualAdmin,
             marketingAnnual: annualMarketing
         },
         depreciation: annualDepreciation,

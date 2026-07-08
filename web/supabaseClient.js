@@ -116,6 +116,9 @@ export async function signUp(email, password) {
 /**
  * تسجيل الخروج: مسح الجلسة محلياً والسيرفر، ثم إعادة التحميل.
  * نمسح كاش العميل وكل مفاتيح جلسة Supabase من localStorage حتى لا يُعاد تسجيل الدخول بعد reload.
+ * تدقيق 2026-07-08 (ملاحظة عالية #44): كان يمسح مفاتيح sb-* فقط، تاركاً مسودات
+ * الدراسات المحلية (feas_project_*، بما فيها actuals حساسة بعد الإطلاق) ظاهرة
+ * لأي مستخدم لاحق على جهاز مشترك. نمسحها الآن أيضاً عند الخروج صراحة.
  */
 export async function signOut() {
   const { supabase } = await getSupabaseClient();
@@ -125,7 +128,9 @@ export async function signOut() {
   _client = null;
   _clientPromise = null;
   if (typeof localStorage !== "undefined") {
-    Object.keys(localStorage).filter((k) => k.startsWith("sb-")).forEach((k) => localStorage.removeItem(k));
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith("sb-") || k.startsWith("feas_project_"))
+      .forEach((k) => localStorage.removeItem(k));
   }
   location.reload();
 }

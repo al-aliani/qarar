@@ -97,6 +97,9 @@ export class FinancialDashboard {
             : (Number.isFinite(indicators.breakEvenUnits) ? indicators.breakEvenUnits / 12 : null);
         const breakevenDisplay = breakevenMonthly != null ? Math.round(breakevenMonthly) : '—';
 
+        // تدقيق 2026-07-08 (ملاحظة عالية #28): كل بطاقات kpi-card كانت تستخدم تراكباً
+        // أبيض ثابتاً بدل var(--c-surface-2) — فتبدو غامقة/متناقضة على أرضية الثيم الفاتح
+        // (ورقي دافئ لا رمادي).
         this.container.innerHTML = `
             <!-- Decision Banner: قرار ثلاثي GO / REVISE / NO-GO (لا يُختزل إلى ثنائي) -->
             <div class="decision-banner ${decision === 'GO' ? 'is-go' : (decision === 'REVISE' ? 'is-revise' : 'is-nogo')}">
@@ -111,18 +114,18 @@ export class FinancialDashboard {
 
             <!-- عرض مبسّط (Brixx/StratPad) — هل المشروع ربح؟ متى يسترد؟ ما حد التعادل؟ -->
             <div id="simpleViewPanel" class="card glass-card mt-4 ${isSimpleView ? '' : 'hidden'}" aria-label="عرض مبسّط للمؤشرات">
-                <h3 class="card-title mb-3">📌 عرض مبسّط</h3>
+                <h3 class="card-title mb-3"><svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg> عرض مبسّط</h3>
                 <p class="text-xs text-muted mb-3">بدون مصطلحات متقدمة (NPV، IRR) — ثلاثة أسئلة فقط.</p>
                 <div class="indicators-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px;">
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">
                         <div class="kpi-label text-muted">هل المشروع ربح؟</div>
                         <div class="kpi-value ${(y1.netIncome ?? 0) >= 0 ? 'text-success' : 'text-danger'}">${(y1.netIncome ?? 0) >= 0 ? 'نعم ✅' : 'لا ❌'}</div>
                     </div>
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px;">
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">
                         <div class="kpi-label text-muted">متى يسترد رأس المال؟</div>
                         <div class="kpi-value text-gold">${indicators.paybackPeriod != null && Number.isFinite(indicators.paybackPeriod) ? indicators.paybackPeriod.toFixed(1) + ' سنة' : 'غير محدد'}</div>
                     </div>
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px;">
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">
                         <div class="kpi-label text-muted">ما حد التعادل؟</div>
                         <div class="kpi-value">${breakevenDisplay} وحدة/شهر</div>
                         <p class="text-xs text-muted mt-1">مبيعات شهرية للتعادل</p>
@@ -135,28 +138,28 @@ export class FinancialDashboard {
 
             <!-- لوحة KPI واحدة (Brixx/Fathom) — الإيراد، التكلفة، الصافي، الاسترداد، التعادل، DSCR -->
             <div class="card glass-card mt-4" id="unifiedKpiPanel" aria-label="لوحة KPI">
-                <h3 class="card-title mb-3">📊 لوحة KPI</h3>
+                <h3 class="card-title mb-3"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> لوحة KPI</h3>
                 <p class="text-xs text-muted mb-3">الإيراد، التكلفة، الصافي، الاسترداد، التعادل، DSCR في بطاقات واحدة.</p>
                 <div class="indicators-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px;"><div class="kpi-label text-muted text-xs">الإيراد (سنة 1)</div><div class="kpi-value text-sm text-success">${this.formatCurrency(revY1)}</div></div>
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px;"><div class="kpi-label text-muted text-xs">التكلفة (سنة 1)</div><div class="kpi-value text-sm">${this.formatCurrency(costY1)}</div></div>
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px;"><div class="kpi-label text-muted text-xs">الصافي (سنة 1)</div><div class="kpi-value text-sm ${(y1.netIncome ?? 0) >= 0 ? 'text-gold' : 'text-danger'}">${this.formatCurrency(y1.netIncome ?? 0)}</div></div>
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px;"><div class="kpi-label text-muted text-xs">الاسترداد</div><div class="kpi-value text-sm">${indicators.paybackPeriod != null && Number.isFinite(indicators.paybackPeriod) ? indicators.paybackPeriod.toFixed(1) + ' سنة' : '—'}</div></div>
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px;"><div class="kpi-label text-muted text-xs">التعادل</div><div class="kpi-value text-sm text-gold">${breakevenDisplay} وحدة/شهر</div></div>
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px;"><div class="kpi-label text-muted text-xs">DSCR</div><div class="kpi-value text-sm">${this.formatDscr(indicators.dscr)}</div></div>
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 12px;"><div class="kpi-label text-muted text-xs">الإيراد (سنة 1)</div><div class="kpi-value text-sm text-success">${this.formatCurrency(revY1)}</div></div>
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 12px;"><div class="kpi-label text-muted text-xs">التكلفة (سنة 1)</div><div class="kpi-value text-sm">${this.formatCurrency(costY1)}</div></div>
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 12px;"><div class="kpi-label text-muted text-xs">الصافي (سنة 1)</div><div class="kpi-value text-sm ${(y1.netIncome ?? 0) >= 0 ? 'text-gold' : 'text-danger'}">${this.formatCurrency(y1.netIncome ?? 0)}</div></div>
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 12px;"><div class="kpi-label text-muted text-xs">الاسترداد</div><div class="kpi-value text-sm">${indicators.paybackPeriod != null && Number.isFinite(indicators.paybackPeriod) ? indicators.paybackPeriod.toFixed(1) + ' سنة' : '—'}</div></div>
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 12px;"><div class="kpi-label text-muted text-xs">التعادل</div><div class="kpi-value text-sm text-gold">${breakevenDisplay} وحدة/شهر</div></div>
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 12px;"><div class="kpi-label text-muted text-xs">DSCR</div><div class="kpi-value text-sm">${this.formatDscr(indicators.dscr)}</div></div>
                 </div>
             </div>
 
             <!-- التدفق النقدي السنوي (رسم بياني) — Brixx/Fathom -->
             <div class="card glass-card mt-4" id="cashFlowChartPanel">
-                <h3 class="card-title mb-3">💵 التدفق النقدي السنوي</h3>
+                <h3 class="card-title mb-3"><svg class="ic" aria-hidden="true"><use href="#i-bank"/></svg> التدفق النقدي السنوي</h3>
                 <p class="text-xs text-muted mb-3">عرض التدفق النقدي على الرسم البياني (سنوي).</p>
                 <canvas id="cashFlowChartAnnual" height="180"></canvas>
             </div>
 
             <!-- لوحة توقعات (Section 44–50: Tarken/Baremetrics) — إيراد، تكلفة، صافي 5–7 سنوات + مقارنة سيناريوهات -->
             <div class="card glass-card mt-4" id="forecastPanel">
-                <h3 class="card-title mb-3">📈 لوحة توقعات (5–7 سنوات)</h3>
+                <h3 class="card-title mb-3"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> لوحة توقعات (5–7 سنوات)</h3>
                 <p class="text-xs text-muted mb-3">رسم الإيراد والتكلفة والصافي على مدى فترة الدراسة؛ مع إمكانية مقارنة صافي الربح بين السيناريوهات.</p>
                 <div class="flex flex-wrap gap-2 mb-3">
                     <button type="button" class="btn btn--sm btn-forecast-mode active" data-mode="revenue-cost-net">الإيراد والتكلفة والصافي</button>
@@ -167,7 +170,7 @@ export class FinancialDashboard {
 
             <!-- لوحة الأداء (LivePlan / Upmetrics) — ربح متوقع، تدفق نقدي، فترة الدراسة 5 أو 7 سنوات -->
             <div class="card glass-card mt-4" id="performancePanel" aria-label="لوحة الأداء">
-                <h3 class="card-title mb-3">📈 لوحة الأداء</h3>
+                <h3 class="card-title mb-3"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> لوحة الأداء</h3>
                 <p class="text-xs text-muted mb-3">تحديث فوري عند تغيير المدخلات (الملخص، الإيرادات، التكاليف، التمويل).</p>
                 <div class="flex flex-wrap items-center gap-4 mb-3" style="margin-bottom: 12px;">
                     <span class="text-sm text-muted">فترة الدراسة (توقعات طويلة):</span>
@@ -177,11 +180,11 @@ export class FinancialDashboard {
                     </div>
                 </div>
                 <div class="indicators-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 14px;">
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 14px;">
                         <div class="kpi-label text-muted">الربح المتوقع (السنة 1)</div>
                         <div class="kpi-value ${(incomeStatement[0]?.netIncome || 0) >= 0 ? 'text-gold' : 'text-danger'}">${this.formatCurrency(incomeStatement[0]?.netIncome ?? 0)}</div>
                     </div>
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 14px;">
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 14px;">
                         <div class="kpi-label text-muted">التدفق النقدي (السنة 1)</div>
                         <div class="kpi-value">${this.formatCurrency((incomeStatement[0]?.netIncome ?? 0) + (incomeStatement[0]?.depreciation ?? 0))}</div>
                         <p class="text-xs text-muted mt-1">صافي ربح + استهلاك</p>
@@ -199,19 +202,19 @@ export class FinancialDashboard {
 
             <!-- لوحة مؤشرات القرار (تعادل، عائد، DSCR) - مدارج -->
             <div class="card glass-card mt-4" id="decisionIndicatorsPanel">
-                <h3 class="card-title mb-3">📊 مؤشرات القرار والجدارة التمويلية</h3>
+                <h3 class="card-title mb-3"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> مؤشرات القرار والجدارة التمويلية</h3>
                 <div class="indicators-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px;">
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">
                         <div class="kpi-label text-muted">نقطة التعادل (وحدات/شهر)</div>
                         <div class="kpi-value text-gold">${breakevenDisplay}</div>
                         <p class="text-xs text-muted mt-1">مبيعات شهرية للوصول لتعادل التكاليف</p>
                     </div>
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px;">
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">
                         <div class="kpi-label text-muted">العائد على الاستثمار (ROI)</div>
                         <div class="kpi-value ${(indicators.roi || 0) >= decisionThresholds.minROI ? 'positive' : 'negative'}">${this.formatPercent(indicators.roi || 0)}</div>
                         <p class="text-xs text-muted mt-1">عائد سنوي على إجمالي الاستثمار</p>
                     </div>
-                    <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px;">
+                    <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">
                         <div class="kpi-label text-muted">نسبة تغطية خدمة الدين (DSCR)</div>
                         <div class="kpi-value">${this.formatDscr(indicators.dscr)}</div>
                         <p class="text-xs text-muted mt-1">${this.getDscrExplanation(indicators.dscr, this.results?.dscrAnalysis)}</p>
@@ -226,14 +229,14 @@ export class FinancialDashboard {
             <div class="card glass-card mt-4 advisor-panel">
                 <div class="flex-between mb-4">
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <span style="font-size:1.5rem;">🤖</span>
+                        <svg class="ic" aria-hidden="true" style="width:1.5rem;height:1.5rem;"><use href="#i-auto"/></svg>
                         <div>
                             <h3 class="card-title mb-0">المستشار الذكي</h3>
                             <p class="text-muted text-sm">تحليل فوري لأداء مشروعك مقارنة بالسوق</p>
                         </div>
                     </div>
                     <button class="btn-xs btn-magic ai-consultant-btn">
-                        🧠 طلب تقرير مفصل
+                        <svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg> طلب تقرير مفصل
                     </button>
                 </div>
                 
@@ -412,7 +415,7 @@ export class FinancialDashboard {
         return `
             <div class="insights-list" style="display:flex; flex-direction:column; gap:10px;">
                 ${analysis.insights.map(item => `
-                    <div class="insight-item ${item.type}" style="display:flex; gap:10px; padding:10px; border-radius:6px; background:rgba(255,255,255,0.05); border-left: 4px solid ${this.getColorForType(item.type)}">
+                    <div class="insight-item ${item.type}" style="display:flex; gap:10px; padding:10px; border-radius:6px; background:var(--c-surface-2); border-left: 4px solid ${this.getColorForType(item.type)}">
                         <div class="insight-icon">
                             ${item.type === 'danger' || item.type === 'critical' ? '⚠️' : item.type === 'warning' ? '✋' : '✅'}
                         </div>
@@ -469,7 +472,7 @@ export class FinancialDashboard {
                 <p class="text-xs text-muted mb-3">مستخرجة من مؤشرات الجدوى والحساسية — كل نقطة مع إجراء مقترح.</p>
                 <ul class="space-y-3" id="improvementSuggestionsList">
                     ${insights.map((item, i) => `
-                        <li class="flex gap-3 items-start p-3 rounded-lg" style="background:rgba(255,255,255,0.03); border-left: 4px solid ${this.getColorForType(item.type)};">
+                        <li class="flex gap-3 items-start p-3 rounded-lg" style="background:var(--c-surface-2); border-left: 4px solid ${this.getColorForType(item.type)};">
                             <div class="flex-grow">
                                 <div class="font-medium text-sm">${(item.message || '').toString().replace(/</g, '&lt;')}</div>
                                 <div class="text-xs text-gold mt-1">💡 ${(item.action || '').toString().replace(/</g, '&lt;')}</div>
@@ -923,7 +926,7 @@ export class FinancialDashboard {
         if (!rows.length) return '';
         return `
             <div class="card glass-card mt-4" id="auditorPanel" aria-label="نظرة المدقق">
-                <h3 class="card-title mb-1">🔍 نظرة المدقق</h3>
+                <h3 class="card-title mb-1"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg> نظرة المدقق</h3>
                 <p class="text-xs text-muted mb-3">ما سيفحصه مقيّم التمويل أولاً — اعرفه قبل أن يراه.</p>
                 ${rows.join('')}
             </div>`;

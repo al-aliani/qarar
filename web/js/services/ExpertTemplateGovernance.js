@@ -1,3 +1,5 @@
+import { detectSectorBenchmark } from '../core/sectorBenchmarks.js';
+
 const text = (value) => String(value ?? '').trim();
 const num = (value) => {
     const n = Number(value);
@@ -22,6 +24,15 @@ export function validateExpertTemplateCertification(meta = {}, studyData = {}) {
     if (years < 1) blockers.push('سنوات خبرة المختص يجب أن تكون سنة واحدة على الأقل قبل الاعتماد.');
     if (scope.length < 20) blockers.push('اكتب نطاق استخدام واضح للقالب: القطاع، الحجم، المدينة/النطاق، وما لا يغطيه.');
     if (reviewNotes.length < 20) blockers.push('اكتب ملاحظات مراجعة توضّح ما الذي راجعه المختص ومصادر الأرقام.');
+
+    // تدقيق 2026-07-08 (ملاحظة عالية #40): كانت البوابة تتحقق من طول النصوص فقط
+    // بلا أي فحص لأن تخصص/نطاق القالب يقع فعلاً ضمن القطاعات الستة المعتمدة في
+    // PRODUCT_CONSTITUTION.md v1.1 (مطاعم + تجزئة/خدمي/صناعي/لوجستي/SaaS) —
+    // نفس قائمة sectorBenchmarks.js الموحّدة، لا قائمة مستقلة جديدة.
+    const matchedSector = detectSectorBenchmark(specialty) || detectSectorBenchmark(scope);
+    if (title && specialty && !matchedSector) {
+        blockers.push('تخصص/نطاق القالب لا يقع ضمن القطاعات المعتمدة حالياً (مطاعم، تجزئة، خدمي، صناعي، لوجستي، SaaS) — راجع دستور المنتج أو حدِّد التخصص بلغة أوضح.');
+    }
 
     const streams = studyData?.revenue?.streams || [];
     const capexItems = [

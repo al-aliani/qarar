@@ -4,7 +4,7 @@
  * Including individual Break-even, NPV, IRR calculations
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
-import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
+import { investmentDataWarning, investmentDataWarningHtml, productCatalogWarning } from '../utils/dataQuality.js';
 import { stepIndexById } from '../core/wizardSteps.js';
 
 export class ServiceAnalysis {
@@ -74,6 +74,9 @@ export class ServiceAnalysis {
             projectTotals = { investment: r?.capex?.total || 0, fixedAnnual: r?.opex?.fixedAnnual || 0 };
             dataWarnHtml = investmentDataWarningHtml(investmentDataWarning(studyData, r));
         } catch (_) { projectTotals = null; }
+        // تدقيق 2026-07-08 (ملاحظة عالية #23): تنبيه عند عزلة كتالوج مقدمة الجدوى
+        // الوصفي (projectInfo.products/introServices) عن هذا الكتالوج المالي.
+        dataWarnHtml += investmentDataWarningHtml(productCatalogWarning(studyData));
         const revY1 = (s) => (parseFloat(s.customersPerMonth) || 0) * 12 * (parseFloat(s.pricePerUnit || s.avgPrice) || 0);
         const totalRevY1 = services.reduce((acc, s) => acc + revY1(s), 0);
         const hasAllocation = !!(projectTotals && projectTotals.investment > 0 && totalRevY1 > 0);

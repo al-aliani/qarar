@@ -6,6 +6,7 @@
 
 import { calculateStudyCompleteness } from '../utils/studyCompleteness.js';
 import { calculateStudy } from './engine.js';
+import { resolveSectorBenchmark } from './sectorBenchmarks.js';
 
 /**
  * حساب نتيجة الفكرة من 0 إلى 100
@@ -26,24 +27,27 @@ export function calculateIdeaScore(state, results = null) {
     // 2) هامش الربح المتوقع — وزن 30%
     // Number(undefined) = NaN وليس null، فـ ?? لا يلتقطها — نستخدم حارس Finite صريحاً
     const safeNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+    // تدقيق 2026-07-08 (ملاحظة عالية #42): كانت عتبات 20%/15%/10%/5% أرقاماً مستقلة
+    // مكرَّرة مرتين هنا، غير مرتبطة بجدول sectorBenchmarks.js الموحّد المستخدم في
+    // بقية المنصة لنفس الغرض (فحص هامش الربح). الآن تُشتَق العتبات من نطاق القطاع
+    // الفعلي (netProfitToRevenue) بدل رقم عام واحد يناسب كل القطاعات خطأً.
+    const bench = resolveSectorBenchmark(state);
+    const [sectorLo, sectorHi] = bench.netProfitToRevenue;
+    const scoreMargin = (netMargin) => {
+        if (netMargin >= sectorHi) return 30;
+        if (netMargin >= sectorLo) return 22;
+        if (netMargin >= sectorLo / 2) return 12;
+        if (netMargin > 0) return 6;
+        return 0;
+    };
     let marginScore = 0;
     if (results && typeof results.indicators === 'object') {
-        const netMargin = safeNum(results.indicators.netMargin);
-        if (netMargin >= 0.20) marginScore = 30;
-        else if (netMargin >= 0.15) marginScore = 25;
-        else if (netMargin >= 0.10) marginScore = 20;
-        else if (netMargin >= 0.05) marginScore = 12;
-        else if (netMargin > 0) marginScore = 6;
+        marginScore = scoreMargin(safeNum(results.indicators.netMargin));
     } else {
         try {
             const res = calculateStudy(state);
             if (res && res.indicators) {
-                const netMargin = safeNum(res.indicators.netMargin);
-                if (netMargin >= 0.20) marginScore = 30;
-                else if (netMargin >= 0.15) marginScore = 25;
-                else if (netMargin >= 0.10) marginScore = 20;
-                else if (netMargin >= 0.05) marginScore = 12;
-                else if (netMargin > 0) marginScore = 6;
+                marginScore = scoreMargin(safeNum(res.indicators.netMargin));
             }
         } catch (_) {
             // لا نتائج مالية بعد — نعطي جزءاً من النقاط حسب وجود إيرادات وتكاليف

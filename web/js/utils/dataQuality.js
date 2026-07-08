@@ -54,6 +54,53 @@ export function investmentDataWarning(state, results) {
     return null;
 }
 
+function normalizeName(s) {
+    return String(s || '').trim().toLowerCase().replace(/\s+/g, '');
+}
+
+/**
+ * تدقيق 2026-07-08 (ملاحظة عالية #23): كتالوج المنتجات/الخدمات الوصفي
+ * (projectInfo.products/introServices — مقدمة الجدوى) معزول تماماً عن الكتالوج
+ * المالي (services.items/revenue.streams — ما يقرأه المحرك فعلياً). يصف المستخدم
+ * منتجاً في مقدمة الجدوى ثم لا يُسعِّره مالياً أبداً (أو العكس)، فتخرج الدراسة بقصة
+ * سردية لا تطابق أرقامها. لا نربط البيانات تلقائياً (قرار الأسماء للمستخدم) بل ننبّه.
+ * @param {object} state - حالة الدراسة
+ * @returns {{ level: 'critical'|'warning', message: string, action: string } | null}
+ */
+export function productCatalogWarning(state) {
+    const pi = state?.projectInfo || {};
+    const descriptiveNames = [
+        ...(Array.isArray(pi.products) ? pi.products : []).map(p => (p.name || '').trim()),
+        ...(Array.isArray(pi.introServices) ? pi.introServices : []).map(s => (s.name || '').trim())
+    ].filter(Boolean);
+    if (descriptiveNames.length === 0) return null;
+
+    const financialNames = [
+        ...(Array.isArray(state?.services?.items) ? state.services.items : []).map(s => (s.name || '').trim()),
+        ...(Array.isArray(state?.revenue?.streams) ? state.revenue.streams : []).map(s => (s.service || s.name || '').trim())
+    ].filter(Boolean);
+
+    if (financialNames.length === 0) {
+        const preview = descriptiveNames.slice(0, 3).join('، ') + (descriptiveNames.length > 3 ? '...' : '');
+        return {
+            level: 'warning',
+            message: `وصفتَ ${descriptiveNames.length} منتج/خدمة في «مقدمة الجدوى» (${preview}) لكن لم تُسعِّر أياً منها هنا — النموذج المالي لا يعرف عنها شيئاً.`,
+            action: 'أضف نفس الأسماء بالسعر وعدد العملاء المتوقع أدناه كي تعكس مؤشرات الدراسة قصتك الفعلية.'
+        };
+    }
+
+    const financialSet = new Set(financialNames.map(normalizeName));
+    const overlap = descriptiveNames.some(n => financialSet.has(normalizeName(n)));
+    if (!overlap) {
+        return {
+            level: 'warning',
+            message: 'أسماء المنتجات/الخدمات في «مقدمة الجدوى» لا تطابق أياً من الأسماء المُسعَّرة هنا مالياً — قد تكون قصة الدراسة الوصفية وأرقامها المالية عن بنود مختلفة فعلياً.',
+            action: 'وحِّد الأسماء بين الشاشتين (نفس اسم المنتج/الخدمة) حتى تتّسق الدراسة.'
+        };
+    }
+    return null;
+}
+
 /**
  * يبني HTML لبطاقة تنبيه من ناتج investmentDataWarning (أو '' إن لم يوجد تحذير).
  * آمن للحقن: يهرّب النص.

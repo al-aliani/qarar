@@ -216,7 +216,10 @@ describe('MonteCarloAnalysis — run(): تكامل حقيقي مع المحرك 
         await runPromise;
 
         expect(btn.disabled).toBe(false);
-        expect(btn.textContent).toBe('تشغيل المحاكاة 🚀');
+        // تدقيق 2026-07-08 (#29): الزر يستخدم الآن أيقونة SVG بدل إيموجي 🚀 (انظر
+        // monteCarloAnalysis.iconSprite.test.js للتحقق التفصيلي من الأيقونة).
+        expect(btn.textContent.trim()).toBe('تشغيل المحاكاة');
+        expect(btn.querySelector('use[href="#i-bolt"]')).not.toBeNull();
 
         expect(document.getElementById('probSuccess').textContent).toBe((expected.stats.successProbability * 100).toFixed(1) + '%');
         expect(document.getElementById('avgNPV').textContent).toBe(fmtCurrency(expected.stats.avgNPV));

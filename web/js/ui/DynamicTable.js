@@ -8,7 +8,10 @@ import { toast } from '../utils/toast.js';
 export class DynamicTable {
     /** أعمدة مخزنة ككسر (0–1) وتُعرض/تُحرَّر كنسبة مئوية (0–100) — نفس نهج Wizard.isFractionPercentKey */
     static isFractionPercentColumn(colKey) {
-        return ['growthRate', 'variableCostRate', 'amortizationRate', 'depreciationRate', 'rate', 'utilizationRate'].includes(colKey);
+        // تدقيق 2026-07-08 (ملاحظة عالية #38): variablePercent (عمود «% متغير» باللوجستيات)
+        // كان غائباً عن هذه القائمة رغم مطابقة اسمه ووسمه لبقية أعمدة الكسر (variableCostRate)
+        // — فيُعرض/يُحرَّر كرقم خام بلا تحويل، ويتناقض مع قوالب الخبراء التي تُخزّنه ككسر (0.7).
+        return ['growthRate', 'variableCostRate', 'amortizationRate', 'depreciationRate', 'rate', 'utilizationRate', 'variablePercent'].includes(colKey);
     }
 
     /**

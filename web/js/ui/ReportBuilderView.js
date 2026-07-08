@@ -69,11 +69,11 @@ export class ReportBuilderView {
         this.container.innerHTML = `
             <div class="report-builder animate-entry">
                 <div class="report-builder-header">
-                    <h2 class="report-builder-title">📋 بناء التقرير</h2>
+                    <h2 class="report-builder-title"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> بناء التقرير</h2>
                     <p class="report-builder-desc">اسحب البطاقات وأفلتها لإعادة ترتيب أقسام التقرير. مثلاً: ضع «الملخص المالي» في البداية لإبراز الأرباح.</p>
                 </div>
                 <div class="report-builder-ai-bar mb-4 p-3 rounded-lg border border-border bg-card" role="group" aria-label="مساعد الكتابة — اكتب لي هذا القسم">
-                    <div class="text-xs text-muted mb-2">✨ اكتب لي هذا القسم — توليد سريع بالذكاء الاصطناعي (الملخص، السوق، التسويق، المخاطر):</div>
+                    <div class="text-xs text-muted mb-2"><svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg> اكتب لي هذا القسم — توليد سريع بالذكاء الاصطناعي (الملخص، السوق، التسويق، المخاطر):</div>
                     <div class="flex flex-wrap gap-2">
                         <button type="button" class="btn btn--sm btn-magic btn-ai-summary" data-type="summary">ولّد الملخص التنفيذي</button>
                         <button type="button" class="btn btn--sm btn-magic btn-ai-market" data-type="market">ولّد تحليل السوق</button>
