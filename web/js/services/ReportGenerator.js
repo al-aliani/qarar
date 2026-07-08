@@ -857,7 +857,7 @@ export class ReportGenerator {
             }
             case 'income_statement': {
                 // قائمة دخل كاملة لكل سنوات الدراسة (كانت تعرض السنة الأولى فقط وتُهمل الباقي)
-                const isYears = (results.incomeStatement || []).slice(0, 7);
+                const isYears = results.incomeStatement || [];
                 if (isYears.length === 0) return null;
                 const isRow = (label, key, opts = {}) => `<tr class="${opts.highlight ? 'financial-highlight' : ''}"><td>${label}</td>${isYears.map(y => `<td>${formatCurrency(y[key] || 0)}</td>`).join('')}</tr>`;
                 // تدقيق 2026-07-08 (ملاحظة عالية #30): "المصاريف التشغيلية الثابتة" كانت تُعرض
@@ -870,6 +870,7 @@ export class ReportGenerator {
                         <h3 class="section-title"><span class="section-number">${num}</span>قائمة الدخل التقديرية (${isYears.length} سنوات)</h3>
                         <div class="section-content">
                             ${this.renderIncomeChart(isYears)}
+                            ${this.renderRevenueStreamsBreakdown(state.revenue?.streams)}
                             <table><thead><tr><th>البند</th>${isYears.map(y => `<th>السنة ${y.year}</th>`).join('')}</tr></thead><tbody>
                                 ${isRow('إجمالي الإيرادات', 'revenue')}
                                 ${isRow('(-) التكاليف المتغيرة', 'variableCosts')}
@@ -1035,6 +1036,38 @@ export class ReportGenerator {
         </div>`;
     }
 
+    /**
+     * تفصيل مصادر الإيراد (السنة الأولى) — إصلاح فجوة جودة بيانات: كانت قائمة الدخل
+     * تعرض إجمالي الإيرادات السنوي المجمّع فقط، بينما بيانات المستخدم الخام
+     * (state.revenue.streams) تتضمن تفصيلاً فعلياً لكل مصدر إيراد (عملاء شهرياً × متوسط
+     * السعر) لا يظهر في التقرير النهائي إطلاقاً. لا نعرض إلا سنة أولى — لأن المحرك يطبّق
+     * النمو على الإجمالي المجمّع لكل السنوات وليس لكل مصدر على حدة، فلا رقم متعدد السنوات
+     * لكل مصدر بمفرده يمكن اشتقاقه دون افتراض مصطنع.
+     */
+    static renderRevenueStreamsBreakdown(streams) {
+        const rows = (streams || []).filter(Boolean);
+        if (rows.length === 0) return '';
+        const streamRow = (s) => {
+            const label = s.name || s.service || 'مصدر إيراد';
+            const customers = Number(s.customersPerMonth) || 0;
+            const price = Number(s.avgPrice) || 0;
+            const yearOneRevenue = customers * 12 * price;
+            return `<tr>
+                <td>${escapeHtml(label)}</td>
+                <td>${customers}</td>
+                <td>${formatCurrency(price)}</td>
+                <td>${formatCurrency(yearOneRevenue)}</td>
+            </tr>`;
+        };
+        return `
+            <h4>تفصيل مصادر الإيراد (السنة الأولى)</h4>
+            <table>
+                <thead><tr><th>مصدر الإيراد</th><th>العملاء شهرياً</th><th>متوسط السعر</th><th>إيراد السنة الأولى</th></tr></thead>
+                <tbody>${rows.map(streamRow).join('')}</tbody>
+            </table>
+            <p style="font-size:9pt;color:#666;margin-top:4px;">الأرقام أعلاه لكل مصدر إيراد تمثّل السنة الأولى فقط، لأن النموذج المالي يطبّق معدل النمو السنوي على إجمالي الإيرادات المجمّع لا على كل مصدر منفرد — تفادياً لعرض رقم متعدد السنوات مفبرك لكل مصدر على حدة.</p>`;
+    }
+
     /** منحنى التدفق النقدي التراكمي — نقطة عبور الصفر = الاسترداد البصري. */
     static renderCumulativeCashChart(cashFlow) {
         const rows = (cashFlow || []).filter(c => c && typeof c.cumulative === 'number');
@@ -1064,7 +1097,7 @@ export class ReportGenerator {
 
     /** الميزانية العمومية التقديرية — جدول متعدد السنوات (الأصول = الخصوم + حقوق الملكية). */
     static renderBalanceSheets(sheets) {
-        const ys = (sheets || []).slice(0, 7);
+        const ys = sheets || [];
         if (ys.length === 0) return '';
         const row = (label, get, opts = {}) => `<tr class="${opts.highlight ? 'financial-highlight' : ''}"><td>${label}</td>${ys.map(b => `<td>${formatCurrency(get(b) || 0)}</td>`).join('')}</tr>`;
         return `
@@ -1125,8 +1158,11 @@ export class ReportGenerator {
     static renderCashFlow(cashFlow) {
         if (!cashFlow || cashFlow.length === 0) return '<p>لا توجد بيانات للتدفقات النقدية.</p>';
 
-        // Take first 5 years if more exist
-        const displayFlows = cashFlow.filter(c => c.year > 0).slice(0, 5);
+        // تدقيق 2026-07-09: كانت هذه الدالة تقتصر على أول 5 سنوات فقط كسقف تعسفي،
+        // بينما قائمة الدخل والميزانية أعلاه/أسفلها تعرضان كل سنوات الدراسة (حتى 7) —
+        // ما يجعل التدفقات النقدية لا تتطابق مع بقية التقرير لدى أي ممول أو مدقق.
+        // نعرض هنا كل السنوات (باستثناء السنة صفر — الاستثمار المبدئي قبل التشغيل، وهو استبعاد مقصود).
+        const displayFlows = cashFlow.filter(c => c.year > 0);
 
         return `
             <table>

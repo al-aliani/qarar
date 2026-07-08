@@ -260,13 +260,10 @@ export class ExcelExporter {
     }
 
     addRevenueSheet(workbook) {
-        const projection = this.results?.revenueProjection || [];
         const isList = this.results?.incomeStatement || [];
 
-        const years = Math.max(1, projection.length || isList.length);
-        const totals = projection.length
-            ? projection.map((p) => SAFE.num(p.total ?? p.revenue))
-            : (isList || []).map((s) => SAFE.num(s.revenue));
+        const years = Math.max(1, isList.length);
+        const totals = (isList || []).map((s) => SAFE.num(s.revenue));
         while (totals.length < years) totals.push(0);
 
         const data = [
@@ -275,13 +272,19 @@ export class ExcelExporter {
             ['الإيرادات', '', ...totals],
         ];
 
-        if (projection[0]?.streams?.length) {
-            projection[0].streams.forEach((stream, idx) => {
-                data.push([
-                    stream.name ?? '',
-                    '',
-                    ...projection.map((p) => SAFE.num(p.streams?.[idx]?.revenue)),
-                ]);
+        // ملاحظة: الكود السابق كان يعتمد على `this.results.revenueProjection`، وهو مفتاح
+        // لا يُنتجه calculateStudy() أبداً (تم التأكد تجريبياً)، ما جعل قسم تفصيل
+        // الإيرادات حسب كل مصدر ميتاً بالكامل ولا يُنفَّذ إطلاقاً في الإنتاج.
+        // البديل الصحيح هو قراءة بيانات الإدخال الخام لكل مصدر إيراد من `this.data.revenue.streams`
+        // (تماماً كما يفعل excel.js). نعرض هنا إيراد السنة الأولى فقط لكل مصدر لأن محرك
+        // التمويل لا يحسب توقعاً مستقلاً متعدد السنوات لكل مصدر على حدة — النمو يُطبَّق على
+        // إجمالي الإيرادات ككل وليس على كل مصدر منفرد، فتفادينا اختلاق أرقام سنوات لاحقة لكل مصدر.
+        const streams = this.data?.revenue?.streams || [];
+        if (streams.length) {
+            streams.forEach((stream, idx) => {
+                const label = stream.name || stream.service || `مصدر إيراد ${idx + 1}`;
+                const year1Revenue = (Number(stream.customersPerMonth) || 0) * 12 * (Number(stream.avgPrice) || 0);
+                data.push([label, '', SAFE.num(year1Revenue)]);
             });
         }
 

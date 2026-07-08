@@ -6,7 +6,7 @@ import { PDFGenerator } from '../../export/pdfGenerator.js';
 import { ReportGenerator } from '../services/ReportGenerator.js';
 import { BankReportGenerator } from '../../export/BankReportGenerator.js';
 import { MonshaatReportGenerator } from '../../export/MonshaatReportGenerator.js';
-import { sanitizeFilename, exportDateISO, downloadBlob } from '../../export/utils.js';
+import { sanitizeFilename, exportDateISO, downloadBlob, selectExcelExportPath } from '../../export/utils.js';
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { runQAChecks } from '../utils/qaChecks.js';
 import { toast } from '../utils/toast.js';
@@ -475,6 +475,19 @@ export class ExportMenu {
 
                 case 'excel': {
                     let excelName = null;
+                    // القالب المعياري مُقيَّد فيزيائياً (5 سنوات × 3 منتجات/خدمات كحد أقصى،
+                    // بمعادلات SUM/NPV/IRR ثابتة النطاق) — إن تجاوزته الدراسة نتحوّل مباشرة
+                    // للمصدِّر الديناميكي بدل محاولة القالب الذي سيقصّ البيانات صامتاً.
+                    const capacity = selectExcelExportPath(results, state);
+                    if (capacity.exceedsTemplateCapacity) {
+                        const { exportToExcel } = await import('../../export/excelExporter.js');
+                        const fn = state.projectInfo?.name || 'feasibility_study';
+                        excelName = await exportToExcel(state, results, fn);
+                        toast.success(excelName
+                            ? `تم تصدير Excel: ${excelName} — الدراسة تتجاوز سعة القالب المعياري (5 سنوات / 3 منتجات كحد أقصى)، لذا استُخدم تصدير موسَّع يعرض كل السنوات والمنتجات دون أي فقد بيانات.`
+                            : 'تم تصدير Excel بنجاح — تم استخدام تصدير موسَّع لأن الدراسة تتجاوز سعة القالب المعياري (5 سنوات / 3 منتجات كحد أقصى)، ولا يوجد فقد بيانات.');
+                        break;
+                    }
                     try {
                         const { exportExcel } = await import('../../export/excel.js');
                         if (results?.incomeStatement?.length) {

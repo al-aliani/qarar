@@ -17,7 +17,7 @@ import { calculateProjectScore } from '../js/core/scoring.js';
 import { formatPayback } from '../js/utils/formatters.js';
 
 /** أقسام تقرير Word (معرّفات قابلة للربط مع reportSectionOrder). */
-const WORD_SECTION_IDS = ['executive_summary', 'market', 'financial_kpis', 'recommendation'];
+const WORD_SECTION_IDS = ['executive_summary', 'market', 'revenue_breakdown', 'financial_kpis', 'recommendation'];
 
 /** الخط العربي الموحد للمستند — نفس هوية المنصة */
 const AR_FONT = 'IBM Plex Sans Arabic';
@@ -89,6 +89,24 @@ export class WordExporter {
                 return [
                     this.createHeading("حجم السوق"),
                     this.createMarketTable()
+                ];
+            }
+            case 'revenue_breakdown': {
+                const streams = this.state.revenue?.streams || [];
+                if (!streams.length) return []; // لا نطبع قسماً بلا مصادر إيراد
+                return [
+                    this.createHeading("تفصيل مصادر الإيراد (السنة الأولى)"),
+                    this.createRevenueStreamsTable(streams),
+                    new Paragraph({
+                        children: [new TextRun({
+                            text: "ملاحظة: الأرقام أعلاه لكل مصدر إيراد تخص السنة الأولى فقط، إذ يُطبِّق محرك الحسابات نمو الإيرادات على الإجمالي الكلي وليس على كل مصدر على حدة، وعليه لا تُعرض أرقام متعددة السنوات لكل مصدر تفادياً لأي تقدير غير محقَّق.",
+                            italics: true,
+                            size: 20
+                        })],
+                        alignment: AlignmentType.RIGHT,
+                        bidirectional: true,
+                        spacing: { after: 200 }
+                    })
                 ];
             }
             case 'financial_kpis':
@@ -217,6 +235,28 @@ export class WordExporter {
                 this.createTableRow(["السوق المستهدف", formatCurrency(market.sam?.value), "SAM"]),
                 this.createTableRow(["الحصة السوقية", formatCurrency(market.som?.value), "SOM"])
             ]
+        });
+    }
+
+    createRevenueStreamsTable(streams) {
+        const rows = [
+            this.createTableRow(['مصدر الإيراد', 'العملاء شهرياً', 'متوسط السعر', 'إيراد السنة الأولى'], true)
+        ];
+        streams.forEach(stream => {
+            const label = stream.name || stream.service || 'مصدر إيراد';
+            const customersPerMonth = Number(stream.customersPerMonth) || 0;
+            const avgPrice = Number(stream.avgPrice) || 0;
+            const year1Revenue = customersPerMonth * 12 * avgPrice;
+            rows.push(this.createTableRow([
+                label,
+                String(customersPerMonth),
+                formatCurrency(avgPrice),
+                formatCurrency(year1Revenue)
+            ], false));
+        });
+        return new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows
         });
     }
 

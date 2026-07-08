@@ -78,6 +78,24 @@ export function formatDscr(v) {
 }
 
 /**
+ * القالب المعياري (xlsx) الموزَّع فعلياً مُقيَّد فيزيائياً: صفحة تقدير_الإيرادات
+ * فيها 3 صفوف منتج/خدمة فقط (بمعادلة SUM ثابتة النطاق)، وكل صفحة (تقدير_الإيرادات/
+ * قائمة_الدخل/مؤشرات_التقييم) فيها 5 أعمدة سنوات فقط، مع معادلات NPV/IRR بنطاق
+ * ثابت مكتوب داخل الملف الثنائي نفسه. إدراج صفوف/أعمدة إضافية برمجياً لا يُمدِّد
+ * هذه المعادلات تلقائياً — لذا عند تجاوز الدراسة لهذه السعة يجب التحويل لمسار
+ * التصدير الديناميكي (excelExporter.js) بدل قصّ البيانات صامتاً في القالب الثابت.
+ * @param {{incomeStatement?: unknown[]}} [results]
+ * @param {{revenue?: {streams?: unknown[]}}} [state]
+ * @returns {{exceedsTemplateCapacity: boolean, yearsCount: number, streamsCount: number}}
+ */
+export function selectExcelExportPath(results, state) {
+    const yearsCount = results?.incomeStatement?.length || 0;
+    const streamsCount = (state?.revenue?.streams || []).length;
+    const exceedsTemplateCapacity = yearsCount > 5 || streamsCount > 3;
+    return { exceedsTemplateCapacity, yearsCount, streamsCount };
+}
+
+/**
  * @param {string} [s]
  * @returns {string} Safe filename (no path chars, spaces → underscores, متتالية الشرطات → شرطة واحدة)
  */
