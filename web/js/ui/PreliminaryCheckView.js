@@ -6,6 +6,7 @@
 
 import { stepIndexById } from '../core/wizardSteps.js';
 import { fieldHelp } from './components/FieldHelp.js';
+import { calculateIdeaScore } from '../core/calculateIdeaScore.js';
 
 // خيارات الأزرار الثلاثة — value معياري إنجليزي، label عربي معروض ومخزّن
 const TRI_CHOICES = [
@@ -187,9 +188,35 @@ export class PreliminaryCheckView {
         return { level: 'yellow', advices };
     }
 
+    /**
+     * تدقيق 2026-07-08 (ملاحظة حرجة، خبير الذكاء): calculateIdeaScore.js كان كود ميت
+     * 100% — الشريط الجانبي (Sidebar.js) هو المستهلك الوحيد له وهو مخفي بالكامل بقاعدة
+     * CSS شاملة. الآن يظهر هنا فعلياً — أول خطوة في الرحلة، حيث المنطق (فحص أولي سريع)
+     * منطقي فعلاً. نعرض الفرعية الثلاث منفصلة (لا رقماً واحداً مدموجاً) كي لا يُفهم
+     * «اكتمال التعبئة» على أنه «جودة الفكرة» (ملاحظة متوسطة منفصلة في نفس التدقيق).
+     */
+    _renderIdeaScoreChip() {
+        const state = this.store.getState();
+        const { score, color, breakdown } = calculateIdeaScore(state);
+        if (!score) return '';
+        const dot = { green: '🟢', yellow: '🟡', red: '🔴' }[color] || '⚪';
+        return `
+            <div class="card mb-3" style="padding:.75rem 1rem;">
+                <div class="flex-between" style="align-items:center;">
+                    <strong style="font-size:.92rem;">${dot} نتيجة الفكرة الأولية: ${score}/100</strong>
+                    ${fieldHelp('تقدير سريع من ثلاثة أجزاء: اكتمال تعبئة البيانات، الهامش الربحي المتوقع (إن حُسب)، وحجم السوق TAM المُدخل — ليست حكماً نهائياً على جودة المشروع.', '')}
+                </div>
+                <div class="d-flex gap-3 mt-2 text-xs text-muted">
+                    <span>اكتمال البيانات: ${breakdown.completeness}/40</span>
+                    <span>الهامش الربحي: ${breakdown.margin}/30</span>
+                    <span>حجم السوق (TAM): ${breakdown.tam}/30</span>
+                </div>
+            </div>`;
+    }
+
     _renderResultCard(pc) {
         const { level, advices } = this._computeResult(pc);
-        if (level === 'none') return '';
+        if (level === 'none') return this._renderIdeaScoreChip();
 
         const palette = {
             green: { bg: '#ecfdf5', border: '#10b981', icon: '🟢', title: 'مؤشرات أولية إيجابية' },
@@ -209,6 +236,7 @@ export class PreliminaryCheckView {
             : '';
 
         return `
+            ${this._renderIdeaScoreChip()}
             <div class="card" style="background:${palette.bg};border-inline-start:4px solid ${palette.border};">
                 <strong style="font-size:1rem;">${palette.icon} ${palette.title}</strong>
                 <p class="mb-0 mt-2" style="font-size:.92rem;">${body}</p>

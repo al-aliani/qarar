@@ -176,7 +176,302 @@ function createSaasFeasibilityPlatformStudy() {
     return data;
 }
 
+/**
+ * تدقيق 2026-07-08 (ملاحظة حرجة، مدير المنتج): لا يوجد أي قالب مطعم فعلي رغم أن
+ * دستور المنتج (القسم 10، MVP) يشترطه صراحة — القالب الوحيد المتاح كان SaaS لا مطعماً.
+ * الأرقام أدناه (إيجار/عمالة/تكلفة متغيرة) ضُبطت لتقع ضمن نطاقات sectorBenchmarks.js
+ * الفعلية لقطاع fnb (تكلفة متغيرة 28-45%، إيجار/مبيعات 8-15%، عمالة/مبيعات 20-32%)
+ * وتحقّقت فعلياً عبر calculateStudy الحقيقي (لا نتائج مصطنعة) — الثلاثة تصدر REVISE
+ * بسبب واحد فقط: حساسية السيناريو المتشائم (-20% إيراد و+15% تكلفة معاً) — تُركت
+ * كما هي عمداً بدل تجميلها، لتكون نقطة انطلاق صادقة لمكتب استشاري/مختص فعلي، لا
+ * دراسة "جاهزة للبيع" مموَّهة (نفس المبدأ الذي أفرغ TEMPLATES سابقاً).
+ */
+function createFastFoodStudy() {
+    const data = createEmptyStudy();
+    data[SECTIONS.PROJECT_INFO] = {
+        ...data[SECTIONS.PROJECT_INFO],
+        name: 'مطعم وجبات سريعة — مسودة مختص',
+        description: 'مطعم وجبات سريعة صغير (صالة محدودة + تيك أواي + توصيل) في حي سكني نشط.',
+        city: 'الرياض', district: 'النرجس',
+        concept: 'مطعم وجبات سريعة',
+        businessModel: 'Independent',
+        targetCapital: 817700, selfFundingAmount: 367700,
+        targetSegment: 'أسر وموظفون في الحي — وجبات سريعة بسعر متوسط',
+    };
+    data[SECTIONS.TECHNICAL] = {
+        ...data[SECTIONS.TECHNICAL],
+        establishmentCosts: [
+            { name: 'تراخيص وتأسيس', amount: 40000, amortizationRate: 0.20 },
+            { name: 'تصميم وهوية بصرية وواجهة', amount: 35000, amortizationRate: 0.20 },
+        ],
+        equipment: [
+            { name: 'معدات مطبخ (قلايات، شوايات، تبريد)', quantity: 1, price: 220000, depreciationRate: 0.15 },
+        ],
+        furniture: [
+            { name: 'طاولات وكراسي ومنطقة انتظار', quantity: 1, price: 70000, depreciationRate: 0.20 },
+        ],
+        capacityUtilization: [
+            { year: 1, rate: 0.60 }, { year: 2, rate: 0.80 }, { year: 3, rate: 0.90 },
+        ],
+        productionProcessDescription: 'استلام طلب (صالة/تطبيق) → تحضير سريع (2-6 دقائق) → تعبئة → تسليم/توصيل.'
+    };
+    data[SECTIONS.TECH_RESOURCES] = { techResources: [{ name: 'نظام نقاط بيع POS + ربط تطبيقات توصيل', quantity: 1, price: 15000, depreciationRate: 0.33 }] };
+    data[SECTIONS.HR] = {
+        ...data[SECTIONS.HR],
+        positions: [
+            { position: 'مدير فرع', count: 1, salary: 7500, months: 12, nationality: 'saudi' },
+            { position: 'طباخ', count: 2, salary: 3800, months: 12, nationality: 'expat' },
+            { position: 'كاشير/خدمة عملاء', count: 2, salary: 3200, months: 12, nationality: 'saudi' },
+            { position: 'عامل تحضير وتنظيف', count: 1, salary: 2800, months: 12, nationality: 'expat' },
+        ],
+    };
+    data[SECTIONS.ADMINISTRATIVE] = {
+        administrative: [
+            { name: 'إيجار المحل', monthly: 10000 },
+            { name: 'كهرباء وماء', monthly: 2500 },
+            { name: 'اتصالات وإنترنت', monthly: 300 },
+        ]
+    };
+    data[SECTIONS.LOGISTICS] = { logistics: [{ name: 'مواد تغليف ومستلزمات توصيل', monthly: 2000, variablePercent: 0.8 }] };
+    data[SECTIONS.MARKETING] = {
+        ...data[SECTIONS.MARKETING],
+        campaigns: [
+            { name: 'إطلاق افتتاحي', type: 'capital', amount: 25000, monthly: 0 },
+            { name: 'تسويق رقمي شهري', type: 'operating', amount: 0, monthly: 6000 },
+        ],
+    };
+    data[SECTIONS.REVENUE] = {
+        streams: [
+            { service: 'وجبات صالة وتيك أواي', type: 'operating', customersPerMonth: 3200, avgPrice: 34, variableCostRate: 0.31, growthRate: 0.05 },
+            { service: 'توصيل عبر التطبيقات', type: 'operating', customersPerMonth: 1850, avgPrice: 40, variableCostRate: 0.38, growthRate: 0.08 },
+        ]
+    };
+    data[SECTIONS.FINANCING] = {
+        ...data[SECTIONS.FINANCING],
+        totalInvestment: 817700, targetDSCR: 1.25,
+        sources: {
+            ...data[SECTIONS.FINANCING].sources,
+            equity: { amount: 367700, percentage: 45.0 },
+            bankLoan: { amount: 450000, percentage: 54.9, interestRate: 0.07, termYears: 5, gracePeriodMonths: 3, repaymentType: 'equal' },
+        },
+    };
+    data[SECTIONS.ASSUMPTIONS] = { ...data[SECTIONS.ASSUMPTIONS], discountRate: 0.12, inflationRate: 0.02, projectionYears: 5 };
+    data[SECTIONS.LEGAL] = {
+        ...data[SECTIONS.LEGAL],
+        licenses: [
+            { name: 'سجل تجاري', quantity: 1, price: 1200 },
+            { name: 'رخصة بلدية', quantity: 1, price: 3000 },
+            { name: 'شهادة الدفاع المدني', quantity: 1, price: 1500 },
+            { name: 'رخصة هيئة الغذاء والدواء', quantity: 1, price: 2000 },
+        ]
+    };
+    return data;
+}
+
+function createCasualDiningStudy() {
+    const data = createEmptyStudy();
+    data[SECTIONS.PROJECT_INFO] = {
+        ...data[SECTIONS.PROJECT_INFO],
+        name: 'مطعم كاجوال دايننج — مسودة مختص',
+        description: 'مطعم صالة كاملة (غداء وعشاء) بخدمة نُدُل، لمنطقة سكنية/تجارية راقية نسبياً.',
+        city: 'جدة', district: 'الشاطئ',
+        concept: 'مطعم كاجوال دايننج',
+        businessModel: 'Independent',
+        targetCapital: 2265000, selfFundingAmount: 1000000,
+        targetSegment: 'أسر وموظفون يبحثون عن تجربة صالة متوسطة إلى راقية',
+    };
+    data[SECTIONS.TECHNICAL] = {
+        ...data[SECTIONS.TECHNICAL],
+        establishmentCosts: [
+            { name: 'تراخيص وتأسيس', amount: 60000, amortizationRate: 0.20 },
+            { name: 'تصميم داخلي وديكور وهوية', amount: 180000, amortizationRate: 0.20 },
+        ],
+        equipment: [
+            { name: 'معدات مطبخ احترافية (خطوط طهي، تبريد، تهوية)', quantity: 1, price: 520000, depreciationRate: 0.12 },
+        ],
+        furniture: [
+            { name: 'أثاث صالة (طاولات، كراسي، إضاءة، ديكور)', quantity: 1, price: 380000, depreciationRate: 0.15 },
+        ],
+        capacityUtilization: [
+            { year: 1, rate: 0.55 }, { year: 2, rate: 0.75 }, { year: 3, rate: 0.88 },
+        ],
+        productionProcessDescription: 'استقبال/حجز → طلب على الطاولة → تحضير في المطبخ → تقديم عبر النادل → محاسبة.'
+    };
+    data[SECTIONS.TECH_RESOURCES] = { techResources: [{ name: 'نظام نقاط بيع + حجوزات + إدارة مطبخ', quantity: 1, price: 35000, depreciationRate: 0.25 }] };
+    data[SECTIONS.HR] = {
+        ...data[SECTIONS.HR],
+        positions: [
+            { position: 'مدير مطعم', count: 1, salary: 12000, months: 12, nationality: 'saudi' },
+            { position: 'رئيس طهاة (Head Chef)', count: 1, salary: 14000, months: 12, nationality: 'expat' },
+            { position: 'طباخ', count: 3, salary: 4200, months: 12, nationality: 'expat' },
+            { position: 'نادل/خدمة صالة', count: 5, salary: 3400, months: 12, nationality: 'saudi' },
+            { position: 'مضيف/كاشير', count: 2, salary: 3200, months: 12, nationality: 'saudi' },
+            { position: 'عامل تنظيف وغسيل أواني', count: 2, salary: 2700, months: 12, nationality: 'expat' },
+        ],
+    };
+    data[SECTIONS.ADMINISTRATIVE] = {
+        administrative: [
+            { name: 'إيجار المحل', monthly: 25000 },
+            { name: 'كهرباء وماء وغاز', monthly: 7000 },
+            { name: 'اتصالات وإنترنت وأنظمة', monthly: 800 },
+        ]
+    };
+    data[SECTIONS.LOGISTICS] = { logistics: [{ name: 'توريد مواد غذائية وتخزين', monthly: 3000, variablePercent: 0.7 }] };
+    data[SECTIONS.MARKETING] = {
+        ...data[SECTIONS.MARKETING],
+        campaigns: [
+            { name: 'إطلاق افتتاحي وتصوير احترافي', type: 'capital', amount: 60000, monthly: 0 },
+            { name: 'تسويق رقمي وشراكات مؤثرين', type: 'operating', amount: 0, monthly: 15000 },
+        ],
+    };
+    data[SECTIONS.REVENUE] = {
+        streams: [
+            { service: 'صالة (غداء وعشاء)', type: 'operating', customersPerMonth: 3800, avgPrice: 95, variableCostRate: 0.32, growthRate: 0.05 },
+            { service: 'توصيل وطلبات خارجية', type: 'operating', customersPerMonth: 900, avgPrice: 110, variableCostRate: 0.40, growthRate: 0.10 },
+        ]
+    };
+    data[SECTIONS.FINANCING] = {
+        ...data[SECTIONS.FINANCING],
+        // تدقيق 2026-07-08 (وجده التحقق العدائي): totalInvestment المُعلَن هنا كان
+        // يفارق results.capex.total الفعلي (الذي يشمل رأس المال العامل) بنسبة 6.8% —
+        // نفس نمط "أرقام استثمار متضاربة" الذي حاربته تقارير سابقة. الرقم الآن مطابق
+        // لما يحسبه المحرك فعلياً (تحقّق عبر calculateStudy مباشرة، لا تقدير يدوي).
+        totalInvestment: 2265000, targetDSCR: 1.25,
+        sources: {
+            ...data[SECTIONS.FINANCING].sources,
+            equity: { amount: 1000000, percentage: 44.1 },
+            bankLoan: { amount: 1265000, percentage: 55.9, interestRate: 0.075, termYears: 7, gracePeriodMonths: 6, repaymentType: 'equal' },
+        },
+    };
+    data[SECTIONS.ASSUMPTIONS] = { ...data[SECTIONS.ASSUMPTIONS], discountRate: 0.13, inflationRate: 0.02, projectionYears: 5 };
+    data[SECTIONS.LEGAL] = {
+        ...data[SECTIONS.LEGAL],
+        licenses: [
+            { name: 'سجل تجاري', quantity: 1, price: 1200 },
+            { name: 'رخصة بلدية (مطعم صالة)', quantity: 1, price: 5000 },
+            { name: 'شهادة الدفاع المدني', quantity: 1, price: 2500 },
+            { name: 'رخصة هيئة الغذاء والدواء', quantity: 1, price: 2000 },
+        ]
+    };
+    return data;
+}
+
+function createCloudKitchenStudy() {
+    const data = createEmptyStudy();
+    data[SECTIONS.PROJECT_INFO] = {
+        ...data[SECTIONS.PROJECT_INFO],
+        name: 'مطبخ سحابي (علامتان للتوصيل) — مسودة مختص',
+        description: 'وحدة إنتاج بلا صالة عملاء، تشغّل علامتين تجاريتين للتوصيل عبر تطبيقات الطلب فقط.',
+        city: 'الدمام', district: 'الصناعية الثانية',
+        concept: 'مطبخ سحابي',
+        businessModel: 'Independent',
+        targetCapital: 737000, selfFundingAmount: 412000,
+        targetSegment: 'عملاء تطبيقات التوصيل (لا صالة) في نطاق 3-5 كم',
+    };
+    data[SECTIONS.TECHNICAL] = {
+        ...data[SECTIONS.TECHNICAL],
+        establishmentCosts: [
+            { name: 'تراخيص وتأسيس', amount: 25000, amortizationRate: 0.20 },
+            { name: 'هوية بصرية وتصوير المنتج للتطبيقات', amount: 20000, amortizationRate: 0.20 },
+        ],
+        equipment: [
+            { name: 'معدات مطبخ إنتاج مضغوط (بلا صالة)', quantity: 1, price: 165000, depreciationRate: 0.15 },
+        ],
+        furniture: [
+            { name: 'أرفف تخزين وتجهيز خلفي', quantity: 1, price: 20000, depreciationRate: 0.20 },
+        ],
+        capacityUtilization: [
+            { year: 1, rate: 0.65 }, { year: 2, rate: 0.85 }, { year: 3, rate: 0.95 },
+        ],
+        productionProcessDescription: 'استلام طلب من تطبيق → تحضير → تعبئة توصيل مخصصة → تسليم لمندوب التطبيق.'
+    };
+    data[SECTIONS.TECH_RESOURCES] = { techResources: [{ name: 'أنظمة إدارة طلبات متعددة المنصات', quantity: 1, price: 18000, depreciationRate: 0.33 }] };
+    data[SECTIONS.HR] = {
+        ...data[SECTIONS.HR],
+        positions: [
+            { position: 'مشرف مطبخ', count: 1, salary: 6500, months: 12, nationality: 'saudi' },
+            { position: 'طباخ', count: 3, salary: 3600, months: 12, nationality: 'expat' },
+            { position: 'مسؤول تعبئة وتغليف طلبات', count: 2, salary: 2800, months: 12, nationality: 'expat' },
+        ],
+    };
+    data[SECTIONS.ADMINISTRATIVE] = {
+        administrative: [
+            { name: 'إيجار وحدة إنتاج (بلا صالة عملاء)', monthly: 8000 },
+            { name: 'كهرباء وماء', monthly: 3000 },
+            { name: 'اتصالات وإنترنت', monthly: 400 },
+        ]
+    };
+    data[SECTIONS.LOGISTICS] = { logistics: [{ name: 'تغليف مخصص للتوصيل', monthly: 4000, variablePercent: 0.9 }] };
+    data[SECTIONS.MARKETING] = {
+        ...data[SECTIONS.MARKETING],
+        campaigns: [
+            { name: 'إطلاق العلامتين على التطبيقات', type: 'capital', amount: 15000, monthly: 0 },
+            { name: 'إعلانات داخل تطبيقات التوصيل', type: 'operating', amount: 0, monthly: 8000 },
+        ],
+    };
+    // مطبخ سحابي: 100% توصيل — عمولة التطبيقات (~25-30%) مضمّنة ضمن variableCostRate
+    data[SECTIONS.REVENUE] = {
+        streams: [
+            { service: 'علامة 1 — توصيل عبر التطبيقات', type: 'operating', customersPerMonth: 2600, avgPrice: 46, variableCostRate: 0.42, growthRate: 0.10 },
+            { service: 'علامة 2 — توصيل عبر التطبيقات', type: 'operating', customersPerMonth: 1700, avgPrice: 43, variableCostRate: 0.42, growthRate: 0.10 },
+        ]
+    };
+    data[SECTIONS.FINANCING] = {
+        ...data[SECTIONS.FINANCING],
+        totalInvestment: 737000, targetDSCR: 1.25,
+        sources: {
+            ...data[SECTIONS.FINANCING].sources,
+            equity: { amount: 412000, percentage: 55.9 },
+            bankLoan: { amount: 325000, percentage: 44.1, interestRate: 0.07, termYears: 6, gracePeriodMonths: 6, repaymentType: 'equal' },
+        },
+    };
+    data[SECTIONS.ASSUMPTIONS] = { ...data[SECTIONS.ASSUMPTIONS], discountRate: 0.12, inflationRate: 0.02, projectionYears: 5 };
+    data[SECTIONS.LEGAL] = {
+        ...data[SECTIONS.LEGAL],
+        licenses: [
+            { name: 'سجل تجاري', quantity: 1, price: 1200 },
+            { name: 'رخصة بلدية (مطبخ إنتاجي)', quantity: 1, price: 3000 },
+            { name: 'شهادة الدفاع المدني', quantity: 1, price: 1500 },
+            { name: 'رخصة هيئة الغذاء والدواء', quantity: 1, price: 2000 },
+        ]
+    };
+    return data;
+}
+
 export const EXPERT_TEMPLATE_PRESETS = [
+    {
+        id: 'restaurant_fast_food',
+        title: 'مسودة مختص: مطعم وجبات سريعة',
+        specialty: 'مطاعم الوجبات السريعة (صالة محدودة + تيك أواي + توصيل)',
+        expertName: 'مسودة إعداد للمختص',
+        yearsExperience: 0,
+        priceLabel: 'يُحدد بعد مراجعة المختص',
+        scope: 'مطعم وجبات سريعة صغير بصالة محدودة، اعتماد رئيسي على تيك أواي والتوصيل. الأرقام ضمن نطاقات القطاع القياسية لكن هامش الأمان تحت السيناريو المتشائم يحتاج مراجعة قبل عرضها على ممول.',
+        reviewNotes: 'مسودة قابلة للاستخدام كنقطة انطلاق فقط — القرار الأساسي إيجابي لكنه REVISE تحت السيناريو المتشائم (-20% إيراد و+15% تكلفة معاً). راجع هامش الأمان (سعر البيع، تكلفة الطعام، أو رأس المال العامل) قبل اعتماده كدراسة نهائية.',
+        buildData: createFastFoodStudy
+    },
+    {
+        id: 'restaurant_casual_dining',
+        title: 'مسودة مختص: مطعم كاجوال دايننج',
+        specialty: 'مطاعم الصالة الكاملة (كاجوال دايننج)',
+        expertName: 'مسودة إعداد للمختص',
+        yearsExperience: 0,
+        priceLabel: 'يُحدد بعد مراجعة المختص',
+        scope: 'مطعم صالة كاملة بخدمة نُدُل، استثمار وتشغيل أكبر من الوجبات السريعة. نفس ملاحظة هامش الأمان تحت السيناريو المتشائم تنطبق هنا أيضاً.',
+        reviewNotes: 'مسودة قابلة للاستخدام كنقطة انطلاق فقط — القرار الأساسي إيجابي وقوي (EBITDA صحي) لكنه REVISE تحت السيناريو المتشائم. راجع هامش الأمان قبل اعتماده كدراسة نهائية.',
+        buildData: createCasualDiningStudy
+    },
+    {
+        id: 'restaurant_cloud_kitchen',
+        title: 'مسودة مختص: مطبخ سحابي (توصيل فقط)',
+        specialty: 'مطابخ سحابية / علامات توصيل بلا صالة عملاء',
+        expertName: 'مسودة إعداد للمختص',
+        yearsExperience: 0,
+        priceLabel: 'يُحدد بعد مراجعة المختص',
+        scope: 'وحدة إنتاج بلا صالة، تشغّل أكثر من علامة تجارية للتوصيل فقط. استثمار أقل من الصالة الكاملة، لكن الاعتماد الكامل على عمولات تطبيقات التوصيل يرفع نسبة التكلفة المتغيرة.',
+        reviewNotes: 'مسودة قابلة للاستخدام كنقطة انطلاق فقط — القرار الأساسي إيجابي لكنه REVISE تحت السيناريو المتشائم. راجع عمولات التطبيقات المفترضة وهامش الأمان قبل اعتماده كدراسة نهائية.',
+        buildData: createCloudKitchenStudy
+    },
     {
         id: 'saas_feasibility_platform',
         title: 'مسودة مختص: منصة SaaS / موقع دراسة جدوى',
@@ -184,7 +479,7 @@ export const EXPERT_TEMPLATE_PRESETS = [
         expertName: 'مسودة إعداد للمختص',
         yearsExperience: 0,
         priceLabel: 'يُحدد بعد مراجعة المختص',
-        scope: 'هيكل مبدئي لمنصة SaaS تبيع اشتراكات وقوالب مختصين ومراجعات استشارية. يحتاج مراجعة أسعار واكتساب عملاء قبل اعتماده.',
+        scope: 'هيكل مبدئي لمنصة SaaS تبيع اشتراكات وقوالب مختصين ومراجعات استشارية. يحتاج مراجعة أسعار واكتساب عملاء قبل اعتماده. (قطاع مساند خارج المطاعم — انظر قرار توسيع النطاق في PRODUCT_CONSTITUTION.md.)',
         reviewNotes: 'هذه ليست دراسة جاهزة للبيع؛ استخدمها كبداية ثم احفظها كقالب مختص بعد مراجعة خبير فعلي.',
         buildData: createSaasFeasibilityPlatformStudy
     }

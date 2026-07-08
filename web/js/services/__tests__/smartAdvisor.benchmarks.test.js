@@ -67,6 +67,23 @@ describe('توحيد بنشمارك SmartAdvisor على sectorBenchmarks', () =>
         expect(cogsInsight(SmartAdvisor.analyze(results, inputs))).toBeUndefined();
     });
 
+    it('تدقيق 2026-07-08: نطاقات SmartAdvisor تُفصح صراحة عن طبيعتها التقديرية (لا رقم رسمي)', () => {
+        const res = SmartAdvisor.analyze(
+            buildResults({ revenue: 1_000_000, variableCosts: 550_000, netIncome: 50_000 }),
+            buildInputs('مطعم')
+        );
+        const c = cogsInsight(res);
+        expect(c.message).toMatch(/تقديري/);
+    });
+
+    it('تدقيق 2026-07-08: تحذيرات بوابة الجودة القطاعية تُفصح أيضاً عن طبيعتها التقديرية', () => {
+        const inputs = buildInputs('مطعم');
+        const results = { incomeStatement: [{ revenue: 1_000_000, variableCosts: 550_000 }], opex: { rentAdminAnnual: 0, payrollAnnual: 0 } };
+        const warnings = checkDriversAgainstBenchmarks(inputs, results).filter(w => w.code.startsWith('BENCH_VC_RATE'));
+        expect(warnings.length).toBeGreaterThan(0);
+        expect(warnings[0].message).toMatch(/تقديري/);
+    });
+
     it('قطاع غير معروف يسقط إلى المعيار العام دون انهيار', () => {
         const bench = resolveSectorBenchmark({ projectInfo: { sector: 'قطاع غريب لا يطابق' } });
         expect(bench.isGeneric).toBe(true);

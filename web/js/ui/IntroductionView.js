@@ -13,9 +13,13 @@ const PRODUCT_TYPES = [
     { value: 'semi', label: 'نصف مصنع' },
     { value: 'final', label: 'نهائي' }
 ];
+// تدقيق 2026-07-08 (ملاحظة حرجة، منهجية IFC/UNIDO): كانت القيمة هنا 'supportive'
+// بينما TABLE_SCHEMAS.introServices.columns (schema.js — المصدر الفعلي لجدول خطوة
+// "تحليل الخدمات المفصل") يستخدم 'supporting' — فلا يُحدَّد أي خيار عند فتح نفس
+// الخدمة من الخطوة الأخرى. القيمة الآن مطابقة لمصدر الحقيقة الوحيد (schema.js).
 const SERVICE_TYPES = [
     { value: 'essential', label: 'أساسية' },
-    { value: 'supportive', label: 'داعمة' },
+    { value: 'supporting', label: 'داعمة' },
     { value: 'secondary', label: 'ثانوية' }
 ];
 
@@ -476,10 +480,10 @@ export class IntroductionView {
                     <textarea class="input input--sm product-desc" rows="2" placeholder="وصف المنتج">${esc(p.description)}</textarea>
                 </div>
                 <div class="form-group">
-                    <input type="text" class="input product-unique" placeholder="الخصائص الفريدة" value="${esc(p.uniqueCharacteristics)}">
+                    <input type="text" class="input product-unique" placeholder="الخصائص الفريدة" value="${esc(p.uniqueFeatures)}">
                 </div>
                 <div class="form-group">
-                    <input type="text" class="input product-value" placeholder="القيمة المضافة" value="${esc(p.addedValue)}">
+                    <input type="text" class="input product-value" placeholder="القيمة المضافة" value="${esc(p.valueAdded)}">
                 </div>
                 <div class="form-group">
                     <input type="text" class="input product-benefit" placeholder="فائدة للعميل" value="${esc(p.customerBenefit)}">
@@ -489,7 +493,7 @@ export class IntroductionView {
     }
 
     renderServiceRow(s, i, esc) {
-        const typeVal = s.type || 'supportive';
+        const typeVal = s.type || 'supporting';
         return `
             <div class="service-card" data-idx="${i}">
                 <div class="flex-between mb-2">
@@ -732,8 +736,8 @@ export class IntroductionView {
             type: card.querySelector('.product-type')?.value || 'final',
             name: card.querySelector('.product-name')?.value || '',
             description: card.querySelector('.product-desc')?.value || '',
-            uniqueCharacteristics: card.querySelector('.product-unique')?.value || '',
-            addedValue: card.querySelector('.product-value')?.value || '',
+            uniqueFeatures: card.querySelector('.product-unique')?.value || '',
+            valueAdded: card.querySelector('.product-value')?.value || '',
             customerBenefit: card.querySelector('.product-benefit')?.value || ''
         }));
     }
@@ -742,7 +746,7 @@ export class IntroductionView {
         const cards = this.container.querySelectorAll('.service-card');
         return Array.from(cards).map(card => ({
             name: card.querySelector('.service-name')?.value || '',
-            type: card.querySelector('.service-type')?.value || 'supportive',
+            type: card.querySelector('.service-type')?.value || 'supporting',
             description: card.querySelector('.service-desc')?.value || ''
         }));
     }
@@ -818,14 +822,14 @@ export class IntroductionView {
 
     addProduct() {
         const pi = { ...this.store.getState().projectInfo };
-        pi.products = [...(pi.products || []), { type: 'final', name: '', description: '', uniqueCharacteristics: '', addedValue: '', customerBenefit: '' }];
+        pi.products = [...(pi.products || []), { type: 'final', name: '', description: '', uniqueFeatures: '', valueAdded: '', customerBenefit: '' }];
         this.store.update('projectInfo', pi);
         this.render(this.stepIndex);
     }
 
     addService() {
         const pi = { ...this.store.getState().projectInfo };
-        pi.introServices = [...(pi.introServices || []), { name: '', type: 'supportive', description: '' }];
+        pi.introServices = [...(pi.introServices || []), { name: '', type: 'supporting', description: '' }];
         this.store.update('projectInfo', pi);
         this.render(this.stepIndex);
     }

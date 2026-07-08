@@ -46,7 +46,10 @@ export class InvestorDashboard {
             solution: project.startupHypothesis?.solution,
             insight: project.startupHypothesis?.insight,
             market: state.marketSizing || {},
-            team: state.keyPeople || [],
+            // تدقيق 2026-07-08 (ملاحظة حرجة محتوى): state.keyPeople كائن {keyPeople:[],
+            // partnershipContracts:[]} حسب schema.js، لا مصفوفة مباشرة — كان يُفرغ قسم
+            // الفريق دائماً في عرض المستثمر (Array.isArray عليه = false دوماً).
+            team: state.keyPeople?.keyPeople || [],
             financing: state.financing || {},
             indicators: financialResults.indicators || {}
         });
@@ -304,8 +307,8 @@ export function buildPitchPayload(state, results) {
         solution: project.startupHypothesis?.solution || '',
         insight: project.startupHypothesis?.insight || '',
         market: state.marketSizing || {},
-        team: Array.isArray(state.keyPeople)
-            ? state.keyPeople.slice(0, 6).map(p => ({ name: p?.name || '', role: p?.role || '' }))
+        team: Array.isArray(state.keyPeople?.keyPeople)
+            ? state.keyPeople.keyPeople.slice(0, 6).map(p => ({ name: p?.name || '', role: p?.role || '' }))
             : [],
         financing: {
             totalInvestment: financing.totalInvestment || 0,

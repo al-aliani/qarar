@@ -32,16 +32,20 @@ const SMART_FILL_HANDLERS = {
             isVariable: (s.position || '').includes('عامل')
         }));
     },
+    // تدقيق 2026-07-08 (ملاحظة حرجة، خبير السوق): كان هذا الزر (المربوط فعلياً في
+    // الواجهة) يستدعي DataService.getComplianceCosts — عام تماماً، يفوّت رخصة هيئة
+    // الغذاء والدواء (SFDA) الإلزامية للمطاعم رغم أن المنتج مخصص لها. المولّد الأفضل
+    // (InternalAIGenerator.generateLicenses) واعٍ بالقطاع ويضيف SFDA للمطاعم/الصحي
+    // لكنه كان مربوطاً فقط بزر "اقتراح بنود" منفصل بأسعار مختلفة لنفس البنود — الآن
+    // مصدر واحد للتراخيص في كلا الزرين.
     licenses: (state) => {
-        const city = state.projectInfo?.city || state.projectInfo?.location || 'الرياض';
-        const type = state.projectInfo?.concept || state.projectInfo?.activity || 'cafe';
-        const size = state.projectInfo?.areaSize || state.technical?.area || 100;
-        const list = DataService.getComplianceCosts(city, type, size);
+        const list = InternalAIGenerator.generateLicenses(state);
         return list.map(l => ({
             id: Date.now() + Math.random(),
             name: l.name,
-            quantity: 1,
-            price: l.cost || 0
+            quantity: l.quantity || 1,
+            price: l.price || 0,
+            notes: l.notes || ''
         }));
     }
 };
@@ -179,6 +183,10 @@ export class Wizard {
         // ⚠️ FIX: Always get fresh data from store to ensure latest changes are reflected
         // Force a small delay to ensure any pending saves are completed
         // بعض الخطوات معرّفها فريد للتنقل لكن بياناتها في قسم آخر (projectDetails → projectInfo)
+        // تدقيق 2026-07-08 (ملاحظة حرجة UX): خطوة تستعير قسم بيانات خطوة أخرى (dataSection)
+        // إنما لعرض جداولها الخاصة (products/introServices هنا) — لا لإعادة عرض ~49 حقلاً
+        // العامة لتلك الخطوة الأخرى مجدداً. isDataSectionBorrower يمنع ذلك أدناه.
+        const isDataSectionBorrower = !!metadata.dataSection;
         stepId = metadata.dataSection || stepId;
         const studyData = this.store.get();
         // Ensure state is initialized
@@ -221,8 +229,9 @@ export class Wizard {
             tablesToRender = tablesToRender.filter(t => !['glossary', 'dataGatheringChecklist'].includes(t));
         }
 
-        // Render regular fields first (if section is object, not array)
-        if (!isArraySection && sectionData && typeof sectionData === 'object') {
+        // Render regular fields first (if section is object, not array) — لا لخطوة تستعير
+        // قسم بيانات خطوة أخرى فقط لعرض جداولها (isDataSectionBorrower).
+        if (!isDataSectionBorrower && !isArraySection && sectionData && typeof sectionData === 'object') {
             const renderEntry = ([key, val]) => {
                 // Skip array fields and complex objects - they'll be rendered as tables
                 if (Array.isArray(val)) return '';

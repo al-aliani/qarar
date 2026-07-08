@@ -34,6 +34,38 @@ describe('LivePanel — عتبات موحّدة (لا 5%/5-سنوات ثابتة
         expect(el.classList.contains('text-gold')).toBe(false);
     });
 
+    it('IRR فوق العتبة الفعلية (18%) يُصنَّف text-gold فعلياً', () => {
+        const panel = new LivePanel(fakeStore({}));
+        panel.lastResults = {
+            indicators: { irr: 0.18, npv: 100000, paybackPeriod: 2 },
+            decision: 'GO',
+            assumptionsApplied: { thresholds: { minIRR: 0.15, maxPayback: 3.5 } }
+        };
+        panel.updateIRR();
+        expect(document.getElementById('liveIRR').classList.contains('text-gold')).toBe(true);
+        expect(document.getElementById('headerKpiIrr').classList.contains('text-gold')).toBe(true);
+    });
+
+    it('IRR سالب يُصنَّف text-danger لا text-gold', () => {
+        const panel = new LivePanel(fakeStore({}));
+        panel.lastResults = {
+            indicators: { irr: -0.05, npv: -50000, paybackPeriod: null },
+            decision: 'NO-GO',
+            assumptionsApplied: { thresholds: { minIRR: 0.15, maxPayback: 3.5 } }
+        };
+        panel.updateIRR();
+        const el = document.getElementById('liveIRR');
+        expect(el.classList.contains('text-danger')).toBe(true);
+        expect(el.classList.contains('text-gold')).toBe(false);
+    });
+
+    it('لا نتائج بعد (lastResults=null): لا يرمي خطأً ولا يغيّر المحتوى', () => {
+        const panel = new LivePanel(fakeStore({}));
+        panel.lastResults = null;
+        expect(() => panel.updateIRR()).not.toThrow();
+        expect(() => panel.updateQAStatus()).not.toThrow();
+    });
+
     it('بند فحص الجودة IRR/استرداد يعكس نفس عتبتي القرار الفعليتين لا ثوابت 5%/5 سنوات', () => {
         const panel = new LivePanel(fakeStore({}));
         panel.lastResults = {

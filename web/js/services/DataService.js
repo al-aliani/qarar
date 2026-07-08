@@ -231,19 +231,4 @@ export class DataService {
 
         return staffing;
     }
-
-    /**
-     * Get estimated compliance costs
-     * @param {string} city 
-     * @param {string} type 
-     * @param {number} size 
-     */
-    static getComplianceCosts(city, type, size) {
-        return [
-            { name: 'إصدار السجل التجاري', cost: 500 },
-            { name: 'رخصة البلدية', cost: 2000 + (size * 5) }, // basic formula
-            { name: 'تصريح الدفاع المدني', cost: 1500 },
-            { name: 'اشتراك الغرفة التجارية', cost: 2000 }
-        ];
-    }
 }

@@ -126,6 +126,20 @@ export async function runQAChecks(state, results) {
                         message: 'التراخيص والرسوم غير موثقة — أضف السجل التجاري، رخصة البلدية، الدفاع المدني، وأي اشتراطات غذائية/تشغيلية حسب النشاط.',
                         path: 'legal.licenses'
                     });
+                } else {
+                    // تدقيق 2026-07-08 (ملاحظة حرجة، خبير السوق): وجود أي تراخيص لا يعني
+                    // اكتمالها — مشروع مطعم بلا رخصة هيئة الغذاء والدواء (SFDA) يمر هذا
+                    // الفحص سابقاً لمجرد طول المصفوفة > 0. تحقق مخصص لقطاع الأغذية.
+                    const sectorText = String(state?.projectInfo?.concept || state?.projectInfo?.sector || '').trim();
+                    const isFandB = /مطعم|كافي|قهوة|وجبات|فود|طعام|مأكولات|مشروبات/i.test(sectorText);
+                    const hasSfda = licenses.some(l => /الغذاء والدواء|SFDA/i.test(String(l?.name || '')));
+                    if (isFandB && !hasSfda) {
+                        qaResults.softWarnings.push({
+                            code: 'SFDA_LICENSE_MISSING',
+                            message: 'مشروع أغذية/مشروبات بلا رخصة هيئة الغذاء والدواء (SFDA) في قائمة التراخيص — إلزامية لمنشآت الأغذية في السعودية.',
+                            path: 'legal.licenses'
+                        });
+                    }
                 }
 
                 const appendices = state?.appendices || {};

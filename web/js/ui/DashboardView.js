@@ -142,8 +142,13 @@ export class DashboardView {
 
         const hasProjects = filtered.length > 0;
         const userEmail = this.currentUser ? this.currentUser.email : null;
-        const lastStepIndex = Number(localStorage.getItem('feas_last_step_index'));
-        const lastStep = Number.isInteger(lastStepIndex) && STEPS[lastStepIndex] ? STEPS[lastStepIndex] : null;
+        // تدقيق 2026-07-08 (ملاحظة حرجة UX+معماري): Number(null) يساوي 0 في جافاسكربت —
+        // فكان الزر يظهر لأي زائر جديد بلا أي مشروع محفوظ لأن Number.isInteger(0) صحيح
+        // وSTEPS[0] موجود دائماً. الآن: نتحقق من وجود المفتاح فعلياً، ونتطلّب مشروعاً
+        // محفوظاً حقيقياً (نفس عدّاد «دراساتك» المعروض) — لا معنى لـ«تابع» بلا شيء لمتابعته.
+        const rawLastStepIndex = localStorage.getItem('feas_last_step_index');
+        const lastStepIndex = rawLastStepIndex !== null ? Number(rawLastStepIndex) : NaN;
+        const lastStep = hasProjects && Number.isInteger(lastStepIndex) && STEPS[lastStepIndex] ? STEPS[lastStepIndex] : null;
 
         const folderOptions = [
             '<option value="">جميع المشاريع</option>',

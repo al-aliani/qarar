@@ -165,16 +165,20 @@ export function checkDriversAgainstBenchmarks(state, results) {
     drivers.forEach(d => {
         if (!Number.isFinite(d.actual) || d.actual <= 0) return;
         const [lo, hi] = d.range;
+        // تدقيق 2026-07-08 (ملاحظة حرجة، خبير السوق): نطاقات sectorBenchmarks.js تقديرية
+        // (ASSUMPTION) بلا مصدر خارجي موثّق — كانت تُعرض للمستخدم كأنها معيار رسمي قاطع.
+        // الآن كل رسالة تفصح صراحة عن طبيعتها التقديرية.
+        const provenanceNote = ' (نطاق تقديري داخلي — ليس رقماً رسمياً منشوراً، راجعه بحذر).';
         if (d.actual < lo) {
             warnings.push({
                 code: `BENCH_${d.code}_LOW`,
-                message: `${d.label} = ${pct(d.actual)} — أدنى من نطاق قطاع «${bench.label}» (${rangeText(d.range)}). ${d.lowHint}.`,
+                message: `${d.label} = ${pct(d.actual)} — أدنى من نطاق قطاع «${bench.label}» (${rangeText(d.range)}). ${d.lowHint}.${provenanceNote}`,
                 path: 'drivers'
             });
         } else if (d.actual > hi) {
             warnings.push({
                 code: `BENCH_${d.code}_HIGH`,
-                message: `${d.label} = ${pct(d.actual)} — أعلى من نطاق قطاع «${bench.label}» (${rangeText(d.range)}). ${d.highHint}.`,
+                message: `${d.label} = ${pct(d.actual)} — أعلى من نطاق قطاع «${bench.label}» (${rangeText(d.range)}). ${d.highHint}.${provenanceNote}`,
                 path: 'drivers'
             });
         }

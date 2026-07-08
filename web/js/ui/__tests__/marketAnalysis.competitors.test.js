@@ -33,15 +33,23 @@ describe('MarketAnalysis — زر اكتشاف المنافسين', () => {
     });
 
     it('يستخدم منافسين حقيقيين من Overpass (لا AI) عند وجود مدينة معروفة وتغطية OSM', async () => {
-        vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({
-                elements: [
-                    { tags: { name: 'مطعم الرياض الأصيل' } },
-                    { tags: { name: 'مقهى العليا' } }
-                ]
-            })
-        })));
+        // fetch مقيّد بمسار Overpass فقط — نفس المكوّن يستدعي أيضاً SaudiDemographicsService
+        // (اقتراح TAM) بشكل غير مرتبط بالزر؛ ترك fetch عاماً يجعله يُطعِمها استجابة Overpass
+        // بالخطأ (ضجيج console.error لا علاقة له بهذا الاختبار).
+        vi.stubGlobal('fetch', vi.fn((url) => {
+            if (String(url).includes('overpass-api.de')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve({
+                        elements: [
+                            { tags: { name: 'مطعم الرياض الأصيل' } },
+                            { tags: { name: 'مقهى العليا' } }
+                        ]
+                    })
+                });
+            }
+            return Promise.reject(new Error('unrelated fetch in test'));
+        }));
         const aiSpy = vi.spyOn(AIWriterModule.AIWriter, 'generate');
 
         const store = fakeStore({

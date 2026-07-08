@@ -1196,6 +1196,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('project-loaded', async (e) => {
     const source = e.detail?.source || '';
     if (source === 'blank') {
+      // تدقيق 2026-07-08: navigateTo(0) يكتب feas_last_step_index=0 فوراً، فيظهر زر
+      // «تابع من حيث توقفت» لاحقاً حتى لهذه الجلسة الفارغة تحديداً — امسحه صراحة عند
+      // بدء دراسة جديدة فارغة بدل تركه يشير لجلسة لا محتوى حقيقياً فيها.
+      localStorage.removeItem('feas_last_step_index');
       navigateTo(0);
     } else {
     const projectInfoIdx = stepIndexById('projectInfo'); // أول تطابق = خطوة النموذج الرئيسية

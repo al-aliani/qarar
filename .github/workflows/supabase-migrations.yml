@@ -1,0 +1,46 @@
+# تدقيق 2026-07-08 (ملاحظة حرجة، المدقّق الأمني): سياسات RLS التي تحمي جدول studies
+# (كل الدراسات المالية لكل المستخدمين) كانت موجودة فقط كملف SQL يدوي التطبيق
+# (supabase/migrations/20260708090000_enable_rls_studies.sql) — خطأ تشغيلي واحد
+# (نسيان لصقه في Supabase Dashboard) = بيانات كل العملاء مكشوفة عبر مفتاح anon العام.
+#
+# هذه الوظيفة تُشغّل `supabase db push` آلياً على كل push لفرع main، بدل الاعتماد على
+# خطوة يدوية. لا تحتاج انتظار أي عمل بشري بعد إضافة الأسرار الثلاثة التالية:
+#   Settings → Secrets and variables → Actions → New repository secret:
+#     - SUPABASE_ACCESS_TOKEN   (من https://supabase.com/dashboard/account/tokens)
+#     - SUPABASE_PROJECT_REF    (معرّف المشروع — من رابط لوحة تحكم المشروع)
+#     - SUPABASE_DB_PASSWORD    (كلمة مرور قاعدة البيانات — Project Settings → Database)
+#
+# بلا هذه الأسرار: الوظيفة تُخطي خطوة النشر بأمان (لا تفشل البناء) وتطبع تحذيراً —
+# فلا يوقف هذا أي شيء حتى تُضاف الأسرار الحقيقية، لكنه أيضاً لا يترك RLS يدوياً منسياً
+# صامتاً إلى الأبد كما كان الحال.
+name: Supabase DB Migrations
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'supabase/migrations/**'
+  workflow_dispatch: {}
+
+jobs:
+  db-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Supabase secrets are configured
+        id: check_secrets
+        run: |
+          if [ -n "${{ secrets.SUPABASE_ACCESS_TOKEN }}" ] && [ -n "${{ secrets.SUPABASE_PROJECT_REF }}" ] && [ -n "${{ secrets.SUPABASE_DB_PASSWORD }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::أسرار Supabase (SUPABASE_ACCESS_TOKEN/SUPABASE_PROJECT_REF/SUPABASE_DB_PASSWORD) غير مضبوطة بعد في إعدادات المستودع — تخطّي نشر ترحيلات RLS. هذا لا يعني أن RLS مفعّلة على المشروع الفعلي؛ أضف الأسرار الثلاثة لتفعيل النشر الآلي."
+
+      - name: Push migrations (enables RLS on public.studies) to Supabase
+        if: steps.check_secrets.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          npx supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" -p "${{ secrets.SUPABASE_DB_PASSWORD }}"
+          npx supabase db push

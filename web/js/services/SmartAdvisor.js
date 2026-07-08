@@ -9,7 +9,10 @@
 import { resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
 
 const pctText = (v) => (v * 100).toFixed(0) + '%';
-const rangeText = ([lo, hi]) => `${pctText(lo)}–${pctText(hi)}`;
+// تدقيق 2026-07-08 (ملاحظة حرجة، خبير السوق): نطاقات sectorBenchmarks.js تقديرية
+// (ASSUMPTION) بلا مصدر خارجي — كانت تُعرض هنا كأنها معيار قاطع. الآن كل نطاق مذكور
+// في نصيحة المستشار الذكي يُفصح صراحة عن طبيعته التقديرية.
+const rangeText = ([lo, hi]) => `${pctText(lo)}–${pctText(hi)} تقديري`;
 
 export class SmartAdvisor {
 
