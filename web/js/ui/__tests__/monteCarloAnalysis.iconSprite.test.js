@@ -57,6 +57,7 @@ describe('MonteCarloAnalysis — عنوان القسم وزر التشغيل ت�
         runSimulationMock.mockReturnValue({
             ok: true, iterations: 1000,
             results: [{ npv: 100000 }, { npv: 200000 }],
+            histogram: [{ binStart: 100000, binEnd: 200000, count: 2 }],
             stats: { minNPV: 100000, maxNPV: 200000, avgNPV: 150000, p10: 110000, p50: 150000, p90: 190000, successProbability: 0.9 }
         });
         global.Chart = class { constructor() {} destroy() {} };
@@ -85,6 +86,7 @@ describe('MonteCarloAnalysis — عنوان القسم وزر التشغيل ت�
         runSimulationMock.mockReturnValue({
             ok: true, iterations: 1000,
             results: [{ npv: 100000 }, { npv: 200000 }],
+            histogram: [{ binStart: 100000, binEnd: 200000, count: 2 }],
             stats: { minNPV: 100000, maxNPV: 200000, avgNPV: 150000, p10: 110000, p50: 150000, p90: 190000, successProbability: 0.9 }
         });
         global.Chart = class { constructor() {} destroy() {} };

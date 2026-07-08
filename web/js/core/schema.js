@@ -331,7 +331,7 @@ export function createEmptyStudy() {
         [SECTIONS.LEGAL]: {
             legalForm: "شركة ذات مسؤولية محدودة",
             licenses: [
-                // { name: "سجل تجاري", quantity: 1, price: 2000, isCapex: true, notes: "" }
+                // { name: "سجل تجاري", quantity: 1, price: 2000, notes: "" }
             ]
         },
 
@@ -577,6 +577,9 @@ export function createEmptyStudy() {
         // 1️⃣4️⃣ تحليل السيناريوهات
         // ═══════════════════════════════════════════════════════════
         [SECTIONS.SCENARIOS]: {
+            // ASSUMPTION (تدقيق 2026-07-08، ملاحظة منخفضة #59): نسب متشائم/متفائل هنا
+            // ثوابت تقديرية عامة بلا مصدر خارجي منشور — قابلة للتعديل الكامل من
+            // المستخدم في خطوة "تحليل السيناريوهات"، وليست أرقاماً معتمدة رسمياً.
             pessimistic: { revenueChange: -0.20, costChange: 0.15, description: 'سيناريو متشائم' },
             base: { revenueChange: 0, costChange: 0, description: 'السيناريو الأساسي' },
             optimistic: { revenueChange: 0.25, costChange: -0.10, description: 'سيناريو متفائل' },
@@ -750,7 +753,12 @@ export function createEmptyStudy() {
         // ═══════════════════════════════════════════════════════════
         [SECTIONS.MONTE_CARLO]: {
             iterations: 1000,
-            volatility: 0.15, // 15% standard deviation for variables
+            // تدقيق 2026-07-08 (ملاحظة متوسطة #32): كانت 0.15 هنا بينما المُستدعي
+            // الفعلي الوحيد (MonteCarloAnalysis.js) يمرّر 0.20 مباشرة متجاوزاً هذه
+            // القيمة بصمت — وُحِّدت على 0.20 (الرقم المُستخدَم فعلياً). ملاحظة: هذا
+            // الحقل توثيقي فقط حالياً؛ الاستدعاء الفعلي لا يقرأ منه بعد (لا واجهة
+            // مستخدم لتخصيص التقلّب) — خارج نطاق هذا الإصلاح.
+            volatility: 0.20, // 20% standard deviation for variables
             variables: ['revenue', 'opex', 'capex'],
             results: {
                 successProbability: 0,

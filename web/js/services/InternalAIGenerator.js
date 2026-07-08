@@ -961,12 +961,23 @@ export function generateLicenses(state) {
     const isLogistics = /لوجستي|شحن|نقل|تخزين|توزيع|استيراد|تصدير/i.test(sector);
     const isIndustrial = /صناع|مصنع|إنتاج|تصنيع/i.test(sector);
 
+    // تدقيق 2026-07-08 (ملاحظة متوسطة #39): كانت القائمة الأساسية تقتصر على 4 بنود
+    // فقط وتُغفل متطلبات سعودية شائعة لأي نشاط تجاري — أُضيفت 3 بنود عامة (الغرفة
+    // التجارية، التسجيل الضريبي/الزكوي ZATCA، رخصة اللافتات) بالإضافة لبند صحي خاص
+    // بالمطاعم (لا GOSI — مُمثَّلة فعلياً كنسبة راتب متكررة في قسم الموارد البشرية،
+    // لا كرسم ترخيص لمرة واحدة، فإضافتها هنا تُكرِّر تمثيلها).
     const base = [
         { name: 'سجل تجاري', quantity: 1, price: 2000, notes: 'وزارة التجارة' },
+        { name: 'انضمام الغرفة التجارية', quantity: 1, price: 800, notes: 'عضوية سنوية' },
+        { name: 'تسجيل ضريبي/زكوي (ZATCA)', quantity: 1, price: 0, notes: 'إلزامي، بلا رسوم تسجيل مبدئياً' },
         { name: 'رخصة بلدية', quantity: 1, price: 1500, notes: 'البلدية حسب النشاط' },
+        { name: 'رخصة لافتات المحل', quantity: 1, price: 600, notes: 'البلدية' },
         { name: 'شهادة الدفاع المدني', quantity: 1, price: 500, notes: 'متطلبات السلامة' }
     ];
-    if (isFandB) base.push({ name: 'رخصة هيئة الغذاء والدواء', quantity: 1, price: 1000, notes: 'للمنشآت الغذائية' });
+    if (isFandB) {
+        base.push({ name: 'رخصة هيئة الغذاء والدواء', quantity: 1, price: 1000, notes: 'للمنشآت الغذائية' });
+        base.push({ name: 'شهادة صحية للعاملين', quantity: 1, price: 400, notes: 'لكل عامل بمناولة الطعام — وزارة الصحة' });
+    }
     if (isRetail) base.push({ name: 'رخصة نشاط تجاري', quantity: 1, price: 2500, notes: 'حسب البند' });
     if (isHealth) {
         base.push({ name: 'ترخيص هيئة التخصصات الصحية', quantity: 1, price: 3000, notes: 'للمنشآت الطبية' });

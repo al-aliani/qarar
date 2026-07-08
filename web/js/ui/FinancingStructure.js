@@ -4,7 +4,7 @@
  * Based on UNIDO and Monsha'at requirements
  */
 
-import { calculateStudy as runFullModel } from '../core/engine.js';
+import { calculateStudy as runFullModel, rateOrDefault } from '../core/engine.js';
 
 export class FinancingStructure {
     constructor(containerId, store, onNavigate) {
@@ -378,17 +378,27 @@ export class FinancingStructure {
             .reduce((sum, key) => sum + Number(sources[key]?.amount || 0), 0);
         const gap = totalCapex - totalFunded;
         const isBalanced = Math.abs(gap) < 1;
+        // تدقيق 2026-07-08 (ملاحظة منخفضة #65): زر «سدّ الفجوة» يعدّل التمويل الذاتي
+        // فقط (autoBalanceFunding) — إن كان الفائض ناتجاً عن مصادر أخرى (قرض/مستثمرون/
+        // دعم حكومي) تتجاوز الاستثمار المطلوب وحدها، فتصفير التمويل الذاتي لا يحلّ شيئاً
+        // ويبقى التحذير ظاهراً بلا تفسير بعد ضغط الزر "المُقترَح". نُميّز الحالة الآن.
+        const othersTotal = ['bankLoan', 'investors', 'governmentSupport']
+            .reduce((sum, key) => sum + Number(sources[key]?.amount || 0), 0);
+        const surplusFixableByEquity = gap >= 0 || othersTotal <= totalCapex;
         const statusHtml = isBalanced
             ? '<span class="text-success">✓ التمويل مكتمل ويطابق الاستثمار المطلوب</span>'
             : gap > 0
                 ? `<span class="text-danger">⚠️ ناقص ${this.formatCurrency(gap)} — أضِف المبلغ أو استخدم زر «سدّ الفجوة»</span>`
-                : `<span class="text-danger">⚠️ زائد ${this.formatCurrency(Math.abs(gap))} عن الاستثمار المطلوب — خفّض أحد المصادر</span>`;
+                : surplusFixableByEquity
+                    ? `<span class="text-danger">⚠️ زائد ${this.formatCurrency(Math.abs(gap))} عن الاستثمار المطلوب — خفّض أحد المصادر أو استخدم زر «سدّ الفجوة»</span>`
+                    : `<span class="text-danger">⚠️ زائد ${this.formatCurrency(Math.abs(gap))} عن الاستثمار المطلوب — الفائض ناتج عن القرض/المستثمرين/الدعم الحكومي لا التمويل الذاتي، خفّض أحد هذه المصادر مباشرة</span>`;
+        const showAutoBalanceBtn = !isBalanced && (gap > 0 || surplusFixableByEquity);
         return `
             <div class="funding-validation" id="fundingValidation">
                 <span class="validation-label">إجمالي التمويل:</span>
                 <span class="validation-value" id="totalFunding">${this.formatCurrency(totalFunded)} / ${this.formatCurrency(totalCapex)}</span>
                 <span class="validation-status" id="fundingStatus">${statusHtml}</span>
-                ${!isBalanced ? `<button type="button" class="btn btn--sm btn--secondary" id="btnAutoBalanceFunding" data-gap="${gap}">⚖️ سدّ الفجوة من التمويل الذاتي</button>` : ''}
+                ${showAutoBalanceBtn ? `<button type="button" class="btn btn--sm btn--secondary" id="btnAutoBalanceFunding" data-gap="${gap}">⚖️ سدّ الفجوة من التمويل الذاتي</button>` : ''}
             </div>
         `;
     }
@@ -469,8 +479,12 @@ export class FinancingStructure {
             <div class="loan-details-grid">
                 <div class="loan-field">
                     <label for="loan-interestRate">معدل الفائدة السنوي %</label>
+                    <!-- تدقيق 2026-07-08 (ملاحظة متوسطة #37): كانت (loan.interestRate || 0.08) تعامل
+                    صفراً صريحاً (قرض بنك تنمية 0%) كقيمة مفقودة فتُعيد عرض 8% بعد كل إعادة رسم،
+                    رغم أن المحرك نفسه يحترم الصفر الصريح فعلياً (rateOrDefault) — يستهلكها هذا
+                    الحقل الآن أيضاً كي لا يتناقض العرض مع الحساب الفعلي. -->
                     <input type="number" id="loan-interestRate" class="input loan-input" data-field="interestRate"
-                           value="${(loan.interestRate || 0.08) * 100}" step="0.5">
+                           value="${rateOrDefault(loan.interestRate, 0.08) * 100}" step="0.5">
                 </div>
                 <div class="loan-field">
                     <label for="loan-termYears">مدة القرض (سنوات)</label>
@@ -494,12 +508,15 @@ export class FinancingStructure {
                 </div>
                 <div class="loan-field">
                     <label for="loan-bank">البنك</label>
+                    <!-- تدقيق 2026-07-08 (ملاحظة منخفضة #63): البنك الأهلي وسامبا اندمجا فعلياً منذ
+                    2021 ليشكّلا البنك الأهلي السعودي (SNB) — كانا يُعرَضان ككيانين منفصلين.
+                    القيمة تبقى 'ncb' توافقاً مع الدراسات المحفوظة سابقاً؛ نطابق 'samba' القديمة
+                    أيضاً كي لا تفقد الدراسات القديمة اختيارها المحفوظ بعد هذا التغيير. -->
                     <select id="loan-bank" class="input loan-input" data-field="bank">
                         <option value="">اختر البنك</option>
                         <option value="rajhi" ${loan.bank === 'rajhi' ? 'selected' : ''}>مصرف الراجحي</option>
-                        <option value="ncb" ${loan.bank === 'ncb' ? 'selected' : ''}>البنك الأهلي</option>
+                        <option value="ncb" ${(loan.bank === 'ncb' || loan.bank === 'samba') ? 'selected' : ''}>البنك الأهلي السعودي (SNB)</option>
                         <option value="riyad" ${loan.bank === 'riyad' ? 'selected' : ''}>بنك الرياض</option>
-                        <option value="samba" ${loan.bank === 'samba' ? 'selected' : ''}>بنك سامبا</option>
                         <option value="other" ${loan.bank === 'other' ? 'selected' : ''}>أخرى</option>
                     </select>
                 </div>
@@ -555,7 +572,7 @@ export class FinancingStructure {
         const debt = sources.bankLoan?.amount || 0;
         // تكلفة حقوق الملكية قابلة للإدخال (financing.costOfEquity) مع 15% كافتراض سوقي للمشاريع الصغيرة بالسوق السعودي
         const costOfEquity = Number.isFinite(Number(financing.costOfEquity)) ? Number(financing.costOfEquity) : 0.15;
-        const costOfDebt = (sources.bankLoan?.interestRate || 0.08);
+        const costOfDebt = rateOrDefault(sources.bankLoan?.interestRate, 0.08);
         // الدرع الضريبي للدين: بنظام الزكاة السعودي الاقتطاع الفعلي على الربح =
         // زكاة 2.5% × الحصة السعودية + ضريبة دخل × الحصة الأجنبية (متسق مع المحرك)
         const _a = this.store?.getState?.()?.assumptions || {};

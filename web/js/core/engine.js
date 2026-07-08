@@ -16,6 +16,16 @@ function toArray(v) {
     return Array.isArray(v) ? v : [v];
 }
 
+// معدل إهلاك/إطفاء/فائدة يحترم الصفر الصريح: «0» قرارُ مستخدمٍ واعٍ (أصل لا يُستهلك،
+// أو قرض بنك تنمية 0% فائدة) وليس غياباً للقيمة. النمط القديم `rate || default` كان
+// يعامل الصفر كفراغ فيفرض الافتراضي. مُصدَّرة (لا محلية داخل calculateStudy) كي
+// تستهلكها شاشات العرض (FinancingStructure.js) بنفس المنطق بدل نسخة محلية مكرَّرة.
+export function rateOrDefault(v, dflt) {
+    if (v === null || v === undefined || v === '') return dflt;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : dflt;
+}
+
 /**
  * Feasibility Study Calculation Engine (v5.0)
  * مصدر الحقيقة الوحيد لكل الأرقام في المنصة — كل الشاشات والمصدّرات تقرأ منه.
@@ -191,15 +201,6 @@ export function calculateStudy(study, overrides) {
     const equipmentBase = sumAsset(technical.equipment, 'Equipment') * (launchStrategy === 'Outsourcing' ? 0.3 : (launchStrategy === 'Pilot_Phase' ? 0.5 : 1.0));
     const equipmentContingency = equipmentBase * computedContingencyRate;
     const equipmentTotal = equipmentBase + equipmentContingency;
-
-    // معدل إهلاك/إطفاء يحترم الصفر الصريح: «0» قرارُ مستخدمٍ واعٍ (أصل لا يُستهلك — أرض/مخزون)
-    // وليس غياباً للقيمة. النمط القديم `rate || default` كان يعامل الصفر كفراغ فيفرض الافتراضي
-    // (مخزون 200 ألف بمعدل 0 كان يُطفأ 40 ألفاً سنوياً وللأبد).
-    const rateOrDefault = (v, dflt) => {
-        if (v === null || v === undefined || v === '') return dflt;
-        const n = Number(v);
-        return Number.isFinite(n) ? n : dflt;
-    };
 
     const initialEstablishmentTotal = toArray(technical.establishmentCosts).reduce((acc, item) => acc + Number(item.amount || 0), 0);
     const establishmentAmortization = toArray(technical.establishmentCosts).reduce((acc, item) => {

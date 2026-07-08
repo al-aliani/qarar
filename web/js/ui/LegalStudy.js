@@ -33,6 +33,10 @@ export class LegalStudy {
                         <select class="input" id="legalForm">
                             <option value="">اختر الشكل القانوني</option>
                             <option value="مؤسسة فردية" ${startData.legalForm === 'مؤسسة فردية' ? 'selected' : ''}>مؤسسة فردية (Sole Proprietorship)</option>
+                            <!-- تدقيق 2026-07-08 (ملاحظة منخفضة #62): شركة الشخص الواحد (نظام الشركات
+                            الجديد 2016) بديل شائع عن المؤسسة الفردية لحماية أصحاب المطاعم من المسؤولية
+                            الشخصية بلا حاجة لشريك — كانت غائبة عن القائمة. -->
+                            <option value="شركة الشخص الواحد" ${startData.legalForm === 'شركة الشخص الواحد' ? 'selected' : ''}>شركة الشخص الواحد (SPC)</option>
                             <option value="شركة ذات مسؤولية محدودة" ${startData.legalForm === 'شركة ذات مسؤولية محدودة' ? 'selected' : ''}>شركة ذات مسؤولية محدودة (LLC)</option>
                             <option value="شركة تضامن" ${startData.legalForm === 'شركة تضامن' ? 'selected' : ''}>شركة تضامن</option>
                             <option value="شركة مساهمة" ${startData.legalForm === 'شركة مساهمة' ? 'selected' : ''}>شركة مساهمة (Joint Stock)</option>

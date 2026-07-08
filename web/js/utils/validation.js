@@ -89,6 +89,13 @@ export function validateFinancing(fin) {
   const src = fin.sources || {};
   const eq = num(src.equity?.amount, null);
   if (eq != null && !Number.isNaN(eq) && eq < 0) err.push('مبلغ التمويل الذاتي لا يمكن أن يكون سالباً');
+  // تدقيق 2026-07-08 (ملاحظة متوسطة #38): كان التحقق من عدم السلبية يغطي التمويل
+  // الذاتي والقرض فقط — حقلا المستثمرون والدعم الحكومي بلا أي تحقق فتمرّ قيمة
+  // سالبة بصمت إلى إجمالي التمويل والنسب.
+  const investors = num(src.investors?.amount, null);
+  if (investors != null && !Number.isNaN(investors) && investors < 0) err.push('مبلغ تمويل المستثمرين لا يمكن أن يكون سالباً');
+  const govt = num(src.governmentSupport?.amount, null);
+  if (govt != null && !Number.isNaN(govt) && govt < 0) err.push('مبلغ الدعم الحكومي لا يمكن أن يكون سالباً');
   const loan = src.bankLoan;
   if (loan && typeof loan === 'object') {
     const amt = num(loan.amount, null);
@@ -97,6 +104,13 @@ export function validateFinancing(fin) {
     if (rate != null && !Number.isNaN(rate) && (rate < 0 || rate > 0.5)) err.push('سعر الفائدة يقترح أن يكون بين 0 و 50%');
     const term = num(loan.termYears, null);
     if (term != null && !Number.isNaN(term) && (term < 1 || term > 30)) err.push('مدة القرض يقترح أن تكون بين 1 و 30 سنة');
+    // تدقيق 2026-07-08 (ملاحظة متوسطة #36): فترة سماح ≥ مدة القرض بالأشهر تُنتج
+    // في computeLoanSchedule جدول سداد لا يُسدَّد فيه أي أصل إطلاقاً طوال المدة
+    // (كل الأشهر تُحتسَب "سماحاً") — رصيد ختامي يبقى كامل مبلغ القرض دون أي تنبيه.
+    const grace = num(loan.gracePeriodMonths, null);
+    if (grace != null && !Number.isNaN(grace) && term != null && !Number.isNaN(term) && grace >= term * 12) {
+      err.push(`فترة السماح (${grace} شهراً) يجب أن تكون أقل من مدة القرض بالأشهر (${term * 12} شهراً)، وإلا لن يُسدَّد أي أصل من القرض`);
+    }
   }
   return { valid: err.length === 0, errors: err };
 }

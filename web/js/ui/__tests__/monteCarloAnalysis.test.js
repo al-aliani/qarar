@@ -90,28 +90,37 @@ describe('MonteCarloAnalysis — عرض نتيجة محفوظة (displaySavedSum
     });
 });
 
-describe('MonteCarloAnalysis — حدود ألوان/تصنيف المخاطرة (عتبات مختلفة عمداً للّون مقابل النص)', () => {
+describe('MonteCarloAnalysis — حدود ألوان/تصنيف المخاطرة موحَّدة الآن (#33)', () => {
     beforeEach(() => { document.body.innerHTML = `<div id="c"></div>`; });
 
-    // الكود يستخدم 0.7/0.4 للّون لكن 0.8/0.5 لنص "درجة المخاطرة" — نطاقاً وسيطاً
-    // [0.7, 0.8) يُظهر لوناً أخضر (نجاح) مع نص "متوسطة ⚠️" في آنٍ واحد. هذا يُوثِّق
-    // السلوك الفعلي الحالي (وليس إصلاحاً — قد يكون متعمَّداً كمنطقة عازلة).
+    // تدقيق 2026-07-08 (ملاحظة متوسطة #33): كان الكود يستخدم 0.7/0.4 للّون لكن
+    // 0.8/0.5 لنص "درجة المخاطرة" — نطاق وسيط [0.7, 0.8) كان يُظهر لوناً أخضر
+    // (نجاح) مع نص "متوسطة ⚠️" في آنٍ واحد. getRiskRating() الموحَّدة تضمن الآن
+    // تطابق اللون والنص دائماً لنفس الاحتمالية (لا مصدرين مستقلين).
     const cases = [
-        { p: 0.75, color: 'var(--c-success)', risk: 'متوسطة ⚠️', note: 'أخضر لكن "متوسطة" — منطقة التناقض الموثّقة' },
-        { p: 0.70, color: 'var(--c-warning)', risk: 'متوسطة ⚠️', note: '0.7 بالضبط: الشرط >0.7 صارم فيسقط للتحذير' },
-        { p: 0.80, color: 'var(--c-success)', risk: 'منخفضة ✅', note: '0.8 بالضبط: الشرط <0.8 صارم فلا يُصنَّف متوسطاً' },
-        { p: 0.40, color: 'var(--c-danger)', risk: 'عالية ⛔', note: '0.4 بالضبط: الشرط >0.4 صارم فيسقط للخطر' },
-        { p: 0.50, color: 'var(--c-warning)', risk: 'متوسطة ⚠️', note: '0.5 بالضبط: الشرط <0.5 صارم فلا يُصنَّف عالياً' },
+        { p: 0.75, color: 'var(--c-success)', risk: 'منخفضة ✅' },
+        { p: 0.70, color: 'var(--c-warning)', risk: 'متوسطة ⚠️' },
+        { p: 0.80, color: 'var(--c-success)', risk: 'منخفضة ✅' },
+        { p: 0.40, color: 'var(--c-danger)', risk: 'عالية ⛔' },
+        { p: 0.50, color: 'var(--c-warning)', risk: 'متوسطة ⚠️' },
     ];
 
-    cases.forEach(({ p, color, risk, note }) => {
-        it(`p=${p}: اللون=${color}, النص="${risk}" — ${note}`, () => {
+    cases.forEach(({ p, color, risk }) => {
+        it(`p=${p}: اللون=${color} والنص="${risk}" متطابقان (لا تناقض)`, () => {
             const view = new MonteCarloAnalysis('c', fakeStore(healthyStudy()));
             view.render();
             view.displaySavedSummary({ successProbability: p, avgNPV: 1000000, p10: 0, p50: 0, p90: 0 });
 
             expect(document.getElementById('probSuccess').style.color).toBe(color);
             expect(document.getElementById('riskRating').textContent).toBe(risk);
+        });
+    });
+
+    it('getRiskRating تُعيد نفس اللون والنص المستخدَمين فعلياً في العرض (مصدر واحد)', () => {
+        [0.9, 0.75, 0.7, 0.55, 0.4, 0.1].forEach(p => {
+            const rating = MonteCarloAnalysis.getRiskRating(p);
+            expect(['var(--c-success)', 'var(--c-warning)', 'var(--c-danger)']).toContain(rating.color);
+            expect(['منخفضة ✅', 'متوسطة ⚠️', 'عالية ⛔']).toContain(rating.text);
         });
     });
 });
@@ -130,7 +139,17 @@ describe('MonteCarloAnalysis — displayResults: بيانات غير كافية 
     });
 });
 
-describe('MonteCarloAnalysis — renderHistogram: حارس القسمة على صفر (خلل مُصلَح)', () => {
+describe('MonteCarloAnalysis — renderHistogram: يستهلك histogram الجاهزة من المحرك (#61)', () => {
+    // تدقيق 2026-07-08 (ملاحظة منخفضة #61): renderHistogram لم تعد تُعيد تجميع
+    // نتائج NPV الخام بمنطق مستقل — تستهلك مصفوفة histogram الجاهزة (نفس الشكل
+    // الذي يُخرجه MonteCarloEngine.runSimulation) مباشرة. حارس القسمة على صفر
+    // (تقلّب صفري) أصبح مسؤولية المحرك وحده الآن — مُثبَّت بحزم اختباراته الخاصة
+    // وفي اختبار التكامل الحقيقي أدناه.
+    function makeHistogram(bins) {
+        // {start, end, count}[] → شكل المحرك الفعلي {binStart, binEnd, count}
+        return bins.map(([binStart, binEnd, count]) => ({ binStart, binEnd, count }));
+    }
+
     beforeEach(() => {
         document.body.innerHTML = `<div id="c"></div><canvas id="histoChart"></canvas>`;
         global.Chart = FakeChart;
@@ -138,48 +157,70 @@ describe('MonteCarloAnalysis — renderHistogram: حارس القسمة على �
     });
     afterEach(() => { delete global.Chart; });
 
-    it('توزيع طبيعي: كل التكرارات تُوزَّع على 20 صندوقاً ومجموعها يساوي عدد النتائج بالضبط', () => {
+    it('يرسم 20 صندوقاً بالضبط بنفس قيم count المُعطاة (لا إعادة تجميع)', () => {
         const view = new MonteCarloAnalysis('c', fakeStore(healthyStudy()));
-        const results = Array.from({ length: 100 }, (_, i) => ({ npv: -500000 + i * 10000 }));
-        view.renderHistogram(results);
+        const counts = Array.from({ length: 20 }, (_, i) => i + 1); // 1..20، مجموعها معروف مسبقاً
+        const histogram = makeHistogram(counts.map((c, i) => [-500000 + i * 50000, -500000 + (i + 1) * 50000, c]));
+        view.renderHistogram(histogram);
 
         const buckets = FakeChart.instances[0].config.data.datasets[0].data;
         expect(buckets).toHaveLength(20);
-        expect(buckets.reduce((a, b) => a + b, 0)).toBe(100);
+        expect(buckets).toEqual(counts);
     });
 
-    it('صندوق القيم السالبة أحمر والموجبة أخضر (حسب مركز الصندوق)', () => {
+    it('صندوق القيم السالبة أحمر والموجبة أخضر (حسب مركز الصندوق binStart/binEnd)', () => {
         const view = new MonteCarloAnalysis('c', fakeStore(healthyStudy()));
-        const results = Array.from({ length: 100 }, (_, i) => ({ npv: -500000 + i * 10000 }));
-        view.renderHistogram(results);
+        const histogram = makeHistogram([
+            [-100000, -50000, 5],
+            [50000, 100000, 5]
+        ]);
+        view.renderHistogram(histogram);
 
         const colors = FakeChart.instances[0].config.data.datasets[0].backgroundColor;
-        expect(colors[0]).toContain('248, 113, 113'); // أحمر لأول صندوق (سالب)
-        expect(colors[colors.length - 1]).toContain('74, 222, 128'); // أخضر لآخر صندوق (موجب)
+        expect(colors[0]).toContain('248, 113, 113'); // أحمر لصندوق مركزه سالب
+        expect(colors[1]).toContain('74, 222, 128'); // أخضر لصندوق مركزه موجب
     });
 
-    it('حالة الحافة الحرجة: كل قيم NPV متطابقة تماماً (تقلّب صفري) — لا NaN صامت، كل التكرارات في صندوق واحد', () => {
+    it('لا يرمي خطأً لو أُعطي histogram بصندوق واحد فقط (حالة تقلّب صفري من المحرك)', () => {
         const view = new MonteCarloAnalysis('c', fakeStore(healthyStudy()));
-        const identicalResults = Array.from({ length: 50 }, () => ({ npv: 1000000 }));
+        const histogram = makeHistogram([[999999.5, 1000000.5, 50]]);
 
-        expect(() => view.renderHistogram(identicalResults)).not.toThrow();
-
+        expect(() => view.renderHistogram(histogram)).not.toThrow();
         const buckets = FakeChart.instances[0].config.data.datasets[0].data;
-        // قبل الإصلاح: width=0 ⇒ فهرس NaN ⇒ كل الصناديق الرقمية تبقى صفراً (بيانات مفقودة صامتة).
-        // بعد الإصلاح: width احتياطي=1 ⇒ كل القيم (فرق=0) تقع في الصندوق 0 تحديداً.
-        expect(buckets[0]).toBe(50);
-        expect(buckets.slice(1).every(b => b === 0)).toBe(true);
-        expect(buckets.reduce((a, b) => a + b, 0)).toBe(50); // لا فقدان صامت للبيانات
+        expect(buckets).toEqual([50]);
     });
 
     it('يُدمّر الرسم البياني القديم قبل رسم جديد (لا تسرّب/تراكم رسومات)', () => {
         const view = new MonteCarloAnalysis('c', fakeStore(healthyStudy()));
-        view.renderHistogram([{ npv: 100 }, { npv: 200 }]);
+        view.renderHistogram(makeHistogram([[0, 100, 1], [100, 200, 1]]));
         const first = FakeChart.instances[0];
-        view.renderHistogram([{ npv: 300 }, { npv: 400 }]);
+        view.renderHistogram(makeHistogram([[0, 100, 2], [100, 200, 2]]));
 
         expect(first.destroyed).toBe(true);
         expect(FakeChart.instances).toHaveLength(2);
+    });
+
+    it('يحذف رسالة "نتيجة محفوظة" (histoPlaceholder) فور رسم فعلي جديد', () => {
+        document.body.innerHTML = `<div id="c"><p id="histoPlaceholder">نتيجة محفوظة</p><canvas id="histoChart"></canvas></div>`;
+        const view = new MonteCarloAnalysis('c', fakeStore(healthyStudy()));
+        view.renderHistogram(makeHistogram([[0, 100, 1]]));
+        expect(document.getElementById('histoPlaceholder')).toBeNull();
+    });
+});
+
+describe('MonteCarloEngine.runSimulation — حارس القسمة على صفر في histogram (خلل مُصلَح، مصدره الآن هنا لا الواجهة)', () => {
+    it('حالة الحافة الحرجة: كل قيم NPV متطابقة تماماً (تقلّب صفري) — لا NaN صامت، كل التكرارات في صندوق واحد', () => {
+        // دراسة بلا أي مصدر تقلّب فعلي (volatility=0) ⇒ كل التكرارات تُنتج نفس NPV بالضبط
+        const study = healthyStudy();
+        const sim = MonteCarloEngine.runSimulation(study, 50, 0);
+        expect(sim.ok).toBe(true);
+        expect(sim.histogram).toHaveLength(20);
+        const counts = sim.histogram.map(b => b.count);
+        // قبل الإصلاح: binSize=0 ⇒ فهرس NaN ⇒ كل الصناديق صفر (بيانات مفقودة صامتة).
+        // بعد الإصلاح: binSize احتياطي=1 ⇒ كل النتائج (فرق=0) تقع في الصندوق 0.
+        expect(counts[0]).toBe(50);
+        expect(counts.slice(1).every(c => c === 0)).toBe(true);
+        expect(counts.reduce((a, b) => a + b, 0)).toBe(50); // لا فقدان صامت للبيانات
     });
 });
 

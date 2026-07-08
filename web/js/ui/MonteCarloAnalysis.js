@@ -11,6 +11,19 @@ export class MonteCarloAnalysis {
         this.store = store;
     }
 
+    /**
+     * تدقيق 2026-07-08 (ملاحظة متوسطة #33): كانت عتبات لون نسبة النجاح (٪) ونص
+     * «درجة المخاطرة» مكرَّرتين بمنطقين مستقلين في دالتين (displaySavedSummary/
+     * displayResults) بعتبات غير متطابقة (لون ينجح عند >70%، نص يتوسّط عند <80%) —
+     * فيظهر رقم أخضر «نجاح» بجانب نص «متوسطة ⚠️» لنفس الاحتمالية في نفس اللحظة.
+     * الآن مصدر واحد يضمن أن اللون والنص يعكسان نفس العتبة دائماً.
+     */
+    static getRiskRating(successProbability) {
+        if (successProbability > 0.7) return { text: 'منخفضة ✅', color: 'var(--c-success)' };
+        if (successProbability > 0.4) return { text: 'متوسطة ⚠️', color: 'var(--c-warning)' };
+        return { text: 'عالية ⛔', color: 'var(--c-danger)' };
+    }
+
     render() {
         // نتائج محفوظة من تشغيل سابق (إن وُجدت) — لا نُشغّل 1000 تكرار تلقائياً عند كل زيارة
         // للخطوة (كان يجمّد الخيط الرئيسي — تدقيق 2026-07-08)؛ التشغيل بزر صريح فقط الآن.
@@ -24,6 +37,9 @@ export class MonteCarloAnalysis {
                     <div class="flex-between mb-4">
                         <div>
                             <p class="text-muted">يقوم هذا التحليل بتشغيل 1000 سيناريو محتمل لقياس احتمالية الربح.</p>
+                            <!-- تدقيق 2026-07-08 (ملاحظة متوسطة #32): كانت نسبة التقلّب المستخدمة فعلياً
+                            (20%) غير مُفصَح عنها للمستخدم إطلاقاً رغم أنها أساس كل الأرقام أدناه. -->
+                            <p class="text-xs text-muted mt-1">افتراض التقلّب: ±20% على الإيراد (تقديري)، وتقلّب أقل تناسبياً على التكلفة والاستثمار الرأسمالي.</p>
                             ${saved ? `<p class="text-xs text-muted mt-1">آخر تشغيل: ${new Date(saved.runAt).toLocaleString('ar-SA')} — بذرة ثابتة (نفس المدخلات = نفس النتيجة)</p>` : ''}
                         </div>
                         <button id="btnRunSim" class="btn btn--primary btn-magic">
@@ -64,6 +80,11 @@ export class MonteCarloAnalysis {
 
                         <div class="chart-container" style="height: 300px;">
                             <canvas id="histoChart"></canvas>
+                            <!-- تدقيق 2026-07-08 (ملاحظة متوسطة #35): نتيجة محفوظة من زيارة سابقة تملأ
+                            بطاقات المؤشرات بأرقام حقيقية، لكن المدرّج يبقى فارغاً تماماً بلا تفسير —
+                            لا نحتفظ بالنتائج الخام (1000 قيمة) في التخزين المحلي لتوفير المساحة، فلا
+                            يمكن إعادة رسمه بلا تشغيل فعلي جديد. -->
+                            ${saved ? '<p id="histoPlaceholder" class="text-xs text-muted text-center" style="padding-top:1rem;">هذه أرقام محفوظة من زيارة سابقة — اضغط «تشغيل المحاكاة» لعرض المدرّج التكراري (لا تُحفَظ التفاصيل الخام لتوفير المساحة).</p>' : ''}
                         </div>
                     </div>
                 </div>
@@ -84,12 +105,10 @@ export class MonteCarloAnalysis {
         const riskEl = this.container.querySelector('#riskRating');
         if (!probEl) return;
         probEl.textContent = (saved.successProbability * 100).toFixed(1) + '%';
-        probEl.style.color = saved.successProbability > 0.7 ? 'var(--c-success)' : (saved.successProbability > 0.4 ? 'var(--c-warning)' : 'var(--c-danger)');
+        const savedRating = MonteCarloAnalysis.getRiskRating(saved.successProbability);
+        probEl.style.color = savedRating.color;
         avgEl.textContent = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(saved.avgNPV);
-        let risk = 'منخفضة ✅';
-        if (saved.successProbability < 0.8) risk = 'متوسطة ⚠️';
-        if (saved.successProbability < 0.5) risk = 'عالية ⛔';
-        riskEl.textContent = risk;
+        riskEl.textContent = savedRating.text;
         this.fillPercentiles(saved.p10, saved.p50, saved.p90);
     }
 
@@ -170,49 +189,39 @@ export class MonteCarloAnalysis {
         const { successProbability, avgNPV, p10, p50, p90 } = sim.stats;
 
         probEl.textContent = (successProbability * 100).toFixed(1) + '%';
-        probEl.style.color = successProbability > 0.7 ? 'var(--c-success)' : (successProbability > 0.4 ? 'var(--c-warning)' : 'var(--c-danger)');
+        const rating = MonteCarloAnalysis.getRiskRating(successProbability);
+        probEl.style.color = rating.color;
 
         avgEl.textContent = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(avgNPV);
 
         // Risk Rating
-        let risk = 'منخفضة ✅';
-        if (successProbability < 0.8) risk = 'متوسطة ⚠️';
-        if (successProbability < 0.5) risk = 'عالية ⛔';
-        riskEl.textContent = risk;
+        riskEl.textContent = rating.text;
 
         this.fillPercentiles(p10, p50, p90);
 
-        // Render Histogram
-        this.renderHistogram(sim.results);
+        // Render Histogram — نستهلك histogram الجاهزة من المحرك (لا نُعيد تجميع النتائج
+        // الخام هنا؛ انظر ملاحظة #61 أدناه).
+        this.renderHistogram(sim.histogram);
     }
 
-    renderHistogram(results) {
+    /**
+     * تدقيق 2026-07-08 (ملاحظة منخفضة #61): كانت هذه الدالة تُعيد تجميع نتائج NPV
+     * الخام إلى 20 فئة بمنطق مستقل خاص بها (مع حارس صفر منفصل خاص به)، رغم أن
+     * MonteCarloEngine.runSimulation يُخرج histogram جاهزة بنفس المواصفات (20 فئة،
+     * حارس صفر مطابق) — منطقان للتجميع قد يتباعدان لاحقاً بلا داعٍ. الآن تُستهلَك
+     * histogram الجاهزة من المحرك مباشرة (مصدر واحد للحقيقة لا نسخة مكرَّرة).
+     * @param {Array<{binStart:number, binEnd:number, count:number}>} histogram
+     */
+    renderHistogram(histogram) {
+        // رسم فعلي جديد ⇒ رسالة "نتيجة محفوظة، اضغط تشغيل" لم تعد صحيحة
+        this.container.querySelector('#histoPlaceholder')?.remove();
         const ctx = document.getElementById('histoChart').getContext('2d');
-        const npvs = results.map(r => r.npv);
 
-        // Create buckets
-        const bucketCount = 20;
-        const min = Math.min(...npvs);
-        const max = Math.max(...npvs);
-        const range = max - min;
-        // حارس القسمة على صفر: إن تطابقت كل قيم NPV (تقلّب صفري)، width=0 يُنتج فهرس
-        // NaN لكل تكرار فتُهمَل البيانات صامتة (مدرّج فارغ رغم اكتمال المحاكاة).
-        const width = range > 0 ? range / bucketCount : 1;
-
-        const buckets = Array(bucketCount).fill(0);
-        const labels = Array(bucketCount).fill(0);
-
-        npvs.forEach(val => {
-            const bucketIndex = Math.min(Math.floor((val - min) / width), bucketCount - 1);
-            buckets[bucketIndex]++;
-        });
-
+        const buckets = histogram.map(b => b.count);
         // Generate labels (bucket centers) — «ألف» عربية بدل 'k' الإنجليزية في واجهة عربية
         const arNum = new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 0 });
-        for (let i = 0; i < bucketCount; i++) {
-            const center = min + (i * width) + (width / 2);
-            labels[i] = arNum.format(Math.round(center / 1000)) + ' ألف';
-        }
+        const centers = histogram.map(b => (b.binStart + b.binEnd) / 2);
+        const labels = centers.map(center => arNum.format(Math.round(center / 1000)) + ' ألف');
 
         // Destroy old chart if exists
         if (this.chart) this.chart.destroy();
@@ -224,10 +233,7 @@ export class MonteCarloAnalysis {
                 datasets: [{
                     label: 'تكرار السيناريو',
                     data: buckets,
-                    backgroundColor: labels.map((l, i) => {
-                        const center = min + (i * width) + (width / 2);
-                        return center >= 0 ? 'rgba(74, 222, 128, 0.6)' : 'rgba(248, 113, 113, 0.6)';
-                    }),
+                    backgroundColor: centers.map(center => center >= 0 ? 'rgba(74, 222, 128, 0.6)' : 'rgba(248, 113, 113, 0.6)'),
                     borderRadius: 4
                 }]
             },

@@ -91,7 +91,13 @@ describe('ScenarioAnalysis — تعذّر حساب سيناريو فردي: "--"
         expect(pessNpv.textContent).not.toBe('--');
     });
 
-    it('فشل السيناريو المتشائم تحديداً يجعل حكم الجدوى "تحذيري" افتراضياً (fail-safe) لا رمي خطأ ولا ادّعاء نجاح', () => {
+    // مُصحَّح 2026-07-08 (ملاحظة متوسطة #34): كان هذا الاختبار يوثّق ميلاً افتراضياً
+    // لـ"تحذيري" عند تعذّر الحساب فعلياً بوصفه "fail-safe" — لكن ذلك عملياً استنتاج
+    // مالي سلبي زائف (null > 0 === false)، ونفس فئة "الرقم الملفَّك" التي تمنعها
+    // بطاقات NPV/IRR أعلاه (تعرض "--" محايدة لا "٠"). صُحِّح verdict-box ليعرض حالة
+    // محايدة صريحة "❔" بدل الادّعاء الضمني بعدم الجدوى — راجع أيضاً
+    // scenarioAnalysis.verdictAndAssumptions.test.js.
+    it('فشل السيناريو المتشائم تحديداً (تعذّر حساب حقيقي) يعرض حالة محايدة "❔" لا تحذيراً مالياً زائفاً (مُصحَّح #34)', () => {
         calculateStudyMock.mockImplementation((state, params) => {
             if (!params) return { indicators: { npv: 500000, irr: 0.30, paybackPeriod: 2.5 } };
             if (params.revenueChange === -0.20) throw new Error('فشل المتشائم');
@@ -102,7 +108,8 @@ describe('ScenarioAnalysis — تعذّر حساب سيناريو فردي: "--"
         expect(() => view.render(0)).not.toThrow();
 
         const verdict = document.querySelector('.verdict-box');
-        expect(verdict.className).toContain('verdict-warning');
-        expect(verdict.textContent).toContain('قد لا يكون مجدياً');
+        expect(verdict.className).toContain('verdict-neutral');
+        expect(verdict.textContent).toContain('❔ تعذّر حساب السيناريو المتشائم');
+        expect(verdict.textContent).not.toContain('قد لا يكون مجدياً');
     });
 });

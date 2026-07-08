@@ -1089,23 +1089,37 @@ export class ReportGenerator {
             <p style="font-size:9pt;color:#666;margin-top:8px;">ميزانية تقديرية مبسطة مشتقة من النموذج المالي (حقوق الملكية = إجمالي الاستثمار − التمويل البنكي).</p>`;
     }
 
-    /** سجل المخاطر: احتمال × أثر × خطة تخفيف. */
+    /**
+     * سجل المخاطر: احتمال × أثر × أثر مالي مقدَّر × أفق زمني × خطة تخفيف × خطر متبقٍّ × إنذار مبكر.
+     * تدقيق 2026-07-08 (ملاحظة متوسطة #31): كانت هذه الدالة تطبع 5 حقول فقط بينما
+     * سجل المخاطر (RiskMatrix.js) يجمع 4 حقول تحليلية إضافية (estimatedFinancialImpact/
+     * timeHorizon/residualRisk/earlyWarning) تختفي تماماً من التقرير النهائي المُصدَّر
+     * رغم أن المستخدم يُدخلها فعلياً — أُضيفت هنا لتظهر في المُخرَج المدفوع نفسه.
+     */
     static renderRisks(risks) {
         const lvl = (v) => v === 'high' ? '<span class="status-negative">مرتفع</span>' : v === 'low' ? '<span class="status-positive">منخفض</span>' : 'متوسط';
         const typeLabel = { operational: 'تشغيلي', financial: 'مالي', market: 'سوقي', legal: 'قانوني', technical: 'تقني' };
+        const horizonLabel = { immediate: 'فوري', short: 'قصير (< سنة)', medium: 'متوسط (1-3 سنوات)', long: 'طويل (> 3 سنوات)' };
+        const totalFinancialImpact = risks.reduce((sum, r) => sum + (Number(r.estimatedFinancialImpact) || 0), 0);
         return `
             <table>
-                <thead><tr><th>الخطر</th><th>النوع</th><th>الاحتمال</th><th>الأثر</th><th>خطة التخفيف</th></tr></thead>
+                <thead><tr><th>الخطر</th><th>النوع</th><th>الاحتمال</th><th>الأثر</th><th>الأثر المالي المقدّر (ريال/سنة)</th><th>الأفق الزمني</th><th>خطة التخفيف</th><th>الخطر المتبقي</th><th>مؤشر إنذار مبكر</th></tr></thead>
                 <tbody>
                     ${risks.map(r => `<tr>
-                        <td>${(r.name || r.description || '-')}</td>
-                        <td>${typeLabel[r.type] || r.type || '-'}</td>
+                        <td>${escapeHtml(r.name || r.description || '-')}</td>
+                        <td>${typeLabel[r.type] || escapeHtml(r.type || '-')}</td>
                         <td>${lvl(r.probability)}</td>
                         <td>${lvl(r.impact)}</td>
-                        <td>${(r.mitigation || '—')}</td>
+                        <td>${(r.estimatedFinancialImpact != null && r.estimatedFinancialImpact !== '') ? formatCurrency(Number(r.estimatedFinancialImpact) || 0) : '—'}</td>
+                        <td>${horizonLabel[r.timeHorizon] || '—'}</td>
+                        <td>${escapeHtml(r.mitigation || '—')}</td>
+                        <td>${lvl(r.residualRisk)}</td>
+                        <td>${escapeHtml(r.earlyWarning || '—')}</td>
                     </tr>`).join('')}
                 </tbody>
-            </table>`;
+                ${totalFinancialImpact > 0 ? `<tfoot><tr><td colspan="4" style="text-align:end;font-weight:600;">إجمالي الأثر المالي المقدّر (ريال/سنة)</td><td style="font-weight:700;">${formatCurrency(totalFinancialImpact)}</td><td colspan="4"></td></tr></tfoot>` : ''}
+            </table>
+            <p style="font-size:9pt;color:#666;margin-top:8px;">الأثر المالي المقدّر أعلاه بيان تخطيطي لكل خطر على حدة، ولا يُخصَم مباشرة من صافي القيمة الحالية — احتمالية وأثر كل خطر مُحتسبان فعلياً ضمن علاوة المخاطر المضافة لمعدل الخصم في النموذج المالي (تفادياً لاحتساب نفس الخطر مرتين).</p>`;
     }
 
     static renderCashFlow(cashFlow) {

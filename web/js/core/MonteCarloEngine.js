@@ -9,9 +9,14 @@ export class MonteCarloEngine {
      * Run simulation
      * @param {Object} baseState - The base study state
      * @param {number} iterations - Number of runs (default 1000)
-     * @param {number} volatility - Standard deviation for variations (default 0.15 or 15%)
+     * @param {number} volatility - Standard deviation for variations (default 0.20 or 20%)
+     * تدقيق 2026-07-08 (ملاحظة متوسطة #32): كانت هذه القيمة الافتراضية 0.15 (وكذلك
+     * SECTIONS.MONTE_CARLO في schema.js)، بينما المستدعي الفعلي الوحيد
+     * (MonteCarloAnalysis.js) يمرّر 0.20 مباشرة متجاوزاً كلا الافتراضيين بصمت —
+     * ثلاثة مصادر متضاربة لنفس الرقم. وُحِّدت جميعها على 0.20 (القيمة المُستخدَمة
+     * فعلياً)، وأُفصح عنها الآن في نص واجهة المحاكاة.
      */
-    static runSimulation(baseState, iterations = 1000, volatility = 0.15, seed = 0x9e3779b9) {
+    static runSimulation(baseState, iterations = 1000, volatility = 0.20, seed = 0x9e3779b9) {
         const results = [];
         let successCount = 0; // NPV > 0
         let failureCount = 0; // تكرارات فشلت (throw أو مخرجات فارغة)

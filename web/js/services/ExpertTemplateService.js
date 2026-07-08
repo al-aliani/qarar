@@ -150,9 +150,12 @@ function createSaasFeasibilityPlatformStudy() {
     data[SECTIONS.LEGAL] = {
         ...(data[SECTIONS.LEGAL] || {}),
         legalForm: 'شركة ذات مسؤولية محدودة',
+        // تدقيق 2026-07-08 (ملاحظة منخفضة #64): isCapex حقل غير مقروء إطلاقاً في
+        // engine.js (كل بنود licenses تُحتسَب رأسمالياً بلا شرط أصلاً) — حُذف كي لا
+        // يوحي بتمييز فعلي غير موجود.
         licenses: [
-            { name: 'سجل تجاري وتقنية معلومات', quantity: 1, price: 3000, isCapex: true, notes: 'تأكيد النشاط مع وزارة التجارة' },
-            { name: 'سياسة خصوصية وشروط استخدام', quantity: 1, price: 12000, isCapex: true, notes: 'مراجعة قانونية للمنصة والبيانات' }
+            { name: 'سجل تجاري وتقنية معلومات', quantity: 1, price: 3000, notes: 'تأكيد النشاط مع وزارة التجارة' },
+            { name: 'سياسة خصوصية وشروط استخدام', quantity: 1, price: 12000, notes: 'مراجعة قانونية للمنصة والبيانات' }
         ]
     };
     data[SECTIONS.BUSINESS_MODEL] = {
@@ -248,10 +251,10 @@ function createFastFoodStudy() {
     };
     data[SECTIONS.FINANCING] = {
         ...data[SECTIONS.FINANCING],
-        // تدقيق 2026-07-08 (ملاحظة عالية #38): بعد ربط «% متغير» اللوجستيات بالمحرك
-        // (تُفصل الآن حصتها المتغيرة إلى غطاء رأس مال عامل بتغطية COGS لا الإيجار)
-        // تغيّر رأس المال العامل المحسوب فعلياً — الرقم مطابق لـresults.capex.total الحقيقي.
-        totalInvestment: 812900, targetDSCR: 1.25,
+        // تدقيق 2026-07-08 (ملاحظة عالية #38 + متوسطة #39): بعد ربط «% متغير» اللوجستيات
+        // بالمحرك، ثم إضافة بنود تراخيص شائعة (الغرفة التجارية/ZATCA/اللافتات/الصحية) —
+        // الرقم مطابق لـresults.capex.total الحقيقي في كل مرة (تحقّق عبر calculateStudy).
+        totalInvestment: 814600, targetDSCR: 1.25,
         sources: {
             ...data[SECTIONS.FINANCING].sources,
             equity: { amount: 367700, percentage: 45.0 },
@@ -261,11 +264,17 @@ function createFastFoodStudy() {
     data[SECTIONS.ASSUMPTIONS] = { ...data[SECTIONS.ASSUMPTIONS], discountRate: 0.12, inflationRate: 0.02, projectionYears: 5 };
     data[SECTIONS.LEGAL] = {
         ...data[SECTIONS.LEGAL],
+        // تدقيق 2026-07-08 (ملاحظة متوسطة #39): كانت القائمة تقتصر على 4 بنود وتُغفل
+        // متطلبات سعودية شائعة — أُضيفت الغرفة التجارية/ZATCA/اللافتات/الشهادة الصحية.
         licenses: [
             { name: 'سجل تجاري', quantity: 1, price: 1200 },
+            { name: 'انضمام الغرفة التجارية', quantity: 1, price: 800 },
+            { name: 'تسجيل ضريبي/زكوي (ZATCA)', quantity: 1, price: 0 },
             { name: 'رخصة بلدية', quantity: 1, price: 3000 },
+            { name: 'رخصة لافتات المحل', quantity: 1, price: 500 },
             { name: 'شهادة الدفاع المدني', quantity: 1, price: 1500 },
             { name: 'رخصة هيئة الغذاء والدواء', quantity: 1, price: 2000 },
+            { name: 'شهادة صحية للعاملين', quantity: 1, price: 400 },
         ]
     };
     return data;
@@ -335,10 +344,10 @@ function createCasualDiningStudy() {
     };
     data[SECTIONS.FINANCING] = {
         ...data[SECTIONS.FINANCING],
-        // تدقيق 2026-07-08 (وجده التحقق العدائي، محدَّث بعد ربط «% متغير» اللوجستيات
-        // بالمحرك #38): totalInvestment مطابق لـresults.capex.total الفعلي (تحقّق عبر
-        // calculateStudy مباشرة، لا تقدير يدوي) — يتغيّر كلما تغيّر منطق رأس المال العامل.
-        totalInvestment: 2258600, targetDSCR: 1.25,
+        // تدقيق 2026-07-08 (وجده التحقق العدائي، محدَّث بعد #38 و#39): totalInvestment
+        // مطابق لـresults.capex.total الفعلي (تحقّق عبر calculateStudy مباشرة، لا تقدير
+        // يدوي) — يتغيّر كلما تغيّر منطق رأس المال العامل أو بنود التراخيص.
+        totalInvestment: 2260700, targetDSCR: 1.25,
         sources: {
             ...data[SECTIONS.FINANCING].sources,
             equity: { amount: 1000000, percentage: 44.1 },
@@ -348,11 +357,17 @@ function createCasualDiningStudy() {
     data[SECTIONS.ASSUMPTIONS] = { ...data[SECTIONS.ASSUMPTIONS], discountRate: 0.13, inflationRate: 0.02, projectionYears: 5 };
     data[SECTIONS.LEGAL] = {
         ...data[SECTIONS.LEGAL],
+        // تدقيق 2026-07-08 (ملاحظة متوسطة #39): كانت القائمة تقتصر على 4 بنود وتُغفل
+        // متطلبات سعودية شائعة — أُضيفت الغرفة التجارية/ZATCA/اللافتات/الشهادة الصحية.
         licenses: [
             { name: 'سجل تجاري', quantity: 1, price: 1200 },
+            { name: 'انضمام الغرفة التجارية', quantity: 1, price: 800 },
+            { name: 'تسجيل ضريبي/زكوي (ZATCA)', quantity: 1, price: 0 },
             { name: 'رخصة بلدية (مطعم صالة)', quantity: 1, price: 5000 },
+            { name: 'رخصة لافتات المحل', quantity: 1, price: 700 },
             { name: 'شهادة الدفاع المدني', quantity: 1, price: 2500 },
             { name: 'رخصة هيئة الغذاء والدواء', quantity: 1, price: 2000 },
+            { name: 'شهادة صحية للعاملين', quantity: 1, price: 600 },
         ]
     };
     return data;
@@ -420,9 +435,9 @@ function createCloudKitchenStudy() {
     };
     data[SECTIONS.FINANCING] = {
         ...data[SECTIONS.FINANCING],
-        // تدقيق 2026-07-08 (ملاحظة عالية #38): مطابق لـresults.capex.total الفعلي بعد
-        // ربط «% متغير» اللوجستيات بالمحرك (انظر ملاحظة createFastFoodStudy أعلاه).
-        totalInvestment: 725960, targetDSCR: 1.25,
+        // تدقيق 2026-07-08 (ملاحظة عالية #38 + متوسطة #39): مطابق لـresults.capex.total
+        // الفعلي (انظر ملاحظة createFastFoodStudy أعلاه).
+        totalInvestment: 727560, targetDSCR: 1.25,
         sources: {
             ...data[SECTIONS.FINANCING].sources,
             equity: { amount: 412000, percentage: 55.9 },
@@ -432,11 +447,17 @@ function createCloudKitchenStudy() {
     data[SECTIONS.ASSUMPTIONS] = { ...data[SECTIONS.ASSUMPTIONS], discountRate: 0.12, inflationRate: 0.02, projectionYears: 5 };
     data[SECTIONS.LEGAL] = {
         ...data[SECTIONS.LEGAL],
+        // تدقيق 2026-07-08 (ملاحظة متوسطة #39): كانت القائمة تقتصر على 4 بنود وتُغفل
+        // متطلبات سعودية شائعة — أُضيفت الغرفة التجارية/ZATCA/اللافتات/الشهادة الصحية.
         licenses: [
             { name: 'سجل تجاري', quantity: 1, price: 1200 },
+            { name: 'انضمام الغرفة التجارية', quantity: 1, price: 800 },
+            { name: 'تسجيل ضريبي/زكوي (ZATCA)', quantity: 1, price: 0 },
             { name: 'رخصة بلدية (مطبخ إنتاجي)', quantity: 1, price: 3000 },
+            { name: 'رخصة لافتات المحل', quantity: 1, price: 400 },
             { name: 'شهادة الدفاع المدني', quantity: 1, price: 1500 },
             { name: 'رخصة هيئة الغذاء والدواء', quantity: 1, price: 2000 },
+            { name: 'شهادة صحية للعاملين', quantity: 1, price: 400 },
         ]
     };
     return data;
