@@ -57,7 +57,7 @@
     font-size: 24px;
     line-height: 1;
     cursor: pointer;
-    color: #6b7280;
+    color: var(--c-text-muted);
     padding: 0;
     width: 24px;
     height: 24px;
@@ -76,7 +76,7 @@
 /* Toast Types */
 
 .toast-success {
-    border-right: 4px solid #10b981;
+    border-inline-start: 4px solid var(--c-success);
 }
 
 .toast-success .toast-icon {
@@ -85,7 +85,7 @@
 }
 
 .toast-error {
-    border-right: 4px solid #ef4444;
+    border-inline-start: 4px solid var(--c-danger);
 }
 
 .toast-error .toast-icon {
@@ -94,7 +94,7 @@
 }
 
 .toast-warning {
-    border-right: 4px solid #f59e0b;
+    border-inline-start: 4px solid var(--c-warning, #b45309);
 }
 
 .toast-warning .toast-icon {
@@ -103,7 +103,7 @@
 }
 
 .toast-info {
-    border-right: 4px solid #3b82f6;
+    border-inline-start: 4px solid var(--c-accent-blue);
 }
 
 .toast-info .toast-icon {
@@ -122,5 +122,17 @@
     .toast {
         min-width: auto;
         width: 100%;
+    }
+}
+
+/* احترام تفضيل تقليل الحركة: ظهور بلا انزلاق */
+@media (prefers-reduced-motion: reduce) {
+    .toast {
+        transition: opacity 0.15s ease;
+        transform: none;
+    }
+
+    .toast-show {
+        transform: none;
     }
 }

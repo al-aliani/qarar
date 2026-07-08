@@ -97,9 +97,9 @@ export class ScenarioSwitcher {
                                 </tr>
                                 <tr>
                                     <td>فترة الاسترداد</td>
-                                    <td class="negative">${(scenarios.pessimistic.results?.indicators?.paybackPeriod ?? 0).toFixed(1)} سنة</td>
-                                    <td>${(scenarios.base.results?.indicators?.paybackPeriod ?? 0).toFixed(1)} سنة</td>
-                                    <td class="positive">${(scenarios.optimistic.results?.indicators?.paybackPeriod ?? 0).toFixed(1)} سنة</td>
+                                    <td class="negative">${this.formatPayback(scenarios.pessimistic.results?.indicators?.paybackPeriod ?? scenarios.pessimistic.results?.indicators?.payback)}</td>
+                                    <td>${this.formatPayback(scenarios.base.results?.indicators?.paybackPeriod ?? scenarios.base.results?.indicators?.payback)}</td>
+                                    <td class="positive">${this.formatPayback(scenarios.optimistic.results?.indicators?.paybackPeriod ?? scenarios.optimistic.results?.indicators?.payback)}</td>
                                 </tr>
                                 <tr>
                                     <td>صافي الربح (السنة 1)</td>
@@ -220,5 +220,10 @@ export class ScenarioSwitcher {
             currency: 'SAR',
             maximumFractionDigits: 0
         }).format(n || 0);
+    }
+
+    formatPayback(n) {
+        const value = Number(n);
+        return Number.isFinite(value) && value > 0 ? value.toFixed(1) + ' سنة' : 'غير محقق';
     }
 }

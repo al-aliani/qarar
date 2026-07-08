@@ -40,13 +40,22 @@ table {
 /* --- App Shell (Split View) --- */
 .app-shell {
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr) 350px;
-    /* Sidebar | Main Wizard | Live Dashboard */
+    grid-template-columns: minmax(0, 1fr);
     flex: 1;
     min-height: 0;
     width: 100%;
     overflow: hidden;
     /* Prevent body scroll */
+}
+
+.sidebar,
+.sidebar-overlay,
+#btnToggleSidebar {
+    display: none !important;
+}
+
+.main-stage {
+    grid-column: 1 / -1;
 }
 
 /* --- Sidebar (Navigation) --- */
@@ -62,20 +71,12 @@ table {
 /* Ensure sidebar is visible on desktop when not explicitly hidden */
 @media (min-width: 769px) {
 
-    /* Force sidebar visibility on desktop unless explicitly hidden */
     .sidebar {
-        display: flex !important;
-    }
-
-    /* Only hide if explicitly set to none via inline style */
-    .sidebar[style*="display: none"] {
         display: none !important;
     }
 
-    /* Ensure stepperNav is visible and keeps flex layout */
     #stepperNav {
-        display: flex !important;
-        flex-direction: column !important;
+        display: none !important;
     }
 
     /* Ensure nav sections are visible */
@@ -157,6 +158,22 @@ table {
     color: var(--c-p-500);
 }
 
+/* مؤشّر «أين أنا» على الجوّال — يعوّض غياب شريط المراحل العلوي المخفي على الجوّال */
+.mobile-stage-indicator {
+    margin-inline-start: auto;
+    max-width: 55%;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--c-text-muted, var(--c-text-muted));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: end;
+}
+.mobile-stage-indicator:empty {
+    display: none;
+}
+
 /* شريط المؤشرات الحيّ للجوّال — مخفي افتراضياً؛ يظهر داخل ترويسة الجوّال في مساحة العمل فقط */
 .mobile-kpi-bar {
     display: none;
@@ -201,7 +218,7 @@ table {
 /* --- Responsive --- */
 @media (max-width: 1300px) {
     .app-shell {
-        grid-template-columns: 260px minmax(0, 1fr) 0;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .live-panel {
@@ -338,7 +355,7 @@ table {
     }
 
     .sidebar.is-open {
-        display: flex !important;
+        display: none !important;
     }
 
     .main-stage {

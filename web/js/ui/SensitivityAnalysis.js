@@ -24,14 +24,18 @@ export class SensitivityAnalysis {
         const baseNPV = baseResults?.indicators?.npv || 0;
 
         // Helper to run scenario
+        // يُرجع null عند تعذّر الحساب (لا صفراً ملفَّقاً) — كي يظهر «--» محايداً لا رقماً أخضر زائفاً
         const runScenario = (params) => {
             try {
                 const res = runFullModel(state, params);
-                return res?.indicators?.npv || 0;
+                const npv = res?.indicators?.npv;
+                return (npv == null || Number.isNaN(npv)) ? null : npv;
             } catch (e) {
-                return 0;
+                return null;
             }
         };
+        // فئة اللون: محايدة عند التعذّر، أحمر للسالب، أخضر للموجب
+        this._npvClass = (v) => (v == null ? 'text-muted' : (v < 0 ? 'text-danger' : 'text-success'));
 
         this.container.innerHTML = `
             <div class="sensitivity-analysis">
@@ -124,15 +128,15 @@ export class SensitivityAnalysis {
                 <div class="sensitivity-range">
                     <div class="range-point negative">
                         <span>-10%</span>
-                        <span class="${downVP < 0 ? 'text-danger' : 'text-success'}">${this.formatCurrency(downVP)}</span>
+                        <span class="${this._npvClass(downVP)}">${this.formatCurrency(downVP)}</span>
                     </div>
                     <div class="range-point base">
                         <span>الأساسي</span>
-                        <span class="${baseNPV < 0 ? 'text-danger' : 'text-success'}">${this.formatCurrency(baseNPV)}</span>
+                        <span class="${this._npvClass(baseNPV)}">${this.formatCurrency(baseNPV)}</span>
                     </div>
                     <div class="range-point positive">
                         <span>+10%</span>
-                        <span class="${upVP < 0 ? 'text-danger' : 'text-success'}">${this.formatCurrency(upVP)}</span>
+                        <span class="${this._npvClass(upVP)}">${this.formatCurrency(upVP)}</span>
                     </div>
                 </div>
             </div>
@@ -150,7 +154,7 @@ export class SensitivityAnalysis {
             if (v === 0) val = baseNPV;
             else val = runner({ [paramKey]: v });
 
-            return `<td class="${val < 0 ? 'text-danger' : 'text-success'}">${this.formatCurrency(val)}</td>`;
+            return `<td class="${this._npvClass(val)}">${this.formatCurrency(val)}</td>`;
         }).join('')}
             </tr>
         `;

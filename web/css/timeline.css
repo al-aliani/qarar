@@ -154,7 +154,7 @@
 }
 
 .btn-delete-act:hover {
-    color: #ef4444;
+    color: var(--c-danger);
 }
 
 .timeline-form {

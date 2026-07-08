@@ -1,4 +1,7 @@
 /**
+ * @deprecated غير مستخدم — المولّد الفعلي للنماذج هو ui/Wizard.js + ui/DynamicTable.js
+ * لا تستورد هذا الملف؛ تسمياته مفاتيح إنجليزية خام بلا ترجمة.
+ *
  * UI Form Generator
  * Dynamically binds Schema sections to HTML forms.
  */

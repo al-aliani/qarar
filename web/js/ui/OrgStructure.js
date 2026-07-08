@@ -60,10 +60,11 @@ export class OrgStructure {
                     <div id="operationalKpisTable"></div>
                 </div>
 
-                <!-- Saudization -->
+                <!-- Saudization / نطاقات -->
                 <div class="card analysis-card">
-                    <h3 class="card-title">الهيكل التنظيمي</h3>
-                    <div id="orgChart" class="org-chart-container"></div>
+                    <h3 class="card-title">🇸🇦 السعودة ونطاقات</h3>
+                    <p class="text-muted text-sm mb-3">نسبة توطين الوظائف — تطلبها جهات التمويل (منشآت/الصندوق) وتؤثر على تصنيف نطاقات ورسوم العمالة الوافدة.</p>
+                    ${this.renderSaudization(orgStructure.saudization || {}, hrData)}
                 </div>
 
                 <!-- Navigation -->
@@ -114,15 +115,7 @@ export class OrgStructure {
     }
 
     renderOrgChart(departments) {
-        const defaultDepts = [
-            { id: 'ceo', name: 'المدير التنفيذي', parentId: null, head: '', responsibilities: 'القيادة العامة والاستراتيجية' },
-            { id: 'ops', name: 'مدير العمليات', parentId: 'ceo', head: '', responsibilities: 'إدارة العمليات اليومية' },
-            { id: 'fin', name: 'المدير المالي', parentId: 'ceo', head: '', responsibilities: 'المالية والمحاسبة' },
-            { id: 'mkt', name: 'مدير التسويق', parentId: 'ceo', head: '', responsibilities: 'التسويق والمبيعات' },
-            { id: 'hr', name: 'مدير الموارد البشرية', parentId: 'ceo', head: '', responsibilities: 'شؤون الموظفين' }
-        ];
-
-        const depts = departments.length > 0 ? departments : defaultDepts;
+        const depts = departments.length > 0 ? departments : this.getDefaultDepts();
 
         return `
             <div class="org-chart-container">
@@ -272,22 +265,32 @@ export class OrgStructure {
     }
 
     renderSaudization(saudization, hrData) {
-        const totalEmployees = (hrData.positions || []).reduce((sum, p) => sum + (p.count || 0), 0);
-        const currentPct = saudization.currentPercentage || 0;
+        const positions = hrData.positions || [];
+        const totalEmployees = positions.reduce((sum, p) => sum + (Number(p.count) || 0), 0);
+        const saudiEmployees = positions.reduce((sum, p) => sum + (p.nationality === 'saudi' ? (Number(p.count) || 0) : 0), 0);
+        // النسبة الفعلية محسوبة من جدول الرواتب (الجنسيات) — لا رقم يدوي منفصل عن الواقع
+        const computedPct = totalEmployees > 0 ? Math.round((saudiEmployees / totalEmployees) * 100) : 0;
+        const currentPct = saudization.currentPercentage != null && saudization.currentPercentage !== ''
+            ? Number(saudization.currentPercentage) : computedPct;
         const targetPct = saudization.targetPercentage || 0;
 
-        // Determine Nitaqat color
+        // نطاقات (نطاقات الموزون): النطاق «الأصفر» أُلغي رسمياً في ديسمبر 2021.
+        // النطاقات الحالية: أحمر ثم أخضر (منخفض/متوسط/مرتفع) ثم بلاتيني.
+        // ⚠️ الحدود أدناه استرشادية عامة؛ النسب الفعلية تختلف حسب النشاط وحجم المنشأة (جداول HRSD).
         let nitaqatColor = 'red';
-        if (currentPct >= 40) nitaqatColor = 'green';
-        else if (currentPct >= 25) nitaqatColor = 'lightgreen';
-        else if (currentPct >= 10) nitaqatColor = 'yellow';
+        let nitaqatName = 'أحمر';
+        if (currentPct >= 60) { nitaqatColor = 'platinum'; nitaqatName = 'بلاتيني'; }
+        else if (currentPct >= 40) { nitaqatColor = 'green'; nitaqatName = 'أخضر مرتفع'; }
+        else if (currentPct >= 25) { nitaqatColor = 'lightgreen'; nitaqatName = 'أخضر متوسط'; }
+        else if (currentPct >= 10) { nitaqatColor = 'lightgreen'; nitaqatName = 'أخضر منخفض'; }
 
         return `
             <div class="saudization-container">
                 <div class="saudization-visual">
                     <div class="nitaqat-indicator nitaqat-${nitaqatColor}">
                         <div class="nitaqat-label">نطاقات</div>
-                        <div class="nitaqat-color">${nitaqatColor === 'green' ? 'أخضر مرتفع' : nitaqatColor === 'lightgreen' ? 'أخضر منخفض' : nitaqatColor === 'yellow' ? 'أصفر' : 'أحمر'}</div>
+                        <div class="nitaqat-color">${nitaqatName}</div>
+                        <div class="nitaqat-note text-xs text-muted">استرشادي — تحقق من حاسبة نطاقات الرسمية (منصة قوى)</div>
                     </div>
                     <div class="saudization-progress">
                         <div class="progress-bar">
@@ -297,6 +300,7 @@ export class OrgStructure {
                             <span>الحالي: ${currentPct}%</span>
                             <span>المستهدف: ${targetPct}%</span>
                         </div>
+                        <p class="text-xs text-muted mt-1">محسوب من جدول الرواتب: ${saudiEmployees} سعودي من ${totalEmployees} موظف = ${computedPct}%.</p>
                     </div>
                 </div>
                 <div class="saudization-inputs">
@@ -305,7 +309,7 @@ export class OrgStructure {
                         <input type="number" id="saud-totalEmployees" class="input" value="${totalEmployees}" readonly>
                     </div>
                     <div class="input-group">
-                        <label for="saud-currentPct">نسبة السعودة الحالية %</label>
+                        <label for="saud-currentPct">نسبة السعودة الحالية % (المحسوبة ${computedPct}%)</label>
                         <input type="number" id="saud-currentPct" class="input saudization-field" data-field="currentPercentage"
                                value="${currentPct}" min="0" max="100">
                     </div>
@@ -386,7 +390,40 @@ export class OrgStructure {
         }
     }
 
+    /**
+     * يبني هيكلاً تنظيمياً افتراضياً يتناسب مع حجم المشروع.
+     * يعتمد على المساحة (areaSize) وعدد الموظفين المقدّر (hr.positions)
+     * لتحديد مستوى التعقيد: مشروع صغير يحصل على هيكل مبسّط،
+     * والمشاريع الأكبر تحصل على إدارات وظيفية إضافية.
+     */
     getDefaultDepts() {
+        const state = this.store.getState();
+        const area = Number(state.projectInfo?.areaSize) || 0;
+        const headcount = (state.hr?.positions || [])
+            .reduce((sum, p) => sum + (Number(p.count) || 0), 0);
+        // مقياس الحجم: الأكبر بين عدد الموظفين وما تعنيه المساحة (كل 50م² ≈ موظف)
+        const scale = Math.max(headcount, Math.ceil(area / 50));
+
+        // مشروع صغير جداً (منشأة واحدة صغيرة): مالك/مدير + إشراف تشغيلي فقط
+        if (scale <= 8) {
+            return [
+                { id: 'owner', name: 'المالك / المدير العام', parentId: null, head: '', responsibilities: 'الإدارة العامة والإشراف' },
+                { id: 'ops', name: 'مشرف التشغيل', parentId: 'owner', head: '', responsibilities: 'العمليات اليومية والفريق' },
+                { id: 'fin', name: 'المحاسبة', parentId: 'owner', head: '', responsibilities: 'الحسابات والمشتريات' }
+            ];
+        }
+
+        // مشروع متوسط: مدير عام + عمليات + مالية + تسويق/مبيعات
+        if (scale <= 25) {
+            return [
+                { id: 'gm', name: 'المدير العام', parentId: null, head: '', responsibilities: 'القيادة العامة والاستراتيجية' },
+                { id: 'ops', name: 'مدير العمليات', parentId: 'gm', head: '', responsibilities: 'إدارة العمليات اليومية' },
+                { id: 'fin', name: 'المسؤول المالي', parentId: 'gm', head: '', responsibilities: 'المالية والمحاسبة' },
+                { id: 'mkt', name: 'مسؤول التسويق والمبيعات', parentId: 'gm', head: '', responsibilities: 'التسويق والمبيعات' }
+            ];
+        }
+
+        // مشروع كبير: هيكل تنفيذي كامل
         return [
             { id: 'ceo', name: 'المدير التنفيذي', parentId: null, head: '', responsibilities: 'القيادة العامة والاستراتيجية' },
             { id: 'ops', name: 'مدير العمليات', parentId: 'ceo', head: '', responsibilities: 'إدارة العمليات اليومية' },
@@ -399,10 +436,14 @@ export class OrgStructure {
     addDepartment() {
         const state = this.store.getState();
         const departments = [...(state.orgStructure?.departments || this.getDefaultDepts())];
+        // الجذر قد يكون owner/gm/ceo حسب حجم المشروع (getDefaultDepts أصبح متدرّجاً) —
+        // نُلحق القسم الجديد بالجذر الفعلي لا بمعرّف ثابت 'ceo' الذي كان يُنتج عقدة يتيمة
+        // لا تظهر في المخطط الشجري للمشاريع الصغيرة/المتوسطة.
+        const rootId = (departments.find(d => d.parentId == null) || departments[0])?.id ?? null;
         departments.push({
             id: crypto.randomUUID().slice(0, 8),
             name: 'قسم جديد',
-            parentId: 'ceo',
+            parentId: rootId,
             head: '',
             responsibilities: ''
         });

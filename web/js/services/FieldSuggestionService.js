@@ -5,6 +5,7 @@
  */
 
 import { AIConnector } from './AIConnector.js';
+import { generateFieldSuggestion } from './InternalAIGenerator.js';
 
 const CHUNK_DELAY_MS = 25;
 const MIN_CHUNK_SIZE = 2;
@@ -18,8 +19,20 @@ const MAX_CHUNK_SIZE = 8;
  * @returns {Promise<string>} النص المقترح
  */
 export async function generateSuggestion(fieldName, currentValue, projectContext) {
-    const connector = new AIConnector();
     const projectInfo = projectContext?.projectInfo ?? projectContext ?? {};
+    const state = { projectInfo };
+
+    // F3: مساعد الكتابة يعمل داخلياً وفورياً — النموذج الداخلي يغطي كل الحقول. كان المسار
+    // يمرّ أولاً عبر الخادم بمهلة 20 ثانية، فيبدو الزر «صامتاً» طوال الانتظار قبل السقوط
+    // للمولّد الداخلي. الآن نبدأ بالداخلي (فوري وحتمي) ونجعل الخادم بديلاً احتياطياً فقط.
+    try {
+        const internal = generateFieldSuggestion(fieldName, currentValue, state);
+        if (typeof internal === 'string' && internal.trim()) return internal;
+    } catch (e) {
+        console.warn('generateSuggestion internal path failed', e);
+    }
+
+    const connector = new AIConnector();
     try {
         const result = await connector.query('field_suggestion', 'field_suggestion', {
             projectInfo,

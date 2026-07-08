@@ -1,4 +1,5 @@
 import { AIConnector } from './AIConnector.js';
+import { InternalAIGenerator } from './InternalAIGenerator.js';
 
 export class AIWriter {
     static async generate(type, data) {
@@ -6,12 +7,27 @@ export class AIWriter {
         const projectInfo = data?.projectInfo ?? data ?? {};
 
         switch (type) {
-            case 'legal_advice':
-                return connector.getBusinessAdvice({ projectInfo }, {});
+            case 'legal_advice': {
+                // توليد التراخيص والشكل القانوني داخلياً — لا يمرّ إطلاقاً على مستشار «advisor» العام
+                // (الذي كان يعيد رسالة «استخدم القوائم المالية» غير ذات صلة بالتراخيص)
+                let licenses = [];
+                try {
+                    const rows = InternalAIGenerator.generateLicenses({ projectInfo });
+                    licenses = Array.isArray(rows) ? rows : [];
+                } catch (e) {
+                    console.warn('legal_advice: generateLicenses failed', e);
+                    licenses = [];
+                }
+                // الشكل القانوني الافتراضي الأنسب لمعظم المشاريع الصغيرة/المتوسطة في السعودية
+                const legalForm = 'شركة ذات مسؤولية محدودة';
+                return { legalForm, licenses };
+            }
+            // ملاحظة: connector.query يتجاهل نص البرومبت (توليد محلي من القوالب، لا LLM) —
+            // نمرّر النوع فقط. لا نبني برومبتات LLM موهِمة بذكاء خارجي غير موجود.
             case 'swot':
-                return connector.query(this.buildSwotPrompt(projectInfo), 'analysis', { projectInfo });
+                return connector.query('swot', 'analysis', { projectInfo });
             case 'pestel':
-                return connector.query(this.buildPestelPrompt(projectInfo), 'pestel', { projectInfo });
+                return connector.query('pestel', 'pestel', { projectInfo });
             case 'customer_segments':
             case 'suggest_segments':
                 return connector.generateTableSuggestions('suggest_segments', projectInfo);
@@ -23,33 +39,4 @@ export class AIWriter {
         }
     }
 
-    static buildSwotPrompt(data) {
-        const d = data || {};
-        return `أنت خبير استراتيجي. قم بإعداد تحليل SWOT لمشروع: ${d.name || 'مشروع جديد'}
-        النشاط: ${d.sector || d.concept || 'غير محدد'}
-        الموقع: ${d.city || 'غير محدد'}
-
-        المطلوب:
-        1. نقاط القوة (Strengths)
-        2. نقاط الضعف (Weaknesses)
-        3. الفرص (Opportunities)
-        4. التهديدات (Threats)
-
-        قدم الإجابة بتنسيق JSON.`;
-    }
-
-    static buildPestelPrompt(data) {
-        const d = data || {};
-        return `أنت خبير استراتيجي. قم بإعداد تحليل PESTEL لمشروع: ${d.name || 'مشروع جديد'}
-النشاط: ${d.sector || d.concept || 'غير محدد'}
-الموقع: ${d.city || 'غير محدد'}
-
-المطلوب تحليل العوامل الستة للبيئة الخارجية:
-1. سياسي (political)  2. اقتصادي (economic)  3. اجتماعي (social)
-4. تقني (technological)  5. بيئي (environmental)  6. قانوني (legal)
-
-لكل عامل: وصف التأثير على المشروع، وحقل impact بقيمة واحدة فقط: positive أو negative أو neutral.
-
-أرجع JSON على شكل مصفوفة من 6 عناصر. كل عنصر: { "factor": "political|economic|social|technological|environmental|legal", "description": "نص عربي", "impact": "positive|negative|neutral" }. لا أقسام أخرى.`;
-    }
 }

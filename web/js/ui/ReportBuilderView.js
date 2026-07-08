@@ -20,10 +20,14 @@ const REPORT_SECTION_LABELS = {
     financial_kpis: 'الملخص المالي (المؤشرات المالية)',
     swot: 'التحليل الاستراتيجي (التحليل الرباعي)',
     capex: 'الاستثمارات الرأسمالية',
+    legal: 'الدراسة القانونية والتراخيص',
     income_statement: 'قائمة الدخل',
     cash_flow: 'قائمة التدفقات النقدية',
     loan_schedule: 'جدول سداد القرض',
+    balance_sheet: 'الميزانية العمومية (قائمة المركز المالي)',
     business_model: 'نموذج العمل',
+    risks: 'تحليل المخاطر',
+    appendices: 'الملاحق والمصادر وعروض الأسعار',
     scenarios: 'مقارنة السيناريوهات',
     sensitivity: 'تحليل الحساسية',
     recommendation: 'التوصية النهائية والقرار الاستثماري'
@@ -74,6 +78,10 @@ export class ReportBuilderView {
                         <button type="button" class="btn btn--sm btn-magic btn-ai-risks" data-type="risks">ولّد تحليل المخاطر</button>
                     </div>
                 </div>
+                <div class="report-builder-ai-preview card mb-4 hidden" id="reportBuilderAiPreview" aria-live="polite">
+                    <h3 class="text-gold mb-2" id="reportBuilderAiPreviewTitle">الناتج المقترح</h3>
+                    <p class="text-sm" id="reportBuilderAiPreviewText"></p>
+                </div>
                 <div class="report-builder-cards" id="reportBuilderCards">
                     ${displayOrder.map(id => this.renderCard(id)).join('')}
                 </div>
@@ -91,6 +99,25 @@ export class ReportBuilderView {
                 <span class="report-builder-card-grip" aria-hidden="true">⋮⋮</span>
                 <span class="report-builder-card-label">${label}</span>
             </div>`;
+    }
+
+    escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    showAIPreview(title, text) {
+        const box = this.container.querySelector('#reportBuilderAiPreview');
+        const titleEl = this.container.querySelector('#reportBuilderAiPreviewTitle');
+        const textEl = this.container.querySelector('#reportBuilderAiPreviewText');
+        if (!box || !titleEl || !textEl) return;
+        titleEl.textContent = title || 'الناتج المقترح';
+        textEl.innerHTML = this.escapeHtml(text || '').replace(/\n/g, '<br>');
+        box.classList.remove('hidden');
     }
 
     bindDragDrop() {
@@ -166,11 +193,16 @@ export class ReportBuilderView {
                     const { calculateStudy } = await import('../core/engine.js');
                     results = calculateStudy(state);
                 } catch (_) {}
+                const existingSummary = (state.executiveSummary?.projectOverview || '').trim();
+                if (existingSummary && !confirm('سيستبدل هذا الملخصَ التنفيذي الحالي. متابعة؟')) {
+                    btn.disabled = false; restoreLabel(btn); return;
+                }
                 const text = await connector.generateExecutiveSummary(state, results);
                 if (typeof text === 'string' && text.trim()) {
                     const prev = (getState().executiveSummary || {});
                     this.store.update('executiveSummary', { ...prev, projectOverview: text });
                     if (this.store.notify) this.store.notify();
+                    this.showAIPreview('الملخص التنفيذي المقترح', text);
                     toast.success('تم توليد الملخص التنفيذي. راجع قسم الملخص التنفيذي.');
                 } else toast.warning('لم يُنشأ نص. جرّب مرة أخرى أو أضف بيانات المشروع.');
             } catch (err) {
@@ -188,6 +220,10 @@ export class ReportBuilderView {
             setLoading(btn, true);
             const state = getState();
             try {
+                const existingMarket = (state.marketing?.marketAnalysis?.summary || '').trim();
+                if (existingMarket && !confirm('سيستبدل هذا ملخصَ تحليل السوق الحالي. متابعة؟')) {
+                    btn.disabled = false; restoreLabel(btn); return;
+                }
                 const text = await connector.generateMarketAnalysisText(state);
                 if (typeof text === 'string' && text.trim()) {
                     const marketing = state.marketing || {};
@@ -211,6 +247,11 @@ export class ReportBuilderView {
             setLoading(btn, true);
             const state = getState();
             try {
+                const prevSwot = (state.strategic || state.strategicAnalysis || {}).swot || {};
+                const hasSwot = (prevSwot.strengths?.length || prevSwot.weaknesses?.length || prevSwot.opportunities?.length || prevSwot.threats?.length);
+                if (hasSwot && !confirm('سيستبدل هذا تحليلَ SWOT الحالي. متابعة؟')) {
+                    btn.disabled = false; restoreLabel(btn); return;
+                }
                 const swot = await connector.generateSWOT(state);
                 if (swot && (swot.strengths?.length || swot.weaknesses?.length || swot.opportunities?.length || swot.threats?.length)) {
                     const strategic = state.strategic || state.strategicAnalysis || {};
@@ -233,6 +274,11 @@ export class ReportBuilderView {
             setLoading(btn, true);
             const state = getState();
             try {
+                const existingCompetitors = state.marketing?.competitors || [];
+                if (existingCompetitors.length > 0 &&
+                    !confirm(`سيستبدل هذا ${existingCompetitors.length} منافساً أدخلتهم. متابعة؟`)) {
+                    btn.disabled = false; restoreLabel(btn); return;
+                }
                 const competitors = await connector.generateCompetitors(state);
                 if (Array.isArray(competitors) && competitors.length > 0) {
                     const marketing = state.marketing || {};

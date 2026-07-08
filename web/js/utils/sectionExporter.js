@@ -479,13 +479,20 @@ function handlePreliminaryCheckSection(data) {
 function handleProjectAlternativesSection(data) {
     const result = [['اختيار المشروع — مقارنة الأفكار المبدئية']];
     const ideas = data?.ideas || [];
-    if (ideas.length > 0) {
-        result.push(['اسم الفكرة', 'تكلفة تقريبية', 'عائد متوقع', 'ملاحظة']);
-        ideas.forEach((idea, i) => {
+    const RISK_AR = { low: 'منخفضة', medium: 'متوسطة', high: 'عالية' };
+    const filledIdeas = ideas.filter(idea => idea.name || idea.estimatedCost || idea.estimatedReturn || idea.notes);
+    if (filledIdeas.length > 0) {
+        result.push(['اسم الفكرة', 'تكلفة تقريبية', 'عائد متوقع', 'المخاطرة', 'الاسترداد (سنة)', 'ملاحظة']);
+        filledIdeas.forEach((idea) => {
+            const cost = Number(idea.estimatedCost) || 0;
+            const ret = Number(idea.estimatedReturn) || 0;
+            const payback = cost > 0 && ret > 0 ? Number((cost / ret).toFixed(1)) : '-';
             result.push([
                 (idea.name || '-').toString(),
                 idea.estimatedCost ?? 0,
                 idea.estimatedReturn ?? 0,
+                RISK_AR[idea.risk] || '-',
+                payback,
                 (idea.notes || '-').toString()
             ]);
         });

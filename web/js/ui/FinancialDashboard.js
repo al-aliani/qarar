@@ -2,7 +2,7 @@
  * Financial Dashboard Component
  * Displays aggregated CAPEX/OPEX, Income Statement, and Key Indicators
  */
-// توحيد مصدر الحقيقة (تدقيق 2026-07-04): كانت اللوحة تحسب عبر lib/calc/financialModel.js
+// توحيد مصدر الحقيقة (تدقيق 2026-07-04): كانت اللوحة تحسب عبر محرك مالي موازي قديم
 // (بلا زكاة، خصم 5%) فتعرض NPV/IRR مختلفة عن التقرير المُصدَّر لنفس الدراسة.
 // الآن كل الشاشات والمصدّرات تقرأ من engine.js حصراً.
 import { calculateStudy as runFullModel } from '../core/engine.js';
@@ -47,6 +47,26 @@ export class FinancialDashboard {
 
         // Run the full financial model
         const studyData = this.store.get ? this.store.get() : this.store.getState();
+
+        // بلا إيرادات لا معنى للوحة: المحرك يعيد NPV/ROI سالبة مضللة لمشروع لم تُدخل
+        // بياناته بعد — نعرض حالة «لا بيانات» إرشادية بدل بطاقات بأرقام سالبة.
+        if (!(Array.isArray(studyData.revenue?.streams) && studyData.revenue.streams.length > 0)) {
+            this.container.innerHTML = `
+                <div class="card glass-card">
+                    <h3 class="card-title">لوحة التحكم المالي</h3>
+                    <div class="alert alert--warning">
+                        <p><strong>⚠️ لا توجد بيانات إيرادات. يرجى إضافة مصادر الإيرادات في خطوة "مصادر الإيرادات".</strong></p>
+                        <p class="text-sm mt-2">لعرض المؤشرات المالية (صافي القيمة الحالية، العائد، التعادل) أكمل:</p>
+                        <ul class="text-sm mt-2" style="list-style: disc; padding-right: 20px;">
+                            <li>مصادر الإيرادات (خطوة "مصادر الإيرادات")</li>
+                            <li>التكاليف الرأسمالية (خطوة "الدراسة الفنية")</li>
+                            <li>التكاليف التشغيلية (خطوات "الموارد البشرية" و"اللوجستية" و"الإدارية")</li>
+                        </ul>
+                    </div>
+                </div>`;
+            return;
+        }
+
         try {
             this.results = runFullModel(studyData);
         } catch (e) {
@@ -74,13 +94,13 @@ export class FinancialDashboard {
         const breakevenDisplay = breakevenMonthly != null ? Math.round(breakevenMonthly) : '—';
 
         this.container.innerHTML = `
-            <!-- Decision Banner -->
-            <div class="decision-banner ${decision === 'GO' ? 'is-go' : 'is-nogo'}">
-                <div class="decision-label">${decision === 'GO' ? '✅ المشروع مجدي' : '⚠️ المشروع غير مجدي'}</div>
+            <!-- Decision Banner: قرار ثلاثي GO / REVISE / NO-GO (لا يُختزل إلى ثنائي) -->
+            <div class="decision-banner ${decision === 'GO' ? 'is-go' : (decision === 'REVISE' ? 'is-revise' : 'is-nogo')}">
+                <div class="decision-label">${decision === 'GO' ? 'المشروع مجدٍ' : (decision === 'REVISE' ? 'المشروع يحتاج مراجعة' : 'المشروع غير مجدٍ')}</div>
                 <div class="flex gap-2 items-center">
                     <button type="button" id="btnSimpleViewToggle" class="btn btn--sm ${isSimpleView ? 'btn--primary' : 'btn--ghost'}" title="${isSimpleView ? 'الرجوع للعرض الكامل (NPV، IRR)' : 'عرض مبسّط: هل ربح؟ متى استرداد؟ حد التعادل؟'}">${isSimpleView ? 'عرض كامل' : 'عرض مبسّط'}</button>
-                    <button id="btnPresentationMode" class="btn btn--outline-light btn-sm">
-                        🎥 عرض العرض التقديمي
+                    <button id="btnPresentationMode" class="btn btn--secondary btn--sm">
+                        عرض تقديمي
                     </button>
                 </div>
             </div>
@@ -241,7 +261,7 @@ export class FinancialDashboard {
                     <tr><td>التجهيزات والمعدات</td><td class="text-mono">${this.formatCurrency(capex.subtotal)}</td></tr>
                     <tr><td>احتياطي طوارئ (10%)</td><td class="text-mono">${this.formatCurrency(capex.contingency)}</td></tr>
                     <tr><td>رأس المال العامل</td><td class="text-mono">${this.formatCurrency(capex.workingCapital)}</td></tr>
-                    <tr class="total-row"><td><strong>إجمالي الاستثمار</strong></td><td class="text-mono text-gold">${this.formatCurrency(capex.total)}</td></tr>
+                    <tr class="total-row"><td><strong>إجمالي الاستثمار المطلوب (شامل رأس المال العامل)</strong></td><td class="text-mono text-gold">${this.formatCurrency(capex.total)}</td></tr>
                 </table>
             </div>
 
@@ -249,7 +269,7 @@ export class FinancialDashboard {
             <div class="card mt-4">
                 <h3 class="text-gold">ملخص التكاليف التشغيلية</h3>
                 <table class="summary-table">
-                    <tr><td>التكاليف الثابتة (سنوياً)</td><td class="text-mono">${this.formatCurrency(opex.fixedAnnual)}</td></tr>
+                    <tr><td>التكاليف الثابتة التشغيلية (بدون استهلاك)</td><td class="text-mono">${this.formatCurrency(opex.fixedAnnual)}</td></tr>
                     <tr><td>التكاليف المتغيرة (سنوياً)</td><td class="text-mono">${this.formatCurrency(opex.variableAnnual)}</td></tr>
                     <tr><td>الاستهلاك السنوي</td><td class="text-mono">${this.formatCurrency(depreciation)}</td></tr>
                     <tr class="total-row"><td><strong>إجمالي التشغيل السنوي</strong></td><td class="text-mono text-gold">${this.formatCurrency(opex.totalAnnual + depreciation)}</td></tr>
@@ -795,7 +815,7 @@ export class FinancialDashboard {
                 datasets: [
                     { label: 'الإيراد', data: revenue, backgroundColor: 'rgba(16, 185, 129, 0.6)', borderColor: '#10b981', borderWidth: 1 },
                     { label: 'التكلفة', data: totalCost, backgroundColor: 'rgba(239, 68, 68, 0.5)', borderColor: '#ef4444', borderWidth: 1 },
-                    { label: 'الصافي', data: netIncome, backgroundColor: 'rgba(212, 175, 55, 0.6)', borderColor: '#d4af37', borderWidth: 1, type: 'line', tension: 0.2 }
+                    { label: 'الصافي', data: netIncome, backgroundColor: 'rgba(138, 95, 28, 0.6)', borderColor: '#8a5f1c', borderWidth: 1, type: 'line', tension: 0.2 }
                 ]
             },
             options: {

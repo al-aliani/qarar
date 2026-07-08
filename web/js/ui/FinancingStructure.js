@@ -4,6 +4,8 @@
  * Based on UNIDO and Monsha'at requirements
  */
 
+import { calculateStudy as runFullModel } from '../core/engine.js';
+
 export class FinancingStructure {
     constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
@@ -20,6 +22,12 @@ export class FinancingStructure {
         const financing = state.financing || {};
         const capexBreakdown = this.calculateTotalCapex(state);
         const totalCapex = capexBreakdown.total;
+
+        // ثبّت الإجمالي الموحّد في الحالة كي تعرضه بقية الشاشات (الملخص التنفيذي، التقييم، عرض المستثمر)
+        // بنفس رقم المحرك — دون هذا يبقى financing.totalInvestment على قيمة قديمة مختلفة.
+        if (financing.totalInvestment !== totalCapex) {
+            this.store.update('financing', { ...financing, totalInvestment: totalCapex });
+        }
 
         this.container.innerHTML = `
             <div class="financing-structure">
@@ -58,6 +66,11 @@ export class FinancingStructure {
                 <div class="alert alert-info">
                     إجمالي رأس المال المطلوب (التكاليف الرأسمالية + التكاليف التشغيلية): <strong>${this.formatCurrency(totalCapex)}</strong>
                 </div>
+                ${capexBreakdown._engineError ? `
+                <div class="alert alert--warning">
+                    ⚠️ تعذّر حساب المحرك المالي — الرقم أعلاه <strong>تقدير مبدئي محلي</strong> وقد يختلف عن القوائم المالية.
+                    أكمل/راجع بيانات الدراسة (الإيرادات، الأصول) ثم أعد فتح هذه الخطوة قبل مطابقة التمويل.
+                </div>` : ''}
 
                 <!-- نسب التمويل المقترحة (الفجوة المعيارية) -->
                 <div class="card analysis-card">
@@ -99,6 +112,7 @@ export class FinancingStructure {
                     <h3 class="card-title">تفاصيل القرض البنكي</h3>
                     <p class="text-muted text-sm mb-3">حدّد معدل الفائدة ومدة القرض إنْ وُجد تمويل بنكي. تُستخدم في جدول السداد والمحرك المالي.</p>
                     ${this.renderLoanDetails(financing)}
+                    ${this.renderLoanReadinessWarning(state)}
                 </div>
 
                 <!-- WACC -->
@@ -110,7 +124,14 @@ export class FinancingStructure {
                 <!-- Loan Schedule -->
                 <div class="card analysis-card" id="loanScheduleCard" style="${(financing.sources?.bankLoan?.amount || 0) > 0 ? '' : 'display:none'}">
                     <h3 class="card-title">جدول سداد القرض</h3>
-                    ${this.renderLoanSchedule(financing)}
+                    ${this.renderLoanSchedule(state)}
+                </div>
+
+                <!-- Guarantees & DSCR -->
+                <div class="card analysis-card">
+                    <h3 class="card-title">🛡️ الضمانات وتغطية خدمة الدين</h3>
+                    <p class="text-muted text-sm mb-3">البنوك تطلب ضمانات مقابل القرض ونسبة تغطية كافية لخدمة الدين. حدّدها لتقوية ملف التمويل.</p>
+                    ${this.renderGuaranteesAndDSCR(financing)}
                 </div>
 
                 <!-- Navigation -->
@@ -197,9 +218,28 @@ export class FinancingStructure {
         breakdown.workingCapitalMonths = state.assumptions?.workingCapitalMonths || 3;
         breakdown.monthlyOpex = this.calculateMonthlyOpex(state);
         breakdown.workingCapital = breakdown.monthlyOpex * breakdown.workingCapitalMonths;
-        
-        // Total
+
+        // Total (تقدير محلي احتياطي)
         breakdown.total = Math.round(breakdown.subtotal + breakdown.contingency + breakdown.workingCapital);
+
+        // مصدر واحد للحقيقة: «إجمالي الاستثمار» من المحرك (نفس الرقم الذي تُحسب عليه NPV/IRR/DSCR
+        // ويعرضه باقي التطبيق). كان هذا المكوّن يحسب رقماً موازياً أصغر فيظهر رقمان مختلفان لنفس التسمية.
+        // نجعل رأس المال العامل هو فرق التسوية كي تبقى تفاصيل التقسيم متطابقة مع الإجمالي الموحّد.
+        try {
+            const eng = runFullModel(state);
+            const engTotal = eng?.capex?.total;
+            if (Number.isFinite(engTotal) && engTotal > 0) {
+                breakdown.total = Math.round(engTotal);
+                breakdown.workingCapital = Math.max(0, Math.round(engTotal - breakdown.subtotal - breakdown.contingency));
+                breakdown._fromEngine = true;
+            }
+        } catch (err) {
+            // فشل المحرك لا يُبتلع بصمت: كان السقوط الصامت للتقدير المحلي يعرض هنا رقماً
+            // مختلفاً عن بقية الشاشات التي تقرأ المحرك (531,800 هنا مقابل 673,195 في القوائم —
+            // تدقيق ٢٠٢٦-٠٧-٠٦)، فيطابق المستخدم تمويله على هدف خاطئ دون أن يدري.
+            breakdown._engineError = true;
+            console.warn('[FinancingStructure] تعذّر المحرك — الرقم المعروض تقدير محلي:', err?.message || err);
+        }
 
         return breakdown;
     }
@@ -285,9 +325,20 @@ export class FinancingStructure {
                         <label for="funding-investors-amount">المبلغ (ريال)</label>
                         <input type="number" id="funding-investors-amount" class="input funding-amount" data-source="investors"
                                value="${investors.amount || 0}">
-                        <label for="funding-investors-pct">النسبة %</label>
+                        <label for="funding-investors-pct">النسبة من التمويل %</label>
                         <input type="number" id="funding-investors-pct" class="input funding-percentage" data-source="investors"
                                value="${investors.percentage || 0}" readonly>
+                        <label for="funding-investors-equity">حصة الملكية المُتنازل عنها %
+                            <span class="tooltip-icon" title="النسبة من ملكية الشركة التي يحصل عليها المستثمرون مقابل مبلغهم — مختلفة عن نسبة مساهمتهم من إجمالي التمويل">ℹ️</span>
+                        </label>
+                        <input type="number" id="funding-investors-equity" class="input investor-input" data-field="equityShare"
+                               value="${investors.equityShare || 0}" min="0" max="100" step="1">
+                        <label for="funding-investors-premoney">التقييم قبل الجولة (ريال)
+                            <span class="tooltip-icon" title="قيمة المشروع قبل ضخّ استثمار هذه الجولة — يُحدّد نسبة الملكية العادلة مقابل المبلغ">ℹ️</span>
+                        </label>
+                        <input type="number" id="funding-investors-premoney" class="input investor-input" data-field="preMoneyValuation"
+                               value="${investors.preMoneyValuation || 0}" min="0">
+                        <div class="text-xs text-muted mt-1">التقييم بعد الجولة: <strong>${this.formatCurrency((investors.preMoneyValuation || 0) + (investors.amount || 0))}</strong></div>
                     </div>
                 </div>
 
@@ -342,6 +393,76 @@ export class FinancingStructure {
         `;
     }
 
+    getLoanReadinessDiagnostics(state) {
+        const financing = state?.financing || {};
+        const loan = financing.sources?.bankLoan || {};
+        const loanAmount = Number(loan.amount || 0);
+        const targetDSCR = Number.isFinite(Number(financing.targetDSCR)) ? Number(financing.targetDSCR) : 1.25;
+
+        if (loanAmount <= 0) {
+            return { loanAmount, targetDSCR, alerts: [] };
+        }
+
+        try {
+            const results = runFullModel(state);
+            const dscr = results?.indicators?.dscr ?? null;
+            const fundingGap = Number(results?.financingCheck?.fundingGap ?? 0);
+            const y1Ebitda = Number(results?.incomeStatement?.[0]?.ebitda ?? NaN);
+            const alerts = [];
+
+            if (fundingGap > 1) {
+                alerts.push(`توجد فجوة تمويل ${this.formatCurrency(fundingGap)} قبل احتساب جاهزية القرض.`);
+            }
+            if (dscr == null) {
+                alerts.push('لا يمكن احتساب DSCR حالياً، راجع الإيرادات والتكاليف وجدول القرض.');
+            } else if (dscr < targetDSCR) {
+                alerts.push(`DSCR الحالي ${Number(dscr).toFixed(2)}x أقل من المستهدف ${targetDSCR.toFixed(2)}x.`);
+            }
+            if (Number.isFinite(y1Ebitda) && y1Ebitda <= 0) {
+                alerts.push('EBITDA السنة الأولى سالب أو صفري؛ هذا مناسب أحياناً لمستثمر تقني لكنه ضعيف للبنك دون إثبات اشتراكات مبكرة أو ضمانات أقوى.');
+            }
+
+            return { loanAmount, targetDSCR, dscr, fundingGap, y1Ebitda, alerts };
+        } catch (err) {
+            return {
+                loanAmount,
+                targetDSCR,
+                dscr: null,
+                fundingGap: NaN,
+                y1Ebitda: NaN,
+                alerts: ['تعذر تشغيل المحرك المالي للتحقق من DSCR. أكمل بيانات الإيرادات والتكاليف ثم أعد فتح خطوة التمويل.']
+            };
+        }
+    }
+
+    renderLoanReadinessWarning(state) {
+        const d = this.getLoanReadinessDiagnostics(state);
+        if (d.loanAmount <= 0) return '';
+
+        const hasAlerts = d.alerts.length > 0;
+        const dscrText = d.dscr == null ? 'غير محسوب' : `${Number(d.dscr).toFixed(2)}x`;
+        const gapText = Number.isFinite(d.fundingGap)
+            ? (Math.abs(d.fundingGap) <= 1 ? 'متوازن' : this.formatCurrency(d.fundingGap))
+            : 'غير محسوبة';
+        const ebitdaText = Number.isFinite(d.y1Ebitda) ? this.formatCurrency(d.y1Ebitda) : 'غير متاح';
+        const title = hasAlerts
+            ? 'تحقق ائتماني مطلوب قبل رفع الملف للبنك'
+            : 'القرض يبدو قابلاً للمراجعة البنكية مبدئياً';
+
+        return `
+            <div class="alert ${hasAlerts ? 'alert-warning' : 'alert-success'} mb-3" data-loan-readiness-warning>
+                <strong>${title}</strong>
+                <div class="text-sm mt-2">
+                    القرض: ${this.formatCurrency(d.loanAmount)} · DSCR: ${dscrText} / المستهدف ${d.targetDSCR.toFixed(2)}x · فجوة التمويل: ${gapText} · EBITDA سنة 1: ${ebitdaText}
+                </div>
+                ${hasAlerts ? `<ul class="text-sm mt-2" style="margin-bottom:0;">
+                    ${d.alerts.map(alert => `<li>${alert}</li>`).join('')}
+                    <li>لتحسين الجاهزية: خفف القرض، ارفع التمويل الذاتي/المستثمرين، مدد فترة السماح، أو أضف إثبات مبيعات واشتراكات مبكرة.</li>
+                </ul>` : '<div class="text-sm mt-2">استمر في مراجعة الضمانات وجدول السداد قبل التصدير النهائي.</div>'}
+            </div>
+        `;
+    }
+
     renderLoanDetails(financing) {
         const loan = financing.sources?.bankLoan || {};
         return `
@@ -359,7 +480,17 @@ export class FinancingStructure {
                 <div class="loan-field">
                     <label for="loan-graceMonths">فترة السماح (شهور)</label>
                     <input type="number" id="loan-graceMonths" class="input loan-input" data-field="gracePeriodMonths"
-                           value="${loan.gracePeriodMonths || 6}" min="0" max="24">
+                           value="${loan.gracePeriodMonths ?? 0}" min="0" max="24">
+                </div>
+                <div class="loan-field">
+                    <label for="loan-repaymentType">نوع السداد
+                        <span class="tooltip-icon" title="متساوي الأقساط: قسط ثابت شهرياً. متناقص: أصل ثابت وفائدة متناقصة (قسط أعلى بدايةً وأقل فوائد إجمالاً). دفعة أخيرة: فوائد فقط ثم أصل القرض دفعة واحدة عند الاستحقاق">ℹ️</span>
+                    </label>
+                    <select id="loan-repaymentType" class="input loan-input" data-field="repaymentType">
+                        <option value="equal" ${(loan.repaymentType || 'equal') === 'equal' ? 'selected' : ''}>متساوي الأقساط (Amortizing)</option>
+                        <option value="declining" ${loan.repaymentType === 'declining' ? 'selected' : ''}>متناقص (أصل ثابت)</option>
+                        <option value="bullet" ${loan.repaymentType === 'bullet' ? 'selected' : ''}>دفعة أخيرة (Bullet)</option>
+                    </select>
                 </div>
                 <div class="loan-field">
                     <label for="loan-bank">البنك</label>
@@ -376,11 +507,54 @@ export class FinancingStructure {
         `;
     }
 
+    renderGuaranteesAndDSCR(financing) {
+        const targetDSCR = Number.isFinite(Number(financing.targetDSCR)) ? Number(financing.targetDSCR) : 1.25;
+        const guarantees = Array.isArray(financing.guarantees) ? financing.guarantees : [];
+        const typeLabels = {
+            mortgage: 'رهن عقار/معدات',
+            personal: 'كفالة شخصية',
+            kafalah: 'كفالة صندوق الكفالة',
+            salaryAssignment: 'تحويل راتب',
+            other: 'أخرى'
+        };
+        const rows = guarantees.map((g, i) => `
+            <tr>
+                <td>
+                    <select class="input input--sm guarantee-input" data-index="${i}" data-field="type">
+                        ${Object.entries(typeLabels).map(([v, l]) => `<option value="${v}" ${(g.type || 'mortgage') === v ? 'selected' : ''}>${l}</option>`).join('')}
+                    </select>
+                </td>
+                <td><input type="text" class="input input--sm guarantee-input" data-index="${i}" data-field="description" value="${(g.description || '').replace(/"/g, '&quot;')}" placeholder="وصف الضمان"></td>
+                <td><input type="number" class="input input--sm guarantee-input" data-index="${i}" data-field="value" value="${g.value || 0}" min="0"></td>
+                <td><button type="button" class="btn btn--sm btn--danger guarantee-remove" data-index="${i}">حذف</button></td>
+            </tr>
+        `).join('');
+        return `
+            <div class="dscr-field mb-3" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                <label for="financing-targetDSCR" style="font-weight:bold;">نسبة تغطية خدمة الدين المستهدفة (DSCR)
+                    <span class="tooltip-icon" title="DSCR = صافي التدفق النقدي التشغيلي ÷ أقساط الدين. البنوك تطلب عادة ≥ 1.25 لتضمن قدرة المشروع على السداد">ℹ️</span>
+                </label>
+                <input type="number" id="financing-targetDSCR" class="input input--sm" style="width:6rem;text-align:center;" value="${targetDSCR}" min="1" max="5" step="0.05">
+                ${targetDSCR < 1.25 ? '<span class="text-danger text-sm">⚠️ أقل من الحد الائتماني المعتاد (1.25)</span>' : '<span class="text-success text-sm">✓ ضمن النطاق المقبول للبنوك</span>'}
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr><th>نوع الضمان</th><th>الوصف</th><th>القيمة (ريال)</th><th></th></tr>
+                </thead>
+                <tbody id="guaranteesBody">
+                    ${rows || '<tr><td colspan="4" class="text-muted text-center">لا ضمانات مضافة بعد</td></tr>'}
+                </tbody>
+            </table>
+            <button type="button" class="btn btn--sm btn--secondary mt-2" id="btnAddGuarantee">+ إضافة ضمان</button>
+        `;
+    }
+
     renderWACC(financing, totalCapex) {
         const sources = financing.sources || {};
         const equity = sources.equity?.amount || 0;
         const debt = sources.bankLoan?.amount || 0;
-        const costOfEquity = 0.15; // تكلفة حقوق الملكية 15%: افتراض سوقي للمشاريع الصغيرة في السوق السعودي
+        // تكلفة حقوق الملكية قابلة للإدخال (financing.costOfEquity) مع 15% كافتراض سوقي للمشاريع الصغيرة بالسوق السعودي
+        const costOfEquity = Number.isFinite(Number(financing.costOfEquity)) ? Number(financing.costOfEquity) : 0.15;
         const costOfDebt = (sources.bankLoan?.interestRate || 0.08);
         // الدرع الضريبي للدين: بنظام الزكاة السعودي الاقتطاع الفعلي على الربح =
         // زكاة 2.5% × الحصة السعودية + ضريبة دخل × الحصة الأجنبية (متسق مع المحرك)
@@ -407,8 +581,10 @@ export class FinancingStructure {
                         <span>${(we * 100).toFixed(1)}%</span>
                     </div>
                     <div class="wacc-item">
-                        <span>تكلفة الملكية (Re)</span>
-                        <span>${(costOfEquity * 100).toFixed(1)}%</span>
+                        <span>تكلفة الملكية (Re)
+                            <span class="tooltip-icon" title="العائد الذي يتوقعه المُلّاك على أموالهم — أعلى من الفائدة البنكية لأنه يحمل مخاطر أعلى. 15% افتراض معتاد للمشاريع الصغيرة">ℹ️</span>
+                        </span>
+                        <span><input type="number" id="wacc-costOfEquity" class="input input--sm" style="width:6rem;text-align:center;" value="${(costOfEquity * 100).toFixed(1)}" min="0" max="100" step="0.5">%</span>
                     </div>
                     <div class="wacc-item">
                         <span>وزن الدين (D/V)</span>
@@ -427,43 +603,46 @@ export class FinancingStructure {
         `;
     }
 
-    renderLoanSchedule(financing) {
+    renderLoanSchedule(state) {
+        const financing = state.financing || {};
         const loan = financing.sources?.bankLoan || {};
-        const principal = loan.amount || 0;
-        const rate = (loan.interestRate || 0.08) / 12;
-        const term = (loan.termYears || 5) * 12;
-        const grace = loan.gracePeriodMonths || 6;
+        if ((loan.amount || 0) <= 0) return '<p class="text-muted">أدخل مبلغ القرض لعرض الجدول</p>';
 
-        if (principal <= 0) return '<p class="text-muted">أدخل مبلغ القرض لعرض الجدول</p>';
+        // مصدر حقيقة واحد: نستهلك جدول القرض الذي يحسبه المحرك (نفس الفوائد التي تُحمَّل على
+        // قائمة الدخل) بدل حساب محلي موازٍ كان يفترض سماحاً افتراضياً مختلفاً (6 مقابل 0 في
+        // المحرك) ويُسقط فوائد فترة السماح من «إجمالي الفوائد».
+        let results = null;
+        try { results = runFullModel(state); } catch (_) { results = null; }
+        const loanSchedule = results?.loanSchedule;
+        if (!loanSchedule || !Array.isArray(loanSchedule.annualSummary) || loanSchedule.annualSummary.length === 0) {
+            return '<p class="text-muted">تعذّر حساب جدول السداد — تحقّق من بيانات القرض.</p>';
+        }
 
-        const monthlyPayment = rate > 0 ?
-            (principal * rate * Math.pow(1 + rate, term - grace)) / (Math.pow(1 + rate, term - grace) - 1) :
-            principal / (term - grace);
-
-        // Generate first 12 months + yearly summary
-        let balance = principal;
-        let totalInterest = 0;
+        const repaymentLabel = { equal: 'متساوي الأقساط', declining: 'متناقص (أصل ثابت)', bullet: 'دفعة أخيرة (Bullet)' }[loanSchedule.repaymentType] || 'متساوي الأقساط';
 
         return `
             <div class="schedule-summary">
                 <div class="kpi-card">
-                    <div class="kpi-label">القسط الشهري</div>
-                    <div class="kpi-value">${this.formatCurrency(monthlyPayment)}</div>
+                    <div class="kpi-label">نمط السداد</div>
+                    <div class="kpi-value" style="font-size:1rem;">${repaymentLabel}</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">القسط الشهري ${loanSchedule.repaymentType === 'equal' ? '' : '(بعد السماح، سنة 1)'}</div>
+                    <div class="kpi-value">${this.formatCurrency(loanSchedule.monthlyPayment)}</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-label">إجمالي الأقساط</div>
-                    <div class="kpi-value">${this.formatCurrency(monthlyPayment * (term - grace))}</div>
+                    <div class="kpi-value">${this.formatCurrency(loanSchedule.totalPayment)}</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-label">إجمالي الفوائد</div>
-                    <div class="kpi-value text-danger">${this.formatCurrency(monthlyPayment * (term - grace) - principal)}</div>
+                    <div class="kpi-value text-danger">${this.formatCurrency(loanSchedule.totalInterest)}</div>
                 </div>
             </div>
             <table class="data-table loan-schedule-table">
                 <thead>
                     <tr>
                         <th>السنة</th>
-                        <th>الرصيد الافتتاحي</th>
                         <th>الأقساط</th>
                         <th>الفوائد</th>
                         <th>الأصل</th>
@@ -471,33 +650,15 @@ export class FinancingStructure {
                     </tr>
                 </thead>
                 <tbody>
-                    ${Array.from({ length: loan.termYears || 5 }, (_, year) => {
-            const openingBalance = balance;
-            let yearlyInterest = 0;
-            let yearlyPrincipal = 0;
-
-            for (let month = 0; month < 12; month++) {
-                const monthNum = year * 12 + month;
-                if (monthNum < grace) continue;
-
-                const interest = balance * rate;
-                const principalPayment = monthlyPayment - interest;
-                yearlyInterest += interest;
-                yearlyPrincipal += principalPayment;
-                balance = Math.max(0, balance - principalPayment);
-            }
-
-            return `
+                    ${loanSchedule.annualSummary.map(y => `
                             <tr>
-                                <td>السنة ${year + 1}</td>
-                                <td>${this.formatCurrency(openingBalance)}</td>
-                                <td>${year === 0 && grace >= 6 ? this.formatCurrency(monthlyPayment * (12 - Math.min(grace, 12))) : this.formatCurrency(monthlyPayment * 12)}</td>
-                                <td class="text-danger">${this.formatCurrency(yearlyInterest)}</td>
-                                <td>${this.formatCurrency(yearlyPrincipal)}</td>
-                                <td>${this.formatCurrency(balance)}</td>
+                                <td>السنة ${y.year}</td>
+                                <td>${this.formatCurrency(y.totalPayment)}</td>
+                                <td class="text-danger">${this.formatCurrency(y.totalInterest)}</td>
+                                <td>${this.formatCurrency(y.totalPrincipal)}</td>
+                                <td>${this.formatCurrency(y.endingBalance)}</td>
                             </tr>
-                        `;
-        }).join('')}
+                        `).join('')}
                 </tbody>
             </table>
         `;
@@ -549,7 +710,7 @@ export class FinancingStructure {
                             <td style="padding: 0.5rem; border-bottom: 1px solid var(--border-color); text-align: left; font-family: monospace;">${this.formatCurrency(breakdown.contingency)}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 0.5rem; border-bottom: 1px solid var(--border-color);">رأس المال العامل (${breakdown.workingCapitalMonths} أشهر × ${this.formatCurrency(breakdown.monthlyOpex)}/شهر)</td>
+                            <td style="padding: 0.5rem; border-bottom: 1px solid var(--border-color);">رأس المال العامل ${breakdown._fromEngine ? '(شامل إيجار مقدّم ودورة النقد — من النموذج المالي)' : `(${breakdown.workingCapitalMonths} أشهر × ${this.formatCurrency(breakdown.monthlyOpex)}/شهر)`}</td>
                             <td style="padding: 0.5rem; border-bottom: 1px solid var(--border-color); text-align: left; font-family: monospace;">${this.formatCurrency(breakdown.workingCapital)}</td>
                         </tr>
                         <tr style="background: var(--bg-secondary); border-top: 2px solid var(--gold);">
@@ -596,6 +757,37 @@ export class FinancingStructure {
             input.addEventListener('change', (e) => this.updateLoanDetails(e));
         });
 
+        // Investor equity / valuation changes
+        this.container.querySelectorAll('.investor-input').forEach(input => {
+            input.addEventListener('change', (e) => this.updateInvestorField(e));
+        });
+
+        // Cost of equity (WACC input)
+        this.container.querySelector('#wacc-costOfEquity')?.addEventListener('change', (e) => {
+            const pct = parseFloat(e.target.value);
+            const value = Number.isFinite(pct) ? pct / 100 : 0.15;
+            const state = this.store.getState();
+            this.store.update('financing', { ...state.financing, costOfEquity: value });
+            this.render();
+        });
+
+        // Target DSCR
+        this.container.querySelector('#financing-targetDSCR')?.addEventListener('change', (e) => {
+            const v = parseFloat(e.target.value);
+            const state = this.store.getState();
+            this.store.update('financing', { ...state.financing, targetDSCR: Number.isFinite(v) ? v : 1.25 });
+            this.render();
+        });
+
+        // Guarantees add / edit / remove
+        this.container.querySelector('#btnAddGuarantee')?.addEventListener('click', () => this.addGuarantee());
+        this.container.querySelectorAll('.guarantee-input').forEach(input => {
+            input.addEventListener('change', (e) => this.updateGuarantee(e));
+        });
+        this.container.querySelectorAll('.guarantee-remove').forEach(btn => {
+            btn.addEventListener('click', (e) => this.removeGuarantee(parseInt(e.target.dataset.index, 10)));
+        });
+
         // Government program change
         this.container.querySelector('[data-field="program"]')?.addEventListener('change', (e) => {
             this.updateGovernmentProgram(e);
@@ -610,6 +802,22 @@ export class FinancingStructure {
         this.renderFundingChart();
     }
 
+    /**
+     * نسب المصادر تُحسب من مجموع مصادر التمويل نفسها (فتجمع دائماً إلى 100%) —
+     * كانت تُقسم على «الاستثمار المطلوب» فيظهر ذاتي 96% + قرض 64% = 160% (تدقيق ٢٠٢٦-٠٧-٠٦)،
+     * وتُحدَّث كل المصادر معاً كي لا تبقى نسب قديمة بجوار نسبة محدثة.
+     */
+    recalcSourcePercentages(sources) {
+        const keys = ['equity', 'bankLoan', 'investors', 'governmentSupport'];
+        const totalFunded = keys.reduce((sum, k) => sum + Number(sources[k]?.amount || 0), 0);
+        keys.forEach(k => {
+            const amount = Number(sources[k]?.amount || 0);
+            const pct = totalFunded > 0 ? Math.round((amount / totalFunded) * 1000) / 10 : 0;
+            sources[k] = { ...(sources[k] || {}), percentage: pct };
+        });
+        return sources;
+    }
+
     /** يسدّ الفجوة بين إجمالي التمويل والاستثمار المطلوب بتعديل حصة التمويل الذاتي فقط. */
     autoBalanceFunding(totalCapex) {
         const state = this.store.getState();
@@ -618,8 +826,8 @@ export class FinancingStructure {
         const others = ['bankLoan', 'investors', 'governmentSupport']
             .reduce((sum, key) => sum + Number(financing.sources[key]?.amount || 0), 0);
         const newEquity = Math.max(0, totalCapex - others);
-        const percentage = totalCapex > 0 ? Math.round((newEquity / totalCapex) * 1000) / 10 : 0;
-        financing.sources.equity = { ...(financing.sources.equity || {}), amount: newEquity, percentage };
+        financing.sources.equity = { ...(financing.sources.equity || {}), amount: newEquity };
+        this.recalcSourcePercentages(financing.sources);
         financing.totalInvestment = totalCapex;
         this.store.update('financing', financing);
         this.render();
@@ -628,20 +836,62 @@ export class FinancingStructure {
     updateFundingSource(e, totalCapex) {
         const source = e.target.dataset.source;
         const amount = parseFloat(e.target.value) || 0;
-        const percentage = totalCapex > 0 ? (amount / totalCapex) * 100 : 0;
 
         const state = this.store.getState();
         const financing = { ...state.financing };
-        financing.sources = financing.sources || {};
+        financing.sources = { ...(financing.sources || {}) };
         financing.sources[source] = {
-            ...financing.sources[source],
-            amount,
-            percentage: Math.round(percentage * 10) / 10
+            ...(financing.sources[source] || {}),
+            amount
         };
+        this.recalcSourcePercentages(financing.sources);
         financing.totalInvestment = totalCapex;
 
+        // Skip global render from store subscription
         this.store.update('financing', financing);
-        this.render();
+
+        // Update DOM in-place to avoid losing focus (Blur Bug)
+        const srcKeys = ['equity', 'bankLoan', 'investors', 'governmentSupport'];
+        srcKeys.forEach(k => {
+            const pct = financing.sources[k]?.percentage || 0;
+            const input = this.container.querySelector(`.funding-percentage[data-source="${k}"]`);
+            if (input) input.value = pct + '%';
+        });
+        this.renderFundingChart();
+        
+        // Update total capex display if we have it
+        const fundingTotalEl = this.container.querySelector('#funding-total-display');
+        if (fundingTotalEl) {
+            const totalFunded = srcKeys.reduce((sum, k) => sum + Number(financing.sources[k]?.amount || 0), 0);
+            fundingTotalEl.textContent = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(totalFunded);
+            
+            const reqInvEl = this.container.querySelector('#required-investment-display');
+            if (reqInvEl && totalCapex) {
+                reqInvEl.textContent = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(totalCapex);
+                if (Math.abs(totalFunded - totalCapex) > 1) {
+                    fundingTotalEl.classList.add('text-danger');
+                    reqInvEl.classList.add('text-danger');
+                } else {
+                    fundingTotalEl.classList.remove('text-danger');
+                    reqInvEl.classList.remove('text-danger');
+                }
+            }
+        }
+    }
+
+    /** إعادة رسم مؤجّلة تمنع تكرار الرسم وتُخرج الهدم من دورة حدث الإدخال الجارية. */
+    scheduleRender() {
+        if (this._renderScheduled) return;
+        this._renderScheduled = true;
+        const run = () => {
+            this._renderScheduled = false;
+            this.render();
+        };
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(run);
+        } else {
+            setTimeout(run, 0);
+        }
     }
 
     updateLoanDetails(e) {
@@ -660,7 +910,7 @@ export class FinancingStructure {
         financing.sources.bankLoan = { ...financing.sources.bankLoan, [field]: value };
 
         this.store.update('financing', financing);
-        this.render();
+        // Do not full render to avoid losing focus
     }
 
     updateGovernmentProgram(e) {
@@ -672,6 +922,62 @@ export class FinancingStructure {
             program: e.target.value
         };
         this.store.update('financing', financing);
+    }
+
+    /** يحدّث حصة الملكية أو التقييم قبل الجولة للمستثمرين دون المساس بمبلغ/نسبة التمويل. */
+    updateInvestorField(e) {
+        const field = e.target.dataset.field; // equityShare | preMoneyValuation
+        const value = parseFloat(e.target.value) || 0;
+        const state = this.store.getState();
+        const financing = { ...state.financing };
+        financing.sources = { ...(financing.sources || {}) };
+        const investors = { ...(financing.sources.investors || {}), [field]: value };
+        // التقييم بعد الجولة = التقييم قبلها + مبلغ المستثمرين (مشتق، يُخزَّن للعرض في الشاشات الأخرى)
+        investors.postMoneyValuation = (investors.preMoneyValuation || 0) + (investors.amount || 0);
+        financing.sources.investors = investors;
+        this.store.update('financing', financing);
+        
+        // Update post-money valuation locally without full render
+        const postMoneyEl = this.container.querySelector('.investor-post-money');
+        if (postMoneyEl) {
+            postMoneyEl.textContent = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(investors.postMoneyValuation);
+        }
+    }
+
+    addGuarantee() {
+        const state = this.store.getState();
+        const financing = { ...state.financing };
+        const guarantees = Array.isArray(financing.guarantees) ? [...financing.guarantees] : [];
+        guarantees.push({ type: 'mortgage', description: '', value: 0 });
+        financing.guarantees = guarantees;
+        this.store.update('financing', financing);
+        this.render();
+    }
+
+    updateGuarantee(e) {
+        const index = parseInt(e.target.dataset.index, 10);
+        const field = e.target.dataset.field; // type | description | value
+        const state = this.store.getState();
+        const financing = { ...state.financing };
+        const guarantees = Array.isArray(financing.guarantees) ? [...financing.guarantees] : [];
+        if (!guarantees[index]) return;
+        const raw = e.target.value;
+        const value = field === 'value' ? (parseFloat(raw) || 0) : raw;
+        guarantees[index] = { ...guarantees[index], [field]: value };
+        financing.guarantees = guarantees;
+        this.store.update('financing', financing);
+        // لا حاجة لإعادة render كاملة عند تعديل حقل نصي/رقمي داخل نفس الجدول إلا لتحديث المشتقات؛ نكتفي بالحفظ.
+        if (field === 'type') this.render();
+    }
+
+    removeGuarantee(index) {
+        const state = this.store.getState();
+        const financing = { ...state.financing };
+        const guarantees = Array.isArray(financing.guarantees) ? [...financing.guarantees] : [];
+        guarantees.splice(index, 1);
+        financing.guarantees = guarantees;
+        this.store.update('financing', financing);
+        this.render();
     }
 
     renderFundingChart() {

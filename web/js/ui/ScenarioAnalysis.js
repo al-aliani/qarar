@@ -34,22 +34,12 @@ export class ScenarioAnalysis {
                 <!-- Scenario Comparison -->
                 <div class="card analysis-card">
                     <h3 class="card-title">مقارنة السيناريوهات</h3>
-                    <p class="text-muted text-sm mb-3">المتشائم vs الأساسي vs المتفائل</p>
+                    <p class="text-muted text-sm mb-3">المتشائم vs الأساسي vs المتفائل — محسوبة بالمحرك الفعلي</p>
                     ${this.renderScenarioComparison(scenarios, baseResults)}
                 </div>
 
-                <!-- Sensitivity Analysis -->
-                <div class="card analysis-card">
-                    <h3 class="card-title">تحليل الحساسية</h3>
-                    <p class="text-muted text-sm mb-3">تأثير تغير المتغيرات الرئيسية على الربحية</p>
-                    ${this.renderSensitivityAnalysis(scenarios, baseResults)}
-                </div>
-
-                <!-- Break-Even Chart -->
-                <div class="card analysis-card">
-                    <h3 class="card-title">نقطة التعادل</h3>
-                    <p class="text-muted text-sm mb-3">تحليل نقطة التعادل التفاعلي</p>
-                    ${this.renderBreakEven(baseResults)}
+                <div class="alert alert--info">
+                    <p class="text-sm">لتحليل الحساسية أحادي المتغير (±10%/±20%) وقيمة التبديل، راجع خطوة <strong>«تحليل الحساسية»</strong>. ولتحليل نقطة التعادل التفصيلي راجع خطوة <strong>«تحليل نقطة التعادل»</strong>.</p>
                 </div>
 
                 <!-- Navigation -->
@@ -61,7 +51,6 @@ export class ScenarioAnalysis {
         `;
 
         this.bindEvents();
-        this.renderCharts(baseResults);
     }
 
     renderScenarioComparison(scenarios, baseResults) {
@@ -172,6 +161,8 @@ export class ScenarioAnalysis {
                 </div>
             </div>
 
+            <p class="text-xs text-muted mt-2">يجمع كل سيناريو تغييرين معاً: الإيرادات والتكاليف في آنٍ واحد (مثلاً المتفائل ${(optimistic.revenueChange * 100).toFixed(0)}% إيراد و${(optimistic.costChange * 100).toFixed(0)}% تكاليف)، لذلك أثره على صافي القيمة الحالية أكبر بكثير من تحليل الحساسية أحادي المتغير (±10%) أدناه — بسبب الرافعة التشغيلية العالية، لا بسبب خطأ حسابي.</p>
+
             <!-- Feasibility Verdict -->
             <div class="verdict-box ${viewPess.npv > 0 ? 'verdict-success' : 'verdict-warning'}">
                 ${viewPess.npv > 0
@@ -181,181 +172,10 @@ export class ScenarioAnalysis {
         `;
     }
 
-    renderSensitivityAnalysis(scenarios, baseResults) {
-        const sensitivity = scenarios.sensitivity || { selectedVariable: 'revenue', range: [-0.30, 0.30] };
-        const variables = [
-            { key: 'revenue', label: 'الإيرادات' },
-            { key: 'costs', label: 'التكاليف' },
-            { key: 'price', label: 'سعر البيع' },
-            { key: 'volume', label: 'حجم المبيعات' }
-        ];
-
-        const baseNPV = baseResults?.kpis?.npv || 0;
-
-        return `
-            <div class="sensitivity-container">
-                <div class="sensitivity-controls">
-                    <label for="sensitivity-variable">المتغير:</label>
-                    <select id="sensitivity-variable" class="input input--sm sensitivity-variable">
-                        ${variables.map(v => `
-                            <option value="${v.key}" ${sensitivity.selectedVariable === v.key ? 'selected' : ''}>${v.label}</option>
-                        `).join('')}
-                    </select>
-                </div>
-                
-                <div class="sensitivity-slider-container">
-                    <span class="slider-label">-30%</span>
-                    <input type="range" class="sensitivity-slider" 
-                           min="-30" max="30" value="0" step="5">
-                    <span class="slider-label">+30%</span>
-                </div>
-                
-                <div class="sensitivity-result">
-                    <span class="result-label">التغير في صافي القيمة الحالية:</span>
-                    <span class="result-value" id="sensitivityNPV">${this.formatCurrency(baseNPV)}</span>
-                </div>
-
-                <canvas id="sensitivityChart" width="400" height="200"></canvas>
-            </div>
-        `;
-    }
-
-    renderBreakEven(baseResults) {
-        const fixedCosts = baseResults?.costs?.totalFixed || 0;
-        const variableCostRatio = baseResults?.costs?.variableRatio || 0.3;
-        const price = baseResults?.revenue?.avgPrice || 100;
-        const contributionMargin = price * (1 - variableCostRatio);
-        const breakEvenUnits = contributionMargin > 0 ? Math.ceil(fixedCosts / contributionMargin) : 0;
-        const breakEvenValue = breakEvenUnits * price;
-
-        return `
-            <div class="breakeven-container">
-                <div class="breakeven-kpis">
-                    <div class="kpi-card">
-                        <div class="kpi-label">التكاليف الثابتة</div>
-                        <div class="kpi-value">${this.formatCurrency(fixedCosts)}</div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">هامش المساهمة</div>
-                        <div class="kpi-value">${((1 - variableCostRatio) * 100).toFixed(1)}%</div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">نقطة التعادل (وحدات)</div>
-                        <div class="kpi-value text-gold">${breakEvenUnits.toLocaleString('ar-SA')}</div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">نقطة التعادل (ريال)</div>
-                        <div class="kpi-value text-gold">${this.formatCurrency(breakEvenValue)}</div>
-                    </div>
-                </div>
-                <canvas id="breakEvenChart" width="400" height="250"></canvas>
-            </div>
-        `;
-    }
-
-    formatCurrency(n) {
-        return new Intl.NumberFormat('ar-SA', {
-            style: 'currency',
-            currency: 'SAR',
-            maximumFractionDigits: 0
-        }).format(n || 0);
-    }
-
-    renderCharts(baseResults) {
-        // Sensitivity Chart
-        const sensitivityCanvas = document.getElementById('sensitivityChart');
-        if (sensitivityCanvas && window.Chart) {
-            const baseNPV = baseResults?.kpis?.npv || 100000;
-            const ctx = sensitivityCanvas.getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['-30%', '-20%', '-10%', '0%', '+10%', '+20%', '+30%'],
-                    datasets: [{
-                        label: 'صافي القيمة الحالية',
-                        data: [-30, -20, -10, 0, 10, 20, 30].map(p => baseNPV * (1 + p / 100)),
-                        borderColor: '#ffd700',
-                        backgroundColor: 'rgba(255, 215, 0, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: {
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: '#888' }
-                        },
-                        x: {
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: '#888' }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Break-Even Chart
-        const breakEvenCanvas = document.getElementById('breakEvenChart');
-        if (breakEvenCanvas && window.Chart) {
-            const fixedCosts = baseResults?.costs?.totalFixed || 100000;
-            const variableRatio = baseResults?.costs?.variableRatio || 0.3;
-            const maxUnits = 1000;
-            const price = 100;
-
-            const ctx = breakEvenCanvas.getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: Array.from({ length: 11 }, (_, i) => i * 100),
-                    datasets: [
-                        {
-                            label: 'الإيرادات',
-                            data: Array.from({ length: 11 }, (_, i) => i * 100 * price),
-                            borderColor: '#4ade80',
-                            tension: 0
-                        },
-                        {
-                            label: 'التكاليف الكلية',
-                            data: Array.from({ length: 11 }, (_, i) => fixedCosts + (i * 100 * price * variableRatio)),
-                            borderColor: '#f87171',
-                            tension: 0
-                        },
-                        {
-                            label: 'التكاليف الثابتة',
-                            data: Array.from({ length: 11 }, () => fixedCosts),
-                            borderColor: '#888',
-                            borderDash: [5, 5],
-                            tension: 0
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            labels: { color: '#888' }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: '#888' }
-                        },
-                        x: {
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: '#888' },
-                            title: { display: true, text: 'الكمية', color: '#888' }
-                        }
-                    }
-                }
-            });
-        }
-    }
+    // ملاحظة: أُزيلت 3 دوال عرض ميتة (renderSensitivityAnalysis/renderBreakEven/renderCharts)
+    // لم يعد render() يستدعيها منذ توجيه المستخدم لخطوتي «الحساسية»/«نقطة التعادل» المستقلتين —
+    // وكانت تحمل أرقاماً ملفّقة جاهزة للعودة إن أُعيد تفعيلها سهواً (baseNPV احتياطي 100,000
+    // ريال، سعر وحدة ثابت 100، طاقة قصوى 1,000 — لا علاقة لها ببيانات الدراسة الفعلية).
 
     bindEvents() {
         // Navigation
@@ -370,18 +190,6 @@ export class ScenarioAnalysis {
         this.container.querySelectorAll('.scenario-input').forEach(input => {
             input.addEventListener('change', (e) => this.updateScenario(e));
         });
-
-        // Sensitivity slider
-        const slider = this.container.querySelector('.sensitivity-slider');
-        if (slider) {
-            slider.addEventListener('input', (e) => this.updateSensitivity(e));
-        }
-
-        // Sensitivity variable
-        const varSelect = this.container.querySelector('.sensitivity-variable');
-        if (varSelect) {
-            varSelect.addEventListener('change', (e) => this.changeSensitivityVariable(e));
-        }
     }
 
     updateScenario(e) {
@@ -395,30 +203,5 @@ export class ScenarioAnalysis {
 
         this.store.update('scenarios', scenarios);
         this.render();
-    }
-
-    updateSensitivity(e) {
-        const value = parseInt(e.target.value);
-        const state = this.store.getState();
-        let baseResults = null;
-        try {
-            baseResults = runFullModel(state);
-        } catch (err) { }
-
-        const baseNPV = baseResults?.kpis?.npv || 100000;
-        const adjustedNPV = baseNPV * (1 + value / 100);
-
-        const resultEl = document.getElementById('sensitivityNPV');
-        if (resultEl) {
-            resultEl.textContent = this.formatCurrency(adjustedNPV);
-            resultEl.className = `result-value ${adjustedNPV >= 0 ? 'text-success' : 'text-danger'}`;
-        }
-    }
-
-    changeSensitivityVariable(e) {
-        const state = this.store.getState();
-        const scenarios = { ...state.scenarios };
-        scenarios.sensitivity = { ...scenarios.sensitivity, selectedVariable: e.target.value };
-        this.store.update('scenarios', scenarios);
     }
 }

@@ -1,0 +1,141 @@
+/* ═════════════════════════════════════════════════════════════
+   wizard-inline.css — التحقّق الفوري على مستوى الحقل (inline)
+   طبقة فوق wizard-forms.css: رسائل خطأ أسفل كل حقل، تلوين الحدّ،
+   وإيقاع أوضح للنماذج. إضافات وتجاوزات فقط — لا مساس بأي
+   معرّف أو فئة يعتمد عليها JS. كل الألوان عبر رموز variables.css.
+   ═════════════════════════════════════════════════════════════ */
+
+/* ── 1) حالة الخطأ على مستوى الحقل ──
+   تُفعّل عبر .has-error على .form-group (من Wizard.validateField).
+   نغطّي كل أنواع الإدخال بما فيها حقل النسبة المئوية داخل .flex. */
+.form-group.has-error > input,
+.form-group.has-error > select,
+.form-group.has-error > textarea,
+.form-group.has-error .flex > input[type="number"],
+.form-group.has-error .input-with-ai > textarea {
+    border-color: var(--c-danger);
+    background-color: var(--c-danger-subtle);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-danger) 14%, transparent);
+}
+
+/* الحدّ الأحمر يبقى واضحاً حتى أثناء التركيز على حقل خاطئ */
+.form-group.has-error > input:focus,
+.form-group.has-error > select:focus,
+.form-group.has-error > textarea:focus,
+.form-group.has-error .flex > input[type="number"]:focus,
+.form-group.has-error .input-with-ai > textarea:focus {
+    border-color: var(--c-danger);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-danger) 26%, transparent);
+}
+
+/* التسمية تتلوّن بالخطر عند الخطأ (بدل الأخضر الافتراضي عند التركيز) */
+.form-group.has-error > label { color: var(--c-danger); }
+.form-group.has-error:focus-within > label { color: var(--c-danger); }
+
+/* ── 2) رسالة الخطأ أسفل الحقل ──
+   عنصر .field-error يُحقن دائماً (فارغ) ويُظهَر عند .has-error فقط. */
+.field-error {
+    display: none;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 0.75rem;
+    line-height: 1.55;
+    color: var(--c-danger);
+    margin-top: 6px;
+}
+.form-group.has-error > .field-error { display: flex; }
+
+/* أيقونة تنبيه صغيرة قبل نص الخطأ — دلالة بصرية غير معتمدة على اللون وحده */
+.field-error::before {
+    content: "";
+    flex: none;
+    width: 14px;
+    height: 14px;
+    margin-top: 1px;
+    background-color: currentColor;
+    -webkit-mask: var(--icon-alert) center / contain no-repeat;
+    mask: var(--icon-alert) center / contain no-repeat;
+}
+:root {
+    --icon-alert: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 8v4M12 16h.01'/%3E%3C/svg%3E");
+}
+
+/* ── 3) حالة الصحّة (اختيارية) — إشارة هادئة بعد تصحيح حقل كان خاطئاً ── */
+.form-group.is-valid > input,
+.form-group.is-valid > select,
+.form-group.is-valid > textarea,
+.form-group.is-valid .flex > input[type="number"],
+.form-group.is-valid .input-with-ai > textarea {
+    border-color: color-mix(in srgb, var(--c-success) 60%, var(--c-border));
+}
+/* علامة صحّ صغيرة عند نهاية الحقل النصّي (يسار في RTL) — دلالة غير معتمدة
+   على اللون وحده. لا تُطبّق على textarea/select (لهما زخارف خاصة) ولا حقل
+   النسبة (٪ بجواره). الأيقونة والحشو على نفس الجهة (inline-end) دائماً. */
+.form-group.is-valid > input:not([type="checkbox"]) {
+    background-image: var(--icon-check);
+    background-repeat: no-repeat;
+    background-position: left var(--s-3) center;
+    padding-inline-end: 2.25rem;
+}
+/* الأرقام/التواريخ اتجاهها ltr والأرقام تحاذي اليمين → الأيقونة يسار الحقل
+   حتى لا تلامس الأرقام. inline-start في ltr = يسار. */
+.form-group.is-valid > input[type="number"],
+.form-group.is-valid > input[type="date"] {
+    background-position: left var(--s-3) center;
+    padding-inline-end: 0.8rem;
+    padding-inline-start: 2.25rem;
+}
+:root { --icon-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23157f5f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E"); }
+[data-theme="dark"] { --icon-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2334d399' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E"); }
+
+/* ── 4) نجمة الحقل المطلوب — دلالة بصرية خفيفة على التسمية ── */
+.form-group > label .req-mark {
+    color: var(--c-danger);
+    font-weight: 700;
+    margin-inline-start: 3px;
+}
+
+/* ── 5) تركيز واضح على الحقول (focus-visible موحّد) ──
+   يكمّل قاعدة :focus في wizard-forms.css بحلقة تركيز أوضح للوحة المفاتيح. */
+.form-group > input:focus-visible,
+.form-group > select:focus-visible,
+.form-group > textarea:focus-visible,
+.form-group .flex > input[type="number"]:focus-visible,
+.form-group .input-with-ai > textarea:focus-visible {
+    outline: 2px solid transparent; /* الحلقة عبر box-shadow لتتبع الزوايا الدائرية */
+    outline-offset: 2px;
+}
+
+/* ── 6) انتقالات ناعمة موحّدة بين حالات الحقل (hover/focus/valid/error) ──
+   تُكمّل transition القاعدة في wizard-forms.css بإضافة لون الخلفية. */
+.form-group > input,
+.form-group > select,
+.form-group > textarea,
+.form-group .flex > input[type="number"],
+.form-group .input-with-ai > textarea {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+/* ── 7) تلوين رأس المجموعة حسب الحالة على أيقونة التلميح ──
+   عند الخطأ يخفت تلميح المدقق حتى لا ينافس رسالة الخطأ بصرياً. */
+.form-group.has-error .tooltip-auditor { color: var(--c-danger); opacity: 0.55; }
+
+/* ── 8) الحقول المُدارة (select/datalist بفئة .input) تأخذ نفس حلقة التركيز ──
+   Wizard.renderControlled يُخرج <select class="input"> و<input class="input" list>. */
+.form-group .input:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: var(--focus-ring);
+}
+
+/* ── 9) نجمة الحقل المطلوب لا تكسر انسيابية سطر التسمية ── */
+.form-group > label .req-mark { line-height: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+    .field-error { transition: none; }
+    .form-group > input,
+    .form-group > select,
+    .form-group > textarea,
+    .form-group .flex > input[type="number"],
+    .form-group .input-with-ai > textarea { transition: none; }
+}

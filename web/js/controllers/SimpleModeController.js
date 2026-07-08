@@ -6,22 +6,8 @@
  */
 
 export const MODES = {
-    MINI: 'mini',
-    SIMPLE: 'simple',
+    QUICK: 'quick',
     ADVANCED: 'advanced'
-};
-
-// Definition of visible steps for each mode
-// Using Step IDs from wizardSteps.js
-const MODE_CONFIG = {
-    [MODES.MINI]: [
-        'projectIntro', 'marketAnalysis', 'costs', 'revenue', 'decisionDashboard'
-    ],
-    [MODES.SIMPLE]: [
-        'projectIntro', 'businessModel', 'marketAnalysis', 'technical',
-        'manpower', 'costs', 'revenue', 'financing', 'decisionDashboard'
-    ],
-    // Advanced includes everything, so no list needed (allow all)
 };
 
 export class SimpleModeController {
@@ -29,47 +15,34 @@ export class SimpleModeController {
         this.store = store;
     }
 
-    /**
-     * Get current mode from store
-     */
     getMode() {
         const state = this.store.getState();
-        return state.appSettings?.mode || MODES.ADVANCED;
+        // Fallback to local storage if store doesn't have it
+        return state.appSettings?.mode || localStorage.getItem('study_mode_preference') || MODES.ADVANCED;
     }
 
-    /**
-     * Check if a step should be visible in the current mode
-     * @param {string} stepId 
-     */
-    isStepVisible(stepId) {
+    setMode(mode) {
+        localStorage.setItem('study_mode_preference', mode);
+        this.store.set('appSettings.mode', mode);
+        this.applyModeToBody();
+    }
+
+    isStepVisible(step) {
+        if (!step) return true;
         const mode = this.getMode();
         if (mode === MODES.ADVANCED) return true;
-
-        const allowed = MODE_CONFIG[mode];
-        return allowed ? allowed.includes(stepId) : true;
+        
+        // In basic mode, hide advanced steps
+        return !step.isAdvancedStep;
     }
 
-    /**
-     * Apply mode classes to body for CSS styling (hiding complex fields)
-     */
     applyModeToBody() {
         const mode = this.getMode();
-        document.body.classList.remove('mode-mini', 'mode-simple', 'mode-advanced');
+        document.body.classList.remove('mode-quick', 'mode-advanced');
         document.body.classList.add(`mode-${mode}`);
     }
 
-    /**
-     * Filter sidebar steps based on mode
-     * @param {Array} allSteps 
-     * @returns {Array} List of visible steps with original indices preserved
-     */
     getVisibleSteps(allSteps) {
-        const mode = this.getMode();
-        if (mode === MODES.ADVANCED) return allSteps;
-
-        const allowed = MODE_CONFIG[mode];
-        if (!allowed) return allSteps;
-
-        return allSteps.filter(step => allowed.includes(step.id));
+        return allSteps.filter(step => this.isStepVisible(step));
     }
 }

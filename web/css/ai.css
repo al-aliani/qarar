@@ -2,29 +2,16 @@
 
 /* 1. Variables & Base */
 :root {
-    /* موحّد مع رمز الهوية — كان #fbbf24 (كهرماني منفصل عن بقية النظام) */
+    /* موحّد مع رمز الهوية — كان var(--c-warning) (كهرماني منفصل عن بقية النظام) */
     --gold: var(--c-gold-500);
     --gold-glow: rgba(176, 125, 44, 0.35);
     --glass-bg: rgba(255, 255, 255, 0.05);
     --glass-border: rgba(255, 255, 255, 0.1);
 }
 
-/* 2. Glassmorphism Cards */
-.glass-card {
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    border-radius: 1rem;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.glass-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    border-color: rgba(255, 255, 255, 0.2);
-}
+/* 2. بطاقات السطح: أُزيلت نسخة .glass-card الزجاجية (أبيض شفاف يختفي على الثيم الفاتح).
+   التعريف الموحّد المُوكَّن في decision-dashboard.css هو المصدر الوحيد الآن — كان يُدهَس
+   هنا بسبب ترتيب تحميل ai.css بعد main.css بنفس الخصوصية. */
 
 /* 3. Animations */
 @keyframes slideInRight {
@@ -133,8 +120,8 @@
 }
 
 .score-good {
-    border-color: #3b82f6;
-    color: #3b82f6;
+    border-color: var(--c-accent-blue);
+    color: var(--c-accent-blue);
 }
 
 .score-fair {
@@ -143,8 +130,8 @@
 }
 
 .score-poor {
-    border-color: #ef4444;
-    color: #ef4444;
+    border-color: var(--c-danger);
+    color: var(--c-danger);
 }
 
 /* 6. Text Utilities */

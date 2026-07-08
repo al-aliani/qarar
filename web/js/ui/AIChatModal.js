@@ -7,6 +7,7 @@ import { aiConnector } from '../services/AIConnector.js';
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { SmartAdvisor } from '../services/SmartAdvisor.js';
 import { generateSWOT, generateAdvisorFallback } from '../services/InternalAIGenerator.js';
+import { escapeHtml } from '../utils/escape.js';
 
 const SUGGESTED_PROMPTS = [
     { label: 'ما توصياتك لمشروعي؟', type: 'advisor' },
@@ -112,8 +113,22 @@ export class AIChatModal {
         this.isLoading = true;
         this.render();
         try {
-            const response = await this.getAIResponse(initialPrompt);
-            this.addMessage('assistant', response);
+            const responseText = await this.getAIResponse(initialPrompt);
+            
+            this.addMessage('assistant', '');
+            const msgIndex = this.messages.length - 1;
+            
+            const { InternalAIGenerator } = await import('../services/InternalAIGenerator.js');
+            const stream = InternalAIGenerator.simulateStream(responseText, 10);
+            const reader = stream.getReader();
+            const decoder = new TextDecoder();
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                this.messages[msgIndex].content += decoder.decode(value);
+                this.render();
+            }
         } catch (e) {
             console.error('AI openWithPrompt error', e);
             this.addMessage('assistant', 'عذراً، حدث خطأ. حاول مرة أخرى أو راجع اكتمال بيانات الدراسة.');
@@ -145,8 +160,22 @@ export class AIChatModal {
         this.render();
 
         try {
-            const response = await this.getAIResponse(text.trim());
-            this.addMessage('assistant', response);
+            const responseText = await this.getAIResponse(text.trim());
+            
+            this.addMessage('assistant', '');
+            const msgIndex = this.messages.length - 1;
+            
+            const { InternalAIGenerator } = await import('../services/InternalAIGenerator.js');
+            const stream = InternalAIGenerator.simulateStream(responseText, 10);
+            const reader = stream.getReader();
+            const decoder = new TextDecoder();
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                this.messages[msgIndex].content += decoder.decode(value);
+                this.render();
+            }
         } catch (e) {
             console.error('AI Chat error:', e);
             this.addMessage('assistant', 'عذراً، حدث خطأ. حاول مرة أخرى أو راجع اكتمال بيانات الدراسة.');
@@ -199,17 +228,19 @@ export class AIChatModal {
                 '• يُوصى بمراقبة المتغيرات الأكثر حساسية (الإيجار، تكلفة المواد، حجم المبيعات) ووضع خطط بديلة.';
         }
 
-        // افتراضي: توصيات المستشار (SmartAdvisor + AIConnector)
+        // افتراضي: لم يُطابَق سؤالٌ محدد — نُفصح بصدق أننا لم نفهم السؤال بعينه، ثم نعرض
+        // ملاحظات المستشار المبنية على بيانات المشروع (لا ندّعي أننا أجبنا عن سؤاله الحر).
+        const notUnderstood = 'لم أفهم سؤالك تحديداً — هذا مساعد قواعد يجيب عن مواضيع محددة. جرّب: «حلّل SWOT»، «اكتب الملخص التنفيذي»، «اقترح مخاطر»، أو «فسّر اختبار الضغط».';
         const analyzed = SmartAdvisor.analyze(results || {}, state);
         if (analyzed?.insights?.length > 0) {
             const insightsText = analyzed.insights.map(i =>
                 `• [${i.category}] ${i.message}\n  **الإجراء:** ${i.action || '—'}`
             ).join('\n\n');
-            return `**توصيات المستشار بناءً على بيانات مشروعك:**\n\n${insightsText}`;
+            return `${notUnderstood}\n\n**وفي الأثناء، ملاحظات المستشار بناءً على بيانات مشروعك:**\n\n${insightsText}`;
         }
 
         const fallback = generateAdvisorFallback(state);
-        return fallback || 'لا توجد توصيات محددة حالياً. أكمل إدخال البيانات المالية (الإيرادات، التكاليف) ثم أعد السؤال.';
+        return fallback ? `${notUnderstood}\n\n${fallback}` : notUnderstood;
     }
 
     render() {
@@ -222,22 +253,27 @@ export class AIChatModal {
         const messagesHtml = this.messages
             .map(m => {
                 if (m.role === 'system') {
-                    return `<div class="ai-chat-msg system">${m.content}</div>`;
+                    return `<div class="ai-chat-msg system">${escapeHtml(m.content)}</div>`;
                 }
                 const cls = m.role === 'user' ? 'user' : 'assistant';
-                const content = (m.content || '').replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                // تهريب HTML أولاً ثم تطبيق تنسيق آمن (**عريض** وأسطر) — يمنع حقن السكربت
+                // مع إبقاء التنسيق البسيط يعمل.
+                const content = escapeHtml(m.content).replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 return `<div class="ai-chat-msg ${cls}"><div class="ai-chat-bubble">${content}</div></div>`;
             })
             .join('');
 
         this.container.innerHTML = `
-            <div class="ai-chat-header" style="padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
-                <h3 style="margin:0;font-size:18px;font-weight:700;">🤖 المستشار الذكي</h3>
-                <button type="button" class="ai-chat-close" aria-label="إغلاق">×</button>
+            <div class="ai-chat-header" style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h3 style="margin:0;font-size:18px;font-weight:700;">المستشار</h3>
+                    <button type="button" class="ai-chat-close" aria-label="إغلاق">×</button>
+                </div>
+                <div style="font-size:12px;color:#64748b;margin-top:4px;">مساعد قواعد محلي — يجيب عن مواضيع محددة (SWOT، الملخص، المخاطر، اختبار الضغط) من بيانات دراستك، لا نموذج محادثة عام.</div>
             </div>
             <div class="ai-chat-messages" style="flex:1;overflow-y:auto;padding:16px;min-height:180px;">
                 ${messagesHtml}
-                ${this.isLoading ? '<div class="ai-chat-msg assistant"><div class="ai-chat-bubble typing">جاري التفكير...</div></div>' : ''}
+                ${this.isLoading ? '<div class="ai-chat-msg assistant"><div class="ai-chat-bubble typing">جارٍ التحليل…</div></div>' : ''}
             </div>
             <div class="ai-chat-suggestions" style="padding:8px 16px;display:flex;flex-wrap:wrap;gap:8px;">
                 ${suggestedHtml}

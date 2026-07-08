@@ -1,16 +1,15 @@
 /**
  * Smart Advisor Service (The "Auto-Consultant")
  * Analyzes financial metrics against industry benchmarks and generates recommendations.
+ *
+ * المعايير تُقرأ من المصدر الوحيد sectorBenchmarks.js (حسب القطاع) — لا جدول
+ * مثبّت مواز، كي لا يتناقض حكم المستشار مع بوابة QA على نفس النسبة.
  */
 
-// SAUDI F&B / RETAIL BENCHMARKS
-const BENCHMARKS = {
-    cogs: { min: 0.25, max: 0.35, label: 'تكلفة البضاعة المباعة (COGS)' },
-    labor: { min: 0.20, max: 0.30, label: 'تكلفة العمالة' },
-    rent: { min: 0.08, max: 0.15, label: 'الإيجار' },
-    marketing: { min: 0.03, max: 0.06, label: 'التسويق' },
-    profit: { min: 0.15, max: 0.25, label: 'صافي الربح' }
-};
+import { resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
+
+const pctText = (v) => (v * 100).toFixed(0) + '%';
+const rangeText = ([lo, hi]) => `${pctText(lo)}–${pctText(hi)}`;
 
 export class SmartAdvisor {
 
@@ -32,7 +31,7 @@ export class SmartAdvisor {
             const npv = Number(ind.npv);
             if (!isNaN(npv) && npv <= 0) insights.push({ type: 'critical', category: 'جدوى', value: npv, message: 'صافي القيمة الحالية غير إيجابي؛ المشروع قد لا يخلق قيمة فوق تكلفة رأس المال.', action: 'مراجعة الافتراضات أو خفض التكاليف أو زيادة الإيرادات.' });
             const irr = Number(ind.irr);
-            if (!isNaN(irr) && irr > 0 && irr < 10) insights.push({ type: 'warning', category: 'عائد', value: irr, message: `معدل العائد الداخلي (${irr.toFixed(1)}%) منخفض.`, action: 'تحسين الهوامش أو تقليل رأس المال أو إعادة تقييم المخاطر.' });
+            if (!isNaN(irr) && irr > 0 && irr < 0.10) insights.push({ type: 'warning', category: 'عائد', value: irr, message: `معدل العائد الداخلي (${(irr * 100).toFixed(1)}%) منخفض.`, action: 'تحسين الهوامش أو تقليل رأس المال أو إعادة تقييم المخاطر.' });
             const payback = Number(ind.paybackPeriod ?? ind.payback);
             if (!isNaN(payback) && payback > 5) insights.push({ type: 'warning', category: 'سيولة', value: payback, message: `فترة الاسترداد طويلة (${payback.toFixed(1)} سنة).`, action: 'خفض التكاليف الأولية أو تعجيل الإيرادات.' });
             const decision = results?.decision;
@@ -70,8 +69,10 @@ export class SmartAdvisor {
                 insights.push({ type: 'critical', category: 'جدوى', value: npv, message: 'صافي القيمة الحالية غير إيجابي؛ المشروع قد لا يخلق قيمة فوق تكلفة رأس المال.', action: 'مراجعة الافتراضات أو خفض التكاليف أو زيادة الإيرادات.' });
             }
             const irr = Number(ind.irr);
-            if (!isNaN(irr) && irr > 0 && irr < 10) {
-                insights.push({ type: 'warning', category: 'عائد', value: irr, message: `معدل العائد الداخلي (${irr.toFixed(1)}%) منخفض مقارنة بمعدلات متوقعة للمخاطرة.`, action: 'تحسين الهوامش أو تقليل رأس المال أو إعادة تقييم المخاطر.' });
+            // IRR مخزّن ككسر (0.999 = 99.9%). العتبة 0.10 = 10٪، والعرض يُضرب في 100.
+            // كان الشرط irr<10 (=1000%) فيُطلق «منخفض» لمشروع عائده 99.9% ويطبع 0.999 كـ«1.0%».
+            if (!isNaN(irr) && irr > 0 && irr < 0.10) {
+                insights.push({ type: 'warning', category: 'عائد', value: irr, message: `معدل العائد الداخلي (${(irr * 100).toFixed(1)}%) منخفض مقارنة بمعدلات متوقعة للمخاطرة.`, action: 'تحسين الهوامش أو تقليل رأس المال أو إعادة تقييم المخاطر.' });
             }
             const payback = Number(ind.paybackPeriod ?? ind.payback);
             if (!isNaN(payback) && payback > 5) {
@@ -88,56 +89,62 @@ export class SmartAdvisor {
             insights.push({ type: 'critical', category: 'قرار', message: msg + reasonStr, action: 'مراجعة بنود الدراسة وإصلاح الافتراضات أو الهيكلة ثم إعادة الحساب.' });
         }
 
-        // 2c. Evaluate against Benchmarks
+        // 2c. Evaluate against Benchmarks — من المصدر الوحيد حسب القطاع المكتشَف
+        const bench = resolveSectorBenchmark(inputs);
+        const sectorNote = bench.isGeneric ? '' : ` لقطاع «${bench.label}»`;
+        const [cogsLo, cogsHi] = bench.variableCostRate;
+        const [, laborHi] = bench.laborToRevenue;
+        const [, rentHi] = bench.rentToRevenue;
+        const [profitLo] = bench.netProfitToRevenue;
 
         // COGS Analysis
-        if (ratios.cogs > BENCHMARKS.cogs.max) {
+        if (ratios.cogs > cogsHi) {
             insights.push({
                 type: 'danger',
                 category: 'COGS',
                 value: ratios.cogs,
-                message: `تكلفة البضاعة (${(ratios.cogs * 100).toFixed(1)}%) مرتفعة جداً. المعدل الصحي هو 30%.`,
+                message: `تكلفة البضاعة (${(ratios.cogs * 100).toFixed(1)}%) أعلى من النطاق الصحي${sectorNote} (${rangeText(bench.variableCostRate)}).`,
                 action: 'حاول التفاوض مع الموردين أو رفع أسعار المنتجات قليلاً.'
             });
-        } else if (ratios.cogs < 0.15) {
+        } else if (ratios.cogs < cogsLo) {
             insights.push({
                 type: 'warning',
                 category: 'COGS',
                 value: ratios.cogs,
-                message: `تكلفة البضاعة (${(ratios.cogs * 100).toFixed(1)}%) منخفضة بشكل غير واقعي.`,
+                message: `تكلفة البضاعة (${(ratios.cogs * 100).toFixed(1)}%) أدنى من النطاق المتوقع${sectorNote} (${rangeText(bench.variableCostRate)}) — قد يكون تفاؤلاً مختبئاً.`,
                 action: 'تأكد من حساب جميع الهوالك وتكاليف التغليف.'
             });
         }
 
         // Labor Analysis
-        if (ratios.labor > BENCHMARKS.labor.max) {
+        if (ratios.labor > laborHi) {
             insights.push({
                 type: 'danger',
                 category: 'Labor',
                 value: ratios.labor,
-                message: `تكلفة الرواتب تستنزف ${(ratios.labor * 100).toFixed(1)}% من دخلك.`,
+                message: `تكلفة الرواتب تستنزف ${(ratios.labor * 100).toFixed(1)}% من دخلك — أعلى من النطاق${sectorNote} (${rangeText(bench.laborToRevenue)}).`,
                 action: 'قلل عدد الموظفين في السنة الأولى أو اربط جزء من الراتب بالمبيعات (عمولة).'
             });
         }
 
         // Rent Analysis
-        if (ratios.rent > BENCHMARKS.rent.max) {
+        if (ratios.rent > rentHi) {
             insights.push({
                 type: 'danger',
                 category: 'Rent',
                 value: ratios.rent,
-                message: `الإيجار يمثل ${(ratios.rent * 100).toFixed(1)}% من المبيعات (خطر).`,
+                message: `الإيجار يمثل ${(ratios.rent * 100).toFixed(1)}% من المبيعات — أعلى من النطاق${sectorNote} (${rangeText(bench.rentToRevenue)}) (خطر).`,
                 action: 'الموقع مكلف جداً مقارنة بالمبيعات المتوقعة. ابحث عن موقع أرخص أو حسن خطة المبيعات.'
             });
         }
 
         // Profit Analysis
-        if (ratios.profit < BENCHMARKS.profit.min && ratios.profit > 0) {
+        if (ratios.profit < profitLo && ratios.profit > 0) {
             insights.push({
                 type: 'warning',
                 category: 'Profitability',
                 value: ratios.profit,
-                message: `هامش الربح ${(ratios.profit * 100).toFixed(1)}% منخفض (المستهدف 20%+).`,
+                message: `هامش الربح ${(ratios.profit * 100).toFixed(1)}% منخفض (المستهدف${sectorNote} ≥ ${pctText(profitLo)}).`,
                 action: 'مشروعك يربح لكن المخاطرة عالية. يجب تحسين كفاءة التشغيل.'
             });
         } else if (ratios.profit < 0) {

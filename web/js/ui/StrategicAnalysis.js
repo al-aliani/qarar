@@ -6,6 +6,7 @@
 import { AIWriter } from '../services/AIWriter.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class StrategicAnalysis {
     constructor(containerId, store, onNavigate) {
@@ -50,6 +51,17 @@ export class StrategicAnalysis {
                         </div>
                     </div>
                     ${this.renderSWOT(strategic.swot || {})}
+                </div>
+
+                <!-- TOWS Matrix (مبنية على SWOT) -->
+                <div class="card analysis-card">
+                    <div class="flex-between">
+                        <div>
+                            <h3 class="card-title">مصفوفة الاستراتيجيات (TOWS)</h3>
+                            <p class="text-muted text-sm mb-3">حوِّل SWOT إلى استراتيجيات عملية: كل ربع يربط بين محورين. اكتب بنداً إجرائياً واحداً على الأقل في كل مربع.</p>
+                        </div>
+                    </div>
+                    ${this.renderTOWS((state.marketing && state.marketing.towsMatrix) || {})}
                 </div>
 
                 <!-- Porter's Five Forces -->
@@ -114,7 +126,7 @@ export class StrategicAnalysis {
                             data-field="description"
                             placeholder="وصف التأثير..."
                             rows="2"
-                        >${f.description || ''}</textarea>
+                        >${escapeHtml(f.description)}</textarea>
                         <div class="pestel-impact">
                             <label class="text-sm text-muted" for="pestel-impact-${idx}">التأثير:</label>
                             <select id="pestel-impact-${idx}" class="input input--sm pestel-impact-select" data-idx="${idx}" data-field="impact">
@@ -148,7 +160,7 @@ export class StrategicAnalysis {
                         <div class="swot-items" data-category="${cat.key}">
                             ${(swot[cat.key] || []).map((item, idx) => `
                                 <div class="swot-item">
-                                    <span class="swot-item-text">${item}</span>
+                                    <span class="swot-item-text">${escapeHtml(item)}</span>
                                     <button class="btn-icon btn-remove-swot" data-category="${cat.key}" data-idx="${idx}">×</button>
                                 </div>
                             `).join('')}
@@ -157,6 +169,28 @@ export class StrategicAnalysis {
                             <input type="text" class="input input--sm swot-input" data-category="${cat.key}" placeholder="إضافة بند جديد...">
                             <button class="btn btn--sm btn--ghost btn-add-swot" data-category="${cat.key}">+</button>
                         </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    renderTOWS(tows) {
+        const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const quadrants = [
+            { key: 'so', title: 'هجومية (SO)', hint: 'قوة + فرص: استغل نقاط قوتك لاقتناص الفرص. مثال: أطلق منتجاً مميزاً في الحي عالي الطلب.', cls: 'swot-strengths' },
+            { key: 'wo', title: 'تطويرية (WO)', hint: 'ضعف + فرص: عالج ضعفك لتلتقط الفرصة. مثال: وظّف خبير تسويق لاستثمار نمو الطلب.', cls: 'swot-opportunities' },
+            { key: 'st', title: 'دفاعية (ST)', hint: 'قوة + تهديدات: استخدم قوتك لصدّ التهديد. مثال: برنامج ولاء لمواجهة دخول منافس.', cls: 'swot-threats' },
+            { key: 'wt', title: 'انكماشية (WT)', hint: 'ضعف + تهديدات: قلّل المخاطر وتجنّب الخسارة. مثال: خفّض الالتزامات الثابتة عند ضعف السيولة.', cls: 'swot-weaknesses' }
+        ];
+        return `
+            <div class="tows-grid swot-grid">
+                ${quadrants.map(q => `
+                    <div class="tows-quadrant swot-quadrant ${q.cls}">
+                        <div class="swot-quadrant-header">
+                            <span>${q.title}</span>
+                        </div>
+                        <textarea class="input tows-input" data-tows="${q.key}" rows="4" placeholder="${q.hint}">${esc(tows[q.key])}</textarea>
                     </div>
                 `).join('')}
             </div>
@@ -188,8 +222,8 @@ export class StrategicAnalysis {
                                 <option value="medium" ${data.level === 'medium' ? 'selected' : ''}>🟡 متوسط</option>
                                 <option value="high" ${data.level === 'high' ? 'selected' : ''}>🔴 عالي</option>
                             </select>
-                            <input type="text" class="input input--sm porter-desc" data-force="${f.key}" 
-                                   placeholder="وصف..." value="${data.description || ''}">
+                            <textarea class="input porter-desc" data-force="${f.key}" rows="3"
+                                   placeholder="وصف...">${escapeHtml(data.description)}</textarea>
                         </div>
                     `;
         }).join('')}
@@ -235,6 +269,11 @@ export class StrategicAnalysis {
         });
         this.container.querySelectorAll('.btn-remove-swot').forEach(btn => {
             btn.addEventListener('click', (e) => this.removeSWOTItem(e));
+        });
+
+        // TOWS events — تُكتب في قسم marketing (وليس strategic)
+        this.container.querySelectorAll('.tows-input').forEach(el => {
+            el.addEventListener('change', (e) => this.updateTOWS(e));
         });
 
         // Porter events
@@ -354,6 +393,16 @@ export class StrategicAnalysis {
 
         this.store.update('strategic', { ...state.strategic, swot });
         this.render();
+    }
+
+    updateTOWS(e) {
+        const key = e.target.dataset.tows; // so | wo | st | wt
+        if (!key) return;
+        const value = e.target.value;
+        const state = this.store.getState();
+        const marketing = { ...(state.marketing || {}) };
+        const towsMatrix = { ...(marketing.towsMatrix || {}), [key]: value };
+        this.store.update('marketing', { ...marketing, towsMatrix });
     }
 
     updatePorter(e) {

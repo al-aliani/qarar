@@ -130,7 +130,7 @@
   margin: 0 0 0.5rem 0;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--c-p-500, #d4af37);
+  color: var(--c-p-500, #0e5b44);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -191,7 +191,7 @@
   font-family: var(--font-mono, monospace);
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--c-p-500, #d4af37);
+  color: var(--c-p-500, #0e5b44);
 }
 
 .pitch-view__kpi-unit {
@@ -231,7 +231,7 @@
 }
 
 .pitch-view__decision-badge--revise {
-  background: rgba(212, 175, 55, 0.15);
+  background: var(--c-gold-subtle, rgba(176, 125, 44, 0.16));
   color: var(--c-p-500);
   border: 1px solid var(--c-p-500);
 }

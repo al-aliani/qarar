@@ -9,6 +9,9 @@ const assetsDir = resolve(__dirname, 'assets');
 export default defineConfig({
     root: './web',
     publicDir: 'public',
+    // mpa: المسارات المجهولة تعيد 404 صريحاً بدل حقن index.html كاحتياط SPA
+    // (كان يجعل الروابط الخاطئة مثل /web/ تعرض التطبيق بلا CSS — «تصميم مكسور» يصعب تشخيصه).
+    appType: 'mpa',
     // بناء متعدد الصفحات: بدون هذا كان Vite يبني index.html فقط، فتُفقد صفحة الهبوط
     // والشروط والخصوصية من الإنتاج (روابط التذييل تُعطي 404). smoke_test أداة تطوير — تُستثنى.
     build: {
@@ -18,7 +21,8 @@ export default defineConfig({
                 landing: resolve(__dirname, 'web/landing.html'),
                 terms: resolve(__dirname, 'web/terms.html'),
                 privacy: resolve(__dirname, 'web/privacy.html'),
-                // investor.html مُستثناة: فيها استيراد مكسور (getPitchFromStorage) وهي خارج مسار الإطلاق.
+                // investor.html: صفحة عرض المستثمر (للقراءة فقط) — أُصلح الاستيراد المكسور (getPitchFromStorage)
+                investor: resolve(__dirname, 'web/investor.html'),
             },
         },
     },
@@ -61,9 +65,17 @@ export default defineConfig({
                 // الأداة (المحاكي) تبقى على /index.html، وروابط الرئيسية النسبية تفتحها.
                 server.middlewares.use((req, res, next) => {
                     const p = (req.url || '/').split('?')[0];
+                    const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
                     if (p === '/') {
-                        const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
                         req.url = '/landing.html' + qs;
+                    } else if (p === '/web' || p.startsWith('/web/')) {
+                        // روابط قديمة من حقبة «الجذر = المستودع» (http://localhost:5173/web/…):
+                        // إعادة توجيه للمسار الصحيح بدل صفحة بلا CSS. ‏/web/ → التطبيق.
+                        const rest = (p === '/web' || p === '/web/') ? '/index.html' : p.slice(4);
+                        res.statusCode = 302;
+                        res.setHeader('Location', rest + qs);
+                        res.end();
+                        return;
                     }
                     next();
                 });

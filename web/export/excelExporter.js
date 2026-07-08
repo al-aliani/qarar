@@ -617,6 +617,7 @@ export class ExcelExporter {
         const p = sc.pessimistic || { revenueChange: 0, costChange: 0, description: '—' };
         const b = sc.base || { revenueChange: 0, costChange: 0, description: '—' };
         const o = sc.optimistic || { revenueChange: 0, costChange: 0, description: '—' };
+        const payback = (entry) => SAFE.payback(entry?.results?.indicators?.paybackPeriod ?? entry?.results?.indicators?.payback);
 
         const data = [
             ['السيناريوهات'],
@@ -629,7 +630,7 @@ export class ExcelExporter {
                 (p.description || '—').toString(),
                 SAFE.num(p.results?.indicators?.npv),
                 (SAFE.pct(p.results?.indicators?.irr) || 0).toFixed(1),
-                (SAFE.num(p.results?.indicators?.paybackPeriod ?? p.results?.indicators?.payback) || 0).toFixed(1),
+                payback(p),
             ],
             [
                 'أساسي',
@@ -638,7 +639,7 @@ export class ExcelExporter {
                 (b.description || '—').toString(),
                 SAFE.num(b.results?.indicators?.npv),
                 (SAFE.pct(b.results?.indicators?.irr) || 0).toFixed(1),
-                (SAFE.num(b.results?.indicators?.paybackPeriod ?? b.results?.indicators?.payback) || 0).toFixed(1),
+                payback(b),
             ],
             [
                 'متفائل',
@@ -647,7 +648,7 @@ export class ExcelExporter {
                 (o.description || '—').toString(),
                 SAFE.num(o.results?.indicators?.npv),
                 (SAFE.pct(o.results?.indicators?.irr) || 0).toFixed(1),
-                (SAFE.num(o.results?.indicators?.paybackPeriod ?? o.results?.indicators?.payback) || 0).toFixed(1),
+                payback(o),
             ],
         ];
 

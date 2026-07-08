@@ -3,6 +3,9 @@
  * Provides detailed analysis for each service (Pool, Padel, Gym, etc.)
  * Including individual Break-even, NPV, IRR calculations
  */
+import { calculateStudy as runFullModel } from '../core/engine.js';
+import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
+import { stepIndexById } from '../core/wizardSteps.js';
 
 export class ServiceAnalysis {
     constructor(containerId, store, onNavigate) {
@@ -37,13 +40,19 @@ export class ServiceAnalysis {
             if (typeof g === 'number' && g > 1) g = g / 100; // إذا أُدخلت كنسبة مئوية (مثل 7)
             if (typeof g !== 'number' || !Number.isFinite(g)) g = 0.07;
 
+            // نحمل نسبة التكلفة المتغيرة من مصدر الإيراد كي لا يظهر هامش الخدمة 100% وعائد داخلي وهمي.
+            // كانت variableCostPerUnit = 0 دائماً فتُحتسب أرباح الخدمة على إيراد شبه صافٍ بلا تكلفة.
+            const price = parseFloat(stream.avgPrice || stream.price) || 0;
+            const vcRate = (typeof stream.variableCostRate === 'number')
+                ? stream.variableCostRate
+                : ((stream.type || 'operating') === 'operating' ? 0.30 : 0);
             services.push({
                 name,
                 icon: '📊',
                 capex: 0,
                 fixedCosts: 0,
-                variableCostPerUnit: 0,
-                pricePerUnit: parseFloat(stream.avgPrice || stream.price) || 0,
+                variableCostPerUnit: Math.round(price * vcRate * 100) / 100,
+                pricePerUnit: price,
                 customersPerMonth: parseFloat(stream.customersPerMonth) || 0,
                 growthRate: g,
                 _fromRevenue: true
@@ -53,11 +62,34 @@ export class ServiceAnalysis {
         const assumptions = studyData.assumptions || {};
         const items = studyData.services?.items || [];
 
+        // C1: توزيع إجمالي الاستثمار والتكاليف الثابتة للمشروع على المنتجات حسب حصة كل منتج
+        // من الإيراد السنوي (تكلفة على أساس النشاط تقريبية). بدون هذا التوزيع كان الاستثمار
+        // لكل منتج = 0 فينفجر العائد الداخلي (>900%) وتظهر فترة استرداد 0.0 سنة و«صافي ربح»
+        // هو في الحقيقة هامش المساهمة. نستخدم أرقام المحرك (المصدر الموحّد) كي تتصالح مجاميع
+        // المنتجات مع مؤشرات المشروع بدل أن تناقضها.
+        let projectTotals = null;
+        let dataWarnHtml = '';
+        try {
+            const r = runFullModel(studyData);
+            projectTotals = { investment: r?.capex?.total || 0, fixedAnnual: r?.opex?.fixedAnnual || 0 };
+            dataWarnHtml = investmentDataWarningHtml(investmentDataWarning(studyData, r));
+        } catch (_) { projectTotals = null; }
+        const revY1 = (s) => (parseFloat(s.customersPerMonth) || 0) * 12 * (parseFloat(s.pricePerUnit || s.avgPrice) || 0);
+        const totalRevY1 = services.reduce((acc, s) => acc + revY1(s), 0);
+        const hasAllocation = !!(projectTotals && projectTotals.investment > 0 && totalRevY1 > 0);
+
         // Calculate analysis for each service
-        const analyses = services.map(service => this.analyzeService(service, assumptions));
+        const analyses = services.map(service => {
+            const share = hasAllocation ? revY1(service) / totalRevY1 : 0;
+            const allocated = hasAllocation
+                ? { capex: projectTotals.investment * share, fixedAnnual: projectTotals.fixedAnnual * share }
+                : null;
+            return this.analyzeService(service, assumptions, allocated);
+        });
 
         this.container.innerHTML = `
             <h2 class="text-lg slide-up" style="margin-bottom: var(--s-3)">تحليل الخدمات المفصل</h2>
+            ${dataWarnHtml}
 
             <!-- تفاصيل المنتجات/الخدمات — نموذج إضافة -->
             <div class="card analysis-card mb-4">
@@ -112,6 +144,11 @@ export class ServiceAnalysis {
             <div class="services-grid fade-in">
                 ${analyses.map(a => this.renderServiceCard(a)).join('')}
             </div>
+            ${hasAllocation ? `
+            <p class="text-xs text-muted mt-2">وُزِّع إجمالي الاستثمار (${this.formatCurrency(projectTotals.investment)}) والتكاليف الثابتة على المنتجات حسب حصة كل منتج من الإيراد السنوي، لذا تُقرأ مؤشرات العائد الداخلي وفترة الاسترداد لكل منتج على أساس هذه الحصة.</p>
+            ` : `
+            <p class="text-xs text-muted mt-2">مؤشرات العائد الداخلي/فترة الاسترداد على مستوى المنتج تظهر فقط عند اكتمال بيانات الاستثمار في الدراسة الفنية؛ وإلا يُكتفى بهامش المساهمة وصافي الربح.</p>
+            `}
 
             ${analyses.length > 0 ? `
                 <!-- Comparison Table -->
@@ -202,9 +239,10 @@ export class ServiceAnalysis {
             });
         });
 
-        // الانتقال إلى مصادر الإيرادات (خطوة 13 في STEPS)
+        // الانتقال إلى مصادر الإيرادات (بحث بالمعرّف بدل الفهرس الثابت الذي كان منحرفاً)
         this.container.querySelector('.btn-link-go-revenue')?.addEventListener('click', () => {
-            if (this.onNavigate) this.onNavigate(13);
+            const revenueIdx = stepIndexById('revenue');
+            if (this.onNavigate && revenueIdx >= 0) this.onNavigate(revenueIdx);
         });
     }
 
@@ -214,7 +252,7 @@ export class ServiceAnalysis {
     /**
      * Analyze a single service
      */
-    analyzeService(service, assumptions) {
+    analyzeService(service, assumptions, allocated = null) {
         const {
             name = 'خدمة',
             icon = '📊',
@@ -232,11 +270,17 @@ export class ServiceAnalysis {
         const taxRate = (0.025 * (1 - foreignShare)) + (Number(assumptions.taxRate ?? 0.20) * foreignShare);
         const years = assumptions.projectionYears || 5;
 
+        // C1: عند توفر توزيع من المحرك نستخدم الحصة المخصّصة (بدل capex/fixedCosts للبند وحده)
+        // — لأن إجمالي المحرك يتضمن أصلاً capex/fixed الخدمات، فجمعها ثانيةً يكرّر العدّ.
+        const capexEff = allocated ? (allocated.capex || 0) : (Number(capex) || 0);
+        const fixedCostsAnnual = allocated ? (allocated.fixedAnnual || 0) : ((Number(fixedCosts) || 0) * 12);
+
         // Annual calculations
         const customersYear1 = customersPerMonth * 12;
         const revenueYear1 = customersYear1 * pricePerUnit;
         const variableCostsYear1 = customersYear1 * variableCostPerUnit;
-        const fixedCostsAnnual = fixedCosts * 12;
+        const hasAllocatedInvestment = capexEff > 0;
+        const hasAllocatedFixedCosts = fixedCostsAnnual > 0;
         const grossProfitYear1 = revenueYear1 - variableCostsYear1 - fixedCostsAnnual;
         const netProfitYear1 = grossProfitYear1 > 0 ? grossProfitYear1 * (1 - taxRate) : grossProfitYear1;
 
@@ -244,58 +288,49 @@ export class ServiceAnalysis {
         const contributionMargin = pricePerUnit - variableCostPerUnit;
 
         // Break-even (units per month)
-        // If contribution margin is <= 0, we never break even
-        const breakEvenUnits = (contributionMargin > 0 && fixedCostsAnnual >= 0)
+        // لا تعرض "0 عميل/شهر" عندما لا تكون التكاليف الثابتة موزعة على المنتج.
+        const breakEvenUnits = (contributionMargin > 0 && hasAllocatedFixedCosts)
             ? Math.ceil(fixedCostsAnnual / contributionMargin / 12)
-            : Infinity;
+            : null;
 
         // Break-even revenue
-        const breakEvenRevenue = breakEvenUnits !== Infinity
+        const breakEvenRevenue = Number.isFinite(breakEvenUnits)
             ? breakEvenUnits * pricePerUnit * 12
-            : 0;
+            : null;
 
         // Cash flows for NPV/IRR
-        const cashFlows = [{ year: 0, cashFlow: -capex }];
-        for (let y = 1; y <= years; y++) {
-            const growthFactor = Math.pow(1 + growthRate, y - 1);
-            const customers = customersYear1 * growthFactor;
-            const revenue = customers * pricePerUnit;
-            const varCosts = customers * variableCostPerUnit;
-            const profit = (revenue - varCosts - fixedCostsAnnual) * (1 - taxRate);
-            cashFlows.push({ year: y, cashFlow: profit });
+        const cashFlows = hasAllocatedInvestment ? [{ year: 0, cashFlow: -capexEff }] : [];
+        if (hasAllocatedInvestment) {
+            for (let y = 1; y <= years; y++) {
+                const growthFactor = Math.pow(1 + growthRate, y - 1);
+                const customers = customersYear1 * growthFactor;
+                const revenue = customers * pricePerUnit;
+                const varCosts = customers * variableCostPerUnit;
+                const profit = (revenue - varCosts - fixedCostsAnnual) * (1 - taxRate);
+                cashFlows.push({ year: y, cashFlow: profit });
+            }
         }
 
         // NPV
-        const npv = this.calculateNPV(cashFlows, discountRate);
+        const npv = hasAllocatedInvestment ? this.calculateNPV(cashFlows, discountRate) : null;
 
-        // IRR - Only calculate if we have investment (capex > 0) or negative cashflows initially
-        let irr = null;
-        if (capex > 0) {
-            irr = this.calculateIRR(cashFlows);
-        } else {
-            // No investment? If profit > 0, return is infinite. If profit < 0, return is undefined (-100%?)
-            // We'll treat as null (N/A) for consistency or specific indicator
-            irr = netProfitYear1 > 0 ? 9.99 : 0; // 999% indicates infinite
-        }
+        // IRR لا يكون ذا معنى بدون استثمار مخصص للمنتج.
+        const irr = hasAllocatedInvestment ? this.calculateIRR(cashFlows) : null;
 
         // Payback period
-        const paybackPeriod = this.calculatePayback(cashFlows);
+        const paybackPeriod = hasAllocatedInvestment ? this.calculatePayback(cashFlows) : null;
 
         // ROI
-        // If capex is 0, ROI is infinite if profit > 0, else 0.
-        let roi = 0;
-        if (capex > 0) {
-            roi = netProfitYear1 / capex;
-        } else {
-            roi = netProfitYear1 > 0 ? 9.99 : 0;
-        }
+        const roi = hasAllocatedInvestment ? (netProfitYear1 / capexEff) : null;
 
         // Profit margin
         const profitMargin = revenueYear1 > 0 ? netProfitYear1 / revenueYear1 : 0;
 
         // Status
-        // Viable if NPV > 0 and IRR > Discount Rate (or IRR is Infinite/Good)
-        const isViable = npv > 0 && (irr === null || irr > discountRate);
+        const unitEconomicsPositive = revenueYear1 > 0 && contributionMargin > 0 && profitMargin > 0;
+        const isViable = hasAllocatedInvestment
+            ? (npv > 0 && (irr === null || irr > discountRate))
+            : unitEconomicsPositive;
 
         return {
             ...service,
@@ -313,6 +348,9 @@ export class ServiceAnalysis {
             roi,
             profitMargin,
             isViable,
+            hasAllocatedInvestment,
+            hasAllocatedFixedCosts,
+            unitEconomicsPositive,
             cashFlows
         };
     }
@@ -358,8 +396,8 @@ export class ServiceAnalysis {
      */
     calculatePayback(cashFlows) {
         let cumulative = 0;
-        // Check if capex is 0 (Payback is 0)
-        if (cashFlows[0].cashFlow >= 0) return 0;
+        // بدون تدفق استثماري سالب لا توجد فترة استرداد ذات معنى.
+        if (!Array.isArray(cashFlows) || cashFlows.length === 0 || cashFlows[0].cashFlow >= 0) return null;
 
         for (let i = 0; i < cashFlows.length; i++) {
             const prevCum = cumulative;
@@ -377,12 +415,31 @@ export class ServiceAnalysis {
         return Infinity;
     }
 
+    metricClass(n) {
+        if (!Number.isFinite(n)) return 'text-muted';
+        return n >= 0 ? 'text-gold' : 'text-danger';
+    }
+
+    formatBreakEvenUnits(n) {
+        if (n === Infinity) return '∞';
+        if (!Number.isFinite(n)) return 'غير محسوب';
+        return n + ' عميل/شهر';
+    }
+
+    formatPayback(n) {
+        if (n === Infinity) return '∞';
+        if (!Number.isFinite(n)) return 'غير محسوب';
+        return n.toFixed(1) + ' سنة';
+    }
+
     /**
      * Render a service card
      */
     renderServiceCard(analysis) {
         const statusClass = analysis.isViable ? 'service-viable' : 'service-not-viable';
-        const statusText = analysis.isViable ? 'مجدي ✅' : 'غير مجدي ⚠️';
+        const statusText = analysis.hasAllocatedInvestment
+            ? (analysis.isViable ? 'مجدي ✅' : 'غير مجدي ⚠️')
+            : (analysis.unitEconomicsPositive ? 'هامش إيجابي' : 'يحتاج تسعير/تكلفة');
 
         return `
             <div class="service-card ${statusClass}">
@@ -397,14 +454,15 @@ export class ServiceAnalysis {
                         <span class="kpi-value">${this.formatCurrency(analysis.revenueYear1)}</span>
                     </div>
                     <div class="service-kpi">
-                        <span class="kpi-label">صافي الربح</span>
-                        <span class="kpi-value ${analysis.netProfitYear1 >= 0 ? 'text-success' : 'text-danger'}">
+                        <span class="kpi-label">${analysis.hasAllocatedFixedCosts ? 'صافي الربح (بعد حصة الثوابت)' : 'مجمل الربح بعد الزكاة (قبل الثوابت)'}</span>
+                        <span class="kpi-value ${analysis.netProfitYear1 >= 0 ? 'text-success' : 'text-danger'}"
+                              title="${analysis.hasAllocatedFixedCosts ? 'الإيراد − المتغيرة − حصة المنتج من الثوابت − الزكاة التقديرية' : 'قبل توزيع الإيجار والرواتب والثوابت — لا يمثل ربحية نهائية'}">
                             ${this.formatCurrency(analysis.netProfitYear1)}
                         </span>
                     </div>
                     <div class="service-kpi">
                         <span class="kpi-label">صافي القيمة الحالية</span>
-                        <span class="kpi-value ${analysis.npv >= 0 ? 'text-gold' : 'text-danger'}">
+                        <span class="kpi-value ${this.metricClass(analysis.npv)}">
                             ${this.formatCurrency(analysis.npv)}
                         </span>
                     </div>
@@ -414,11 +472,11 @@ export class ServiceAnalysis {
                     </div>
                     <div class="service-kpi">
                         <span class="kpi-label">نقطة التعادل</span>
-                        <span class="kpi-value">${analysis.breakEvenUnits === Infinity ? '∞' : analysis.breakEvenUnits + ' عميل/شهر'}</span>
+                        <span class="kpi-value">${this.formatBreakEvenUnits(analysis.breakEvenUnits)}</span>
                     </div>
                     <div class="service-kpi">
                         <span class="kpi-label">فترة الاسترداد</span>
-                        <span class="kpi-value">${analysis.paybackPeriod === Infinity ? '∞' : analysis.paybackPeriod.toFixed(1) + ' سنة'}</span>
+                        <span class="kpi-value">${this.formatPayback(analysis.paybackPeriod)}</span>
                     </div>
                 </div>
             </div>
@@ -450,11 +508,11 @@ export class ServiceAnalysis {
                                 <td><span class="service-icon-sm">${a.icon}</span> ${a.name}</td>
                                 <td class="text-mono">${this.formatCompact(a.revenueYear1)}</td>
                                 <td class="text-mono ${a.netProfitYear1 >= 0 ? 'text-success' : 'text-danger'}">${this.formatCompact(a.netProfitYear1)}</td>
-                                <td class="text-mono ${a.npv >= 0 ? 'text-gold' : 'text-danger'}">${this.formatCompact(a.npv)}</td>
+                                <td class="text-mono ${this.metricClass(a.npv)}">${this.formatCompact(a.npv)}</td>
                                 <td class="text-mono">${this.formatPercent(a.irr)}</td>
                                 <td class="text-mono">${this.formatPercent(a.roi)}</td>
-                                <td class="text-mono">${a.breakEvenUnits === Infinity ? '∞' : a.breakEvenUnits}</td>
-                                <td>${a.isViable ? '✅' : '⚠️'}</td>
+                                <td class="text-mono">${this.formatBreakEvenUnits(a.breakEvenUnits)}</td>
+                                <td>${a.hasAllocatedInvestment ? (a.isViable ? '✅' : '⚠️') : 'هامش'}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -467,7 +525,8 @@ export class ServiceAnalysis {
      * Render ranking
      */
     renderRanking(analyses) {
-        const sorted = [...analyses].sort((a, b) => b.npv - a.npv);
+        const rankingScore = (a) => Number.isFinite(a.npv) ? a.npv : a.netProfitYear1;
+        const sorted = [...analyses].sort((a, b) => rankingScore(b) - rankingScore(a));
 
         return `
             <div class="ranking-list">
@@ -476,8 +535,8 @@ export class ServiceAnalysis {
                         <span class="ranking-position">${i + 1}</span>
                         <span class="ranking-icon">${a.icon}</span>
                         <span class="ranking-name">${a.name}</span>
-                        <span class="ranking-npv ${a.npv >= 0 ? 'text-gold' : 'text-danger'}">
-                            صافي القيمة الحالية: ${this.formatCurrency(a.npv)}
+                        <span class="ranking-npv ${this.metricClass(rankingScore(a))}">
+                            ${Number.isFinite(a.npv) ? 'صافي القيمة الحالية' : 'صافي ربح سنة 1'}: ${this.formatCurrency(rankingScore(a))}
                         </span>
                         ${i === 0 ? '<span class="ranking-badge">🏆 الأعلى ربحية</span>' : ''}
                     </div>
@@ -502,8 +561,8 @@ export class ServiceAnalysis {
                     datasets: [{
                         label: 'الإيراد السنوي',
                         data: analyses.map(a => a.revenueYear1),
-                        backgroundColor: 'rgba(212, 175, 55, 0.7)',
-                        borderColor: '#d4af37',
+                        backgroundColor: 'rgba(138, 95, 28, 0.7)',
+                        borderColor: '#8a5f1c',
                         borderWidth: 1
                     }]
                 },
@@ -564,7 +623,7 @@ export class ServiceAnalysis {
     }
 
     formatCurrency(n) {
-        if (!Number.isFinite(n)) return '--';
+        if (!Number.isFinite(n)) return 'غير محسوب';
         return new Intl.NumberFormat('ar-SA', {
             style: 'currency',
             currency: 'SAR',
@@ -573,7 +632,7 @@ export class ServiceAnalysis {
     }
 
     formatCompact(n) {
-        if (!Number.isFinite(n)) return '--';
+        if (!Number.isFinite(n)) return 'غير محسوب';
         if (n === 0) return '0';
         if (Math.abs(n) >= 1000000) return (n / 1000000).toFixed(1) + 'M';
         if (Math.abs(n) >= 1000) return (n / 1000).toFixed(0) + 'K';
@@ -581,8 +640,8 @@ export class ServiceAnalysis {
     }
 
     formatPercent(n) {
-        if (n === null || n === undefined) return '--';
-        if (!Number.isFinite(n)) return '--';
+        if (n === null || n === undefined) return 'غير محسوب';
+        if (!Number.isFinite(n)) return 'غير محسوب';
         if (n > 9) return '> 900%'; // Cap for display
         return (n * 100).toFixed(1) + '%';
     }

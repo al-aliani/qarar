@@ -1,4 +1,4 @@
-﻿/**
+/**
  * مولّد نصوص داخلي (ذكاء صناعي داخلي)
  * ينتج نصوص نموذج العمل وغيره من بيانات الدراسة باستخدام قواعد ونماذج محلية.
  * لا يتطلب اتصالاً خارجياً أو مفاتيح API.
@@ -14,6 +14,25 @@ import { getCityStats, getSuggestion } from '../data/SaudiCityStats.js';
 function or(v, d) { return (v != null && String(v).trim() !== '') ? String(v).trim() : d; }
 
 /**
+ * اسم نشاط قصير صالح للحشر داخل جملة. نص «نوع النشاط» الوصفي الطويل (من قوالب قديمة
+ * أو إدخال حر) كان يُقحم كاملاً في الجمل فيكسر تركيبها: «تقديم متجر عطور نسائية ورجالية
+ * وتجزئة ماركات محلية وعالمية الأساسي» (تدقيق ٢٠٢٦-٠٧-٠٦). نفضّل القيمة القصيرة،
+ * ثم القطاع، ثم نقتطع حتى أول فاصل طبيعي.
+ */
+function shortActivity(p, fallback) {
+    const c = (p?.concept || '').toString().trim();
+    const s = (p?.sector || '').toString().trim();
+    if (c && c.length <= 30) return c;
+    if (s && s.length <= 30) return s;
+    if (c) {
+        const cut = c.split(/[،,ـ—]|\sو/)[0].trim();
+        if (cut.length >= 4) return cut;
+        return c.slice(0, 30);
+    }
+    return fallback;
+}
+
+/**
  * توليد نموذج العمل (Business Model Canvas) من بيانات الدراسة
  * @param {object} state - حالة الدراسة من الـ store
  * @returns {object} كائن بالحقول التسعة، كل قيمة string
@@ -21,7 +40,7 @@ function or(v, d) { return (v != null && String(v).trim() !== '') ? String(v).tr
 export function generateBusinessModel(state) {
     const p = state?.projectInfo || {};
     const name = or(p.name, 'المشروع');
-    const concept = or(p.concept, 'النشاط المقترح');
+    const concept = shortActivity(p, 'النشاط المقترح');
     const desc = or(p.description, 'تقديم قيمة للعميل');
     const city = or(p.city, 'الموقع المستهدف');
     const district = or(p.district, '');
@@ -73,9 +92,27 @@ export function generateBusinessModel(state) {
         channelsText += ` التنافس مع ${compsStr} يتطلب تميزاً في القنوات وطرق الوصول.`;
     }
 
+    // تحليل المقارنة المعيارية للمنافسين (الميزة التنافسية)
+    const benchmarking = state?.marketing?.competitorBenchmarking || [];
+    let competitiveAdvantage = '';
+    if (benchmarking.length > 0) {
+        const myRankOne = benchmarking.filter(b => Number(b.myRank) === 1).map(b => b.criterion);
+        if (myRankOne.length > 0) {
+            competitiveAdvantage = ` ويتميز المشروع تنافسياً عن غيره في: ${myRankOne.join(' و')}.`;
+        }
+    }
+
+    // حجم السوق
+    const som = state?.marketSizing?.som?.value ?? state?.marketSizing?.som ?? 0;
+    const tam = state?.marketSizing?.tam?.value ?? state?.marketSizing?.tam ?? 0;
+    let marketInfo = '';
+    if (Number(som) > 0 && Number(tam) > 0) {
+        marketInfo = ` باستهداف حصة سوقية مخدومة (SOM) تقدر بـ ${Number(som).toLocaleString('ar-SA')} من إجمالي السوق المتاح.`;
+    }
+
     return {
-        valueProposition: `يمثل مشروع «${name}» حلاً يركز على ${concept}. ${desc}. يهدف المشروع إلى تقديم قيمة متميزة للعملاء في ${city}${districtStr}.`,
-        customerSegments: `شرائح العملاء المستهدفة: العملاء في منطقة ${city}${districtStr} والمهتمين بـ ${concept}. يمكن التركيز على شرائح فرعية حسب البيانات التسويقية وتجربة التشغيل.`,
+        valueProposition: `يمثل مشروع «${name}» حلاً يركز على ${concept}. ${desc}. يهدف المشروع إلى تقديم قيمة متميزة للعملاء في ${city}${districtStr}.${competitiveAdvantage}`,
+        customerSegments: `شرائح العملاء المستهدفة: العملاء في منطقة ${city}${districtStr} والمهتمين بـ ${concept}.${marketInfo}`,
         channels: channelsText,
         customerRelationships: `علاقة مباشرة مع العميل عبر جودة الخدمة والمنتج. الاهتمام بالولاء والتكرار عبر تجربة إيجابية وخدمة ما بعد البيع.`,
         revenueStreams: `مصادر الإيرادات: ${revenueSummary}.`,
@@ -93,7 +130,7 @@ export function generateBusinessModel(state) {
  */
 export function generateSectorIndustry(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'النشاط');
+    const concept = shortActivity(p, 'النشاط');
     const city = or(p.city, 'المنطقة');
     const som = state?.marketSizing?.som?.value ?? state?.marketSizing?.som ?? 0;
     const tam = state?.marketSizing?.tam?.value ?? state?.marketSizing?.tam ?? 0;
@@ -116,7 +153,7 @@ export function generateSectorIndustry(state) {
  */
 export function generateVision2030Economy(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'النشاط');
+    const concept = shortActivity(p, 'النشاط');
     const city = or(p.city, 'المملكة');
 
     const vision2030 = {
@@ -142,7 +179,7 @@ export function generateVision2030Economy(state) {
  */
 export function generateMarketAnalysisSummary(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'المنتج أو الخدمة');
+    const concept = shortActivity(p, 'المنتج أو الخدمة');
     const city = or(p.city, 'المنطقة');
     const sector = generateSectorIndustry(state);
     const desc = generateMarketDescriptions(state);
@@ -161,7 +198,7 @@ export function generateMarketAnalysisSummary(state) {
  */
 export function generateMarketDescriptions(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'المنتج أو الخدمة');
+    const concept = shortActivity(p, 'المنتج أو الخدمة');
     const city = or(p.city, 'المنطقة المستهدفة');
     const name = or(p.name, 'المشروع');
 
@@ -185,7 +222,7 @@ export function generateMarketDescriptions(state) {
  */
 export function generateSWOT(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'النشاط');
+    const concept = shortActivity(p, 'النشاط');
     const city = or(p.city, 'المنطقة');
     const tech = state?.technical || {};
     const hr = state?.hr || {};
@@ -247,7 +284,7 @@ export function generateSWOT(state) {
  */
 export function generateSegments(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'المنتج أو الخدمة');
+    const concept = shortActivity(p, 'المنتج أو الخدمة');
     const city = or(p.city, 'المنطقة');
     const som = state?.marketSizing?.som?.value ?? state?.marketSizing?.som ?? 0;
     const num = Number(som) || 0;
@@ -279,7 +316,7 @@ export function generateSegments(state) {
  */
 export function generateCompetitors(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'النشاط');
+    const concept = shortActivity(p, 'النشاط');
     const city = or(p.city, 'المنطقة');
     const sector = or(p.sector, concept);
 
@@ -342,7 +379,7 @@ export function generateCompetitors(state) {
 export function generateFieldSuggestion(fieldName, currentValue, state) {
     const p = state?.projectInfo || {};
     const name = or(p.name, 'المشروع');
-    const concept = or(p.concept, 'النشاط');
+    const concept = shortActivity(p, 'النشاط');
     const city = or(p.city, 'المنطقة');
     const key = (fieldName || '').split('.').pop() || fieldName;
 
@@ -350,17 +387,17 @@ export function generateFieldSuggestion(fieldName, currentValue, state) {
         description: `مشروع «${name}» يقدم ${concept} في ${city}. يهدف إلى تلبية احتياجات السوق المحلي بجودة عالية وخدمة متميزة، مع التركيز على تجربة العميل والقيمة المضافة.`,
         notes: `ملاحظات إضافية ذات صلة بسياق المشروع والافتراضات المعتمدة في الدراسة.`,
         trends: `اتجاهات السوق تشير إلى نمو الطلب على ${concept} في ${city}، مع تفضيل متزايد للجودة والخدمة والرقمنة.`,
-        strengths: `نقاط القوة: موقع مميز، فريق ذو خبرة، تميز في ${concept}، وخدمة عملاء متميزة.`,
+        strengths: `نقاط القوة (عدّلها حسب واقع مشروعك): [صف ميزة موقعك]، [صف خبرة فريقك الفعلية في ${concept}]، [ما الذي يميّز خدمتك تحديداً؟].`,
         weaknesses: `نقاط الضعف المحتملة: الحاجة لرأس مال تشغيلي، الاعتماد على موردين، ومنافسة محلية.`,
         opportunities: `الفرص: توسع السوق، برامج دعم حكومية، واتجاه الاستهلاك الإيجابي نحو ${concept}.`,
         threats: `التهديدات: تغير الأسعار، منافسة جديدة، وتقلبات الطلب.`,
         // New Hooks
         'hypothesis-problem': `نقص في خيارات ${concept} ذات الجودة العالية في ${city}، مع عدم وجود تجربة عميل مرضية في السوق الحالي.`,
         'hypothesis-solution': `توفير ${concept} بمعايير احترافية وأسعار تنافسية، مع التركيز على الخدمة الشخصية وسرعة التوصيل.`,
-        'hypothesis-insight': `فريقنا يمتلك خبرة طويلة في ${concept} وعلاقات قوية مع الموردين، مما يسمح لنا بتقديم جودة لا يمكن للمنافسين الجدد نسخها بسهولة.`,
+        'hypothesis-insight': `[اذكر ميزتك الحقيقية غير القابلة للنسخ: خبرة فريق فعلية في ${concept}، اتفاق حصري مع مورد، موقع، تقنية…] — استبدل هذا النص بما تملكه بالفعل ويصعب على المنافس تكراره.`,
         'identity': `«${name}» هي الوجهة الأولى لـ ${concept} في ${city}، نجمع بين الأصالة والحداثة لتقديم تجربة لا تُنسى.`,
         // المهمة 3 — AI Writer في المعالج
-        'ua-insight-text': `ميزتنا التنافسية تكمن في خبرة الفريق في ${concept} وعلاقاتنا مع السوق المحلي في ${city}، مما يتيح لنا تقديم قيمة مضافة يصعب على المنافسين الجدد محاكاتها.`,
+        'ua-insight-text': `[صف ميزتك التنافسية الفعلية في ${concept} بسوق ${city}: ما الذي تملكه ويصعب على منافس جديد محاكاته؟] — استبدل النص بواقع مشروعك.`,
         'national-importance': `المشروع يساهم في التنويع الاقتصادي وتوطين صناعة ${concept} في ${city}، مع إمكانية خلق فرص عمل محلية.`,
         'selectionFactors': `الكثافة السكانية وقرب العملاء المستهدفين، توفر مواقف السيارات والبنية التحتية، تكلفة الإيجار المناسبة، واجهة الشارع والظهور التجاري، واشتراطات البلدية وتصنيف استخدام الموقع في المنطقة.`,
         'la-factors': `الكثافة السكانية وقرب العملاء المستهدفين، توفر مواقف السيارات والبنية التحتية، تكلفة الإيجار المناسبة، واجهة الشارع والظهور التجاري، واشتراطات البلدية وتصنيف استخدام الموقع في المنطقة.`,
@@ -422,7 +459,7 @@ export function generateIntroSuggestions(state) {
             type: 'final',
             name: 'القهوة السعودية',
             description: 'منتج يُستخرج من شجرة البن على شكل حبيبات تتدرج ألوانها من الأخضر إلى الأصفر إلى البني الفاتح أو الغامق. يُحمّص حسب المعيار حتى يكون جاهزاً للاستخدام.',
-            uniqueCharacteristics: 'مشروب ملك مر ينشط الجهاز العصبي والعملية العقلية للدماغ في التركيز والانتباه لمحتواه العالي من الكافيين. ينشط الجسم ويزيد من الطاقة.',
+            uniqueCharacteristics: 'مذاق مميز يعتمد على نوع البن وطريقة التحميص ودرجة المرارة المطلوبة.',
             addedValue: 'الطعم المر المميز للقهوة العربية نتيجة لنوع البن وطريقة التحميص. يهدف للوصول لدرجة المرارة التي يرغب بها العميل.',
             customerBenefit: 'جودة عالية وبسعر مناسب.'
         }];
@@ -452,7 +489,7 @@ export function generateIntroSuggestions(state) {
  */
 export function generateMarketingMix(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'المنتج/الخدمة');
+    const concept = shortActivity(p, 'المنتج/الخدمة');
     const city = or(p.city, 'المنطقة');
     const name = or(p.name, 'المشروع');
     const isFandB = /مطعم|كافي|قهوة|فود|طعام|مشروبات/i.test(concept);
@@ -530,7 +567,7 @@ export function generateProductionCapacity(state) {
 export function generatePESTEL(state) {
     const p = state?.projectInfo || {};
     const name = or(p.name, 'المشروع');
-    const concept = or(p.concept, 'النشاط');
+    const concept = shortActivity(p, 'النشاط');
     const city = or(p.city, 'المملكة');
     const sector = or(p.sector, concept);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
@@ -565,7 +602,7 @@ export function generatePESTEL(state) {
  */
 export function generatePorter(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'النشاط');
+    const concept = shortActivity(p, 'النشاط');
     const city = or(p.city, 'المنطقة');
     const comps = state?.marketing?.competitors || [];
     const compCount = comps.length;
@@ -603,13 +640,13 @@ export function generatePorter(state) {
 export function generateExecutiveSummary(state, results) {
     const p = state?.projectInfo || state || {};
     const name = or(p.name, 'المشروع');
-    const concept = or(p.concept, 'النشاط');
+    const concept = shortActivity(p, 'النشاط');
     const city = or(p.city, 'المنطقة');
 
     const ind = results?.indicators || results?.context?.kpis || results?.context?.financials || {};
     const npv = ind.npv ?? results?.npv ?? 0;
     const irr = ind.irr ?? results?.irr ?? 0;
-    const payback = ind.paybackPeriod ?? results?.paybackPeriod ?? ind.payback ?? 0;
+    const payback = ind.paybackPeriod ?? results?.paybackPeriod ?? ind.payback ?? null;
     const roi = ind.roi ?? results?.roi ?? 0;
     const breakEven = ind.breakEvenPointValue ?? results?.breakEvenPointValue ?? 0;
     const margin = ind.profitMargin ?? results?.profitMargin ?? 0;
@@ -620,12 +657,14 @@ export function generateExecutiveSummary(state, results) {
     let overview = `تهدف دراسة الجدوى إلى تقييم جدوى مشروع «${name}» في ${city}، وهو مشروع يركز على ${concept}.`;
     let indText = [];
     // نعرض المؤشر فقط إذا كان له قيمة فعلية (غير صفرية) — يمنع طباعة «٠ ريال · ٠٪» على بيانات ناقصة
-    if (Number(npv)) indText.push(`صافي القيمة الحالية: ${Number(npv).toLocaleString('ar-SA')} ريال`);
-    if (Number(irr)) indText.push(`معدل العائد الداخلي: ${Number(irr).toFixed(1)}%`);
-    if (Number(payback)) indText.push(`فترة الاسترداد: ${Number(payback).toFixed(1)} سنة`);
-    if (Number(roi)) indText.push(`العائد على الاستثمار: ${Number(roi).toFixed(1)}%`);
-    if (Number(breakEven)) indText.push(`نقطة التعادل: ${Number(breakEven).toLocaleString('ar-SA')} ريال`);
-    if (Number(margin)) indText.push(`هامش الربح: ${Number(margin).toFixed(1)}%`);
+    // المحرك يخزّن IRR/ROI/الهامش كسوراً عشرية (−0.127 = −12.7%) — الضرب في 100 إلزامي
+    // قبل الطباعة، وإلا خرج «معدل العائد الداخلي: −0.1%» في ملخص يُقدَّم لممول (تدقيق ٢٠٢٦-٠٧-٠٦).
+    if (Number(npv)) indText.push(`صافي القيمة الحالية: ${Math.round(Number(npv)).toLocaleString('ar-SA')} ريال`);
+    if (Number(irr)) indText.push(`معدل العائد الداخلي: ${(Number(irr) * 100).toFixed(1)}%`);
+    if (Number(payback) > 0) indText.push(`فترة الاسترداد: ${Number(payback).toFixed(1)} سنة`);
+    if (Number(roi)) indText.push(`العائد على الاستثمار: ${(Number(roi) * 100).toFixed(1)}% (تراكمي لسنوات الدراسة)`);
+    if (Number(breakEven)) indText.push(`نقطة التعادل: ${Math.round(Number(breakEven)).toLocaleString('ar-SA')} ريال سنوياً`);
+    if (Number(margin)) indText.push(`هامش الربح الصافي (سنة أولى): ${(Number(margin) * 100).toFixed(1)}%`);
     const indicatorsBlock = indText.length ? `أهم المؤشرات: ${indText.join('؛ ')}.` : 'تم حساب المؤشرات المالية في نموذج التدفقات.';
 
     let feasibility = 'الجدوى المالية تُحدد وفق المؤشرات أعلاه ومقارنتها بمعايير القطاع.';
@@ -638,8 +677,10 @@ export function generateExecutiveSummary(state, results) {
         rec += ' أبرز أسباب القرار: ' + reasons.slice(0, 3).map(r => typeof r === 'string' ? r : (r?.text || r?.reason || '')).filter(Boolean).join('؛ ');
     }
 
-    const saudiStandardsNote = ' تم إعداد هذه النبذة وفق معايير دراسات الجدوى المعتمدة محلياً (رؤية 2030، منشآت، بنك التنمية الاجتماعية).';
-    return `${overview}\n\n${indicatorsBlock}\n\n${feasibility}\n\n${rec}${saudiStandardsNote}`;
+    // إفصاح صادق بدل ادعاء اعتماد مختلق: لا توجد «معايير معتمدة» من رؤية 2030/منشآت/بنك التنمية
+    // اعتمدها المنتج — النص مولَّد آلياً من مدخلات المستخدم ومؤشرات النموذج، ويجب مراجعته قبل التقديم.
+    const disclosureNote = ' (نص مولَّد آلياً من مدخلات دراستك ومؤشرات النموذج المالي — راجعه وأسنده بمصادرك قبل التقديم لممول.)';
+    return `${overview}\n\n${indicatorsBlock}\n\n${feasibility}\n\n${rec}${disclosureNote}`;
 }
 
 /**
@@ -649,7 +690,7 @@ export function generateExecutiveSummary(state, results) {
  */
 export function generateRisks(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'النشاط');
+    const concept = shortActivity(p, 'النشاط');
     const city = or(p.city, 'المنطقة');
     const sector = or(p.sector, concept);
 
@@ -682,6 +723,82 @@ export function generateRisks(state) {
     }
 
     return base.slice(0, 8);
+}
+
+/**
+ * توليد منتجات مقترحة للجدول (داخلي، بدون API)
+ * الأعمدة مطابقة لـ TABLE_SCHEMAS.products: type, name, description, uniqueFeatures, valueAdded, customerBenefit
+ * type: select من primary | semi | final
+ */
+export function generateProducts(state) {
+    const p = state?.projectInfo || {};
+    const concept = shortActivity(p, 'النشاط');
+    const sector = or(p.sector, concept);
+    const isFandB = /مطعم|كافي|كافتيريا|قهوة|بن|وجبات|مأكولات|مشروبات|فود|طعام|حلويات|مخبوزات/i.test(sector);
+
+    if (isFandB) {
+        return [
+            { type: 'final', name: 'الأطباق الرئيسية', description: 'قائمة أطباق رئيسية متنوعة تُحضّر طازجة حسب الطلب بمعايير جودة ثابتة.', uniqueFeatures: 'وصفات مميزة ومكونات منتقاة تمنح نكهة مختلفة عن السوق.', valueAdded: 'تجربة طعام متكاملة تجمع الجودة والسرعة والتقديم المميز.', customerBenefit: 'وجبة عالية الجودة بسعر مناسب وخدمة سريعة.' },
+            { type: 'final', name: 'المشروبات الساخنة والباردة', description: 'قهوة ومشروبات متنوعة تُحضّر باحترافية لمرافقة الوجبات أو الاستهلاك المستقل.', uniqueFeatures: 'مذاق مميز وثبات في الجودة عبر معايير تحضير موحّدة.', valueAdded: 'تنويع مصادر الإيراد ورفع متوسط قيمة الفاتورة.', customerBenefit: 'خيارات مشروبات تناسب مختلف الأذواق والأوقات.' },
+            { type: 'semi', name: 'الحلويات والمخبوزات', description: 'أصناف حلويات ومخبوزات تُعدّ داخلياً أو تُجهّز جزئياً وتُكمَّل عند الطلب.', uniqueFeatures: 'تنوّع موسمي وتقديم بصري جذّاب.', valueAdded: 'منتج إضافي مرتفع الهامش يعزّز الربحية.', customerBenefit: 'خيارات تحلية طازجة تكمّل التجربة.' }
+        ];
+    }
+
+    return [
+        { type: 'final', name: `المنتج/الخدمة الأساسية (${concept})`, description: `المنتج أو الخدمة الرئيسية في نشاط ${concept} بمواصفات تلبي احتياجات الشريحة المستهدفة.`, uniqueFeatures: 'ميزة تنافسية في الجودة أو التجربة تميّزه عن المنافسين.', valueAdded: 'قيمة مضافة واضحة للعميل تبرّر السعر وتبني الولاء.', customerBenefit: 'تلبية احتياج فعلي بجودة عالية وسعر مناسب.' },
+        { type: 'final', name: 'منتج/خدمة مكمّلة', description: `عرض مكمّل يرفع متوسط قيمة الطلب في نشاط ${concept}.`, uniqueFeatures: 'يكمّل العرض الأساسي ويزيد فرص البيع المتقاطع.', valueAdded: 'تنويع مصادر الإيراد وتقليل الاعتماد على منتج واحد.', customerBenefit: 'حلّ أشمل من مصدر واحد موثوق.' }
+    ];
+}
+
+/**
+ * توليد خدمات مقدَّمة مقترحة للجدول (داخلي، بدون API)
+ * الأعمدة مطابقة لـ TABLE_SCHEMAS.introServices: type, name, description
+ * type: select من essential | supporting | secondary
+ */
+export function generateIntroServices(state) {
+    const p = state?.projectInfo || {};
+    const concept = shortActivity(p, 'النشاط');
+    const sector = or(p.sector, concept);
+    const isFandB = /مطعم|كافي|كافتيريا|قهوة|بن|وجبات|مأكولات|مشروبات|فود|طعام|حلويات|مخبوزات/i.test(sector);
+
+    if (isFandB) {
+        return [
+            { type: 'essential', name: 'الخدمة داخل الصالة', description: 'استقبال العملاء وتقديم الطلبات داخل المطعم بمعايير ضيافة وجودة خدمة عالية.' },
+            { type: 'supporting', name: 'التوصيل والطلب الخارجي', description: 'توصيل الطلبات للعملاء مباشرة أو عبر منصات التوصيل لتوسيع نطاق الوصول.' },
+            { type: 'secondary', name: 'خدمة المناسبات والطلبات الكبيرة (كيترنق)', description: 'تجهيز طلبات المناسبات والولائم كمصدر إيراد إضافي في أوقات الذروة.' }
+        ];
+    }
+
+    return [
+        { type: 'essential', name: `تقديم ${concept} الأساسي`, description: `الخدمة الجوهرية التي يقوم عليها نشاط ${concept} وتلبّي الاحتياج الرئيسي للعميل.` },
+        { type: 'supporting', name: 'التوصيل أو خدمة ما بعد البيع', description: `خدمة داعمة تسهّل وصول ${concept} للعميل وترفع رضاه وولاءه.` },
+        { type: 'secondary', name: 'الاستشارة أو الدعم', description: 'خدمة ثانوية تعزّز تجربة العميل وتميّز العرض عن المنافسين.' }
+    ];
+}
+
+/**
+ * توليد جدول القيمة للعميل (Value Proposition) مقترح (داخلي، بدون API)
+ * الأعمدة مطابقة لـ TABLE_SCHEMAS.customerValues: customerType, customerNeed, valueWeProvide
+ */
+export function generateCustomerValues(state) {
+    const p = state?.projectInfo || {};
+    const concept = shortActivity(p, 'النشاط');
+    const sector = or(p.sector, concept);
+    const isFandB = /مطعم|كافي|كافتيريا|قهوة|بن|وجبات|مأكولات|مشروبات|فود|طعام|حلويات|مخبوزات/i.test(sector);
+
+    if (isFandB) {
+        return [
+            { customerType: 'العائلات', customerNeed: 'مكان مناسب لوجبة عائلية بجودة وسعر معقول', valueWeProvide: 'أجواء عائلية مريحة وقائمة متنوعة بجودة ثابتة وأسعار مناسبة' },
+            { customerType: 'الموظفون ورجال الأعمال', customerNeed: 'وجبة سريعة وموثوقة خلال ساعات العمل', valueWeProvide: 'خدمة سريعة وطلب خارجي وجودة تُعتمد عليها يومياً' },
+            { customerType: 'الشباب ومحبّو التجارب', customerNeed: 'تجربة طعام مميزة تستحق المشاركة', valueWeProvide: 'أصناف مميزة وتقديم جذّاب وأجواء تناسب اللقاءات' }
+        ];
+    }
+
+    return [
+        { customerType: 'العميل المستهدف الأساسي', customerNeed: `احتياج واضح لـ ${concept} بجودة موثوقة`, valueWeProvide: `${concept} بجودة عالية وسعر تنافسي وخدمة متميزة` },
+        { customerType: 'العميل الباحث عن السعر', customerNeed: 'حلّ مناسب بأقل تكلفة ممكنة', valueWeProvide: 'قيمة عالية مقابل السعر مع الحفاظ على مستوى الجودة' },
+        { customerType: 'العميل الباحث عن التميّز', customerNeed: 'تجربة أو جودة أعلى من المتوسط', valueWeProvide: 'تميّز في الجودة والخدمة يصعب على المنافسين الجدد تقليده' }
+    ];
 }
 
 /**
@@ -835,7 +952,7 @@ export function generateAdvisorFallback(state) {
  */
 export function generateLicenses(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'النشاط');
+    const concept = shortActivity(p, 'النشاط');
     const sector = or(p.sector, concept);
     const isFandB = /مطعم|كافي|قهوة|وجبات|فود|طعام|مأكولات|مشروبات/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر|بيع/i.test(sector);
@@ -966,6 +1083,7 @@ export function generateCampaigns(state) {
 export function generatePositions(state) {
     const p = state?.projectInfo || {};
     const sector = or(p.sector, p.concept, 'النشاط');
+    const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|قهوة|فود|طعام|مأكولات|مشروبات/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر|بيع/i.test(sector);
     const isHealth = /صحي|عيادة|مستشفى|طب|تمريض|مختبر|صيدل/i.test(sector);
@@ -976,7 +1094,15 @@ export function generatePositions(state) {
 
     let positions = [];
 
-    if (isFandB) {
+    if (isCafe) {
+        positions = [
+            { position: 'مدير/مديرة فرع', nationality: 'saudi', count: 1, salary: 7000, months: 12, isVariable: false },
+            { position: 'باريستا رئيسي', nationality: 'saudi', count: 1, salary: 5500, months: 12, isVariable: false },
+            { position: 'باريستا', nationality: 'saudi', count: 3, salary: 4500, months: 12, isVariable: false },
+            { position: 'كاشير وخدمة عملاء', nationality: 'saudi', count: 1, salary: 4200, months: 12, isVariable: false },
+            { position: 'عامل خدمة ونظافة', nationality: 'expat', count: 1, salary: 2800, months: 12, isVariable: true }
+        ];
+    } else if (isFandB) {
         positions = [
             { position: 'مدير/مديرة التشغيل', nationality: 'saudi', count: 1, salary: 7500, months: 12, isVariable: false },
             { position: 'شيف / مشرف مطبخ', nationality: 'expat', count: 1, salary: 5500, months: 12, isVariable: false },
@@ -1112,7 +1238,7 @@ export function generateSuppliers(state) {
  */
 export function generateOperationalKpis(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'النشاط');
+    const concept = shortActivity(p, 'النشاط');
 
     return [
         { strategicGoal: 'تحقيق الإيرادات المستهدفة', indicator: 'متوسط عدد الفواتير/يوم', calculationMethod: 'عدد الفواتير ÷ أيام الشهر', unit: 'عدد/يوم', targetValue: '50', notes: '' },
@@ -1331,7 +1457,7 @@ export function generateTechResources(state) {
  */
 export function generateRevenueStreams(state) {
     const p = state?.projectInfo || {};
-    const concept = or(p.concept, 'الخدمة');
+    const concept = shortActivity(p, 'الخدمة');
     const sector = or(p.sector, concept);
     const isFandB = /مطعم|كافي|قهوة|فود|طعام/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر/i.test(sector);
@@ -1375,9 +1501,31 @@ export function generateRevenueStreams(state) {
     return [{ service: or(concept, 'الخدمة الرئيسية'), customersPerMonth: 150, avgPrice: 200, growthRate: 0.07 }];
 }
 
+/**
+ * دالة لمحاكاة التدفق (Streaming) لنص معين كـ ReadableStream
+ * @param {string} text - النص المراد تدفقه
+ * @param {number} delayMs - التأخير بين كل جزء
+ * @returns {ReadableStream}
+ */
+export function simulateStream(text, delayMs = 15) {
+    return new ReadableStream({
+        async start(controller) {
+            const encoder = new TextEncoder();
+            const words = (text || '').split(' ');
+            for (let i = 0; i < words.length; i++) {
+                const chunk = words[i] + (i < words.length - 1 ? ' ' : '');
+                controller.enqueue(encoder.encode(chunk));
+                await new Promise(r => setTimeout(r, delayMs));
+            }
+            controller.close();
+        }
+    });
+}
+
 // الكائن المجمَّع يجب أن يشمل *كل* الدوال المصدَّرة — كان ناقصاً 7 دوال
 // (generateMarketAnalysisSummary وأخواتها) فترمي أزرار التوليد TypeError وقت التشغيل.
 export const InternalAIGenerator = {
+    simulateStream,
     generateBusinessModel,
     generateMarketDescriptions,
     generateMarketAnalysisSummary,
@@ -1398,6 +1546,9 @@ export const InternalAIGenerator = {
     generatePorter,
     generateExecutiveSummary,
     generateRisks,
+    generateProducts,
+    generateIntroServices,
+    generateCustomerValues,
     generateTimeline,
     generateLocationFactors,
     generateMitigationSuggestions,

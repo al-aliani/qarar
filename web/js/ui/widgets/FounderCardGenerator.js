@@ -85,7 +85,7 @@ export class FounderCardGenerator {
 
         // Decorative Circles (Spotify Wrapped ish)
         ctx.globalAlpha = 0.1;
-        ctx.fillStyle = '#D4AF37'; // Gold
+        ctx.fillStyle = '#8a5f1c'; // Gold
         ctx.beginPath();
         ctx.arc(w, 0, 400, 0, 2 * Math.PI);
         ctx.fill();
@@ -106,7 +106,7 @@ export class FounderCardGenerator {
 
         // Project Name (Big Gold)
         ctx.font = 'bold 80px "Tajawal", sans-serif';
-        ctx.fillStyle = '#D4AF37';
+        ctx.fillStyle = '#8a5f1c';
         ctx.fillText(name, w / 2, 300);
 
         // Concept & City
@@ -138,7 +138,7 @@ export class FounderCardGenerator {
 
         // Fake Logo Text
         ctx.font = 'bold 40px sans-serif';
-        ctx.fillStyle = '#D4AF37';
+        ctx.fillStyle = '#8a5f1c';
         ctx.textAlign = 'right';
         ctx.fillText('الجدوى.com', w - 50, h - 60);
 

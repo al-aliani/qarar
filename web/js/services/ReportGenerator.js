@@ -10,6 +10,7 @@ import { calculateStudy as runFullModel } from '../core/engine.js';
 import { validateStudy } from '../utils/validation.js';
 import { DEFAULT_REPORT_SECTION_ORDER } from '../core/schema.js';
 import { BANK_COMPLIANCE_SENTENCE } from '../config.js';
+import { getOptionLabel } from '../core/fieldOptions.js';
 
 /** عناوين الأقسام (لفهرس المحتويات وترتيب التصدير) */
 const REPORT_SECTION_LABELS = {
@@ -23,16 +24,26 @@ const REPORT_SECTION_LABELS = {
     financial_kpis: 'الملخص المالي (المؤشرات المالية)',
     swot: 'التحليل الاستراتيجي (التحليل الرباعي)',
     capex: 'الاستثمارات الرأسمالية',
+    legal: 'الدراسة القانونية والتراخيص',
     income_statement: 'قائمة الدخل',
     cash_flow: 'قائمة التدفقات النقدية',
     loan_schedule: 'جدول سداد القرض',
     balance_sheet: 'الميزانية العمومية التقديرية',
     business_model: 'نموذج العمل',
     risks: 'سجل المخاطر وخطط التخفيف',
+    appendices: 'الملاحق والمصادر وعروض الأسعار',
     scenarios: 'مقارنة السيناريوهات',
     sensitivity: 'تحليل الحساسية',
     recommendation: 'التوصية النهائية والقرار الاستثماري'
 };
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
 
 export class ReportGenerator {
 
@@ -45,9 +56,70 @@ export class ReportGenerator {
         }
     }
 
+    static getFinancingDiagnostics(state, results) {
+        const financing = state?.financing || {};
+        const loan = financing.sources?.bankLoan || {};
+        const loanAmount = Number(loan.amount || results?.loanSchedule?.loanAmount || 0);
+        const targetDSCR = Number.isFinite(Number(financing.targetDSCR)) ? Number(financing.targetDSCR) : 1.25;
+        const fundingGap = Number(results?.financingCheck?.fundingGap ?? 0);
+        const dscr = results?.indicators?.dscr ?? null;
+        const y1Ebitda = Number(results?.incomeStatement?.[0]?.ebitda ?? NaN);
+        const concept = String(state?.projectInfo?.concept || state?.projectInfo?.sector || '');
+        const isSaas = /saas|منصة|تطبيق|برمجي|تقني|موقع دراسة جدوى/i.test(concept);
+        const dscrBlocked = loanAmount > 0 && (dscr == null || dscr < targetDSCR);
+        const alerts = [];
+
+        if (fundingGap > 1) {
+            alerts.push({ title: 'فجوة تمويل غير مغطاة', text: 'مصادر التمويل أقل من إجمالي الاستثمار المطلوب.' });
+        }
+        if (dscrBlocked) {
+            alerts.push({ title: 'تغطية خدمة الدين غير كافية', text: 'القرض لا يحقق DSCR السنة الأولى حسب الحد المستهدف.' });
+        }
+        if (isSaas && loanAmount > 0 && (!Number.isFinite(y1Ebitda) || y1Ebitda <= 0)) {
+            alerts.push({ title: 'قراءة البنك تختلف عن قراءة المستثمر', text: 'مشروع SaaS قد يكون واعداً استثمارياً لكنه يحتاج إثبات نمو أو تمويل أخف قبل ملف بنكي.' });
+        }
+
+        return {
+            alerts,
+            fundingGap,
+            dscr,
+            y1Ebitda,
+            loanAmount,
+            targetDSCR,
+            dscrBlocked,
+            isSaas,
+            bankReady: alerts.length === 0
+        };
+    }
+
+    static renderFinancingDiagnostics(d, fmt) {
+        if (!d || (!d.alerts?.length && !d.isSaas && Math.abs(Number(d.fundingGap || 0)) <= 1 && !d.loanAmount)) return '';
+        const gapText = d.fundingGap > 1
+            ? fmt(d.fundingGap)
+            : d.fundingGap < -1
+                ? 'فائض ' + fmt(Math.abs(d.fundingGap))
+                : 'متوازن';
+        const dscrText = d.dscr == null ? 'غير قابل للحساب' : Number(d.dscr).toFixed(2) + 'x';
+        const y1Text = Number.isFinite(d.y1Ebitda) ? fmt(d.y1Ebitda) : 'غير متاح';
+        const title = d.bankReady ? 'جاهزية التمويل: جاهز بنكياً مبدئياً' : 'جاهزية التمويل: مراجعة مطلوبة قبل البنك';
+        return `
+            <div style="border:1px solid ${d.bankReady ? '#38a169' : '#f59e0b'}; background:${d.bankReady ? '#f0fff4' : '#fffbeb'}; border-radius:6px; padding:12px 14px; margin:14px 0;">
+                <h4 style="margin:0 0 8px; color:${d.bankReady ? '#276749' : '#92400e'};">${title}</h4>
+                <table style="margin:8px 0;"><thead><tr><th>المؤشر</th><th>القيمة</th><th>القراءة</th></tr></thead><tbody>
+                    <tr><td>فجوة التمويل</td><td>${gapText}</td><td>${d.fundingGap > 1 ? 'غير مغطاة' : 'مقبولة'}</td></tr>
+                    <tr><td>DSCR السنة الأولى</td><td>${dscrText}</td><td>${d.dscrBlocked ? 'دون الحد المستهدف ' + d.targetDSCR.toFixed(2) + 'x' : 'مقبول مبدئياً'}</td></tr>
+                    <tr><td>EBITDA السنة الأولى</td><td>${y1Text}</td><td>${d.y1Ebitda < 0 ? 'سالب؛ يحتاج تمويل/سماح أطول' : 'موجب'}</td></tr>
+                </tbody></table>
+                ${d.alerts?.length ? `<ul>${d.alerts.map(a => `<li><strong>${a.title}:</strong> ${a.text}</li>`).join('')}</ul>` : ''}
+            </div>
+        `;
+    }
+
     static generateHTML(store) {
         const state = store.getState ? store.getState() : store.get();
         const info = state.projectInfo || {};
+        const studyTypeLabel = getOptionLabel('studyType', info.studyType);
+        const studyRecipientLabel = getOptionLabel('studyRecipientType', info.studyRecipientType);
 
         // تحديث state.results دائماً من runFullModel قبل إنشاء التقرير
         let results;
@@ -87,7 +159,7 @@ export class ReportGenerator {
                        ═══════════════════════════════════════════════════════════════ */
                     
                     :root {
-                        --primary-gold: #D4AF37;
+                        --primary-gold: #8a5f1c;
                         --primary-dark: #1a1f2e;
                         --accent-blue: #2c5282;
                         --text-main: #1a202c;
@@ -160,7 +232,7 @@ export class ReportGenerator {
                         justify-content: space-around;
                         margin-top: 20px;
                         padding-top: 20px;
-                        border-top: 1px solid rgba(212, 175, 55, 0.3);
+                        border-top: 1px solid rgba(138, 95, 28, 0.3);
                         font-size: 10pt;
                         color: #cbd5e0;
                     }
@@ -444,6 +516,8 @@ export class ReportGenerator {
                     <div class="report-header">
                         <h1>📊 دراسة جدوى اقتصادية شاملة</h1>
                         <h2>${info.name || 'مشروع مقترح'}</h2>
+                        ${(info.clientName || '').trim() ? `<p style="font-size: 12pt; margin: 6px 0 0;">أُعدت هذه الدراسة لصالح: <strong>${String(info.clientName).replace(/</g, '&lt;')}</strong></p>` : ''}
+                        ${(info.preparedBy || '').trim() ? `<p style="font-size: 10pt; margin: 2px 0 0; color: #718096;">إعداد: ${String(info.preparedBy).replace(/</g, '&lt;')}</p>` : ''}
                         <div class="report-meta">
                             <div class="report-meta-item">
                                 <strong>تاريخ الإعداد</strong>
@@ -452,6 +526,14 @@ export class ReportGenerator {
                             <div class="report-meta-item">
                                 <strong>النشاط</strong>
                                 <span>${info.activity || 'غير محدد'}</span>
+                            </div>
+                            <div class="report-meta-item">
+                                <strong>نوع الدراسة</strong>
+                                <span>${studyTypeLabel || 'غير محدد'}</span>
+                            </div>
+                            <div class="report-meta-item">
+                                <strong>لمن تُعد</strong>
+                                <span>${studyRecipientLabel || 'غير محدد'}</span>
                             </div>
                             <div class="report-meta-item">
                                 <strong>المنصة</strong>
@@ -489,9 +571,13 @@ export class ReportGenerator {
 
     /** يبني فهرس المحتويات وأقسام التقرير حسب ترتيب المستخدم (reportSectionOrder). */
     static _renderBodyWithOrder(state, results, info) {
-        const order = (state.reportSectionOrder && state.reportSectionOrder.length)
+        const baseOrder = (state.reportSectionOrder && state.reportSectionOrder.length)
             ? state.reportSectionOrder
             : [...DEFAULT_REPORT_SECTION_ORDER];
+        const order = [...baseOrder];
+        for (const id of DEFAULT_REPORT_SECTION_ORDER) {
+            if (!order.includes(id)) order.push(id);
+        }
         const ordered = [];
         let num = 1;
         for (const id of order) {
@@ -518,6 +604,7 @@ export class ReportGenerator {
     static _renderSection(id, state, results, info, num) {
         const title = REPORT_SECTION_LABELS[id] || id;
         const fmt = (v) => formatCurrency(v, state.assumptions?.currency || 'SAR');
+        const financingDiagnostics = this.getFinancingDiagnostics(state, results);
         let html = '';
         switch (id) {
             case 'executive_summary': {
@@ -544,6 +631,16 @@ export class ReportGenerator {
                 }
                 if (results.capacityCheck && !results.capacityCheck.exceeded) {
                     exFootnotes.push(`مصالحة الطاقة: المبيعات المخططة (${results.capacityCheck.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر) تعادل ${Math.round((results.capacityCheck.utilizationOfMax || 0) * 100)}% من الطاقة القصوى الفعلية (${results.capacityCheck.maxUnitsPerMonth.toLocaleString('ar-SA')}) — قابلة للتحقيق مادياً.`);
+                }
+                if (financingDiagnostics.fundingGap > 1) {
+                    exFootnotes.push(`حاجز تمويلي: توجد فجوة تمويل قدرها ${fmt(financingDiagnostics.fundingGap)} يجب تغطيتها قبل اعتماد الدراسة.`);
+                }
+                if (financingDiagnostics.dscrBlocked) {
+                    const dscrText = financingDiagnostics.dscr == null ? 'غير قابل للحساب' : financingDiagnostics.dscr.toFixed(2) + 'x';
+                    exFootnotes.push(`حاجز بنكي: DSCR السنة الأولى ${dscrText} دون الحد المستهدف ${financingDiagnostics.targetDSCR.toFixed(2)}x.`);
+                }
+                if (financingDiagnostics.isSaas && financingDiagnostics.loanAmount > 0 && financingDiagnostics.y1Ebitda <= 0) {
+                    exFootnotes.push('قراءة المستثمر والقراءة البنكية مختلفتان: مشروع SaaS قد يكون مقبولاً استثمارياً مع إثبات النمو، لكنه يحتاج هيكلة تمويل أخف أو سماح أطول قبل التقديم للبنك.');
                 }
                 const exFootnotesHtml = exFootnotes.length
                     ? `<div style="font-size:9pt; color:#6C766E; line-height:1.8; margin-top:8px;">${exFootnotes.map(f => `• ${f}`).join('<br>')}</div>`
@@ -575,8 +672,13 @@ export class ReportGenerator {
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>مقارنة أفكار المشاريع (قبل التفصيل)</h3>
                         <div class="section-content">
-                            <table style="width:100%; border-collapse:collapse; margin-top:8px;"><thead><tr><th>اسم الفكرة</th><th>تكلفة تقريبية</th><th>عائد متوقع/سنة</th><th>ملاحظة</th></tr></thead><tbody>
-                            ${(state.projectAlternatives.ideas || []).map(idea => `<tr><td>${(idea.name || '-')}</td><td>${new Intl.NumberFormat('ar-SA').format(idea.estimatedCost ?? 0)}</td><td>${new Intl.NumberFormat('ar-SA').format(idea.estimatedReturn ?? 0)}</td><td>${(idea.notes || '-')}</td></tr>`).join('')}
+                            <table style="width:100%; border-collapse:collapse; margin-top:8px;"><thead><tr><th>اسم الفكرة</th><th>تكلفة تقريبية</th><th>عائد متوقع/سنة</th><th>المخاطرة</th><th>الاسترداد (سنة)</th><th>ملاحظة</th></tr></thead><tbody>
+                            ${(state.projectAlternatives.ideas || []).filter(idea => idea.name || idea.estimatedCost || idea.estimatedReturn || idea.notes).map(idea => {
+                                const cost = Number(idea.estimatedCost) || 0, ret = Number(idea.estimatedReturn) || 0;
+                                const payback = cost > 0 && ret > 0 ? (cost / ret).toFixed(1) : '-';
+                                const riskAr = { low: 'منخفضة', medium: 'متوسطة', high: 'عالية' }[idea.risk] || '-';
+                                return `<tr><td>${(idea.name || '-')}</td><td>${new Intl.NumberFormat('ar-SA').format(cost)}</td><td>${new Intl.NumberFormat('ar-SA').format(ret)}</td><td>${riskAr}</td><td>${payback}</td><td>${(idea.notes || '-')}</td></tr>`;
+                            }).join('')}
                             </tbody></table>
                             ${state.projectAlternatives.selectedIndex != null && state.projectAlternatives.ideas?.[state.projectAlternatives.selectedIndex] ? `<p style="margin-top:12px;"><strong>الفكرة المختارة للمتابعة:</strong> ${(state.projectAlternatives.ideas[state.projectAlternatives.selectedIndex].name || '-')}</p>` : ''}
                         </div>
@@ -611,18 +713,22 @@ export class ReportGenerator {
                          samV > 0 ? 'القابل للخدمة: ' + fmt(samV) : null,
                          somV > 0 ? 'الحصة الممكنة: ' + fmt(somV) : null].filter(Boolean).join(' · ')]);
                 }
-                const comps = (state.marketing?.competitors || []).map(c => typeof c === 'string' ? c : (c.name || '')).filter(Boolean);
+                const competitors = state.marketing?.competitors || [];
+                const comps = competitors.map(c => typeof c === 'string' ? c : (c.name || '')).filter(Boolean);
                 if (comps.length) mRows.push(['المنافسون الرئيسيون', comps.join('؛ ')]);
                 const loc = info.locationAnalysis?.address || info.city;
                 if (loc) mRows.push(['الموقع والوصول', loc]);
                 if (state.marketing?.marketingMix?.price) mRows.push(['استراتيجية التسعير', state.marketing.marketingMix.price]);
                 if (mRows.length === 0) return null;
+                const segments = state.marketSizing?.segments || [];
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>تحليل السوق</h3>
                         <div class="section-content">
                             <table style="width:100%; border-collapse:collapse;">
                                 ${mRows.map(([k, v]) => `<tr><td style="padding:8px 0; vertical-align:top; width:28%;"><strong>${k}</strong></td><td style="padding:8px 0;">${v}</td></tr>`).join('')}
                             </table>
+                            ${segments.length ? `<h4 style="margin-top:16px;">شرائح العملاء المستهدفة</h4>${this.renderMarketSegments(segments)}` : ''}
+                            ${competitors.length ? `<h4 style="margin-top:16px;">مصفوفة المنافسين</h4>${this.renderCompetitors(competitors)}` : ''}
                         </div>
                     </div>`;
                 break;
@@ -639,14 +745,31 @@ export class ReportGenerator {
                     </div>`;
                 break;
             case 'marketing':
-                if (!((state.marketSizing?.vision2030?.alignment) || (state.marketSizing?.nationalEconomy?.gdpGrowth) || (state.marketing?.marketingMix?.product) || (state.marketing?.marketAnalysis?.historicalData || []).length > 0 || (state.marketing?.supplyDemandBalance || []).length > 0 || (state.marketing?.marketAnalysis?.demandElasticity))) return null;
+                {
+                const ma = state.marketing?.marketAnalysis || {};
+                const mix = state.marketing?.marketingMix || {};
+                if (!((state.marketSizing?.vision2030?.alignment) || (state.marketSizing?.nationalEconomy?.gdpGrowth) || (mix.product || mix.price || mix.place || mix.promotion) || ma.summary || ma.description || ma.trends || ma.marketGap || ma.pricingStrategy || ma.distributionStrategy || ma.marketSize || ma.growthRate || (ma.historicalData || []).length > 0 || (state.marketing?.supplyDemandBalance || []).length > 0 || ma.demandElasticity)) return null;
+                const marketFacts = [
+                    ma.marketSize ? ['حجم السوق المقدر', ma.marketSize] : null,
+                    ma.growthRate ? ['معدل النمو', ma.growthRate] : null,
+                    ma.trends ? ['اتجاهات السوق', ma.trends] : null,
+                    ma.marketGap ? ['الفجوة السوقية', ma.marketGap] : null,
+                    ma.pricingStrategy ? ['استراتيجية التسعير', ma.pricingStrategy] : null,
+                    ma.distributionStrategy ? ['استراتيجية التوزيع', ma.distributionStrategy] : null,
+                    ma.demandElasticity ? ['مرونة الطلب السعرية', ma.demandElasticity] : null
+                ].filter(Boolean);
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>الدراسة التسويقية</h3>
                         <div class="section-content">
+                            ${(ma.summary || ma.description) ? `<h4>ملخص السوق</h4><p>${escapeHtml(ma.summary || ma.description)}</p>` : ''}
+                            ${marketFacts.length ? `<h4>مؤشرات واتجاهات السوق</h4><table><thead><tr><th>البند</th><th>التفصيل</th></tr></thead><tbody>${marketFacts.map(([k, v]) => `<tr><td>${escapeHtml(k)}</td><td>${escapeHtml(v)}</td></tr>`).join('')}</tbody></table>` : ''}
                             ${state.marketSizing?.vision2030?.alignment ? `<h4>مواءمة رؤية 2030</h4><p>${(state.marketSizing.vision2030.alignment || '')}</p>` : ''}
-                            ${(state.marketing?.marketingMix?.product || state.marketing?.marketingMix?.price) ? `<h4>المزيج التسويقي (4P)</h4><ul><li><strong>المنتج:</strong> ${(state.marketing?.marketingMix?.product || '-')}</li><li><strong>السعر:</strong> ${(state.marketing?.marketingMix?.price || '-')}</li></ul>` : ''}
+                            ${(mix.product || mix.price || mix.place || mix.promotion) ? `<h4>المزيج التسويقي (4P)</h4><ul><li><strong>المنتج:</strong> ${escapeHtml(mix.product || '-')}</li><li><strong>السعر:</strong> ${escapeHtml(mix.price || '-')}</li><li><strong>المكان:</strong> ${escapeHtml(mix.place || '-')}</li><li><strong>الترويج:</strong> ${escapeHtml(mix.promotion || '-')}</li></ul>` : ''}
+                            ${(ma.historicalData || []).length ? `<h4>اتجاهات الطلب التاريخية</h4>${this.renderHistoricalDemand(ma.historicalData)}` : ''}
+                            ${(state.marketing?.supplyDemandBalance || []).length ? `<h4>توازن العرض والطلب</h4>${this.renderSupplyDemand(state.marketing.supplyDemandBalance)}` : ''}
                         </div>
                     </div>`;
+                }
                 break;
             case 'financial_kpis':
                 html = `<div class="section">
@@ -655,14 +778,18 @@ export class ReportGenerator {
                             <div class="kpi-grid">
                                 <div class="kpi-card"><div class="kpi-label">صافي القيمة الحالية</div><div class="kpi-value ${(results.indicators?.npv || 0) > 0 ? 'positive' : 'negative'}">${formatCurrency(results.indicators?.npv || 0)}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">معدل العائد الداخلي (IRR)</div><div class="kpi-value ${(results.indicators?.irr || 0) > 0.15 ? 'positive' : ''}">${((results.indicators?.irr || 0) * 100).toFixed(1)}%</div></div>
-                                <div class="kpi-card"><div class="kpi-label">فترة الاسترداد</div><div class="kpi-value">${(results.indicators?.paybackPeriod || 0).toFixed(1)} سنة</div></div>
+                                <div class="kpi-card"><div class="kpi-label">فترة الاسترداد</div><div class="kpi-value">${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">نقطة التعادل</div><div class="kpi-value">${results.indicators?.breakEvenPointValue != null ? formatCurrency(results.indicators.breakEvenPointValue) : (results.indicators?.breakevenUnitsPerMonth != null ? Math.round(results.indicators.breakevenUnitsPerMonth) + ' وحدة/شهر' : '—')}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">نسبة تغطية خدمة الدين (DSCR)</div><div class="kpi-value">${results.indicators?.dscr != null ? (results.indicators.dscr.toFixed(2) + 'x') : '—'}</div></div>
+                                <div class="kpi-card"><div class="kpi-label">فجوة التمويل</div><div class="kpi-value ${financingDiagnostics.fundingGap > 1 ? 'negative' : 'positive'}">${financingDiagnostics.fundingGap > 1 ? fmt(financingDiagnostics.fundingGap) : financingDiagnostics.fundingGap < -1 ? 'فائض ' + fmt(Math.abs(financingDiagnostics.fundingGap)) : 'متوازن'}</div></div>
                             </div>
+                            ${this.renderFinancingDiagnostics(financingDiagnostics, fmt)}
                             <table><thead><tr><th>المؤشر المالي</th><th>القيمة</th><th>التقييم</th></tr></thead><tbody>
                                 <tr><td>صافي القيمة الحالية</td><td>${formatCurrency(results.indicators?.npv || 0)}</td><td class="${(results.indicators?.npv || 0) > 0 ? 'status-positive' : 'status-negative'}">${(results.indicators?.npv || 0) > 0 ? '✓ موجب' : '✗ سالب'}</td></tr>
                                 <tr><td>معدل العائد الداخلي</td><td>${((results.indicators?.irr || 0) * 100).toFixed(2)}%</td><td>${(results.indicators?.irr || 0) > 0.15 ? '✓ مرتفع' : 'متوسط'}</td></tr>
-                                <tr><td>فترة الاسترداد</td><td>${(results.indicators?.paybackPeriod || 0).toFixed(1)} سنة</td><td>${(results.indicators?.paybackPeriod || 999) < 3 ? 'سريع' : 'طويل نسبياً'}</td></tr>
+                                <tr><td>فترة الاسترداد</td><td>${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</td><td>${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; if (!Number.isFinite(p) || p <= 0) return 'غير محقق'; return p < 3 ? 'سريع' : 'طويل نسبياً'; })()}</td></tr>
+                                <tr><td>فجوة التمويل</td><td>${financingDiagnostics.fundingGap > 1 ? fmt(financingDiagnostics.fundingGap) : financingDiagnostics.fundingGap < -1 ? 'فائض ' + fmt(Math.abs(financingDiagnostics.fundingGap)) : 'متوازن'}</td><td class="${financingDiagnostics.fundingGap > 1 ? 'status-negative' : 'status-positive'}">${financingDiagnostics.fundingGap > 1 ? 'يجب سدها قبل الاعتماد' : 'مقبولة'}</td></tr>
+                                <tr><td>DSCR السنة الأولى</td><td>${financingDiagnostics.dscr == null ? 'غير قابل للحساب' : financingDiagnostics.dscr.toFixed(2) + 'x'}</td><td class="${financingDiagnostics.dscrBlocked ? 'status-negative' : 'status-positive'}">${financingDiagnostics.dscrBlocked ? 'دون الحد البنكي المستهدف' : 'مقبول مبدئياً'}</td></tr>
                             </tbody></table>
                         </div>
                     </div>`;
@@ -686,6 +813,15 @@ export class ReportGenerator {
                         </div>
                     </div>`;
                 break;
+            case 'legal': {
+                const licenses = state.legal?.licenses || [];
+                if (!licenses.length) return null;
+                html = `<div class="section">
+                        <h3 class="section-title"><span class="section-number">${num}</span>الدراسة القانونية والتراخيص</h3>
+                        <div class="section-content">${this.renderLicenses(licenses)}</div>
+                    </div>`;
+                break;
+            }
             case 'income_statement': {
                 // قائمة دخل كاملة لكل سنوات الدراسة (كانت تعرض السنة الأولى فقط وتُهمل الباقي)
                 const isYears = (results.incomeStatement || []).slice(0, 7);
@@ -700,8 +836,8 @@ export class ReportGenerator {
                                 ${isRow('(-) التكاليف المتغيرة', 'variableCosts')}
                                 ${isRow('(=) مجمل الربح', 'grossProfit')}
                                 ${isRow('(-) المصاريف التشغيلية الثابتة', 'fixedCosts')}
-                                ${isRow('(=) الربح قبل الفوائد والإهلاك (EBITDA)', 'ebitda')}
-                                ${isRow('(-) الاستهلاك والإطفاء', 'depreciation')}
+                                ${isRow('(=) الأرباح قبل الفوائد والضرائب والإهلاك والإطفاء (EBITDA)', 'ebitda')}
+                                ${isRow('(-) الإهلاك والإطفاء', 'depreciation')}
                                 ${isRow('(-) الفوائد', 'interest')}
                                 ${isRow('(-) الزكاة', 'zakat')}
                                 ${isYears.some(y => (y.tax || 0) > 0) ? isRow('(-) ضريبة الدخل (حصة الأجانب)', 'tax') : ''}
@@ -734,6 +870,20 @@ export class ReportGenerator {
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>سجل المخاطر وخطط التخفيف</h3>
                         <div class="section-content">${this.renderRisks(riskRows)}</div>
+                    </div>`;
+                break;
+            }
+            case 'appendices': {
+                const appendices = state.appendices || {};
+                const hasAppendix = (appendices.references || []).length
+                    || (appendices.reviewers || []).length
+                    || (appendices.surveys || []).length
+                    || (appendices.priceQuotes || []).length
+                    || String(appendices.investorProfile || '').trim();
+                if (!hasAppendix) return null;
+                html = `<div class="section">
+                        <h3 class="section-title"><span class="section-number">${num}</span>الملاحق والمصادر وعروض الأسعار</h3>
+                        <div class="section-content">${this.renderAppendices(appendices)}</div>
                     </div>`;
                 break;
             }
@@ -771,6 +921,7 @@ export class ReportGenerator {
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>تقييم المشروع والمخاطر (التوصية والقرار الاستثماري)</h3>
                         <div class="section-content">
+                            ${this.renderFinancingDiagnostics(financingDiagnostics, fmt)}
                             <p style="font-size: 11pt; line-height: 1.9;">
                                 ${state.decisionDashboard?.finalAssessment ||
                     (results.decision === 'GO'
@@ -955,7 +1106,7 @@ export class ReportGenerator {
                             <td><strong>${labels[key] || key}</strong></td>
                             <td class="${val.kpis.npv > 0 ? 'status-positive' : ''}">${formatCurrency(val.kpis.npv)}</td>
                             <td>${(val.kpis.irr * 100).toFixed(1)}%</td>
-                            <td>${val.kpis.payback?.toFixed(1) || '-'} سنة</td>
+                            <td>${Number.isFinite(val.kpis.payback) && val.kpis.payback > 0 ? val.kpis.payback.toFixed(1) + ' سنة' : 'غير محقق'}</td>
                             <td>${Math.round(val.breakeven?.ordersPerDay || 0)}/يوم</td>
                         </tr>
                     `).join('')}
@@ -1089,6 +1240,127 @@ export class ReportGenerator {
                     `).join('')}
                 </tbody>
             </table>
+        `;
+    }
+
+    static renderMarketSegments(segments) {
+        const rows = (segments || []).filter(s => s && (s.name || s.segment || s.demographics || s.needs || s.size));
+        if (!rows.length) return '';
+        return `
+            <table>
+                <thead><tr><th>الشريحة</th><th>الديموغرافيا/الوصف</th><th>الاحتياج</th><th>الحجم/الأولوية</th></tr></thead>
+                <tbody>
+                    ${rows.map(s => `<tr>
+                        <td>${escapeHtml(s.name || s.segment || '-')}</td>
+                        <td>${escapeHtml(s.demographics || s.description || '-')}</td>
+                        <td>${escapeHtml(s.needs || '-')}</td>
+                        <td>${s.size ? formatCurrency(Number(s.size) || 0) : escapeHtml(s.priority || '-')}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    static renderCompetitors(competitors) {
+        const rows = (competitors || []).filter(c => c && (typeof c === 'string' || c.name || c.strengths || c.weaknesses));
+        if (!rows.length) return '';
+        return `
+            <table>
+                <thead><tr><th>المنافس</th><th>نقاط القوة</th><th>نقاط الضعف</th><th>الحصة/العملاء</th><th>ملاحظة</th></tr></thead>
+                <tbody>
+                    ${rows.map(c => {
+                        if (typeof c === 'string') {
+                            return `<tr><td>${escapeHtml(c)}</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>`;
+                        }
+                        const share = c.marketShare ? `${escapeHtml(c.marketShare)}%` : '';
+                        const customers = c.estimatedDailyCustomers ? `${Number(c.estimatedDailyCustomers).toLocaleString('ar-SA')} عميل/يوم` : '';
+                        return `<tr>
+                            <td>${escapeHtml(c.name || '-')}</td>
+                            <td>${escapeHtml(c.strengths || '-')}</td>
+                            <td>${escapeHtml(c.weaknesses || '-')}</td>
+                            <td>${escapeHtml([share, customers].filter(Boolean).join(' - ') || '-')}</td>
+                            <td>${escapeHtml(c.advantage || c.notes || '-')}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    static renderHistoricalDemand(rows) {
+        const clean = (rows || []).filter(r => r && (r.year || r.demand || r.notes));
+        if (!clean.length) return '';
+        return `
+            <table>
+                <thead><tr><th>السنة</th><th>الطلب/الحجم</th><th>ملاحظات</th></tr></thead>
+                <tbody>
+                    ${clean.map(r => `<tr><td>${escapeHtml(r.year || '-')}</td><td>${escapeHtml(r.demand || '-')}</td><td>${escapeHtml(r.notes || '-')}</td></tr>`).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    static renderSupplyDemand(rows) {
+        const clean = (rows || []).filter(r => r && (r.factor || r.estimatedSupply || r.estimatedDemand || r.notes));
+        if (!clean.length) return '';
+        const label = { opportunity: 'فرصة (الطلب أكبر من العرض)', risk: 'خطر (العرض أكبر من الطلب)', neutral: 'محايد' };
+        return `
+            <table>
+                <thead><tr><th>العامل</th><th>العرض المقدر</th><th>الطلب المقدر</th><th>الخلاصة</th><th>ملاحظات</th></tr></thead>
+                <tbody>
+                    ${clean.map(r => `<tr>
+                        <td>${escapeHtml(r.factor || '-')}</td>
+                        <td>${escapeHtml(r.estimatedSupply || '-')}</td>
+                        <td>${escapeHtml(r.estimatedDemand || '-')}</td>
+                        <td>${escapeHtml(label[r.balanceConclusion] || r.balanceConclusion || '-')}</td>
+                        <td>${escapeHtml(r.notes || '-')}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    static renderLicenses(licenses) {
+        const rows = (licenses || []).filter(l => l && (l.name || l.price || l.notes));
+        if (!rows.length) return '';
+        return `
+            <table>
+                <thead><tr><th>الترخيص/الرسم</th><th>الكمية</th><th>التكلفة</th><th>الإجمالي</th><th>ملاحظات/جهة الإصدار</th></tr></thead>
+                <tbody>
+                    ${rows.map(l => {
+                        const quantity = Number(l.quantity || 1);
+                        const price = Number(l.price || 0);
+                        const total = Number(l.total || (quantity * price));
+                        return `<tr>
+                            <td>${escapeHtml(l.name || l.license || '-')}</td>
+                            <td>${quantity.toLocaleString('ar-SA')}</td>
+                            <td>${formatCurrency(price)}</td>
+                            <td>${formatCurrency(total)}</td>
+                            <td>${escapeHtml(l.notes || l.authority || '-')}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    static renderAppendices(appendices) {
+        const references = appendices.references || [];
+        const reviewers = appendices.reviewers || [];
+        const surveys = appendices.surveys || [];
+        const priceQuotes = appendices.priceQuotes || [];
+        const blockList = (items) => `<ul>${items.map(item => `<li>${escapeHtml(typeof item === 'string' ? item : (item.notes || item.title || item.name || JSON.stringify(item)))}</li>`).join('')}</ul>`;
+        const refTable = references.length ? `
+            <h4>المصادر والمراجع</h4>
+            <table><thead><tr><th>العنوان</th><th>المؤلف/الناشر</th><th>السنة</th><th>ملاحظات</th></tr></thead><tbody>
+                ${references.map(r => `<tr><td>${escapeHtml(r.title || '-')}</td><td>${escapeHtml([r.author, r.publisher].filter(Boolean).join(' - ') || '-')}</td><td>${escapeHtml(r.year || '-')}</td><td>${escapeHtml(r.notes || '-')}</td></tr>`).join('')}
+            </tbody></table>` : '';
+        const reviewerTable = reviewers.length ? `
+            <h4>المراجعون والمختصون</h4>
+            <table><thead><tr><th>الاسم</th><th>الدور</th><th>المؤهلات</th></tr></thead><tbody>
+                ${reviewers.map(r => `<tr><td>${escapeHtml(r.name || '-')}</td><td>${escapeHtml(r.role || '-')}</td><td>${escapeHtml(r.qualifications || '-')}</td></tr>`).join('')}
+            </tbody></table>` : '';
+        return `
+            ${appendices.investorProfile ? `<h4>نبذة المستثمر/الشركة</h4><p>${escapeHtml(appendices.investorProfile)}</p>` : ''}
+            ${refTable}
+            ${priceQuotes.length ? `<h4>عروض الأسعار والتقارير الفنية</h4>${blockList(priceQuotes)}` : ''}
+            ${surveys.length ? `<h4>الاستبيانات والاستطلاعات</h4>${blockList(surveys)}` : ''}
+            ${reviewerTable}
         `;
     }
 

@@ -64,7 +64,13 @@ export class LegalStudy {
     renderTable(data) {
         const container = this.container.querySelector('#licensesTableContainer');
         const schema = TABLE_SCHEMAS.licenses;
-        
+        // حارس دفاعي: لا نكسر الخطوة كاملة إن غاب تعريف الجدول (مثلاً بعد انحدار في المخطط)
+        if (!schema) {
+            if (container) container.innerHTML = '<p class="text-danger">تعذّر تحميل جدول التراخيص (تعريف الجدول غير متاح).</p>';
+            console.error('TABLE_SCHEMAS.licenses is undefined — schema regression?');
+            return;
+        }
+
         // Add onSuggest handler for AI suggestions
         const onSuggest = schema.aiPrompt ? async (btn) => {
             if (btn && btn.disabled) return;

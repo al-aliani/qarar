@@ -103,3 +103,86 @@ export const QUICK_DEFAULTS_BY_SECTOR = {
     تقني: { monthlyRevenue: 35000, monthlyCosts: 20000, initialInvestment: 100000 },
     أخرى: { monthlyRevenue: 50000, monthlyCosts: 30000, initialInvestment: 200000 }
 };
+
+/**
+ * تقدير استثمار أولي *شامل* من قيم محرك السوق (لا يُكتفى بالتجهيز فقط).
+ * كان الحساب القديم = fitout_per_sqm × المساحة فقط، فينتج مثلاً 42–150 ألف لمقهى 100م²
+ * (غير واقعي: يُهمل المعدات والأثاث والتراخيص وما قبل التشغيل ورأس المال العامل)،
+ * ما يعطي فترة استرداد ≈ 0 وصافي قيمة حالية منتفخاً وتوصية GO زائفة.
+ * الآن: تجهيز + معدات/أثاث + تراخيص وما قبل التشغيل + رأس مال عامل ٣ أشهر.
+ * @returns {number} تقدير الاستثمار الأولي الكامل (ريال)
+ */
+export function estimateAllInInvestment(defaults, area, monthlyCosts) {
+    const a = Number(area) || 100;
+    const fitoutPerSqm = Number(defaults?.fitout_per_sqm) || 1500;
+    const fitout = fitoutPerSqm * a;                     // بناء وتجهيز المكان
+    const equipmentFurniture = Math.round(fitout * 0.6); // معدات وأثاث ≈ 60% من التجهيز (تقدير قطاعي)
+    const setupLicenses = Number(defaults?.setup_cost) || Math.round((Number(monthlyCosts) || 0) * 1); // تراخيص + ما قبل التشغيل ≈ شهر تشغيل
+    const workingCapital = Math.round((Number(monthlyCosts) || 0) * 3); // رأس مال عامل يغطي ٣ أشهر
+    return Math.round(fitout + equipmentFurniture + setupLicenses + workingCapital);
+}
+
+/**
+ * فحوصات جدارة سريعة (نسخة مصغّرة من بوابة الجودة في المسار الكامل) — المهمة: منع «GO المُلفّق».
+ * تُبرز الأرقام غير الواقعية للمستخدم المبتدئ المتعجل قبل أن يتخذ قراراً بناءً عليها.
+ * @returns {{ level: 'hard'|'soft', text: string }[]}
+ */
+export function quickSanityChecks(inputs, result, opts = {}) {
+    const warnings = [];
+    const rev = Number(inputs.monthlyRevenue) || 0;
+    const cost = Number(inputs.monthlyCosts) || 0;
+    const initial = Number(inputs.initialInvestment) || 0;
+    const area = Number(inputs.area) || 0;
+    const isVenue = inputs.sector === 'مطعم' || inputs.sector === 'retail';
+
+    // أرقام تعتمد على تقدير قطاعي عام وليست أرقام المستخدم الحقيقية
+    if (opts.estimatesApplied) {
+        warnings.push({
+            level: 'hard',
+            text: 'الأرقام الحالية مبنية على تقدير قطاعي عام (متوسطات) لا تخص مشروعك تحديداً. عدّلها بأرقامك الحقيقية (عروض أسعار، إيجار فعلي، مبيعات متوقعة مدروسة) قبل أي قرار.'
+        });
+    }
+
+    // فترة استرداد سريعة بشكل غير واقعي
+    if (result.paybackYears != null && result.paybackYears < 1.5) {
+        warnings.push({
+            level: 'hard',
+            text: `فترة الاسترداد المحسوبة (${result.paybackYears} سنة) سريعة بشكل غير معتاد. غالباً يعني أن الاستثمار الأولي مُقدَّر بأقل من الواقع أو الإيراد مبالغ فيه — راجع الرقمين.`
+        });
+    }
+
+    // عائد سنوي مرتفع بشكل غير واقعي (الصافي / الاستثمار)
+    if (initial > 0 && result.annualNet > 0) {
+        const roi = result.annualNet / initial;
+        if (roi > 0.6) {
+            warnings.push({
+                level: 'soft',
+                text: `العائد السنوي على الاستثمار مرتفع جداً (${Math.round(roi * 100)}٪). تأكد أن الاستثمار الأولي يشمل كل البنود (تجهيز، معدات، تراخيص، رأس مال عامل).`
+            });
+        }
+    }
+
+    // استثمار أولي منخفض لمساحة مطعم/تجزئة
+    if (isVenue && area >= 30 && initial > 0 && initial / area < 1500) {
+        warnings.push({
+            level: 'hard',
+            text: `الاستثمار الأولي (${Math.round(initial / area).toLocaleString('ar-SA')} ريال/م²) منخفض لمشروع ${area}م². عادةً يتجاوز 2,000–3,500 ريال/م² شاملاً التجهيز والمعدات والأثاث والتراخيص ورأس المال العامل.`
+        });
+    }
+
+    // هامش ربح مرتفع بشكل غير معتاد (التكاليف أقل من نصف الإيراد)
+    if (rev > 0 && cost > 0 && cost / rev < 0.5) {
+        warnings.push({
+            level: 'soft',
+            text: 'هامش الربح مرتفع بشكل غير معتاد (التكاليف أقل من 50٪ من الإيراد). تأكد أنك أدرجت كل التكاليف: إيجار، رواتب، مواد/بضاعة، كهرباء، تسويق، صيانة.'
+        });
+    }
+
+    // إيراد يبدأ كاملاً من الشهر الأول بلا فترة تهيئة (الجدوى السريعة لا تُدخِل ramp-up)
+    warnings.push({
+        level: 'soft',
+        text: 'هذا التقدير السريع يفترض إيراداً ثابتاً من الشهر الأول بلا فترة تهيئة. في الواقع تحتاج المشاريع أشهراً لبلوغ الطاقة — استخدم «الدراسة الكاملة» لنمذجة فترة التهيئة والتدفق الشهري.'
+    });
+
+    return warnings;
+}

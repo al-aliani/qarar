@@ -205,16 +205,29 @@ export class DataService {
      * @param {string} type Activity type
      */
     static recommendStaffing(size, type) {
+        const activity = String(type || '').toLowerCase();
+        const isCafe = /مقهى|كافيه|قهوة|بن|cafe|coffee/.test(activity);
+        if (isCafe) {
+            const baristaCount = Math.max(2, Math.ceil(Number(size || 100) / 45));
+            return [
+                { position: 'مدير/مديرة فرع', nationality: 'saudi', count: 1, salary: 7000, months: 12, isVariable: false },
+                { position: 'باريستا رئيسي', nationality: 'saudi', count: 1, salary: 5500, months: 12, isVariable: false },
+                { position: 'باريستا', nationality: 'saudi', count: baristaCount, salary: 4500, months: 12, isVariable: false },
+                { position: 'كاشير وخدمة عملاء', nationality: 'saudi', count: 1, salary: 4200, months: 12, isVariable: false },
+                { position: 'عامل خدمة ونظافة', nationality: 'expat', count: 1, salary: 2800, months: 12, isVariable: true }
+            ];
+        }
+
         const staffing = [];
         // Default logic
-        staffing.push({ position: 'مدير مشروع', count: 1, salary: 6000 });
+        staffing.push({ position: 'مدير مشروع', nationality: 'saudi', count: 1, salary: 6000, months: 12, isVariable: false });
 
         if (size > 100) {
-            staffing.push({ position: 'محاسب', count: 1, salary: 4000 });
+            staffing.push({ position: 'محاسب', nationality: 'saudi', count: 1, salary: 4000, months: 12, isVariable: false });
         }
 
         const workers = Math.max(2, Math.ceil(size / 50));
-        staffing.push({ position: 'موظف/عامل', count: workers, salary: 3000 });
+        staffing.push({ position: 'موظف/عامل', nationality: 'expat', count: workers, salary: 3000, months: 12, isVariable: true });
 
         return staffing;
     }

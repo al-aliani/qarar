@@ -22,6 +22,16 @@ export class AuthComponent {
     async render() {
         if (!this.container) return;
 
+        // S1 (أمن): هذا المكوّن يعيش داخل الشريط الجانبي المُلغى (مخفي بـ CSS: display:none).
+        // تركيب نموذج (بريد + كلمة مرور) في DOM مخفيٍّ يجعله «مصيدة تعبئة تلقائية»: يملؤه مدير
+        // كلمات المرور فتصبح كلمة المرور مقروءة نصاً عبر #inpPassword.value في أي خطوة، وهي
+        // غير مرئية للمستخدم أصلاً. واجهة الدخول الفعلية هي AuthModalStub (تُفتح عند الحاجة
+        // وتُزيل نفسها عند النجاح). فما دام الحاوي مخفياً لا نركّب أي حقول اعتماد إطلاقاً.
+        if (this.container.offsetParent === null) {
+            this.container.innerHTML = '';
+            return;
+        }
+
         // Check configuration
         const { ok } = await getSupabaseClient();
         if (!ok) {
@@ -44,7 +54,7 @@ export class AuthComponent {
         this.container.innerHTML = `
             <div class="auth-card p-4 card border-warning bg-warning-light">
                 <div class="flex justify-between items-center mb-2">
-                    <h3 class="font-bold text-warning-dark">⚙️ إعداد السحابة</h3>
+                    <h3 class="font-bold text-warning-dark">إعداد السحابة</h3>
                     <button id="btnToggleAuth" class="btn-xs btn--ghost">▼</button>
                 </div>
                 <div id="authContent" class="${this.isExpanded ? '' : 'hidden'}">
@@ -68,7 +78,7 @@ export class AuthComponent {
         this.container.innerHTML = `
             <div class="auth-card p-4 card">
                 <div class="flex justify-between items-center mb-2">
-                    <h3 class="font-bold">☁️ تسجيل الدخول</h3>
+                    <h3 class="font-bold">تسجيل الدخول</h3>
                     <button id="btnToggleAuth" class="btn-xs btn--ghost">▼</button>
                 </div>
                 <div id="authContent" class="${this.isExpanded ? '' : 'hidden'}">
@@ -79,10 +89,10 @@ export class AuthComponent {
                     </div>
                     <div id="authEmailForm" class="auth-form">
                         <div class="form-group">
-                            <input type="email" id="inpEmail" class="form-input text-sm" placeholder="البريد الإلكتروني">
+                            <input type="email" id="inpEmail" class="form-input text-sm" placeholder="البريد الإلكتروني" autocomplete="username" dir="ltr">
                         </div>
                         <div class="form-group">
-                            <input type="password" id="inpPassword" class="form-input text-sm" placeholder="كلمة المرور">
+                            <input type="password" id="inpPassword" class="form-input text-sm" placeholder="كلمة المرور" autocomplete="current-password">
                         </div>
                         <div class="flex gap-2 mt-2">
                             <button id="btnLogin" class="btn btn--primary flex-1 text-sm">دخول</button>
@@ -91,29 +101,20 @@ export class AuthComponent {
                     </div>
                     <div id="authPhoneForm" class="auth-form hidden">
                         <div class="form-group">
-                            <input type="tel" id="inpPhone" class="form-input text-sm" placeholder="05xxxxxxxx أو +9665xxxxxxxx">
+                            <input type="tel" id="inpPhone" class="form-input text-sm" placeholder="05xxxxxxxx أو +9665xxxxxxxx" autocomplete="tel" dir="ltr">
                         </div>
                         <button type="button" id="btnSendOtp" class="btn btn--primary w-full text-sm mb-2">إرسال رمز الدخول</button>
                         <div id="authOtpBlock" class="hidden">
                             <div class="form-group">
-                                <input type="text" id="inpOtp" class="form-input text-sm" placeholder="الرمز المكون من 6 أرقام" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+                                <input type="text" id="inpOtp" class="form-input text-sm" placeholder="الرمز المكون من 6 أرقام" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" dir="ltr">
                             </div>
                             <button type="button" id="btnVerifyOtp" class="btn btn--primary w-full text-sm">تأكيد الدخول</button>
                         </div>
                     </div>
                     <div class="mt-3 pt-3" style="border-top: 1px solid var(--c-border);">
-                        <button id="btnGoogleLogin" class="btn btn--ghost w-full text-sm mb-1" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            <span style="font-size: 18px;">🌐</span>
-                            <span>تسجيل بحساب Google</span>
-                        </button>
-                        <button id="btnAppleLogin" class="btn btn--ghost w-full text-sm mb-1" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            <span style="font-size: 18px;">🍎</span>
-                            <span>تسجيل بحساب Apple</span>
-                        </button>
-                        <button id="btnMicrosoftLogin" class="btn btn--ghost w-full text-sm" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            <span style="font-size: 18px;">🪟</span>
-                            <span>تسجيل بحساب Microsoft</span>
-                        </button>
+                        <button id="btnGoogleLogin" class="btn btn--ghost w-full text-sm mb-1"><span>المتابعة بحساب Google</span></button>
+                        <button id="btnAppleLogin" class="btn btn--ghost w-full text-sm mb-1"><span>المتابعة بحساب Apple</span></button>
+                        <button id="btnMicrosoftLogin" class="btn btn--ghost w-full text-sm"><span>المتابعة بحساب Microsoft</span></button>
                     </div>
                     <div id="authResendBlock" class="hidden mt-2 p-2 rounded" style="background:var(--c-danger-subtle);border:1px solid var(--c-danger);">
                         <p class="text-sm text-danger mb-1">البريد غير مفعّل. تحقق من صندوق الوارد أو البريد المزعج.</p>
@@ -139,11 +140,11 @@ export class AuthComponent {
                         <div class="text-sm font-bold truncate" title="${this.user.email || this.user.phone || ''}">${displayName}</div>
                         <div class="text-xs text-success-dark">● متصل سحابياً</div>
                     </div>
-                    <button id="btn2FASettings" class="btn-xs btn--ghost" title="إعدادات المصادقة الثنائية">🔐</button>
-                    <button id="btnLogout" class="btn-xs btn--ghost text-danger" title="تسجيل خروج">🚪</button>
+                    <button id="btn2FASettings" class="btn-xs btn--ghost" title="إعدادات المصادقة الثنائية">المصادقة الثنائية</button>
+                    <button id="btnLogout" class="btn-xs btn--ghost text-danger" title="تسجيل خروج">خروج</button>
                 </div>
                 <button type="button" id="btnUserPage" class="btn btn--ghost w-full mt-2 text-sm" title="صفحة حسابي">
-                    👤 حسابي
+                    حسابي
                 </button>
             </div>
         `;
@@ -255,17 +256,17 @@ export class AuthComponent {
             });
         }
 
-        const handleOAuth = async (provider, btnId, label, icon) => {
+        const handleOAuth = async (provider, btnId, label) => {
             const btn = document.getElementById(btnId);
             if (!btn) return;
             btn.disabled = true;
-            btn.innerHTML = '<span>⏳ جاري...</span>';
+            btn.innerHTML = '<span>جاري...</span>';
             auditLog(ACTIONS.OAUTH, { provider });
             const result = await signInWithOAuth(provider);
             if (!result.ok) {
                 toast.error('فشل الدخول بـ ' + label + ': ' + result.error);
                 btn.disabled = false;
-                btn.innerHTML = '<span style="font-size: 18px;">' + icon + '</span><span>تسجيل بحساب ' + label + '</span>';
+                btn.innerHTML = '<span>المتابعة بحساب ' + label + '</span>';
                 return;
             }
             // توجيه المتصفح لصفحة مزود OAuth (Google / Apple / Microsoft)
@@ -274,18 +275,19 @@ export class AuthComponent {
                 return;
             }
             btn.disabled = false;
-            btn.innerHTML = '<span style="font-size: 18px;">' + icon + '</span><span>تسجيل بحساب ' + label + '</span>';
+            btn.innerHTML = '<span>المتابعة بحساب ' + label + '</span>';
             toast.warning('لم يُرجَع رابط الدخول. تأكد من تفعيل ' + label + ' في لوحة Supabase.');
         };
-        document.getElementById('btnGoogleLogin')?.addEventListener('click', (e) => handleOAuth('google', 'btnGoogleLogin', 'Google', '🌐'));
-        document.getElementById('btnAppleLogin')?.addEventListener('click', (e) => handleOAuth('apple', 'btnAppleLogin', 'Apple', '🍎'));
-        document.getElementById('btnMicrosoftLogin')?.addEventListener('click', (e) => handleOAuth('azure', 'btnMicrosoftLogin', 'Microsoft', '🪟'));
+        document.getElementById('btnGoogleLogin')?.addEventListener('click', (e) => handleOAuth('google', 'btnGoogleLogin', 'Google'));
+        document.getElementById('btnAppleLogin')?.addEventListener('click', (e) => handleOAuth('apple', 'btnAppleLogin', 'Apple'));
+        document.getElementById('btnMicrosoftLogin')?.addEventListener('click', (e) => handleOAuth('azure', 'btnMicrosoftLogin', 'Microsoft'));
 
         document.getElementById('btnLogin').addEventListener('click', async (e) => {
             const inpEmail = this.container?.querySelector('#inpEmail') || document.getElementById('inpEmail');
             const inpPassword = this.container?.querySelector('#inpPassword') || document.getElementById('inpPassword');
             const email = (inpEmail?.value || '').trim();
             const password = inpPassword?.value || '';
+            const clearPassword = () => { if (inpPassword) inpPassword.value = ''; };
 
             if (!email || !password) {
                 toast.error('أدخل البريد الإلكتروني وكلمة المرور');
@@ -326,6 +328,7 @@ export class AuthComponent {
                 }
                 e.target.disabled = false;
                 e.target.textContent = 'دخول';
+                clearPassword();
                 return;
             }
             document.getElementById('authResendBlock')?.classList.add('hidden');
@@ -343,6 +346,7 @@ export class AuthComponent {
                             await supabase.auth.signOut();
                             e.target.disabled = false;
                             e.target.textContent = 'دخول';
+                            clearPassword();
                             return;
                         }
                     }
@@ -350,6 +354,7 @@ export class AuthComponent {
             }
             auditLog(ACTIONS.LOGIN, { email });
             toast.success('مرحباً بك!');
+            clearPassword();
             this.render();
         });
 
@@ -358,6 +363,7 @@ export class AuthComponent {
             const inpPassword = this.container?.querySelector('#inpPassword') || document.getElementById('inpPassword');
             const email = (inpEmail?.value || '').trim();
             const password = inpPassword?.value || '';
+            const clearPassword = () => { if (inpPassword) inpPassword.value = ''; };
 
             if (!email || !password) {
                 toast.error('أدخل البريد الإلكتروني وكلمة المرور');
@@ -382,9 +388,11 @@ export class AuthComponent {
                 toast.error('فشل التسجيل: ' + error.message);
                 e.target.disabled = false;
                 e.target.textContent = 'تسجيل';
+                clearPassword();
             } else {
                 auditLog(ACTIONS.SIGNUP, { email });
                 toast.success('تم التسجيل! تحقق من بريدك الإلكتروني.');
+                clearPassword();
             }
         });
 

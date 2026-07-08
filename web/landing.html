@@ -3,467 +3,1023 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>قرار — دراسة جدوى مطعمك بدقة بنكية خلال ٢٤ ساعة</title>
-  <meta name="description" content="منصة قرار تحوّل بيانات مطعمك أو كافيهك إلى قرار استثماري واضح (GO / NO-GO) بدقة تُقنع البنك، وبثلث تكلفة المكتب الاستشاري. مصممة للسوق السعودي." />
-  <meta property="og:title" content="قرار — دراسات جدوى المطاعم والكافيهات السعودية" />
-  <meta property="og:description" content="قرار استثماري موثوق لمطعمك خلال ٢٤ ساعة، بدقة بنكية وسعر يبدأ من ٢٤٩ ﷼." />
+  <title>قرار | محاكي دراسة الجدوى الذكية</title>
+  <meta name="description" content="منصة قرار: محاكي دراسة جدوى ذكية للأنشطة التجارية في السعودية. ابدأ من الصفر أو من قالب مختص معتمد، وكل رقم مربوط بافتراض تقدر تراجعه بنفسك — تقرير PDF، ملف Excel، وتوصية GO / REVISE / NO-GO." />
+  <meta name="theme-color" content="#0b6b4f" />
+  <meta property="og:title" content="قرار | محاكي دراسة الجدوى الذكية" />
+  <meta property="og:description" content="حوّل فكرة مشروعك إلى قرار استثماري قابل للتدقيق: كل رقم مربوط بافتراض ظاهر، وتقرير جاهز للمراجعة مع ممول أو شريك." />
   <meta property="og:type" content="website" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b6b4f'/><text x='50' y='72' font-size='62' text-anchor='middle' fill='%23fff' font-family='sans-serif' font-weight='700'>ق</text></svg>" type="image/svg+xml" />
+  <link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts/fonts.css" />
   <style>
     :root {
-      --pine: #0e5b44; --pine-deep: #0a3d2e; --pine-2: #127a5b;
-      --brass: #b07d2c; --brass-ink: #8a5f1c;
-      --paper: #f6f5f0; --paper-2: #eeece4; --card: #fdfcf9;
-      --ink: #1c2420; --muted: #5b665f; --line: rgba(28,36,32,.14);
-      --good: #157f5f; --crit: #c2382e;
-      --r: 16px; --r-sm: 10px;
+      /* الألوان — الأخضر هو الأساس، الذهب لهجة نادرة */
+      --green-900: #062e23;
+      --green-800: #084532;
+      --green-700: #0b6b4f;
+      --green-600: #108264;
+      --green-500: #17a37c;
+      --mint-100: #e3f4ec;
+      --mint-50: #f5faf7;
+      --gold: #d7aa4a;
+      --gold-deep: #b8892f;
+      --gold-soft: #fff5dc;
+      /* سلّم محايدات غني — النصوص الثانوية مضبوطة فوق 4.5:1 على الأبيض */
+      --ink: #10201a;
+      --ink-2: #33443c;
+      --muted: #525f58;
+      /* كان 7c8a83 (~3.9:1) على حافة القراءة → غُمّق ليتجاوز 4.5:1 */
+      --muted-2: #66756d;
+      --line: rgba(16, 32, 26, .12);
+      --line-strong: rgba(16, 32, 26, .22);
+      --white: #ffffff;
+      --danger: #b8332b;
+      --ok: #16835f;
+      /* الطباعة */
       --font: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
-      --mono: 'JetBrains Mono', ui-monospace, monospace;
-      --shadow: 0 1px 2px rgba(20,33,28,.05), 0 12px 32px -14px rgba(20,33,28,.28);
-      --shadow-lg: 0 24px 60px -22px rgba(10,61,46,.5);
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --text-xs: 12.5px;
+      --text-sm: 14px;
+      --text-base: 15.5px;
+      --text-lg: 18px;
+      --text-xl: 22px;
+      /* إيقاع مسافات موحّد للأقسام والبطاقات */
+      --pad-card: clamp(22px, 3vw, 30px);
+      /* سلّم نصف القطر */
+      --r-sm: 8px;
+      --r: 12px;
+      --r-lg: 16px;
+      --r-pill: 999px;
+      /* الظلال — ملوّنة بلون العلامة */
+      --shadow-sm: 0 6px 18px -12px rgba(6, 46, 35, .38);
+      --shadow-md: 0 16px 40px -22px rgba(6, 46, 35, .5);
+      --shadow-lg: 0 30px 70px -34px rgba(0, 0, 0, .58);
+      /* المسافات */
+      --wrap: 1180px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
-    body { font-family: var(--font); background: var(--paper); color: var(--ink); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      font-weight: 400;
+      color: var(--ink);
+      background: var(--white);
+      line-height: 1.65;
+      font-size: var(--text-base);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
     a { color: inherit; text-decoration: none; }
-    img { max-width: 100%; }
-    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
-    h1, h2, h3 { line-height: 1.2; letter-spacing: -.3px; text-wrap: balance; }
-    section { padding: 72px 0; }
-    .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--brass-ink); background: rgba(176,125,44,.12); padding: 6px 14px; border-radius: 100px; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-size: 15.5px; font-weight: 700; padding: 13px 26px; border-radius: 12px; border: 1.5px solid transparent; cursor: pointer; transition: transform .15s, box-shadow .15s, background .15s; white-space: nowrap; }
-    .btn:hover { transform: translateY(-1px); }
-    .btn-primary { background: var(--pine); color: #fff; box-shadow: 0 10px 24px -12px rgba(14,91,68,.7); }
-    .btn-primary:hover { background: var(--pine-2); }
-    .btn-wa { background: #25d366; color: #05331d; }
-    .btn-wa:hover { background: #2ee06f; }
-    .btn-ghost { background: var(--card); color: var(--ink); border-color: var(--line); }
-    .btn-ghost:hover { border-color: var(--pine); color: var(--pine); }
-    .btn-lg { font-size: 17px; padding: 16px 32px; }
+    /* focus-visible واضح على كل رابط/زر لا يملك نمطاً خاصاً */
+    a:focus-visible, summary:focus-visible {
+      outline: 2px solid var(--green-700);
+      outline-offset: 3px;
+      border-radius: var(--r-sm);
+    }
+    /* على الأسطح الداكنة يكون التركيز ذهبياً ليُرى */
+    .hero a:focus-visible, .band a:focus-visible,
+    .final-cta a:focus-visible, footer a:focus-visible,
+    .contact-bar a:focus-visible {
+      outline-color: var(--gold);
+    }
+    img { max-width: 100%; display: block; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { line-height: 1.2; font-weight: 700; text-wrap: balance; }
+    p { margin-bottom: 0; }
+    /* أرقام مصطفّة بخط أحادي المسافة — مظهر بنكي */
+    .num { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums lining-nums; letter-spacing: -.01em; }
+    section { padding: clamp(72px, 9vw, 116px) 0; }
+    .wrap { width: min(var(--wrap), calc(100% - 44px)); margin-inline: auto; }
 
-    /* Header */
-    header.top { position: sticky; top: 0; z-index: 50; background: rgba(246,245,240,.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
-    .top-in { display: flex; align-items: center; gap: 16px; height: 66px; }
-    .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; font-size: 20px; }
-    .brand .mk { width: 38px; height: 38px; border-radius: 11px; background: var(--pine); color: #fff; display: grid; place-items: center; font-size: 22px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
-    nav.links { display: flex; gap: 24px; margin-inline-start: auto; font-size: 15px; font-weight: 600; color: var(--muted); }
-    nav.links a:hover { color: var(--pine); }
-    .top-cta { display: flex; gap: 10px; }
-    @media (max-width: 820px) { nav.links { display: none; } .top-cta .btn-ghost { display: none; } }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      border: 1px solid rgba(215, 170, 74, .42);
+      border-radius: var(--r-pill);
+      background: rgba(255, 245, 220, .7);
+      color: var(--gold-deep);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      letter-spacing: .01em;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor;
+      flex: none;
+    }
 
-    /* Hero */
-    .hero { position: relative; overflow: hidden; background: radial-gradient(120% 130% at 88% -10%, #0f6a4f 0%, var(--pine-deep) 55%, #072f23 100%); color: #eaf2ee; padding: 84px 0 96px; }
-    .hero-grid-bg { position: absolute; inset: 0; opacity: .5; background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px); background-size: 46px 46px; -webkit-mask-image: radial-gradient(80% 90% at 85% 0%, #000, transparent 72%); mask-image: radial-gradient(80% 90% at 85% 0%, #000, transparent 72%); }
-    .hero-in { position: relative; z-index: 2; display: grid; grid-template-columns: 1.15fr .85fr; gap: 48px; align-items: center; }
-    @media (max-width: 900px) { .hero-in { grid-template-columns: 1fr; gap: 40px; } }
-    .hero .eyebrow { color: #9fd8c3; background: rgba(159,216,195,.1); border: 1px solid rgba(159,216,195,.3); }
-    .hero h1 { font-size: clamp(30px, 5vw, 50px); font-weight: 800; color: #fff; margin: 20px 0 0; max-width: 16ch; }
-    .hero h1 .hl { color: #eabf6f; }
-    .hero .lede { font-size: clamp(16px, 2vw, 19px); color: #c7dcd3; margin-top: 18px; max-width: 46ch; }
-    .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
-    .hero-trust { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 30px; }
-    .hero-trust div { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #bcd4ca; font-weight: 600; }
-    .hero-trust .ic { color: #6fe0b0; font-size: 17px; }
+    /* الأيقونات */
+    .ic { width: 1.25em; height: 1.25em; flex: none; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
 
-    /* Decision card mock */
-    .decision-card { background: var(--card); border-radius: 20px; padding: 24px; box-shadow: var(--shadow-lg); color: var(--ink); }
-    .dc-top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-    .dc-top .name { font-weight: 800; font-size: 16px; }
-    .dc-top .name span { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 2px; }
-    .dc-verdict { display: inline-flex; align-items: center; gap: 6px; background: #ddf0e6; color: var(--good); font-weight: 800; font-size: 14px; padding: 6px 13px; border-radius: 100px; }
-    .dc-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
-    .dc-kpi { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; }
-    .dc-kpi .k { font-size: 12px; color: var(--muted); font-weight: 600; }
-    .dc-kpi .v { font-size: 22px; font-weight: 800; font-family: var(--mono); margin-top: 4px; letter-spacing: -.5px; }
-    .dc-kpi .v.pos { color: var(--good); }
-    .dc-bar { display: flex; align-items: flex-end; gap: 6px; height: 56px; padding: 0 4px; }
-    .dc-bar span { flex: 1; background: linear-gradient(180deg, var(--pine-2), var(--pine)); border-radius: 4px 4px 0 0; }
-    .dc-note { font-size: 11.5px; color: var(--muted); text-align: center; margin-top: 10px; }
+    /* الأزرار */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 48px;
+      padding: 12px 24px;
+      border-radius: var(--r-pill);
+      border: 1px solid transparent;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: transform .2s cubic-bezier(.2,.7,.2,1), background .2s ease, border-color .2s ease, box-shadow .2s ease, color .2s ease;
+    }
+    .btn .ic { width: 19px; height: 19px; }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(0) scale(.985); }
+    .btn:focus-visible { outline: 2px solid var(--green-700); outline-offset: 3px; box-shadow: 0 0 0 4px rgba(11,107,79,.18); }
+    /* على الأسطح الداكنة يكون تركيز الأزرار ذهبياً */
+    .hero .btn:focus-visible, .band .btn:focus-visible,
+    .final-cta .btn:focus-visible { outline-color: var(--gold); box-shadow: 0 0 0 4px rgba(215,170,74,.28); }
+    .btn-primary {
+      background: linear-gradient(180deg, var(--green-600), var(--green-700));
+      color: var(--white);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 16px 30px -18px rgba(11, 107, 79, .85);
+    }
+    .btn-primary:hover { background: linear-gradient(180deg, var(--green-500), var(--green-600)); box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 20px 36px -18px rgba(11, 107, 79, .95); }
+    .btn-light { background: var(--white); color: var(--green-800); box-shadow: var(--shadow-sm); }
+    .btn-light:hover { box-shadow: var(--shadow-md); }
+    .btn-ghost { background: rgba(255,255,255,.1); color: var(--white); border-color: rgba(255,255,255,.36); }
+    .btn-ghost:hover { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.55); }
+    .btn-outline { background: var(--white); color: var(--ink); border-color: var(--line-strong); }
+    .btn-outline:hover { border-color: var(--green-700); color: var(--green-700); box-shadow: var(--shadow-sm); }
+    .btn-wa { background: #21c063; color: #05331d; }
+    .btn-wa:hover { background: #29d670; box-shadow: 0 16px 30px -18px rgba(33,192,99,.9); }
+    .btn-sm { min-height: 44px; padding: 10px 18px; font-size: var(--text-sm); }
 
-    /* Logos / social proof strip */
-    .strip { background: var(--paper-2); padding: 22px 0; border-block: 1px solid var(--line); }
-    .strip-in { display: flex; align-items: center; justify-content: center; gap: 14px 40px; flex-wrap: wrap; font-size: 14px; color: var(--muted); font-weight: 600; }
-    .strip-in b { color: var(--ink); font-weight: 800; }
+    /* شريط تقدّم القراءة */
+    #progress {
+      position: fixed; inset-block-start: 0; inset-inline: 0;
+      height: 2px; width: 0%;
+      background: linear-gradient(90deg, var(--gold), var(--gold-deep));
+      z-index: 60; transition: width .1s linear;
+    }
 
-    /* Section heads */
-    .sec-head { text-align: center; max-width: 640px; margin: 0 auto 48px; }
-    .sec-head h2 { font-size: clamp(25px, 3.4vw, 36px); font-weight: 800; margin-top: 12px; }
-    .sec-head p { color: var(--muted); font-size: 17px; margin-top: 12px; }
+    /* شريط علوي */
+    .contact-bar { background: var(--green-800); color: rgba(255,255,255,.9); font-size: var(--text-xs); }
+    .contact-in { min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .contact-list { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center; }
+    .contact-list .dot { color: var(--gold); }
+    .contact-list strong { color: var(--white); font-weight: 700; }
+    .contact-actions { display: flex; gap: 18px; align-items: center; font-weight: 500; }
+    .contact-actions a { color: rgba(255,255,255,.92); display: inline-flex; align-items: center; gap: 6px; }
+    .contact-actions a:hover { color: var(--white); }
 
-    /* Problem cards */
+    /* الرأس */
+    .top {
+      position: sticky; inset-block-start: 0; z-index: 40;
+      background: rgba(255,255,255,.82);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid transparent;
+      transition: border-color .25s ease, box-shadow .25s ease, background .25s ease;
+    }
+    .top.scrolled { border-bottom-color: var(--line); box-shadow: 0 10px 30px -24px rgba(6,46,35,.5); background: rgba(255,255,255,.92); }
+    .top-in { min-height: 76px; display: flex; align-items: center; gap: 20px; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; font-size: var(--text-xl); font-weight: 700; }
+    .brand-mark {
+      width: 44px; height: 44px; border-radius: var(--r-sm);
+      display: grid; place-items: center;
+      background: linear-gradient(150deg, var(--green-600), var(--green-800));
+      color: var(--white); font-size: 24px; font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 0 0 3px rgba(215,170,74,.16);
+    }
+    .brand small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 500; line-height: 1.25; }
+    .links { margin-inline-start: auto; display: flex; gap: 26px; align-items: center; color: var(--ink-2); font-weight: 500; font-size: var(--text-sm); }
+    .links a { position: relative; padding-block: 4px; }
+    .links a::after { content: ""; position: absolute; inset-block-end: 0; inset-inline: 0; height: 2px; background: var(--green-700); border-radius: 2px; transform: scaleX(0); transition: transform .22s cubic-bezier(.2,.7,.2,1); }
+    .links a:hover { color: var(--green-700); }
+    .links a:hover::after { transform: scaleX(1); }
+    .top-cta { display: flex; gap: 10px; align-items: center; }
+
+    /* الهيرو — خلفية مبنية بالكامل بـ CSS، لا صور خارجية */
+    .hero {
+      position: relative; isolation: isolate; overflow: hidden;
+      padding: clamp(84px, 11vw, 128px) 0 clamp(64px, 8vw, 96px);
+      color: var(--white);
+      background:
+        radial-gradient(circle at 82% 12%, rgba(215,170,74,.16), transparent 42%),
+        linear-gradient(135deg, var(--green-900) 0%, var(--green-800) 58%, var(--green-700) 100%);
+    }
+    .hero::before {
+      content: ""; position: absolute; inset: 0; z-index: -1;
+      background-image:
+        linear-gradient(rgba(255,255,255,.032) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.032) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: linear-gradient(90deg, #000 0%, rgba(0,0,0,.6) 46%, transparent 100%);
+    }
+    .hero-curve { position: absolute; inset-block-start: 0; inset-inline-start: 0; width: 62%; height: 100%; z-index: -1; opacity: .5; pointer-events: none; }
+    .hero-in { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(320px, .78fr); gap: clamp(40px, 5vw, 56px); align-items: center; }
+    .hero-copy { max-width: 700px; }
+    .hero .eyebrow { color: #ffeec2; background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.2); }
+    .hero h1 { margin: 24px 0 20px; font-size: clamp(36px, 5vw, 62px); max-width: 16ch; letter-spacing: -.012em; }
+    .hero h1 .hl { color: var(--gold); position: relative; white-space: nowrap; }
+    .hero h1 .hl::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: .04em; height: 3px; background: linear-gradient(90deg, var(--gold), transparent); border-radius: 3px; }
+    .hero .lede { color: rgba(255,255,255,.86); font-size: clamp(16px, 1.7vw, 19px); max-width: 56ch; line-height: 1.72; }
+    .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+    .hero-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 40px; max-width: 760px; }
+    .hero-fact { border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.07); border-radius: var(--r); padding: 15px 15px; backdrop-filter: blur(8px); transition: border-color .22s ease, background .22s ease, transform .22s cubic-bezier(.2,.7,.2,1); }
+    .hero-fact:hover { border-color: rgba(215,170,74,.5); background: rgba(255,255,255,.1); transform: translateY(-2px); }
+    .hero-fact b { display: block; font-size: 19px; color: var(--white); line-height: 1.15; font-weight: 700; }
+    .hero-fact.is-num b { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+    .hero-fact span { display: block; margin-top: 5px; color: rgba(255,255,255,.72); font-size: 12px; font-weight: 400; }
+
+    /* بطاقة التقرير — البطل البصري */
+    .report-card { position: relative; background: var(--white); color: var(--ink); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); overflow: hidden; }
+    /* حلقة ذهبية رقيقة تُبرز البطاقة عن خلفية الهيرو */
+    .report-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(215,170,74,.28); pointer-events: none; }
+    .report-win { display: flex; align-items: center; gap: 7px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--mint-50); }
+    .report-win .d { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+    .report-win .d:nth-child(1) { background: #e5877e; }
+    .report-win .d:nth-child(2) { background: #e6c15f; }
+    .report-win .d:nth-child(3) { background: #7bcb9f; }
+    .report-win span { margin-inline-start: auto; font-size: 11.5px; color: var(--muted); font-weight: 500; }
+    .report-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px 10px; }
+    .report-title strong { display: block; font-size: var(--text-base); font-weight: 700; }
+    .report-title span { display: block; color: var(--muted); font-size: var(--text-xs); font-weight: 500; }
+    .verdict { display: inline-flex; align-items: center; gap: 7px; color: var(--gold-deep); background: rgba(215,170,74,.12); border: 1px solid rgba(215,170,74,.3); border-radius: var(--r-pill); padding: 6px 12px; font-size: var(--text-xs); font-weight: 700; white-space: nowrap; }
+    .verdict::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--gold-deep); }
+    .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 6px 18px 12px; }
+    .kpi { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 13px; background: linear-gradient(180deg, var(--white), var(--mint-50)); transition: border-color .2s ease, box-shadow .2s ease; }
+    .kpi:hover { border-color: rgba(16,130,100,.28); box-shadow: var(--shadow-sm); }
+    .kpi span { display: block; color: var(--muted); font-size: 11.5px; font-weight: 500; }
+    .kpi b { display: block; margin-top: 6px; color: var(--green-700); font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; font-size: 22px; line-height: 1.15; }
+    .mini-chart { display: flex; align-items: end; gap: 8px; height: 84px; margin: 4px 18px 0; padding: 12px 6px 0; border-top: 1px dashed var(--line); }
+    .mini-chart span { flex: 1; min-width: 20px; border-radius: 5px 5px 0 0; background: linear-gradient(180deg, var(--green-500), var(--green-800)); height: var(--h); transform-origin: bottom; animation: bar-grow .7s cubic-bezier(.2,.7,.2,1) both; }
+    .mini-chart span:nth-child(2) { animation-delay: .08s; }
+    .mini-chart span:nth-child(3) { animation-delay: .16s; }
+    .mini-chart span:nth-child(4) { animation-delay: .24s; }
+    .mini-chart span:nth-child(5) { animation-delay: .32s; }
+    @keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+    .report-foot { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-top: 12px; padding: 12px 18px 16px; color: var(--muted); font-size: 11.5px; font-weight: 500; }
+    .sample-flag { display: inline-flex; align-items: center; gap: 6px; color: var(--gold-deep); background: var(--gold-soft); border: 1px solid rgba(215,170,74,.35); border-radius: var(--r-pill); padding: 4px 11px; font-size: 11px; font-weight: 700; }
+
+    /* شريط الإثبات */
+    .proof-strip { background: var(--mint-50); border-block: 1px solid var(--line); padding: 22px 0; }
+    .proof-in { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px 26px; color: var(--ink-2); font-size: var(--text-sm); font-weight: 600; }
+    .proof-item { display: inline-flex; align-items: center; gap: 10px; }
+    .proof-item .ic { width: 20px; height: 20px; color: var(--green-700); }
+    .proof-sep { width: 1px; height: 18px; background: var(--line-strong); }
+
+    /* رؤوس الأقسام */
+    .sec-head { max-width: 680px; margin: 0 auto clamp(40px, 5vw, 56px); text-align: center; }
+    .sec-head h2 { margin: 16px 0 0; font-size: clamp(28px, 3.1vw, 40px); letter-spacing: -.01em; }
+    .sec-head p { margin-top: 15px; color: var(--muted); font-size: var(--text-lg); line-height: 1.65; }
+    .sec-head .eyebrow { margin-bottom: 2px; }
+    .sec-head.start { text-align: start; margin-inline: 0; }
+
+    /* بطاقات */
     .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    @media (max-width: 820px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
-    .card-b { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 26px; box-shadow: var(--shadow); }
-    .card-b .ic { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; margin-bottom: 14px; }
-    .ic-red { background: rgba(194,56,46,.1); }
-    .ic-pine { background: rgba(14,91,68,.1); }
-    .ic-brass { background: rgba(176,125,44,.12); }
-    .card-b h3 { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
-    .card-b p { color: var(--muted); font-size: 15px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .card { border: 1px solid var(--line); border-top: 2px solid transparent; border-radius: var(--r); background: var(--white); box-shadow: var(--shadow-sm); padding: var(--pad-card); transition: transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s ease, border-top-color .22s ease; }
+    .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-top-color: var(--green-600); }
+    .card-ic { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: var(--r-sm); background: var(--mint-100); color: var(--green-700); margin-bottom: 16px; }
+    .card-ic .ic { width: 24px; height: 24px; }
+    .card h3 { margin-bottom: 9px; font-size: var(--text-lg); }
+    .card p { color: var(--muted); font-size: var(--text-sm); }
 
-    /* Steps */
-    .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; counter-reset: s; }
-    @media (max-width: 900px) { .steps { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
-    .step { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 24px 22px; box-shadow: var(--shadow); }
-    .step .n { width: 38px; height: 38px; border-radius: 11px; background: var(--pine); color: #fff; font-family: var(--mono); font-weight: 800; display: grid; place-items: center; margin-bottom: 14px; }
-    .step h3 { font-size: 16.5px; font-weight: 800; margin-bottom: 6px; }
-    .step p { color: var(--muted); font-size: 14px; }
+    /* المشكلة — قائمة */
+    .pain-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+    .pain-list li { display: flex; gap: 13px; align-items: flex-start; padding: 18px 18px; border: 1px solid var(--line); border-radius: var(--r); background: var(--white); box-shadow: var(--shadow-sm); transition: transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s ease, border-color .22s ease; }
+    .pain-list li:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: rgba(184,51,43,.28); }
+    .pain-list .ic { color: var(--danger); width: 22px; height: 22px; margin-top: 1px; flex: none; }
+    .pain-list p { color: var(--ink-2); font-size: var(--text-sm); line-height: 1.6; }
 
-    /* Deliverable list */
-    .deliver { background: linear-gradient(160deg, var(--pine-deep), var(--pine)); color: #eaf2ee; border-radius: 24px; padding: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 36px; align-items: center; }
-    @media (max-width: 820px) { .deliver { grid-template-columns: 1fr; padding: 32px; } }
-    .deliver h2 { color: #fff; font-size: clamp(24px, 3vw, 32px); font-weight: 800; }
-    .deliver .sub { color: #c7dcd3; margin-top: 12px; font-size: 16px; }
-    .deliver ul { list-style: none; margin-top: 22px; display: flex; flex-direction: column; gap: 12px; }
-    .deliver li { display: flex; gap: 11px; align-items: flex-start; font-size: 15.5px; color: #e4efe9; }
-    .deliver li .ck { color: #6fe0b0; font-weight: 900; flex: none; }
-    .deliver-visual { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: 16px; padding: 20px; }
-    .dv-row { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.1); font-size: 14px; }
-    .dv-row:last-child { border-bottom: 0; }
-    .dv-row .lbl { color: #a9cabd; }
-    .dv-row .val { font-family: var(--mono); font-weight: 700; color: #fff; }
+    /* شريط داكن — التمييز */
+    .band { position: relative; color: rgba(255,255,255,.86); background: radial-gradient(circle at 82% 0%, rgba(215,170,74,.07), transparent 46%), var(--green-900); border-block: 1px solid rgba(255,255,255,.07); }
+    .band .eyebrow { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); color: #ffeec2; }
+    .band h2 { color: var(--white); }
+    .band .sec-head p { color: rgba(255,255,255,.72); }
+    .pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .pillar { border: 1px solid rgba(255,255,255,.13); border-radius: var(--r); background: rgba(255,255,255,.05); padding: 24px; transition: transform .22s cubic-bezier(.2,.7,.2,1), background .22s ease, border-color .22s ease; }
+    .pillar:hover { transform: translateY(-3px); background: rgba(255,255,255,.08); border-color: rgba(215,170,74,.4); }
+    .pillar-ic { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: var(--r-sm); background: rgba(255,255,255,.09); color: var(--gold); margin-bottom: 14px; }
+    .pillar-ic .ic { width: 23px; height: 23px; }
+    .pillar h3 { color: var(--white); font-size: var(--text-lg); margin-bottom: 8px; }
+    .pillar p { color: rgba(255,255,255,.72); font-size: var(--text-sm); }
 
-    /* Pricing */
-    .prices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch; }
-    @media (max-width: 900px) { .prices { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; } }
-    .price { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 30px 26px; display: flex; flex-direction: column; box-shadow: var(--shadow); position: relative; }
-    .price.feat { border: 2px solid var(--pine); box-shadow: 0 0 0 1px var(--pine), var(--shadow-lg); }
-    .price .tag { position: absolute; top: -13px; inset-inline-start: 24px; background: var(--pine); color: #fff; font-size: 12px; font-weight: 800; padding: 5px 13px; border-radius: 100px; }
-    .price .tname { font-size: 14px; font-weight: 800; color: var(--brass-ink); letter-spacing: .02em; }
-    .price .amt { font-size: 40px; font-weight: 800; font-family: var(--mono); margin: 10px 0 2px; letter-spacing: -1px; }
-    .price .amt small { font-size: 15px; color: var(--muted); font-weight: 600; font-family: var(--font); }
-    .price .desc { font-size: 14px; color: var(--muted); min-height: 40px; }
-    .price ul { list-style: none; margin: 18px 0 24px; display: flex; flex-direction: column; gap: 11px; flex: 1; }
-    .price li { display: flex; gap: 9px; align-items: flex-start; font-size: 14.5px; color: var(--ink); }
-    .price li .ck { color: var(--good); font-weight: 900; flex: none; }
+    /* المخرجات */
+    .deliverable-grid { display: grid; grid-template-columns: 1.02fr .98fr; gap: clamp(40px, 5vw, 56px); align-items: center; }
+    .del-list { display: grid; gap: 15px; margin: 26px 0 0; padding: 0; list-style: none; }
+    .del-list li { display: flex; gap: 12px; align-items: flex-start; color: var(--ink-2); font-weight: 500; font-size: var(--text-base); line-height: 1.55; }
+    .chk { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--mint-100); color: var(--ok); margin-top: 1px; }
+    .chk .ic { width: 15px; height: 15px; stroke-width: 2.4; }
+    .del-card { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--white); box-shadow: var(--shadow-md); overflow: hidden; }
+    .del-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 15px 20px; background: var(--mint-50); border-bottom: 1px solid var(--line); }
+    .del-card-head strong { font-size: var(--text-sm); font-weight: 700; }
+    .del-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 14px 20px; align-items: center; color: var(--muted); font-size: var(--text-sm); font-weight: 500; transition: background .18s ease; }
+    .del-row:nth-child(even) { background: rgba(6,46,35,.025); }
+    .del-row:hover { background: var(--mint-100); }
+    .del-row b { color: var(--green-800); font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .del-row b.txt { font-family: var(--font); }
+
+    /* المنهجية */
+    .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: start; }
+    .score-card { border: 1px solid var(--line); border-radius: var(--r-lg); background: linear-gradient(180deg, var(--white), var(--mint-50)); box-shadow: var(--shadow-sm); padding: 26px; }
+    .score-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .score-top b { font-family: var(--mono); font-weight: 500; font-size: 46px; color: var(--green-700); line-height: 1; }
+    .score-top b small { font-size: 18px; color: var(--muted-2); }
+    .score-bar { height: 10px; border-radius: var(--r-pill); background: var(--mint-100); margin: 16px 0 10px; overflow: hidden; }
+    .score-bar i { display: block; height: 100%; width: var(--w); border-radius: inherit; background: linear-gradient(90deg, var(--green-700), var(--green-500)); transform-origin: inline-start; }
+    .score-card.in .score-bar i { animation: score-fill .9s cubic-bezier(.2,.7,.2,1) both; }
+    @keyframes score-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .score-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .score-tag { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); font-weight: 500; color: var(--ink-2); background: var(--white); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 6px 12px; }
+    .score-tag::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--green-600); flex: none; }
+    .method-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+    .method-list li { display: flex; gap: 12px; align-items: flex-start; }
+    .method-list h3 { font-size: var(--text-base); margin-bottom: 4px; }
+    .method-list p { color: var(--muted); font-size: var(--text-sm); }
+
+    /* الخطوات */
+    .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; counter-reset: step; }
+    .step { position: relative; border: 1px solid var(--line); border-radius: var(--r); padding: 26px; background: linear-gradient(180deg, var(--white), var(--mint-50)); transition: transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s ease, border-color .22s ease; }
+    .step:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--line-strong); }
+    .step-num { width: 40px; height: 40px; border-radius: var(--r-sm); display: grid; place-items: center; background: linear-gradient(150deg, var(--green-600), var(--green-800)); color: var(--white); font-family: var(--mono); font-weight: 500; margin-bottom: 14px; box-shadow: 0 0 0 3px rgba(215,170,74,.14); }
+    .step h3 { margin-bottom: 8px; font-size: var(--text-lg); }
+    .step p { color: var(--muted); font-size: var(--text-sm); }
+
+    /* جدول المقارنة */
+    .cmp-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-md); background: var(--white); -webkit-overflow-scrolling: touch; }
+    table.cmp { width: 100%; min-width: 640px; border-collapse: collapse; background: var(--white); }
+    table.cmp th, table.cmp td { text-align: start; padding: 16px 20px; font-size: var(--text-sm); border-bottom: 1px solid var(--line); vertical-align: top; }
+    table.cmp thead th { font-weight: 700; font-size: var(--text-base); background: var(--mint-50); border-bottom: 2px solid var(--line-strong); }
+    table.cmp thead th.us { color: var(--green-700); background: rgba(16,130,100,.08); }
+    table.cmp tbody th { font-weight: 700; color: var(--ink); width: 26%; background: rgba(6,46,35,.015); }
+    table.cmp td.us { background: rgba(16,130,100,.05); color: var(--ink-2); font-weight: 500; border-inline: 1px solid rgba(16,130,100,.14); }
+    table.cmp tbody tr:hover td.us { background: rgba(16,130,100,.09); }
+    table.cmp tbody tr:hover th { background: rgba(6,46,35,.04); }
+    table.cmp td.them { color: var(--muted); }
+    table.cmp tr:last-child th, table.cmp tbody tr:last-child td { border-bottom: 0; }
+    .cmp-cell { display: flex; gap: 9px; align-items: flex-start; line-height: 1.5; }
+    .cmp-cell .ic { width: 18px; height: 18px; margin-top: 1px; flex: none; }
+    td.us .ic { color: var(--ok); }
+    td.them .ic { color: var(--muted-2); }
+    /* تلميح تمرير أفقي على الجوال */
+    .cmp-hint { display: none; text-align: center; color: var(--muted-2); font-size: var(--text-xs); font-weight: 500; margin-top: 12px; }
+
+    /* التسعير */
+    .pricing { background: var(--mint-50); border-block: 1px solid var(--line); }
+    .prices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; align-items: stretch; }
+    .price { position: relative; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--white); padding: 34px 28px 30px; box-shadow: var(--shadow-sm); transition: transform .24s cubic-bezier(.2,.7,.2,1), box-shadow .24s ease, border-color .24s ease; }
+    .price:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--line-strong); }
+    /* شريط علوي رفيع يميّز كل باقة */
+    .price::before { content: ""; position: absolute; inset-block-start: 0; inset-inline: 0; height: 3px; border-radius: var(--r-lg) var(--r-lg) 0 0; background: var(--line-strong); opacity: .5; }
+    .price.featured { border: 1.5px solid var(--green-700); box-shadow: 0 0 0 4px rgba(11,107,79,.08), 0 24px 60px -30px rgba(6,46,35,.55); background: linear-gradient(180deg, #fff, var(--mint-50)); }
+    .price.featured::before { background: linear-gradient(90deg, var(--gold-deep), var(--gold)); opacity: 1; height: 4px; }
+    .price.featured:hover { transform: translateY(-14px); box-shadow: 0 0 0 4px rgba(11,107,79,.1), 0 30px 70px -32px rgba(6,46,35,.6); }
+    @media (min-width: 981px) { .price.featured { transform: translateY(-10px); } }
+    .price .tag { position: absolute; inset-block-start: -14px; inset-inline: 0; margin-inline: auto; width: max-content; display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: var(--r-pill); background: linear-gradient(180deg, var(--green-600), var(--green-700)); color: var(--white); font-size: 11.5px; font-weight: 700; box-shadow: 0 0 0 4px rgba(215,170,74,.2), var(--shadow-sm); white-space: nowrap; }
+    .price .tag::before { content: "★"; font-size: 11px; color: var(--gold); }
+    .price .name { color: var(--green-700); font-weight: 700; font-size: var(--text-base); }
+    .price .amount { margin: 12px 0 4px; font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; font-size: 42px; line-height: 1.05; color: var(--ink); letter-spacing: -.02em; }
+    .price.featured .amount { color: var(--green-700); }
+    .price .amount small { font-family: var(--font); color: var(--muted); font-size: var(--text-sm); font-weight: 500; letter-spacing: 0; }
+    .price .desc { color: var(--muted); font-size: var(--text-sm); min-height: 46px; line-height: 1.55; }
+    .price ul { list-style: none; padding: 20px 0 0; margin: 18px 0 26px; display: grid; gap: 12px; flex: 1; border-top: 1px solid var(--line); }
+    .price li { display: flex; gap: 10px; align-items: flex-start; font-size: var(--text-sm); font-weight: 500; color: var(--ink-2); }
+    .price li .chk { width: 21px; height: 21px; }
+    .price li .chk .ic { width: 13px; height: 13px; }
     .price .btn { width: 100%; }
-    .price-note { text-align: center; color: var(--muted); font-size: 13.5px; margin-top: 22px; }
+    .price-note { margin-top: 24px; text-align: center; color: var(--muted); font-size: var(--text-xs); font-weight: 500; }
 
-    /* Why us */
-    .why { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
-    @media (max-width: 900px) { .why { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 520px) { .why { grid-template-columns: 1fr; } }
-    .why-item { padding: 8px; }
-    .why-item .ic { font-size: 26px; margin-bottom: 10px; }
-    .why-item h3 { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
-    .why-item p { color: var(--muted); font-size: 14px; }
+    /* الأسئلة */
+    .faq { max-width: 820px; margin-inline: auto; display: grid; gap: 12px; }
+    details { border: 1px solid var(--line); border-radius: var(--r); background: var(--white); box-shadow: var(--shadow-sm); padding: 0 20px; overflow: hidden; transition: border-color .2s ease, box-shadow .2s ease; }
+    details:hover { border-color: var(--line-strong); }
+    details[open] { border-color: var(--green-600); box-shadow: var(--shadow-md); }
+    summary { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 0; cursor: pointer; list-style: none; font-weight: 700; font-size: var(--text-base); border-radius: var(--r-sm); }
+    summary::-webkit-details-marker { display: none; }
+    summary .plus { flex: none; width: 24px; height: 24px; position: relative; color: var(--green-700); transition: transform .25s cubic-bezier(.2,.7,.2,1); }
+    summary .plus::before, summary .plus::after { content: ""; position: absolute; inset-block-start: 50%; inset-inline-start: 50%; width: 14px; height: 2px; background: currentColor; border-radius: 2px; transform: translate(-50%, -50%); }
+    summary .plus::after { transform: translate(-50%, -50%) rotate(90deg); transition: transform .25s cubic-bezier(.2,.7,.2,1); }
+    details[open] summary .plus::after { transform: translate(-50%, -50%) rotate(0); }
+    details p { color: var(--muted); padding: 0 0 20px; font-size: var(--text-sm); margin: 0; line-height: 1.7; }
+    details[open] p { animation: faq-open .28s ease both; }
+    @keyframes faq-open { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* FAQ */
-    .faq { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-    details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 20px; box-shadow: var(--shadow); }
-    details summary { cursor: pointer; font-weight: 700; font-size: 16px; padding: 16px 0; list-style: none; display: flex; justify-content: space-between; align-items: center; }
-    details summary::-webkit-details-marker { display: none; }
-    details summary::after { content: '+'; font-size: 22px; color: var(--pine); font-weight: 400; }
-    details[open] summary::after { content: '−'; }
-    details p { color: var(--muted); font-size: 15px; padding: 0 0 18px; }
+    /* الدعوة الختامية */
+    .final-cta { position: relative; overflow: hidden; color: var(--white); background: radial-gradient(circle at 15% 20%, rgba(215,170,74,.14), transparent 44%), linear-gradient(120deg, var(--green-900), var(--green-700)); }
+    .cta-box { max-width: 760px; }
+    .cta-box h2 { font-size: clamp(28px, 3.6vw, 44px); margin-bottom: 16px; color: var(--white); letter-spacing: -.01em; }
+    .cta-box p { color: rgba(255,255,255,.86); font-size: var(--text-lg); max-width: 58ch; line-height: 1.72; }
+    .cta-box .hero-cta { margin-top: 28px; }
 
-    /* Final CTA */
-    .cta-band { background: radial-gradient(120% 140% at 15% 0%, #0f6a4f, var(--pine-deep) 60%, #072f23); color: #fff; text-align: center; border-radius: 24px; padding: 56px 32px; }
-    .cta-band h2 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 800; }
-    .cta-band p { color: #c7dcd3; font-size: 18px; margin-top: 14px; max-width: 48ch; margin-inline: auto; }
-    .cta-band .hero-cta { justify-content: center; }
+    /* التذييل */
+    footer { background: radial-gradient(circle at 85% 0%, rgba(215,170,74,.06), transparent 42%), var(--green-900); color: rgba(255,255,255,.7); padding: 48px 0 30px; }
+    .foot-in { display: flex; justify-content: space-between; gap: 32px; flex-wrap: wrap; }
+    .foot-brand { display: flex; align-items: center; gap: 11px; color: var(--white); font-weight: 700; font-size: var(--text-xl); }
+    .foot-links { display: flex; flex-wrap: wrap; gap: 8px 28px; font-weight: 500; font-size: var(--text-sm); }
+    .foot-links a { display: inline-flex; align-items: center; min-height: 40px; padding-block: 2px; transition: color .18s ease; }
+    .foot-links a:hover { color: var(--white); }
+    .foot-copy { margin-top: 28px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.12); font-size: var(--text-xs); line-height: 1.7; }
 
-    /* Footer */
-    footer { background: var(--paper-2); border-top: 1px solid var(--line); padding: 44px 0 30px; margin-top: 20px; }
-    .foot-in { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
-    .foot-brand { font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 9px; }
-    .foot-brand .mk { width: 32px; height: 32px; border-radius: 9px; background: var(--pine); color: #fff; display: grid; place-items: center; }
-    .foot-links { display: flex; gap: 26px; flex-wrap: wrap; font-size: 15px; color: var(--muted); font-weight: 600; }
-    .foot-links a:hover { color: var(--pine); }
-    .foot-copy { color: var(--muted); font-size: 13px; margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); line-height: 1.9; }
+    /* زر واتساب عائم للجوال */
+    .wa-fab { position: fixed; inset-block-end: 18px; inset-inline-end: 18px; z-index: 50; width: 56px; height: 56px; border-radius: 50%; display: none; align-items: center; justify-content: center; background: #21c063; color: #fff; box-shadow: 0 14px 30px -12px rgba(0,0,0,.5); }
+    .wa-fab .ic { width: 28px; height: 28px; stroke: none; fill: currentColor; }
 
-    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+    /* كشف لطيف عند الدخول — المحتوى ظاهر افتراضياً، والحركة مجرد تحسين لا تُخفي شيئاً */
+    .reveal.in { animation: reveal-rise .6s cubic-bezier(.2,.7,.2,1) both; }
+    @keyframes reveal-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-delay: 0ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+      }
+      /* تحييد الحركات المعتمدة على التحويل حتى لا تبقى العناصر مطويّة */
+      .mini-chart span, .score-card.in .score-bar i, .reveal.in { transform: none !important; opacity: 1 !important; }
+      .btn:hover, .card:hover, .price:hover, .step:hover,
+      .pillar:hover, .pain-list li:hover, .hero-fact:hover { transform: none !important; }
+    }
+
+    @media (max-width: 980px) {
+      .contact-actions { display: none; }
+      .links { display: none; }
+      .hero-in, .deliverable-grid, .method-grid { grid-template-columns: 1fr; }
+      .hero h1 { max-width: 18ch; }
+      .hero .hl { white-space: normal; }
+      .report-card { max-width: 520px; margin-inline: auto; }
+      .hero-facts { grid-template-columns: repeat(2, 1fr); max-width: 520px; }
+      .grid-3, .prices { grid-template-columns: 1fr; }
+      .grid-4, .steps, .pillars { grid-template-columns: repeat(2, 1fr); }
+      .hero-curve { display: none; }
+      .wa-fab { display: flex; }
+      /* على الجوال لا نرفع البطاقة المميّزة — تبقى في التدفق مع فسحة للشارة */
+      .price.featured { transform: none; margin-top: 8px; }
+      .price.featured:hover { transform: translateY(-4px); }
+      .prices { row-gap: 26px; }
+      .cmp-hint { display: block; }
+    }
+    @media (max-width: 620px) {
+      .wrap { width: min(100% - 30px, var(--wrap)); }
+      .contact-bar { display: none; }
+      .top-in { min-height: 66px; }
+      .brand { font-size: var(--text-lg); }
+      .brand small { display: none; }
+      .brand-mark { width: 38px; height: 38px; font-size: 20px; }
+      .top-cta .btn-outline { display: none; }
+      section { padding: clamp(56px, 12vw, 72px) 0; }
+      .hero { padding: clamp(64px, 16vw, 84px) 0 clamp(48px, 12vw, 64px); }
+      .hero h1 { font-size: clamp(30px, 8.5vw, 38px); max-width: 100%; }
+      .hero .hl { white-space: normal; }
+      .hero-cta .btn { width: 100%; }
+      .hero-facts, .grid-4, .steps, .pillars { grid-template-columns: 1fr; }
+      .hero-facts { max-width: 100%; }
+      .sec-head { text-align: start; }
+      .kpi-grid { grid-template-columns: 1fr; }
+      .proof-sep { display: none; }
+      .price { padding: 30px 22px 26px; }
+      .foot-in { display: grid; }
+      .foot-links { display: grid; gap: 12px; }
+    }
   </style>
 </head>
 <body>
+  <div id="progress" aria-hidden="true"></div>
 
-  <!-- ملاحظة للمالك: استبدل رقم الواتساب في كل الروابط (data-wa) برقمك بصيغة دولية بلا +، مثال 9665XXXXXXXX -->
+  <!-- مكتبة أيقونات SVG مضمّنة تُستدعى بـ <use> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/></symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></symbol>
+      <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4h9l8.6 8.6a1.4 1.4 0 0 1 0 2Z"/><circle cx="7.5" cy="7.5" r="1.6"/></symbol>
+      <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6Z"/><path d="m9 12 2 2 4-4"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><path d="M8 16l3-4 3 2 4-6"/></symbol>
+      <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v18M7 7h10"/><path d="M7 7 4 13a3 3 0 0 0 6 0Z"/><path d="M17 7l-3 6a3 3 0 0 0 6 0Z"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+      <symbol id="i-wa" viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.15-1.75-.86-2-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.9-.8-1.5-1.78-1.67-2.08-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.53.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.5h-.57c-.2 0-.53.07-.8.38-.28.3-1.05 1.02-1.05 2.5s1.07 2.9 1.22 3.1c.15.2 2.1 3.2 5.1 4.5.7.3 1.26.48 1.7.62.7.22 1.35.2 1.86.12.57-.08 1.75-.72 2-1.4.24-.7.24-1.28.17-1.4-.07-.13-.27-.2-.57-.35Z"/><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.5A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.15l-.3-.18-2.9.9.92-2.84-.2-.3A8.2 8.2 0 1 1 12 20.2Z"/></symbol>
+    </defs>
+  </svg>
 
-  <header class="top">
+  <div class="contact-bar">
+    <div class="wrap contact-in">
+      <div class="contact-list">
+        <span><strong>تسليم خلال 24 إلى 48 ساعة</strong> حسب اكتمال البيانات</span>
+        <span class="dot">•</span>
+        <span>تقرير بنكي + Excel + توصية GO / REVISE / NO-GO</span>
+      </div>
+      <div class="contact-actions">
+        <a href="#" data-wa data-pkg="استفسار سريع"><svg class="ic" style="width:15px;height:15px;stroke:none;fill:currentColor"><use href="#i-wa"/></svg> تواصل واتساب</a>
+        <a href="./privacy.html">الخصوصية</a>
+      </div>
+    </div>
+  </div>
+
+  <header class="top" id="top">
     <div class="wrap top-in">
-      <a href="#" class="brand"><span class="mk">ق</span> قرار</a>
-      <nav class="links">
-        <a href="#how">كيف يعمل</a>
-        <a href="#deliverable">ماذا تحصل</a>
+      <a href="#" class="brand" aria-label="قرار">
+        <span class="brand-mark">ق</span>
+        <span>قرار <small>محاكي دراسة الجدوى الذكية</small></span>
+      </a>
+      <nav class="links" aria-label="التنقل الرئيسي">
+        <a href="#why">لماذا قرار</a>
+        <a href="#deliverable">المخرجات</a>
+        <a href="#how">كيف نعمل</a>
+        <a href="#compare">المقارنة</a>
         <a href="#pricing">الأسعار</a>
         <a href="#faq">الأسئلة</a>
       </nav>
       <div class="top-cta">
-        <a href="./index.html" class="btn btn-ghost">جرّب مجاناً</a>
-        <a href="./index.html?auth=1" class="btn btn-primary">دخول / تسجيل</a>
+        <a href="#sample" class="btn btn-outline btn-sm">تقرير نموذجي</a>
+        <a href="./index.html" class="btn btn-primary btn-sm">ابدأ دراستك</a>
       </div>
     </div>
   </header>
 
-  <!-- Hero -->
-  <section class="hero">
-    <div class="hero-grid-bg"></div>
-    <div class="wrap hero-in">
-      <div>
-        <span class="eyebrow">◆ دراسات جدوى المطاعم والكافيهات — السعودية</span>
-        <h1>قرار افتتاح مطعمك… مبني على <span class="hl">رقم</span>، لا على حدس.</h1>
-        <p class="lede">تحوّل «قرار» بيانات مشروعك إلى قرار استثماري واضح (GO / NO-GO) بدقة تُقنع البنك — خلال ٢٤ ساعة، وبثلث تكلفة المكتب الاستشاري.</p>
-        <div class="hero-cta">
-          <a href="#pricing" class="btn btn-primary btn-lg">اطلب دراستك الآن</a>
-          <a href="./index.html" class="btn btn-ghost btn-lg" style="background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.25)">جرّب تقديراً مجانياً</a>
+  <main>
+    <!-- الهيرو -->
+    <section class="hero">
+      <svg class="hero-curve" viewBox="0 0 600 600" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="gline" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#d7aa4a" stop-opacity="0"/>
+            <stop offset="1" stop-color="#d7aa4a" stop-opacity=".7"/>
+          </linearGradient>
+        </defs>
+        <path d="M0 520 C 120 500 180 360 300 320 S 480 180 600 60" fill="none" stroke="url(#gline)" stroke-width="2.5"/>
+      </svg>
+      <div class="wrap hero-in">
+        <div class="hero-copy">
+          <span class="eyebrow">دراسة جدوى ذكية للأنشطة التجارية في السعودية</span>
+          <h1>قبل أن تصرف أول ريال، اعرف <span class="hl">رقم مشروعك الحقيقي.</span></h1>
+          <p class="lede">«قرار» يحوّل فكرة مشروعك إلى دراسة جدوى مالية واضحة وقابلة للتدقيق: كل رقم مربوط بافتراض تستطيع تعديله ومراجعته بنفسك، وتنتهي بتوصية صريحة — أكمِل، عدّل، أو توقّف. لا صندوق أسود، ولا وعود عامة.</p>
+          <div class="hero-cta">
+            <a href="./index.html" class="btn btn-light">ابدأ دراستك الآن</a>
+            <a href="#sample" class="btn btn-ghost"><svg class="ic"><use href="#i-eye"/></svg> شاهد تقريراً نموذجياً</a>
+          </div>
+          <div class="hero-facts" aria-label="حقائق سريعة">
+            <div class="hero-fact is-num"><b>24–48</b><span>ساعة للتسليم</span></div>
+            <div class="hero-fact is-num"><b>5</b><span>سنوات توقعات مالية</span></div>
+            <div class="hero-fact"><b>PDF + Excel</b><span>تقرير + نموذج مفتوح</span></div>
+            <div class="hero-fact"><b>GO / NO-GO</b><span>توصية صريحة</span></div>
+          </div>
         </div>
-        <div class="hero-trust">
-          <div><span class="ic">✓</span> دقة بنكية (NPV · IRR · تعادل)</div>
-          <div><span class="ic">✓</span> توطين سعودي كامل</div>
-          <div><span class="ic">✓</span> جاهز للبنك ومنشآت</div>
+
+        <div class="report-card reveal" aria-label="نموذج توضيحي لمخرجات الدراسة">
+          <div class="report-win"><span class="d"></span><span class="d"></span><span class="d"></span><span>قرار — ملخص القرار</span></div>
+          <div class="report-head">
+            <div class="report-title">
+              <strong>ملخص قرار استثماري</strong>
+              <span>مشروع تجاري — مثال افتراضي</span>
+            </div>
+            <div class="verdict">REVISE — مجدٍ بعد المراجعة</div>
+          </div>
+          <div class="kpi-grid">
+            <div class="kpi"><span>صافي القيمة الحالية (NPV)</span><b>+420K ﷼</b></div>
+            <div class="kpi"><span>فترة الاسترداد</span><b>3.2 سنة</b></div>
+            <div class="kpi"><span>العائد الداخلي (IRR)</span><b>28%</b></div>
+            <div class="kpi"><span>تغطية خدمة الدين</span><b>1.6×</b></div>
+          </div>
+          <div class="mini-chart" aria-hidden="true">
+            <span style="--h:42%"></span>
+            <span style="--h:56%"></span>
+            <span style="--h:64%"></span>
+            <span style="--h:80%"></span>
+            <span style="--h:100%"></span>
+          </div>
+          <div class="report-foot">
+            <span class="sample-flag"><svg class="ic" style="width:13px;height:13px"><use href="#i-alert"/></svg> مثال توضيحي · أرقام افتراضية</span>
+            <span>تحليل حساسية + سيناريوهات</span>
+          </div>
         </div>
       </div>
-      <div class="decision-card" aria-hidden="true">
-        <div class="dc-top">
-          <div class="name">كافيه النرجس المختص<span>الرياض · قهوة مختصة</span></div>
-          <div class="dc-verdict">🟢 مجدٍ (GO)</div>
-        </div>
-        <div class="dc-kpis">
-          <div class="dc-kpi"><div class="k">صافي القيمة الحالية</div><div class="v pos">٣.٠ م﷼</div></div>
-          <div class="dc-kpi"><div class="k">فترة الاسترداد</div><div class="v">١.٠ سنة</div></div>
-          <div class="dc-kpi"><div class="k">العائد الداخلي (IRR)</div><div class="v pos">١٠٢٪</div></div>
-          <div class="dc-kpi"><div class="k">تغطية الدين (DSCR)</div><div class="v">١٥.٦×</div></div>
-        </div>
-        <div class="dc-bar"><span style="height:42%"></span><span style="height:58%"></span><span style="height:70%"></span><span style="height:85%"></span><span style="height:100%"></span></div>
-        <div class="dc-note">توقعات الإيراد على ٥ سنوات — نموذج توضيحي</div>
+    </section>
+
+    <!-- شريط الإثبات الصادق -->
+    <div class="proof-strip">
+      <div class="wrap proof-in">
+        <span class="proof-item"><svg class="ic"><use href="#i-target"/></svg> ابدأ من الصفر أو من قالب مختص معتمد</span>
+        <span class="proof-sep"></span>
+        <span class="proof-item"><svg class="ic"><use href="#i-eye"/></svg> كل رقم قابل للتدقيق</span>
+        <span class="proof-sep"></span>
+        <span class="proof-item"><svg class="ic"><use href="#i-shield"/></svg> امتثال سعودي مدمج: ضريبة 15٪ · زكاة · تأمينات · مصروفات تشغيل</span>
       </div>
     </div>
-  </section>
 
-  <div class="strip">
-    <div class="wrap strip-in">
-      <span>معايير موطّنة: <b>GOSI</b> · <b>ضريبة ١٥٪</b> · <b>زكاة</b> · <b>تراخيص بلدية</b></span>
-      <span>قنوات المطاعم: <b>صالة</b> · <b>تيك أواي</b> · <b>توصيل (جاهز/هنقرستيشن)</b></span>
-    </div>
-  </div>
-
-  <!-- Problem -->
-  <section id="problem">
-    <div class="wrap">
-      <div class="sec-head">
-        <span class="eyebrow">لماذا قرار</span>
-        <h2>أكثر من نصف المطاعم الجديدة تتعثّر خلال ٣ سنوات</h2>
-        <p>السبب غالباً ليس الفكرة — بل قرار افتُتح على تقدير متفائل بلا أرقام. والبدائل التقليدية بطيئة وغالية.</p>
-      </div>
-      <div class="grid-3">
-        <div class="card-b">
-          <div class="ic ic-red">💸</div>
-          <h3>مكتب استشاري غالٍ</h3>
-          <p>دراسة تكلّف ٥٬٠٠٠ إلى ٢٥٬٠٠٠ ﷼ وتأخذ أسابيع — وتنتهي كملف PDF ميت لا يُحدَّث ولا يُقارَن.</p>
+    <!-- المشكلة -->
+    <section id="problem">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">المشكلة</span>
+          <h2>معظم المشاريع لا تفشل في الفكرة، بل في القرار الأول</h2>
+          <p>الحماس للفكرة شيء، والأرقام التي تحكم بقاءها شيء آخر. أغلب المشاريع تُوقّع عقد الإيجار وتصرف على التجهيز قبل أن تعرف رقمها الحقيقي.</p>
         </div>
-        <div class="card-b">
-          <div class="ic ic-brass">🎲</div>
-          <h3>قرار بالحدس</h3>
-          <p>«الموقع حلو والزحمة كثيرة» ليست دراسة جدوى. بدون NPV وتعادل وحساسية، أنت تراهن لا تستثمر.</p>
-        </div>
-        <div class="card-b">
-          <div class="ic ic-pine">⏳</div>
-          <h3>أدوات عامة سطحية</h3>
-          <p>قوالب أجنبية بلا تعريب ولا معايير سعودية ولا عمق مالي — تعطيك أرقاماً لا يقبلها ممول.</p>
-        </div>
+        <ul class="pain-list grid-4" style="display:grid">
+          <li class="reveal"><svg class="ic"><use href="#i-alert"/></svg><p>تقدّر التكاليف بالحدس، فتكتشف بعد الافتتاح أن الإيجار وحده يلتهم الهامش.</p></li>
+          <li class="reveal"><svg class="ic"><use href="#i-alert"/></svg><p>لا تعرف نقطة التعادل الشهرية، فتظن أن الازدحام يعني ربحاً — وهو ليس كذلك دائماً.</p></li>
+          <li class="reveal"><svg class="ic"><use href="#i-alert"/></svg><p>تنسى بنوداً حقيقية: التأمينات، ضريبة القيمة المضافة، الصيانة، الاشتراكات، ومصروف الطوارئ.</p></li>
+          <li class="reveal"><svg class="ic"><use href="#i-alert"/></svg><p>حين تطلب تمويلاً، لا تملك أرقاماً منظّمة يفهمها الممول أو الشريك — فتضيع الفرصة أو الوقت.</p></li>
+        </ul>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- How it works -->
-  <section id="how" style="background:var(--paper-2);border-block:1px solid var(--line)">
-    <div class="wrap">
-      <div class="sec-head">
-        <span class="eyebrow">بأربع خطوات</span>
-        <h2>من فكرتك إلى قرار موثوق</h2>
-        <p>سواء سوّيتها بنفسك أو طلبتها كخدمة كاملة — نفس المحرك، نفس الدقة.</p>
+    <!-- لماذا قرار — التمييز -->
+    <section id="why" class="band">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">لماذا قرار بدل المكتب التقليدي؟</span>
+          <h2>دراسة تفهمها وتدافع عنها، لا ملف لا تعرف من أين جاءت أرقامه</h2>
+          <p>مكاتب الدراسات التقليدية تسلّمك تقريراً بأرقام نهائية دون أن ترى كيف اُحتسبت. «قرار» يفتح لك الصندوق.</p>
+        </div>
+        <div class="pillars">
+          <div class="pillar reveal">
+            <span class="pillar-ic"><svg class="ic"><use href="#i-eye"/></svg></span>
+            <h3>شفاف</h3>
+            <p>تفتح أي رقم فترى الافتراض الذي بُني عليه، وتعدّله وتشاهد أثره فوراً — لا صندوق أسود.</p>
+          </div>
+          <div class="pillar reveal">
+            <span class="pillar-ic"><svg class="ic"><use href="#i-target"/></svg></span>
+            <h3>متخصص</h3>
+            <p>نموذج عام قابل للتخصيص، والقوالب القطاعية لا تظهر إلا عندما يضيفها مختص واضح الخبرة والنطاق.</p>
+          </div>
+          <div class="pillar reveal">
+            <span class="pillar-ic"><svg class="ic"><use href="#i-bolt"/></svg></span>
+            <h3>سريع</h3>
+            <p>من <span data-price-min>249</span> ريالاً وتسليم خلال 24–48 ساعة، مقابل آلاف الريالات وأسابيع في المكتب التقليدي.</p>
+          </div>
+          <div class="pillar reveal">
+            <span class="pillar-ic"><svg class="ic"><use href="#i-shield"/></svg></span>
+            <h3>محلي</h3>
+            <p>ضريبة القيمة المضافة، الزكاة، التأمينات الاجتماعية، وعمولات التطبيقات محسوبة داخل المحرك.</p>
+          </div>
+        </div>
       </div>
-      <div class="steps">
-        <div class="step"><div class="n">١</div><h3>أدخل بيانات مشروعك</h3><p>نوع المطعم، المدينة، التكاليف، المبيعات المتوقعة — أو ابدأ من قالب جاهز يعبّئ لك الأساسيات.</p></div>
-        <div class="step"><div class="n">٢</div><h3>احصل على القرار فوراً</h3><p>يحسب المحرك NPV و IRR والتعادل والتدفقات، ويعطيك توصية GO / NO-GO مع تحليل حساسية وسيناريوهات.</p></div>
-        <div class="step"><div class="n">٣</div><h3>راجعه خبير (اختياري)</h3><p>مختص مطاعم يضبط التكاليف ويضيف توصيات موثّقة — لثقة أعلى أمام الممول والشريك.</p></div>
-        <div class="step"><div class="n">٤</div><h3>صدّر جاهزاً للبنك</h3><p>تقرير احترافي (PDF / Excel) بهيكل متوافق مع بنك التنمية ومنشآت — جاهز للتقديم.</p></div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Deliverable -->
-  <section id="deliverable">
-    <div class="wrap">
-      <div class="deliver">
-        <div>
-          <h2>دراسة يمسكها الممول ويثق بها</h2>
-          <p class="sub">ليست جداول عامة — قرار استثماري متكامل قابل للتدقيق، مبني على بيانات مطاعم واقعية.</p>
-          <ul>
-            <li><span class="ck">✓</span> بطاقة قرار واضحة (GO / NO-GO / مراجعة) في صفحة واحدة</li>
-            <li><span class="ck">✓</span> قوائم مالية تقديرية على ٥ سنوات + ميزانية عمومية</li>
-            <li><span class="ck">✓</span> تحليل حساسية وسيناريوهات (متحفّظ / أساسي / طموح)</li>
-            <li><span class="ck">✓</span> جدول سداد القرض وحساب الزكاة والضريبة</li>
-            <li><span class="ck">✓</span> تقرير بنكي بصيغة PDF و Excel جاهز للتقديم</li>
+    <!-- المخرجات -->
+    <section id="deliverable">
+      <div class="wrap">
+        <div class="deliverable-grid">
+          <div>
+            <span class="eyebrow">ماذا بداخل الدراسة؟</span>
+            <h2 style="font-size:clamp(28px,3.1vw,40px);letter-spacing:-.01em;margin:14px 0 12px">كل ما يحتاجه قرار استثماري جاد، في مكان واحد</h2>
+            <p style="color:var(--muted);font-size:var(--text-lg);line-height:1.65">لست أمام صفحات إنشائية، بل نموذج مالي مترابط يبدأ من فكرتك وينتهي بتوصية يمكن الدفاع عنها أمام أي ممول أو شريك.</p>
+            <ul class="del-list">
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>ملخص تنفيذي وبطاقة قرار GO / REVISE / NO-GO مع أسبابها.</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>توقعات مالية لخمس سنوات: قائمة دخل، تدفقات نقدية، وميزانية عمومية.</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>مؤشرات التقييم: NPV، IRR، نقطة التعادل، وفترة الاسترداد.</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تحليل حساسية وسيناريوهات (متفائل / أساسي / متحفظ) وسجل مخاطر.</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تقرير PDF بتنسيق بنكي + ملف Excel قابل للتعديل يبقى بين يديك.</li>
+            </ul>
+          </div>
+          <div id="sample" class="del-card reveal" aria-label="معاينة تقرير نموذجي">
+            <div class="del-card-head">
+              <strong>نموذج مخرجات — مشروع تجاري</strong>
+              <span class="sample-flag"><svg class="ic" style="width:13px;height:13px"><use href="#i-alert"/></svg> مثال توضيحي</span>
+            </div>
+            <div class="del-row"><span>إجمالي الاستثمار المبدئي</span><b>950,000 ﷼</b></div>
+            <div class="del-row"><span>صافي القيمة الحالية (NPV)</span><b>+420,000 ﷼</b></div>
+            <div class="del-row"><span>العائد الداخلي (IRR)</span><b>28%</b></div>
+            <div class="del-row"><span>فترة الاسترداد</span><b>3.2 سنة</b></div>
+            <div class="del-row"><span>نقطة التعادل الشهرية</span><b>165,000 ﷼</b></div>
+            <div class="del-row"><span>أبرز مخاطرة</span><b class="txt">تكلفة العمالة والإيجار</b></div>
+            <div class="del-row"><span>التوصية</span><b class="txt">تعديل الإيجار قبل التوقيع</b></div>
+          </div>
+        </div>
+        <p style="text-align:center;color:var(--muted-2);font-size:var(--text-xs);margin-top:26px">الأرقام أعلاه لمثال افتراضي لبيان شكل المخرجات فقط، وليست وعداً بأداء مشروعك — نتائج دراستك تعتمد على بياناتك أنت.</p>
+      </div>
+    </section>
+
+    <!-- المنهجية والشفافية -->
+    <section id="method" class="pricing">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">المنهجية والشفافية</span>
+          <h2>«درجة المدقق»: كل رقم يقف على افتراض تراه وتعدّله</h2>
+          <p>الثقة عندنا لا تُبنى بشعارات، بل بأن تفتح النموذج بنفسك وتتحقق من كل حساب.</p>
+        </div>
+        <div class="method-grid">
+          <div class="score-card reveal" aria-label="بطاقة درجة المدقق — مثال">
+            <div class="score-top">
+              <div>
+                <div style="color:var(--muted);font-size:var(--text-sm);font-weight:500">درجة المدقق لهذه الدراسة</div>
+                <div style="color:var(--muted-2);font-size:var(--text-xs);margin-top:2px">تقييم آلي على 9 بنود منهجية</div>
+              </div>
+              <b class="num">82<small>/100</small></b>
+            </div>
+            <div class="score-bar" aria-hidden="true"><i style="--w:82%"></i></div>
+            <div class="score-tags">
+              <span class="score-tag">اكتمال البيانات</span>
+              <span class="score-tag">اتساق الافتراضات</span>
+              <span class="score-tag">توثيق CAPEX</span>
+              <span class="score-tag">المساهمة الذاتية</span>
+              <span class="score-tag">تغطية خدمة الدين</span>
+              <span class="score-tag">التوطين</span>
+            </div>
+            <p style="color:var(--muted-2);font-size:var(--text-xs);margin:14px 0 0">مثال توضيحي — الدرجة تُحتسب من بياناتك الفعلية داخل المنصة.</p>
+          </div>
+          <ul class="method-list">
+            <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span><div><h3>افتراضات ظاهرة وقابلة للتعديل</h3><p>غيّر الإيجار أو متوسط الفاتورة أو نسبة النمو، فتتحدث كل المؤشرات لحظياً.</p></div></li>
+            <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span><div><h3>منهجية مالية معيارية</h3><p>خصم التدفقات النقدية لاحتساب NPV وIRR، ونقطة تعادل من هيكل التكاليف الفعلي.</p></div></li>
+            <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span><div><h3>بوابة جودة مانعة</h3><p>الدراسة لا تُصدَّر إذا كانت البيانات ناقصة أو المؤشرات غير منطقية — لا تقرير مطمئن على أساس هشّ.</p></div></li>
+            <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span><div><h3>قيم السوق موسومة بصدق</h3><p>نميّز بوضوح بين رقمك أنت وبين قيمة مرجعية عامة عليك مراجعتها حسب واقعك.</p></div></li>
           </ul>
         </div>
-        <div class="deliver-visual" aria-hidden="true">
-          <div class="dv-row"><span class="lbl">إجمالي الاستثمار</span><span class="val">٩٥٤٬٢٦٧ ﷼</span></div>
-          <div class="dv-row"><span class="lbl">صافي القيمة الحالية (NPV)</span><span class="val">٣٬٠١١٬٧١٤ ﷼</span></div>
-          <div class="dv-row"><span class="lbl">العائد الداخلي (IRR)</span><span class="val">١٠٢٪</span></div>
-          <div class="dv-row"><span class="lbl">فترة الاسترداد</span><span class="val">١.٠ سنة</span></div>
-          <div class="dv-row"><span class="lbl">تغطية خدمة الدين</span><span class="val">١٥.٦×</span></div>
-          <div class="dv-row"><span class="lbl">القرار</span><span class="val" style="color:#6fe0b0">المضي قدماً</span></div>
-        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Pricing -->
-  <section id="pricing" style="background:var(--paper-2);border-block:1px solid var(--line)">
-    <div class="wrap">
-      <div class="sec-head">
-        <span class="eyebrow">أسعار واضحة</span>
-        <h2>اختر ما يناسبك</h2>
-        <p>ادفع مرة واحدة لكل دراسة — بلا اشتراكات مخفية. وبعد الدفع تفتح التعديل الحي متى شئت.</p>
-      </div>
-      <div class="prices">
-        <div class="price">
-          <div class="tname">ذاتي</div>
-          <div class="amt">٢٤٩ <small>﷼ / دراسة</small></div>
-          <div class="desc">أنت تسوّي الدراسة بنفسك عبر المنصة، بإرشاد كامل.</div>
-          <ul>
-            <li><span class="ck">✓</span> كل المؤشرات المالية والتقارير</li>
-            <li><span class="ck">✓</span> قوالب مطاعم وكافيهات جاهزة</li>
-            <li><span class="ck">✓</span> تصدير PDF و Excel</li>
-            <li><span class="ck">✓</span> تعديل حيّ غير محدود</li>
-          </ul>
-          <a href="./index.html" class="btn btn-ghost">ابدأ الآن</a>
+    <!-- كيف نعمل -->
+    <section id="how">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">آلية العمل</span>
+          <h2>رحلة قصيرة من الفكرة إلى القرار</h2>
+          <p>بدل الاجتماعات الطويلة والرسائل المتفرقة، تدخل بياناتك خطوة بخطوة فيتحوّل كل شيء إلى نموذج مالي وتقرير جاهز.</p>
         </div>
-        <div class="price feat">
-          <div class="tag">الأعلى قيمة</div>
-          <div class="tname">مراجَع بخبير</div>
-          <div class="amt">٩٩٠ <small>﷼ / دراسة</small></div>
-          <div class="desc">نبنيها لك ويراجعها مختص مطاعم قبل التسليم.</div>
-          <ul>
-            <li><span class="ck">✓</span> كل مزايا الباقة الذاتية</li>
-            <li><span class="ck">✓</span> مراجعة خبير وضبط التكاليف</li>
-            <li><span class="ck">✓</span> توصيات موثّقة ترفع ثقة الممول</li>
-            <li><span class="ck">✓</span> تسليم خلال ٢٤–٤٨ ساعة</li>
-          </ul>
-          <a href="#" class="btn btn-wa" data-wa data-pkg="مراجَع بخبير — ٩٩٠ ﷼">اطلب عبر واتساب</a>
-        </div>
-        <div class="price">
-          <div class="tname">خدمة كاملة</div>
-          <div class="amt">٢٬٩٠٠ <small>﷼ / دراسة</small></div>
-          <div class="desc">نتولّى كل شيء نيابةً عنك — من الصفر للتسليم.</div>
-          <ul>
-            <li><span class="ck">✓</span> جمع البيانات وبناء الدراسة</li>
-            <li><span class="ck">✓</span> مراجعة خبير + تقرير بنكي/منشآت</li>
-            <li><span class="ck">✓</span> جلسة عرض للنتائج</li>
-            <li><span class="ck">✓</span> مقابل ٥ﻙ–٢٥ﻙ للمكاتب التقليدية</li>
-          </ul>
-          <a href="#" class="btn btn-wa" data-wa data-pkg="خدمة كاملة — ٢٬٩٠٠ ﷼">اطلب عبر واتساب</a>
+        <div class="steps">
+          <article class="step reveal"><div class="step-num">1</div><h3>تحدّد المشروع</h3><p>النشاط، المدينة، المساحة، القنوات، والميزانية المتوقعة.</p></article>
+          <article class="step reveal"><div class="step-num">2</div><h3>نبني الافتراضات</h3><p>الإيرادات والتكاليف والعمالة والتمويل وفق نشاطك ونطاق القالب إن وجد.</p></article>
+          <article class="step reveal"><div class="step-num">3</div><h3>نراجع المخاطر</h3><p>نختبر السيناريوهات ونحدد أين قد ينهار الهامش أو يتأخر الاسترداد.</p></article>
+          <article class="step reveal"><div class="step-num">4</div><h3>تستلم القرار</h3><p>تقرير PDF، ملف Excel، وتوصية واضحة بما يجب تعديله قبل الالتزام.</p></article>
         </div>
       </div>
-      <p class="price-note">الأسعار بالريال السعودي وتشمل ضريبة القيمة المضافة حيثما تنطبق · تُصدر فاتورة ضريبية.</p>
-    </div>
-  </section>
+    </section>
 
-  <!-- Why us -->
-  <section>
-    <div class="wrap">
-      <div class="sec-head">
-        <span class="eyebrow">ما الذي يميّزنا</span>
-        <h2>دقة المكتب الاستشاري بسرعة الأداة الرقمية</h2>
+    <!-- المقارنة الصادقة -->
+    <section id="compare" class="band">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">مقارنة صادقة</span>
+          <h2>قرار مقابل مكتب دراسات جدوى تقليدي</h2>
+          <p>لا نذكر منافساً بالاسم، ولا ندّعي ما لا نملكه — نقارن الفئتين على ما يهمّك فعلاً.</p>
+        </div>
+        <div class="cmp-wrap reveal">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th scope="col">المعيار</th>
+                <th scope="col" class="us">منصة «قرار»</th>
+                <th scope="col">مكتب دراسات جدوى تقليدي</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">الشفافية</th>
+                <td class="us"><span class="cmp-cell"><svg class="ic"><use href="#i-check"/></svg>كل رقم مربوط بافتراض ظاهر وقابل للتدقيق</span></td>
+                <td class="them"><span class="cmp-cell"><svg class="ic"><use href="#i-x"/></svg>أرقام نهائية دون بيان طريقة احتسابها</span></td>
+              </tr>
+              <tr>
+                <th scope="row">التخصص</th>
+                <td class="us"><span class="cmp-cell"><svg class="ic"><use href="#i-check"/></svg>نموذج عام مع قوالب مختصين عند اعتمادها</span></td>
+                <td class="them"><span class="cmp-cell"><svg class="ic"><use href="#i-x"/></svg>قوالب عامة تصلح لكل القطاعات</span></td>
+              </tr>
+              <tr>
+                <th scope="row">السعر</th>
+                <td class="us"><span class="cmp-cell"><svg class="ic"><use href="#i-check"/></svg>ثابت ومعلن: من <span data-price-min>249</span> إلى <span data-price-max>2,900</span> ﷼</span></td>
+                <td class="them"><span class="cmp-cell"><svg class="ic"><use href="#i-alert"/></svg>غالباً 5,000 إلى 35,000 ﷼ تفاوضياً</span></td>
+              </tr>
+              <tr>
+                <th scope="row">مدة التسليم</th>
+                <td class="us"><span class="cmp-cell"><svg class="ic"><use href="#i-check"/></svg>24 إلى 48 ساعة حسب اكتمال البيانات</span></td>
+                <td class="them"><span class="cmp-cell"><svg class="ic"><use href="#i-alert"/></svg>غالباً أسابيع</span></td>
+              </tr>
+              <tr>
+                <th scope="row">التعديل بعد التسليم</th>
+                <td class="us"><span class="cmp-cell"><svg class="ic"><use href="#i-check"/></svg>تعديل حي فوري مع Excel يبقى معك</span></td>
+                <td class="them"><span class="cmp-cell"><svg class="ic"><use href="#i-x"/></svg>يتطلب طلباً جديداً غالباً</span></td>
+              </tr>
+              <tr>
+                <th scope="row">الامتثال السعودي</th>
+                <td class="us"><span class="cmp-cell"><svg class="ic"><use href="#i-check"/></svg>ضريبة وزكاة وتأمينات وعمولات مدمجة</span></td>
+                <td class="them"><span class="cmp-cell"><svg class="ic"><use href="#i-alert"/></svg>يُعالَج يدوياً ويختلف حسب المكتب</span></td>
+              </tr>
+              <tr>
+                <th scope="row">متى يناسبك الآخر؟</th>
+                <td class="us"><span class="cmp-cell">قرار مشروع واحد بسرعة وشفافية</span></td>
+                <td class="them"><span class="cmp-cell">مشاريع صناعية عملاقة، أو توقيع جهة استشارية باسمها</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="cmp-hint">اسحب الجدول أفقياً لعرض الأعمدة كاملة ←</p>
       </div>
-      <div class="why">
-        <div class="why-item"><div class="ic">🏦</div><h3>دقة بنكية</h3><p>NPV · IRR · تعادل · DSCR · تدفقات نقدية — رياضيات صحيحة تُقنع الممول.</p></div>
-        <div class="why-item"><div class="ic">🇸🇦</div><h3>موطّن للسعودية</h3><p>GOSI والزكاة والضريبة والتراخيص وعمولات منصات التوصيل محسوبة بدقة.</p></div>
-        <div class="why-item"><div class="ic">🍽️</div><h3>متخصص للمطاعم</h3><p>تكلفة الطعام، الطاقة الاستيعابية، وقنوات البيع — نموذج مطعمي حقيقي لا عام.</p></div>
-        <div class="why-item"><div class="ic">🧠</div><h3>لمسة خبير بشري</h3><p>عند الحاجة، مختص يضيف خبرته — ما لا تعطيه أداة رخيصة ولا يوفّره مكتب بطيء.</p></div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- FAQ -->
-  <section id="faq" style="background:var(--paper-2);border-block:1px solid var(--line)">
-    <div class="wrap">
-      <div class="sec-head">
-        <span class="eyebrow">أسئلة شائعة</span>
-        <h2>كل ما تحتاج معرفته</h2>
+    <!-- الأسعار -->
+    <section id="pricing" class="pricing">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">أسعار مباشرة</span>
+          <h2>اختر مستوى الدعم المناسب لك</h2>
+          <p>ابدأ بنفسك، أو دع خبيراً يراجع افتراضاتك، أو سلّمنا البيانات لنبني الدراسة كاملة. الأسعار بالريال السعودي.</p>
+        </div>
+        <div class="prices">
+          <article class="price">
+            <div class="name">ذاتي</div>
+            <div class="amount"><span data-price="self">249</span> <small>﷼ / دراسة</small></div>
+            <p class="desc">لمن يريد بناء تقديره بنفسه على المنصة بمؤشرات فورية.</p>
+            <ul>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>قوالب مختصين عند اعتمادها</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>مؤشرات مالية فورية</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تصدير PDF وExcel</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تعديل حي غير محدود</li>
+            </ul>
+            <a href="./index.html" class="btn btn-outline">ابدأ الآن</a>
+          </article>
+          <article class="price featured">
+            <div class="tag">موصى بها</div>
+            <div class="name">مراجَع بخبير</div>
+            <div class="amount"><span data-price="reviewed">990</span> <small>﷼ / دراسة</small></div>
+            <p class="desc">نبني الدراسة ونراجع الافتراضات قبل التسليم.</p>
+            <ul>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>كل مزايا الباقة الذاتية</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>مراجعة مختص حسب القطاع</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تحليل حساسية وتوصيات</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تسليم خلال 24 إلى 48 ساعة</li>
+            </ul>
+            <a href="#" class="btn btn-wa" data-wa data-pkg="مراجَع بخبير — 990 ﷼"><svg class="ic" style="stroke:none;fill:currentColor"><use href="#i-wa"/></svg> اطلب عبر واتساب</a>
+          </article>
+          <article class="price">
+            <div class="name">خدمة كاملة</div>
+            <div class="amount"><span data-price="full">2,900</span> <small>﷼ / دراسة</small></div>
+            <p class="desc">تسلّمنا البيانات العامة، ونتولّى البناء والمراجعة والشرح.</p>
+            <ul>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>جمع وتنظيم المدخلات</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تقرير للممول والشريك</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>جلسة شرح النتائج</li>
+              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>قائمة تعديلات قبل التنفيذ</li>
+            </ul>
+            <a href="#" class="btn btn-wa" data-wa data-pkg="خدمة كاملة — 2,900 ﷼"><svg class="ic" style="stroke:none;fill:currentColor"><use href="#i-wa"/></svg> اطلب عبر واتساب</a>
+          </article>
+        </div>
+        <p class="price-note">سعر ثابت معلن، لا عروض تفاوضية غامضة. وقد تختلف المتطلبات النهائية حسب نوع النشاط واكتمال البيانات.</p>
       </div>
-      <div class="faq">
-        <details open><summary>هل الدراسة معتمدة للتقديم على تمويل؟</summary><p>التقرير مُعدّ بهيكل ومصطلحات متوافقة مع متطلبات جهات التمويل المحلية (بنك التنمية الاجتماعية، منشآت). هو أداة قوية تدعم طلبك، لكن قرار الاعتماد النهائي يعود للجهة الممولة، ونوصي دائماً بمراجعة بياناتك قبل التقديم.</p></details>
-        <details><summary>ما الفرق بين الباقات الثلاث؟</summary><p>«ذاتي» تسوّيها بنفسك عبر المنصة. «مراجَع بخبير» نبنيها لك ويدقّقها مختص مطاعم. «خدمة كاملة» نتولّى كل شيء من جمع البيانات حتى التسليم مع جلسة عرض. الجودة الحسابية واحدة في الثلاث — الفرق في مقدار العمل الذي نقوم به عنك ولمسة الخبير.</p></details>
-        <details><summary>كم يستغرق إعداد الدراسة؟</summary><p>الباقة الذاتية فورية (تحصل على القرار وأنت تُدخل البيانات). الباقات المدفوعة تُسلَّم عادةً خلال ٢٤ إلى ٤٨ ساعة حسب اكتمال بياناتك.</p></details>
-        <details><summary>لأي قطاع هذه المنصة؟</summary><p>مصممة خصيصاً للمطاعم والكافيهات داخل السعودية (سفرة، تيك أواي، توصيل، مطبخ سحابي). هذا التخصص هو ما يمنحنا الدقة التي لا توفّرها الأدوات العامة.</p></details>
-        <details><summary>هل بياناتي آمنة؟</summary><p>نعم. تُحفظ دراستك افتراضياً على جهازك، ولا تُرسل للسحابة إلا إذا فعّلت ذلك بنفسك. لا نبيع بياناتك ولا نشاركها. اطّلع على <a href="./privacy.html" style="color:var(--pine);font-weight:700">سياسة الخصوصية</a>.</p></details>
-        <details><summary>هل أقدر أعدّل الدراسة بعد إعدادها؟</summary><p>نعم — بعد الدفع يُفتح لك التعديل الحيّ، فتغيّر أي رقم وتشاهد أثره على القرار فوراً، وتقارن السيناريوهات كما تشاء.</p></details>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Final CTA -->
-  <section>
-    <div class="wrap">
-      <div class="cta-band">
-        <h2>لا تفتح مطعمك على تخمين.</h2>
-        <p>اعرف رقمك الحقيقي قبل أن تصرف ريالاً — ابدأ تقديراً مجانياً الآن، أو اطلب دراستك الكاملة.</p>
-        <div class="hero-cta">
-          <a href="./index.html" class="btn btn-primary btn-lg" style="background:#fff;color:var(--pine-deep)">جرّب مجاناً الآن</a>
-          <a href="#" class="btn btn-wa btn-lg" data-wa data-pkg="استفسار / دراسة كاملة">اطلب دراسة كاملة — واتساب</a>
+    <!-- الأسئلة -->
+    <section id="faq">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">أسئلة شائعة</span>
+          <h2>قبل أن تبدأ</h2>
+        </div>
+        <div class="faq">
+          <details open>
+            <summary>هل التقرير يصلح للتقديم على تمويل؟ <span class="plus" aria-hidden="true"></span></summary>
+            <p>التقرير مُعد بهيكل مالي ولغة مناسبة للنقاش مع جهات التمويل والشركاء، ويتضمن المؤشرات والجداول التي تُطلب عادةً. لكنه لا يضمن الموافقة؛ فقرار الاعتماد النهائي يعود دائماً للجهة الممولة وشروطها — وأي وعد بـ«اعتماد مضمون» هو إشارة إنذار لا ميزة.</p>
+          </details>
+          <details>
+            <summary>لماذا سعركم أقل بكثير من المكاتب التقليدية؟ <span class="plus" aria-hidden="true"></span></summary>
+            <p>لأن محرك «قرار» المالي يقوم بالحسابات الثقيلة تلقائياً، فنوفّر وقت العمل اليدوي وتكاليفه دون التنازل عن دقة النموذج. أنت تدفع مقابل نموذج مالي متخصّص وشفاف، لا مقابل ساعات مكتب طويلة.</p>
+          </details>
+          <details>
+            <summary>ما مصدر الأرقام والافتراضات؟ <span class="plus" aria-hidden="true"></span></summary>
+            <p>أنت مصدر الأرقام الأساسية (تكاليفك، أسعارك، مبيعاتك المتوقعة)، والمحرك يبني عليها القواعد المالية والنظامية السعودية. القيم المرجعية العامة موسومة بوضوح كقيم تقريبية عليك مراجعتها، ولا نقدّمها على أنها بيانات سوق مؤكدة.</p>
+          </details>
+          <details>
+            <summary>هل أستطيع تعديل الدراسة بعد استلامها؟ <span class="plus" aria-hidden="true"></span></summary>
+            <p>نعم. بعد الدفع تُفتح لك خاصية التعديل الحي: تغيّر أي افتراض وتشاهد أثره على المؤشرات لحظياً، ثم تصدّر نسخة محدّثة من التقرير وملف Excel وقتما تشاء.</p>
+          </details>
+          <details>
+            <summary>ما الفرق بين الباقات الثلاث؟ <span class="plus" aria-hidden="true"></span></summary>
+            <p>الباقة الذاتية (249) تمنحك المحرك والأدوات لتبني بنفسك. المراجَعة بخبير (990) تضيف مراجعة مختص لافتراضاتك وتوصياته قبل التسليم. الخدمة الكاملة (2,900) نتولّى فيها جمع بياناتك وتنظيمها وبناء الدراسة ومراجعتها مع جلسة شرح للنتائج.</p>
+          </details>
+          <details>
+            <summary>هل بياناتي محفوظة وآمنة؟ <span class="plus" aria-hidden="true"></span></summary>
+            <p>الدراسات تُحفظ محلياً في متصفحك افتراضياً، ولا تُرسل إلى السحابة إلا عند تفعيل ميزات تتطلب ذلك. لا نبيع بياناتك ولا نشاركها. راجع <a href="./privacy.html" style="color:var(--green-700);font-weight:700">سياسة الخصوصية</a> للتفاصيل.</p>
+          </details>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+
+    <!-- الدعوة الختامية -->
+    <section class="final-cta">
+      <div class="wrap">
+        <div class="cta-box">
+          <h2>قبل أن توقّع عقد الإيجار، اختبر القرار بالأرقام</h2>
+          <p>أرسل فكرة مشروعك الآن، أو ابدأ تقديرك بنفسك على المنصة، وحوّل الحماس إلى قرار استثماري تستطيع الدفاع عنه. أنت لا تخسر شيئاً بأن تعرف الرقم الحقيقي مبكراً — بل تخسر الكثير إن تجاهلته.</p>
+          <div class="hero-cta">
+            <a href="./index.html" class="btn btn-light">ابدأ دراستك الآن</a>
+            <a href="#" class="btn btn-wa" data-wa data-pkg="استفسار / دراسة كاملة"><svg class="ic" style="stroke:none;fill:currentColor"><use href="#i-wa"/></svg> تواصل عبر واتساب</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 
   <footer>
     <div class="wrap">
       <div class="foot-in">
         <div>
-          <div class="foot-brand"><span class="mk">ق</span> قرار</div>
-          <p style="color:var(--muted);font-size:14px;margin-top:10px;max-width:34ch">منصة دراسات جدوى المطاعم والكافيهات السعودية — قرارك مبني على رقم.</p>
+          <div class="foot-brand"><span class="brand-mark">ق</span> قرار</div>
+          <p style="max-width:40ch;margin-top:12px;font-size:var(--text-sm)">دراسات جدوى للأنشطة التجارية في السعودية، مبنية على نموذج مالي شفّاف قابل للتدقيق.</p>
         </div>
-        <div class="foot-links">
-          <a href="#how">كيف يعمل</a>
+        <nav class="foot-links" aria-label="روابط التذييل">
+          <a href="#why">لماذا قرار</a>
+          <a href="#deliverable">المخرجات</a>
           <a href="#pricing">الأسعار</a>
           <a href="#faq">الأسئلة</a>
           <a href="./terms.html">الشروط</a>
           <a href="./privacy.html">الخصوصية</a>
           <a href="./index.html">دخول المنصة</a>
-        </div>
+        </nav>
       </div>
       <div class="foot-copy">
-        © <span id="year"></span> قرار — جميع الحقوق محفوظة · صُمّمت للسوق السعودي.<br>
-        هذه المنصة أداة مساندة للقرار، ولا تُعد استشارة مالية أو قانونية ملزمة.
+        © <span id="year"></span> قرار — جميع الحقوق محفوظة. هذه المنصة أداة مساندة للقرار، ولا تُعد استشارة مالية أو قانونية ملزمة، ولا تضمن موافقة أي جهة تمويل.
       </div>
     </div>
   </footer>
 
-  <script>
-    // سنة التذييل
-    document.getElementById('year').textContent = new Date().getFullYear();
-    // ══════════════════════════════════════════════════════════════
-    // إعداد المالك: ضع رقم واتساب عملك هنا (صيغة دولية بلا +، مثال 9665XXXXXXXX)
-    // هذا هو المكان الوحيد الذي تغيّره لتفعيل كل أزرار الطلب في الصفحة.
-    var WHATSAPP_NUMBER = '9665XXXXXXXX';
-    // ══════════════════════════════════════════════════════════════
+  <a href="#" class="wa-fab" data-wa data-pkg="استفسار سريع (جوال)" aria-label="تواصل عبر واتساب"><svg class="ic"><use href="#i-wa"/></svg></a>
 
+  <script>
+    document.documentElement.classList.add('js');
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    /* ============================================================
+       إعداد المالك: ضع رقم واتساب عملك هنا بصيغة دولية بلا +
+       مثال: 9665XXXXXXXX
+       ما دام الرقم غير مضبوط، أزرار «واتساب» تتحوّل تلقائياً
+       إلى فتح المنصة (بدل عرض رسالة تقنية للزائر).
+       ============================================================ */
+    var WHATSAPP_NUMBER = '9665XXXXXXXX';
     var NUMBER_IS_SET = /^\d{11,15}$/.test(WHATSAPP_NUMBER);
 
-    // رسالة طلب مُهيّأة: تصل المالك مُصنّفة بالباقة ومعها حقول جاهزة للتعبئة،
-    // فيتحوّل النقر إلى طلب مؤهّل بدل رسالة عامة.
-    document.querySelectorAll('a[data-wa]').forEach(function (a) {
-      var pkg = a.getAttribute('data-pkg') || 'استفسار عام';
-      var text =
-        'السلام عليكم، أرغب في طلب دراسة جدوى عبر منصة «قرار».\n' +
-        '• الباقة: ' + pkg + '\n' +
-        '• اسم المشروع: \n' +
-        '• النشاط (مطعم/كافيه): \n' +
-        '• المدينة: ';
-      a.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(text);
-      a.target = '_blank'; a.rel = 'noopener';
-      // حارس أثناء الإعداد: إن لم يُضبط الرقم بعد، نبّه المالك بدل إرسال العميل لرقم وهمي.
+    (function setupWhatsApp() {
+      var msgFor = function (pkg) {
+        return 'السلام عليكم، أرغب في طلب دراسة جدوى عبر منصة «قرار».\n' +
+          '• الباقة / الطلب: ' + pkg + '\n' +
+          '• اسم المشروع: \n' +
+          '• النشاط التجاري: \n' +
+          '• المدينة: \n' +
+          '• مرحلة المشروع (فكرة/موقع محدد/قائم): ';
+      };
+      document.querySelectorAll('a[data-wa]').forEach(function (a) {
+        var pkg = a.getAttribute('data-pkg') || 'استفسار عام';
+        if (NUMBER_IS_SET) {
+          a.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(msgFor(pkg));
+          a.target = '_blank';
+          a.rel = 'noopener';
+        } else {
+          /* تراجع رشيق: افتح المنصة بدل رسالة خطأ للزائر */
+          a.href = './index.html';
+        }
+      });
       if (!NUMBER_IS_SET) {
-        a.addEventListener('click', function (e) {
-          e.preventDefault();
-          alert('لتفعيل الطلب: ضع رقم واتساب عملك في متغيّر WHATSAPP_NUMBER داخل landing.html.');
-        });
+        console.warn('[قرار] لتفعيل أزرار واتساب: ضع رقم عملك في المتغيّر WHATSAPP_NUMBER داخل landing.html. الأزرار حالياً تفتح المنصة كتراجع.');
       }
-    });
+    })();
+
+    /* شريط تقدّم القراءة + ظل الرأس اللاصق */
+    var progress = document.getElementById('progress');
+    var topEl = document.getElementById('top');
+    var onScroll = function () {
+      var h = document.documentElement;
+      var max = h.scrollHeight - h.clientHeight;
+      if (progress) progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+      if (topEl) topEl.classList.toggle('scrolled', h.scrollTop > 8);
+    };
+    document.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    /* كشف لطيف عند دخول العنصر للشاشة. المحتوى ظاهر افتراضياً؛ إن لم يُطلق
+       المراقب (بيئات لا تدعمه) يبقى كل شيء مرئياً بلا حركة — لا خطر إخفاء. */
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce && 'IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+        });
+      }, { threshold: 0, rootMargin: '0px 0px -6% 0px' });
+      document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+    }
+  </script>
+
+  <!-- الأسعار من المصدر الموحّد (web/js/core/pricing.js) — عدّل السعر هناك فقط.
+       الأرقام في الـHTML أعلاه احتياطية تظهر إن لم يعمل هذا السكربت. -->
+  <script type="module">
+    import { PRICING_PACKAGES, PRICE_MIN, PRICE_MAX, formatPrice } from './js/core/pricing.js';
+    try {
+      const byId = Object.fromEntries(PRICING_PACKAGES.map(p => [p.id, p]));
+      document.querySelectorAll('[data-price]').forEach(el => {
+        const p = byId[el.getAttribute('data-price')];
+        if (p) el.textContent = formatPrice(p.price);
+      });
+      document.querySelectorAll('[data-price-min]').forEach(el => { el.textContent = formatPrice(PRICE_MIN); });
+      document.querySelectorAll('[data-price-max]').forEach(el => { el.textContent = formatPrice(PRICE_MAX); });
+    } catch (e) {
+      console.warn('[قرار] تعذّر تحميل الأسعار من المصدر الموحّد؛ تُعرض الأرقام الاحتياطية.', e);
+    }
   </script>
 </body>
 </html>

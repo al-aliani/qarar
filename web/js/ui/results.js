@@ -10,6 +10,11 @@ export function renderResults(container, outputs) {
 
   const base = outputs.base;
   const kpis = base.indicators || base.kpis || {};
+  const paybackValue = Number(kpis.paybackPeriod ?? kpis.payback);
+  const paybackText = Number.isFinite(paybackValue) && paybackValue > 0
+    ? formatNum.format(paybackValue) + " سنوات"
+    : "غير محقق";
+  const breakEvenValue = Number(kpis.breakEvenPointValue ?? 0);
   const years = base.meta?.years || 5;
   const pnl = Array.isArray(base.incomeStatement) ? base.incomeStatement : (Array.isArray(base.pnl) ? base.pnl : []);
 
@@ -40,9 +45,9 @@ export function renderResults(container, outputs) {
   const metrics = [
     { label: "صافي القيمة الحالية (NPV)", value: formatSAR.format(kpis.npv || 0), color: (kpis.npv || 0) > 0 ? "green" : "red" },
     { label: "معدل العائد الداخلي (IRR)", value: formatPct.format(kpis.irr || 0), color: (kpis.irr || 0) > 0.1 ? "green" : "orange" },
-    { label: "فترة الاسترداد", value: formatNum.format(kpis.paybackPeriod || kpis.payback || 0) + " سنوات", color: "blue" },
+    { label: "فترة الاسترداد", value: paybackText, color: "blue" },
     { label: "مضاعف الاستثمار (PI)", value: formatNum.format((kpis.npv + (base.cashFlow?.[0]?.cashFlow ? -base.cashFlow[0].cashFlow : 0)) / -(base.cashFlow?.[0]?.cashFlow || 1)) + "x", color: "gray" },
-    { label: "نقطة التعادل (سنوية)", value: formatSAR.format((kpis.breakevenUnitsPerMonth || 0) * 12 * (base.revenueProjection?.[0]?.total / (base.revenueProjection?.[0]?.streams?.[0]?.revenue > 0 ? 1 : 1) || 100)), color: "gray" } // Approx for Breakeven value
+    { label: "نقطة التعادل (سنوية)", value: Number.isFinite(breakEvenValue) && breakEvenValue > 0 ? formatSAR.format(breakEvenValue) : "غير محسوبة", color: "gray" }
 
   ];
 

@@ -6,6 +6,7 @@
 
 import { IDEA_ASSESSMENT_HINTS } from '../config.js';
 import { SECTIONS } from '../core/schema.js';
+import { STEPS } from '../core/wizardSteps.js';
 import { toast } from '../utils/toast.js';
 
 export class IdeaAssessmentView {
@@ -19,23 +20,17 @@ export class IdeaAssessmentView {
         if (!this.container) return;
         const state = this.store?.getState?.() ?? this.store?.get?.() ?? {};
         const projectInfo = state.projectInfo || {};
-        const idea = projectInfo.ideaAssessment || {};
-        const exec = state.executiveSummary || {};
         const market = state.marketSizing || {};
-
-        // Pre-fill from existing sections if ideaAssessment empty
-        const problem = idea.problem || exec.problemStatement || '';
-        const solution = idea.solution || projectInfo.concept || exec.solutionStatement || '';
-        const whyUs = idea.whyUs || '';
-        const marketSize = idea.marketSize || this.formatMarketSize(market);
-        const competitiveAdvantage = idea.competitiveAdvantage || exec.uniqueValueProposition || '';
+        const values = this.getEffectiveValues(state);
+        // أرقام TAM/SAM موجودة في الدراسة السوقية ⇒ الحقل قراءة فقط منعاً لنسخة نصية مكرّرة تتقادم
+        const marketSizeReadOnly = this.formatMarketSize(market) !== '';
 
         const fields = [
-            { key: 'problem', label: 'ما المشكلة؟ لمن؟', value: problem, placeholder: 'صف المشكلة التي يحلها مشروعك ولمن (شريحة العملاء).' },
-            { key: 'solution', label: 'ما الحل؟', value: solution, placeholder: 'ما المنتج أو الخدمة التي تقدمها؟ كيف تحل المشكلة؟' },
-            { key: 'whyUs', label: 'لماذا أنتم؟', value: whyUs, placeholder: 'لماذا فريقكم قادر على تنفيذ هذا الحل؟ (خبرة، شبكة، تقنية)' },
-            { key: 'marketSize', label: 'حجم السوق', value: marketSize, placeholder: 'ما حجم السوق المستهدف؟ (أرقام أو وصف: TAM، SAM، SOM)' },
-            { key: 'competitiveAdvantage', label: 'الميزة التنافسية', value: competitiveAdvantage, placeholder: 'ما الذي يمنع المنافسين من نسخكم؟ (ميزة دفاعية)' }
+            { key: 'problem', label: 'ما المشكلة؟ لمن؟', value: values.problem, placeholder: 'صف المشكلة التي يحلها مشروعك ولمن (شريحة العملاء).' },
+            { key: 'solution', label: 'ما الحل؟', value: values.solution, placeholder: 'ما المنتج أو الخدمة التي تقدمها؟ كيف تحل المشكلة؟' },
+            { key: 'whyUs', label: 'لماذا أنتم؟', value: values.whyUs, placeholder: 'لماذا فريقكم قادر على تنفيذ هذا الحل؟ (خبرة، شبكة، تقنية)' },
+            { key: 'marketSize', label: 'حجم السوق', value: values.marketSize, placeholder: 'ما حجم السوق المستهدف؟ (أرقام أو وصف: TAM، SAM، SOM)', readOnly: marketSizeReadOnly },
+            { key: 'competitiveAdvantage', label: 'الميزة التنافسية', value: values.competitiveAdvantage, placeholder: 'ما الذي يمنع المنافسين من نسخكم؟ (ميزة دفاعية)' }
         ];
 
         const getHintFor = (f) => {
@@ -63,6 +58,15 @@ export class IdeaAssessmentView {
                 <form id="ideaAssessmentForm" class="space-y-6">
                     ${fields.map(f => {
                         const { tip, ok } = getHintFor(f);
+                        if (f.readOnly) {
+                            return `
+                        <div class="idea-field">
+                            <label class="block font-medium mb-2">${f.label}</label>
+                            <p class="input w-full mb-1" style="min-height: 44px;">${(f.value || '').replace(/</g, '&lt;')}</p>
+                            <div class="idea-hint text-xs mt-1 text-muted">القيم مأخوذة من أرقام الدراسة السوقية (TAM/SAM) — عدّلها هناك لتنعكس هنا.</div>
+                            <button type="button" class="btn btn--ghost btn-sm mt-2 btn-goto-market">تعديل في الدراسة السوقية ←</button>
+                        </div>`;
+                        }
                         return `
                         <div class="idea-field">
                             <label class="block font-medium mb-2">${f.label}</label>
@@ -94,6 +98,35 @@ export class IdeaAssessmentView {
         });
 
         this.container.querySelector('#btnSaveIdeaAssessment')?.addEventListener('click', () => this.save());
+
+        // زر الانتقال لخطوة الدراسة السوقية — نعيد إظهار الشريط الجانبي الذي أخفاه عرض التقييم
+        this.container.querySelector('.btn-goto-market')?.addEventListener('click', () => {
+            ['.sidebar', '#stepperNav', '#breadcrumbBar'].forEach(sel => {
+                const el = sel.startsWith('.') ? document.querySelector(sel) : document.getElementById(sel.slice(1));
+                el?.style.removeProperty('display');
+            });
+            const idx = STEPS.findIndex(s => s.id === SECTIONS.MARKETING);
+            if (idx >= 0) window.location.hash = '#/step/' + idx;
+        });
+    }
+
+    /**
+     * القيم الفعلية للحقول الخمسة — problem/solution مصدرهما startupHypothesis
+     * (نفس ما يقرأه التقرير النهائي) لا نسخة منفصلة في ideaAssessment.
+     */
+    getEffectiveValues(state) {
+        const projectInfo = state.projectInfo || {};
+        const idea = projectInfo.ideaAssessment || {};
+        const sh = projectInfo.startupHypothesis || {};
+        const exec = state.executiveSummary || {};
+        const fromMarket = this.formatMarketSize(state.marketSizing || {});
+        return {
+            problem: sh.problem || idea.problem || exec.problemStatement || '',
+            solution: sh.solution || idea.solution || projectInfo.concept || exec.solutionStatement || '',
+            whyUs: idea.whyUs || '',
+            marketSize: fromMarket || idea.marketSize || '',
+            competitiveAdvantage: idea.competitiveAdvantage || exec.uniqueValueProposition || ''
+        };
     }
 
     formatMarketSize(market) {
@@ -121,12 +154,24 @@ export class IdeaAssessmentView {
     save() {
         const state = this.store?.getState?.() ?? this.store?.get?.() ?? {};
         const projectInfo = { ...(state.projectInfo || {}) };
-        projectInfo.ideaAssessment = projectInfo.ideaAssessment || {};
+        projectInfo.ideaAssessment = { ...(projectInfo.ideaAssessment || {}) };
 
-        ['problem', 'solution', 'whyUs', 'marketSize', 'competitiveAdvantage'].forEach(key => {
+        // problem/solution تُحفظ في startupHypothesis — المصدر الذي يقرأه التقرير النهائي
+        // (ReportGenerator: intro_feasibility) — لا نسخة منفصلة تتعارض معه
+        const sh = { ...(projectInfo.startupHypothesis || {}) };
+        ['problem', 'solution'].forEach(key => {
+            const el = this.container.querySelector(`textarea[name="${key}"]`);
+            if (el) sh[key] = (el.value || '').trim();
+        });
+        projectInfo.startupHypothesis = sh;
+
+        ['whyUs', 'marketSize', 'competitiveAdvantage'].forEach(key => {
             const el = this.container.querySelector(`textarea[name="${key}"]`);
             if (el) projectInfo.ideaAssessment[key] = (el.value || '').trim();
         });
+        // إزالة النسخة القديمة المكرّرة كي لا تطغى قراءةً على المصدر الموحّد
+        delete projectInfo.ideaAssessment.problem;
+        delete projectInfo.ideaAssessment.solution;
 
         this.store.update(SECTIONS.PROJECT_INFO, projectInfo);
         if (this.store.notify) this.store.notify();
@@ -136,7 +181,8 @@ export class IdeaAssessmentView {
 
     renderScoreSummary() {
         const state = this.store?.getState?.() ?? this.store?.get?.() ?? {};
-        const idea = state.projectInfo?.ideaAssessment || {};
+        // نفس مصادر القراءة الموحّدة (startupHypothesis + marketSizing) لا نسخة ideaAssessment وحدها
+        const idea = this.getEffectiveValues(state);
         let filled = 0;
         IDEA_ASSESSMENT_HINTS.forEach(h => {
             const len = (idea[h.key] || '').trim().length;

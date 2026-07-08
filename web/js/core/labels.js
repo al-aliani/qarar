@@ -11,10 +11,30 @@ export const LABELS = {
 
     // Transcript 8: Environmental Classification
     environmentalClass: "التصنيف البيئي للمشروع",
-    environmentalMitigationCost: "تكلفة معالجة الأثر البيئي (Mitigation Cost)",
-    Green: "أخضر (صديق للبيئة - مدعوم)",
-    Grey: "رمادي (يتطلب معالجة - Grey List)",
-    Black_List: "أسود (قائمة سوداء - مرفوض/ضرائب عالية)",
+    environmentalMitigationCost: "تكلفة معالجة الأثر البيئي",
+    openingInventory: "المخزون الافتتاحي (بضاعة أول المدة، ريال)",
+    clientName: "اعتماد الدراسة باسم (العميل / الجهة المالكة)",
+    preparedBy: "إعداد الدراسة (المستشار / الجهة المعدّة)",
+    studyType: "نوع الدراسة",
+    studyRecipientType: "لمن تُعد الدراسة",
+    bank_financing: "تمويل بنكي",
+    investor_pitch: "عرض لمستثمر",
+    internal_planning: "تخطيط وتشغيل داخلي",
+    idea_validation: "اختبار فكرة مبدئي",
+    expert_template: "قالب مختص قابل للاعتماد",
+    expansion_plan: "توسع أو فرع جديد",
+    acquisition_review: "شراء أو استحواذ",
+    freelancer: "عمل حر / فرد",
+    establishment: "مؤسسة",
+    llc: "شركة ذات مسؤولية محدودة",
+    corporation: "شركة مساهمة / شركة كبرى",
+    investor: "مستثمر أو شريك",
+    lender: "بنك أو جهة تمويل",
+    incubator: "حاضنة / مسرعة / جهة حكومية",
+    consultant: "مختص / مستشار",
+    Green: "أخضر (صديق للبيئة ومدعوم)",
+    Grey: "رمادي (يتطلب معالجة بيئية)",
+    Black_List: "أسود (مرفوض أو عالي المخاطر تنظيمياً)",
 
     techResources: "الموارد التقنية",
     hr: "الموارد البشرية",
@@ -23,11 +43,16 @@ export const LABELS = {
     indicators: "مؤشرات الجدوى",
     risk: "تحليل المخاطر",
     appendices: "الملاحق",
+    retail: "التجزئة",
+    restaurants: "المطاعم والمقاهي",
+    restaurant: "مطعم/مقهى",
+    services: "الخدمات",
+    tech: "التقنية",
 
     // ═══════════════════════════════════════════════════════════
     // 0️⃣ بيانات المشروع
     // ═══════════════════════════════════════════════════════════
-    ideaCriteria: "معاير الفكرة (التقييم الأولي)",
+    ideaCriteria: "معايير الفكرة (التقييم الأولي)",
     feasibility: "جدوى الفكرة",
     uniqueness: "التفرد والتميز",
     marketFit: "ملاءمة السوق",
@@ -50,8 +75,11 @@ export const LABELS = {
     district: "الحي",
     concept: "نوع المفهوم",
     areaSize: "المساحة (م²)",
+    ownershipType: "نوع الكيان القانوني للمشروع",
+    targetCapital: "رأس المال المستهدف (ريال)",
+    selfFundingAmount: "منه مساهمة ذاتية (ريال)",
     businessModel: "نموذج العمل",
-    Corporate_Venture: "مشروع ريادي تابع لشركة (Corporate Venture)",
+    Corporate_Venture: "مشروع ريادي تابع لشركة",
     franchiseDetails: "تفاصيل الامتياز التجاري",
     entryFee: "رسوم الامتياز (تأسيس)",
     royaltyRate: "نسبة الإتاوة (% من المبيعات)",
@@ -95,24 +123,29 @@ export const LABELS = {
     weaknesses: "نقاط الضعف",
     opportunities: "الفرص",
     threats: "التهديدات",
+    towsMatrix: "مصفوفة الاستراتيجيات (TOWS)",
+    so: "استراتيجيات هجومية (قوة + فرص)",
+    wo: "استراتيجيات تطويرية (ضعف + فرص)",
+    st: "استراتيجيات دفاعية (قوة + تهديدات)",
+    wt: "استراتيجيات انكماشية (ضعف + تهديدات)",
     pricingStrategy: "استراتيجية التسعير",
-    pricingCostPlus: "التكلفة + الهامش (Cost-Plus)",
-    pricingValueBased: "التسعير على أساس القيمة (Value-Based)",
-    pricingPenetration: "اختراق السوق (Penetration)",
-    pricingSkimming: "كشط السوق (Skimming)",
+    pricingCostPlus: "التكلفة + الهامش",
+    pricingValueBased: "التسعير على أساس القيمة",
+    pricingPenetration: "اختراق السوق",
+    pricingSkimming: "كشط السوق",
 
     historicalData: "بيانات الطلب التاريخية (لآخر 5 سنوات)",
     demand: "حجم الطلب",
 
     distributionStrategy: "استراتيجية التوزيع",
-    distIntensive: "توزيع مكثف (Intensive)",
-    distSelective: "توزيع انتقائي (Selective)",
-    distExclusive: "توزيع وحيد (Exclusive)",
+    distIntensive: "توزيع مكثف",
+    distSelective: "توزيع انتقائي",
+    distExclusive: "توزيع حصري",
 
     launchStrategy: "استراتيجية الدخول",
-    launchFull: "تشغيل كامل (Full Launch)",
-    launchPilot: "تشغيل تجريبي (Soft Launch)",
-    launchOutsource: "تصنيع خارجي (Outsourcing)",
+    launchFull: "تشغيل كامل",
+    launchPilot: "تشغيل تجريبي",
+    launchOutsource: "تصنيع خارجي",
 
     environmentalRisks: "المخاطر البيئية (PESTEL)",
     factor: "عامل الخطر",
@@ -129,7 +162,7 @@ export const LABELS = {
 
     approach: "المنهج",
     comparisonNotes: "ملاحظات المقارنة",
-    marketingMix: "المزيج التسويقي (4Ps)",
+    marketingMix: "المزيج التسويقي",
     product: "المنتج",
     price: "السعر",
     place: "المكان",
@@ -140,13 +173,13 @@ export const LABELS = {
     monthlyBudget: "الميزانية الشهرية",
     salesProjection: "توقعات المبيعات",
 
-    // Transcript 8: Market Structure & Pricing
-    marketStructure: "هيكل السوق (Market Structure)",
+    // هيكل السوق والتسعير
+    marketStructure: "هيكل السوق",
     pricingPower: "القدرة على التسعير",
-    Perfect_Competition: "منافسة تامة (Perfect Competition)",
-    Monopolistic_Competition: "منافسة احتكارية (Monopolistic Competition)",
-    Oligopoly: "احتكار القلة (Oligopoly)",
-    Monopoly: "احتكار تام (Monopoly)",
+    Perfect_Competition: "منافسة تامة",
+    Monopolistic_Competition: "منافسة احتكارية",
+    Oligopoly: "احتكار القلة",
+    Monopoly: "احتكار تام",
 
     Price_Taker: "متقبل للسعر (السوق يحدد السعر)",
     Price_Maker: "صانع للسعر (أنت تحدد السعر)",
@@ -247,6 +280,8 @@ export const LABELS = {
     // 4️⃣ الدراسة القانونية
     // ═══════════════════════════════════════════════════════════
     legalForm: "الشكل القانوني",
+    requirementsChecklist: "الاشتراطات والتراخيص",
+    keyContracts: "العقود الجوهرية",
     licenses: "التراخيص المطلوبة",
     commercialRegistration: "السجل التجاري",
     municipalLicense: "رخصة البلدية",
@@ -334,6 +369,7 @@ export const LABELS = {
     discountRate: "معدل الخصم",
     workingCapitalMonths: "أشهر رأس المال العامل",
     rampUpMonths: "أشهر التصاعد لبلوغ كامل المبيعات",
+    seasonalityProfile: "نمط الموسمية (لتخطيط السيولة)",
     terminalValue: "القيمة النهائية بعد سنوات الدراسة (استرشادية)",
     method: "الطريقة",
     growthRate: "معدل النمو المستدام",
@@ -388,9 +424,68 @@ export const LABELS = {
     teamCVs: "السير الذاتية للفريق",
     lettersOfIntent: "خطابات النوايا",
     referenceStudies: "الدراسات المرجعية",
-    notes: "ملاحظات"
+    notes: "ملاحظات",
+
+    // الموارد البشرية — الرسوم الحكومية (govtFees) — كانت تظهر كمفاتيح إنجليزية خام
+    govtFees: "الرسوم الحكومية",
+    workCard: "المقابل المالي (رخصة العمل)",
+    visa: "رسوم الاستقدام (التأشيرة)",
+    ticket: "تذاكر الطيران السنوية",
+    iqama: "رسوم تجديد الإقامة",
+
+    // الدراسة الفنية — تقييم المختص الفني (technicalSpecialistEvaluation)
+    technicalSpecialistEvaluation: "تقييم المختص الفني",
+    specialistName: "اسم المختص",
+    date: "التاريخ",
+    adequacyOfNeeds: "مدى كفاية الاحتياجات",
+    equipmentQuality: "جودة المعدات",
+    staffAdequacy: "كفاية الكادر البشري",
+    costRevenueAssessment: "تقييم التكلفة مقابل الإيراد",
+    materialsAssessment: "تقييم المواد الخام",
+    otherComments: "ملاحظات أخرى",
+    recommendations: "التوصيات",
+
+    // ═══════════════════════════════════════════════════════════
+    // تقييم الفكرة والفرضية (كانت تتسرّب كمفاتيح إنجليزية خام)
+    // ═══════════════════════════════════════════════════════════
+    region: "المنطقة",
+    sector: "القطاع / النشاط",
+    investorProfile: "ملف المستثمر",
+    inverseQualification: "المؤهل العكسي (الفكرة مقابل الخبرة)",
+    ideaStrength: "قوة الفكرة",
+    experienceLevel: "مستوى الخبرة",
+    nationalEconomicImportance: "الأهمية للاقتصاد الوطني/الأمن القومي",
+    techInvestmentLevel: "مستوى الاستفادة من التقنية",
+    startupHypothesis: "فرضية النمو (المشكلة ← الحل ← الاستبصار)",
+    problem: "المشكلة",
+    solution: "الحل",
+    insight: "الاستبصار (لماذا سنربح؟)",
+    problemQualityChecklist: "قائمة جودة المشكلة",
+    popular: "شائعة (كثيرون يعانونها)",
+    growing: "نامية (السوق/المشكلة تتزايد)",
+    urgent: "عاجلة (تحتاج حلاً سريعاً)",
+    expensive: "مكلفة (فرصة لتحصيل قيمة)",
+    mandatory: "إلزامية (قانون/تنظيم يفرض حلها)",
+    frequent: "متكررة (فرص تحويل متعددة)",
+    unfairAdvantage: "الميزة غير العادلة",
+    insightText: "شرح الاستبصار",
+    ideaAssessment: "تقييم الفكرة",
+    whyUs: "لماذا نحن؟",
+    competitiveAdvantage: "الميزة التنافسية",
+    demandElasticity: "مرونة الطلب",
+    // مفاتيح داخلية قد تتسرّب عبر deCamelize إن رُندرت في مسار عام («selected Index») — نعرّبها احترازياً
+    selectedIndex: "الفكرة المختارة",
+    ideas: "الأفكار"
 };
 
+/** يحوّل مفتاح camelCase/snake إلى نص مقروء عند غياب ترجمة — يمنع تسرّب المفاتيح الخام. */
+function deCamelize(key) {
+    return String(key)
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .replace(/[_-]+/g, ' ')
+        .trim();
+}
+
 export function getLabel(key) {
-    return LABELS[key] || key;
+    return LABELS[key] || deCamelize(key);
 }

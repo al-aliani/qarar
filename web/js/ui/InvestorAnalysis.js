@@ -25,21 +25,23 @@ export class InvestorAnalysis {
         const ind = results?.indicators || {};
         const npv = ind.npv ?? 0;
         const irr = ind.irr ?? 0;
-        const payback = ind.paybackPeriod ?? 999;
+        const payback = ind.paybackPeriod ?? ind.payback ?? 999;
         const roi = ind.roi ?? 0;
         const profitMargin = ind.profitMargin ?? 0;
         const discountRate = ind.discountRateUsed ?? 0.10;
-        const breakeven = ind.breakevenUnitsPerMonth;
+        const breakeven = ind.breakEvenUnits ?? ind.breakevenUnitsPerMonth;
 
         const tam = state.marketSizing?.tam?.value ?? 0;
         const som = state.marketSizing?.som?.value ?? 0;
         const hasMarket = (tam > 0 || som > 0);
-        const risks = state.riskAnalysis?.risks || state.marketing?.competitors || [];
+        // بند «سجل مخاطر» يفحص سجل المخاطر الفعلي فقط — كان يتحقق زوراً بوجود منافسين
+        // (السوق له بند مستقل «hasMarket» أعلاه) فيمنح ✓ لدراسة بلا أي تحليل مخاطر فعلي.
+        const risks = state.riskAnalysis?.risks || [];
         const hasRisks = Array.isArray(risks) && risks.length > 0;
         const hasProjectInfo = !!(state.projectInfo?.name || state.projectInfo?.concept);
 
         const score = this.calcInvestabilityScore({ npv, irr, payback, roi, profitMargin, hasMarket, hasRisks, hasProjectInfo, discountRate });
-        const checklist = this.buildReadinessChecklist(state, results, { npv, irr, payback, hasMarket, hasRisks });
+        const checklist = this.buildReadinessChecklist(state, results, { npv, irr, payback, hasMarket, hasRisks, discountRate });
         const criteria = this.buildInvestorCriteriaTable({ npv, irr, payback, roi, profitMargin, tam, som, discountRate });
 
         this.container.innerHTML = `
@@ -145,7 +147,8 @@ export class InvestorAnalysis {
         const gaps = [];
         if (ctx.npv > 0) p += 20; else gaps.push('تحسين NPV (صافي القيمة الحالية)');
         if (ctx.irr > (ctx.discountRate || 0.10)) p += 15; else if (ctx.irr != null) gaps.push('رفع IRR فوق معدل الخصم');
-        if (ctx.payback < 6 && ctx.payback >= 0) p += 15; else if (ctx.payback >= 0) gaps.push('تقليل فترة الاسترداد');
+        // عتبة الاسترداد موحّدة مع maxPayback الافتراضي في محرك القرار (engine.js) — لا رقم مستقل
+        if (ctx.payback < 7 && ctx.payback >= 0) p += 15; else if (ctx.payback >= 0) gaps.push('تقليل فترة الاسترداد');
         if (ctx.roi > 0.15) p += 10; else if (ctx.roi != null && ctx.roi > 0) gaps.push('تحسين العائد على الاستثمار');
         if (ctx.profitMargin > 0.10) p += 10; else gaps.push('تحسين هامش الربح');
         if (ctx.hasMarket) p += 15; else gaps.push('تحديد حجم السوق TAM/SAM/SOM');
@@ -154,7 +157,7 @@ export class InvestorAnalysis {
         const percent = Math.min(100, Math.round(p));
         let color = '#22c55e';
         if (percent < 40) color = '#ef4444';
-        else if (percent < 70) color = '#d4af37';
+        else if (percent < 70) color = '#8a5f1c';
         let label = 'جاذبية منخفضة — يحتاج تعزيز عدة معايير';
         if (percent >= 70) label = 'جاذبية جيدة — المشروع مؤهل لعرضه على مستثمرين مدروسين';
         else if (percent >= 50) label = 'جاذبية متوسطة — التركيز على الفجوات أعلاه يرفع الفرص';
@@ -162,14 +165,14 @@ export class InvestorAnalysis {
     }
 
     buildReadinessChecklist(state, results, ctx) {
-        const rev = (results?.revenueProjection || [])[0]?.total;
+        const rev = (results?.incomeStatement || [])[0]?.revenue;
         const net = (results?.incomeStatement || [])[0]?.netIncome;
         return [
             { label: 'نموذج مالي مكتمل (إيرادات وتكاليف)', ok: !!results && typeof rev === 'number' },
             { label: 'صافي القيمة الحالية (NPV) موجب', ok: ctx.npv > 0 },
-            { label: 'معدل العائد الداخلي (IRR) فوق معدل الخصم', ok: ctx.irr != null && ctx.irr > 0.05 },
-            { label: 'فترة استرداد معقولة (&lt; 7 سنوات)', ok: ctx.payback >= 0 && ctx.payback < 8 },
-            { label: 'وجود نقطة تعادل أو خطة لها', ok: results?.indicators?.breakevenUnitsPerMonth != null || (state.assumptions || {}).projectionYears > 0 },
+            { label: 'معدل العائد الداخلي (IRR) فوق معدل الخصم', ok: ctx.irr != null && ctx.irr > (ctx.discountRate ?? 0.10) },
+            { label: 'فترة استرداد معقولة (&lt; 7 سنوات)', ok: ctx.payback >= 0 && ctx.payback < 7 },
+            { label: 'وجود نقطة تعادل أو خطة لها', ok: results?.indicators?.breakEvenUnits != null || results?.indicators?.breakevenUnitsPerMonth != null || (state.assumptions || {}).projectionYears > 0 },
             { label: 'تحليل منافسين أو سوق', ok: ctx.hasMarket || (state.marketing?.competitors || []).length > 0 },
             { label: 'سجل مخاطر أو تحليل مخاطر', ok: ctx.hasRisks },
             { label: 'بيانات مشروع وتعريف واضح', ok: !!(state.projectInfo?.name || state.projectInfo?.concept) },
@@ -192,10 +195,12 @@ export class InvestorAnalysis {
         const npv = ctx.npv ?? 0;
         const irr = ctx.irr ?? 0;
         const payback = ctx.payback ?? 999;
-        const decision = ctx.decision || (npv > 0 && irr > 0.05 ? 'GO' : 'NO-GO');
-        const cap = state.financing?.totalInvestment ?? results?.capex?.total ?? 0;
-
         if (!results) return 'أكمل إدخال البيانات المالية وتشغيل النموذج لعرض توصية مبنية على الأرقام.';
+        // القرار من المحرك حصراً — لا نصنع قراراً محلياً بعتبة موازية قد تناقض لوحة القرار
+        // (المصدر الوحيد للحقيقة engine.js: minIRR/maxPayback الفعليين لا 5% ثابتة)
+        const decision = ctx.decision || null;
+        if (!decision) return 'تعذّر استخراج القرار — أكمل بيانات الدراسة (الإيرادات، التكاليف، التمويل).';
+        const cap = state.financing?.totalInvestment ?? results?.capex?.total ?? 0;
 
         const npvStr = npv >= 1e6 ? (npv/1e6).toFixed(2) + ' مليون' : (npv/1e3).toFixed(0) + ' ألف';
         if (decision === 'GO' && npv > 0) {

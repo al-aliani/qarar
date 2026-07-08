@@ -89,12 +89,23 @@ export class MonteCarloAnalysis {
     }
 
     displayResults(sim) {
-        const { successProbability, avgNPV } = sim.stats;
-
         // Update KPIs
         const probEl = this.container.querySelector('#probSuccess');
         const avgEl = this.container.querySelector('#avgNPV');
         const riskEl = this.container.querySelector('#riskRating');
+
+        // Guard: if every iteration failed (invalid/empty state), the engine returns
+        // ok:false with zeroed stats. Show an honest "insufficient data" state instead
+        // of rendering a fake 0% success / high-risk verdict to the user.
+        if (sim && sim.ok === false) {
+            probEl.textContent = '—';
+            probEl.style.color = 'var(--c-muted, #888)';
+            avgEl.textContent = '—';
+            riskEl.textContent = 'تعذّرت المحاكاة — بيانات غير كافية';
+            return;
+        }
+
+        const { successProbability, avgNPV } = sim.stats;
 
         probEl.textContent = (successProbability * 100).toFixed(1) + '%';
         probEl.style.color = successProbability > 0.7 ? 'var(--c-success)' : (successProbability > 0.4 ? 'var(--c-warning)' : 'var(--c-danger)');
@@ -130,10 +141,11 @@ export class MonteCarloAnalysis {
             buckets[bucketIndex]++;
         });
 
-        // Generate labels (bucket centers)
+        // Generate labels (bucket centers) — «ألف» عربية بدل 'k' الإنجليزية في واجهة عربية
+        const arNum = new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 0 });
         for (let i = 0; i < bucketCount; i++) {
             const center = min + (i * width) + (width / 2);
-            labels[i] = (center / 1000).toFixed(0) + 'k';
+            labels[i] = arNum.format(Math.round(center / 1000)) + ' ألف';
         }
 
         // Destroy old chart if exists

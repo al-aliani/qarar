@@ -1,6 +1,6 @@
-﻿import { getLabel } from '../core/labels.js';
+import { getLabel } from '../core/labels.js';
 import { getLabelSDB, getAuditorTooltip, getFieldHint } from '../core/regulatoryLabels.js';
-import { getPhaseForStep, getStepHelp } from '../core/wizardSteps.js';
+import { getPhaseForStep, getStepHelp, MAJOR_PHASES, getMajorPhaseForStep } from '../core/wizardSteps.js';
 import { EXPERT_FAQ } from '../config.js';
 import { DynamicTable } from './DynamicTable.js';
 import { DataService } from '../services/DataService.js';
@@ -13,6 +13,9 @@ import { toast } from '../utils/toast.js';
 import { validateAssumptions, validateFinancing } from '../utils/validation.js';
 import { GULF_CURRENCIES, CURRENCY_LABELS } from '../utils/formatters.js';
 import { CITY_STATS } from '../data/SaudiCityStats.js';
+import { getFieldOptionSpec } from '../core/fieldOptions.js';
+import { getFieldHelp } from '../core/fieldHelpTexts.js';
+import { fieldHelp } from './components/FieldHelp.js';
 
 /** Smart Fill handlers keyed by TABLE_SCHEMAS.*.smartFill.dataKey. Add new tables here. */
 const SMART_FILL_HANDLERS = {
@@ -43,6 +46,22 @@ const SMART_FILL_HANDLERS = {
     }
 };
 
+// الحقول السردية الطويلة — تُرسم textarea لا سطر إدخال ضيق واحد
+const LONG_TEXT_KEYS = ['identityStatement', 'valueProposition', 'problem', 'solution', 'insight', 'insightText', 'whyUs', 'marketSize', 'competitiveAdvantage', 'locationFactors', 'alternativesComparison', 'finalChoiceReason'];
+
+// حقول خطوة معلومات المشروع الأساسية — الباقي يُطوى تحت «حقول متقدمة» لتخفيف النموذج
+const PROJECT_INFO_BASIC_KEYS = ['name', 'description', 'city', 'region', 'district', 'concept', 'studyType', 'studyRecipientType', 'businessModel', 'franchiseDetails', 'areaSize', 'ownershipType', 'targetCapital', 'selfFundingAmount', 'targetSegment', 'timeline'];
+
+// هدف حفظ اقتراح العصا السحرية: data-section/data-path الصريحان يسبقان
+// خطوة/مفتاح العرض الحاليين — المفتاح قد يكون مساراً متداخلاً داخل قسم آخر
+export function getSuggestionUpdateTarget(stepId, key, textarea) {
+    const ds = textarea?.dataset || {};
+    return {
+        section: ds.section || stepId,
+        path: ds.path || key
+    };
+}
+
 export class Wizard {
     constructor(containerId, store, tableSchemas, options = {}) {
         this.container = document.getElementById(containerId);
@@ -62,8 +81,13 @@ export class Wizard {
 
         // Progress bar HTML + Gamification
         const isQuickMode = localStorage.getItem('study_mode_preference') === 'quick';
-        const totalSteps = this.steps.length;
-        const progressPercent = totalSteps > 0 ? ((stepIndex + 1) / totalSteps) * 100 : 0;
+        const activeSteps = isQuickMode ? this.steps.filter(s => !s.isAdvancedStep) : this.steps;
+        const totalSteps = activeSteps.length;
+        
+        let relativeStepIndex = activeSteps.findIndex(s => s.id === stepId);
+        if (relativeStepIndex === -1) relativeStepIndex = 0; // Fallback
+        
+        const progressPercent = totalSteps > 0 ? ((relativeStepIndex + 1) / totalSteps) * 100 : 0;
         
         let expectedMinutes;
         if (isQuickMode) {
@@ -74,58 +98,88 @@ export class Wizard {
              expectedMinutes = Math.max(5, Math.round(30 * (1 - progressPercent/100)));
         }
 
-        const progressHTML = totalSteps > 0 ? `
-            <div class="progress-info flex justify-between items-end mb-1" role="status" aria-live="polite">
-                <span class="text-sm font-medium text-white">خطوة ${stepIndex + 1} من ${totalSteps}</span>
-                <span class="text-gold font-bold text-lg">${Math.round(progressPercent)}%</span>
-            </div>
-            <div class="progress-bar-container relative h-3 bg-gray-700 rounded-full mb-2 overflow-hidden shadow-inner">
-                <div class="progress-bar-fill h-full bg-gradient-to-l from-yellow-500 to-yellow-700 transition-all duration-700 ease-out relative" style="width: ${progressPercent}%">
-                    <div class="absolute inset-0 bg-white/20 animate-pulse-slow"></div>
+        const { phase: currentMajorPhase, index: currentMajorIndex } = getMajorPhaseForStep(relativeStepIndex);
+        
+        const phasesStepperHTML = MAJOR_PHASES.map((p, idx) => {
+            const isActive = idx === currentMajorIndex;
+            const isCompleted = idx < currentMajorIndex;
+            return `
+                <div class="major-phase-step ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}" style="flex: 1; text-align: center; border-bottom: 3px solid ${isActive ? 'var(--color-primary)' : isCompleted ? 'var(--color-success)' : 'var(--color-border)'}; padding-bottom: 0.5rem; color: ${isActive ? 'var(--color-primary)' : isCompleted ? 'var(--color-success)' : 'var(--color-muted)'}; font-weight: ${isActive ? 'bold' : 'normal'};">
+                    <span class="phase-number" style="display:inline-block; width: 24px; height: 24px; border-radius: 50%; background: ${isActive ? 'var(--color-primary)' : isCompleted ? 'var(--color-success)' : 'var(--color-surface)'}; color: ${isActive || isCompleted ? 'white' : 'inherit'}; line-height: 24px; font-size: 0.8rem; margin-left: 0.5rem;">${isCompleted ? '✓' : idx + 1}</span>
+                    ${p.label}
                 </div>
+            `;
+        }).join('');
+
+        const progressHTML = totalSteps > 0 ? `
+            <div class="wizard-major-phases" style="display: flex; justify-content: space-between; margin-bottom: 2rem; gap: 1rem;">
+                ${phasesStepperHTML}
             </div>
-            <div class="flex justify-between items-center text-xs text-muted mb-4">
-                <span class="flex items-center gap-1">⏱️ باقي حوالي <span class="text-white font-mono">${expectedMinutes}</span> دقيقة</span>
-                ${progressPercent > 50 ? '<span class="text-green-400 animate-bounce-slight">🔥 أداء مذهل! اقتربت من النهاية</span>' : 
-                  progressPercent > 20 ? '<span class="text-blue-400">💪 تقدم ممتاز!</span>' : 
-                  '<span class="text-gold">🚀 بداية موفقة!</span>'}
+            <div class="wizard-progress" role="status" aria-live="polite">
+                <div class="progress-info">
+                    <span class="progress-step-label">الخطوة <span class="num">${relativeStepIndex + 1}</span> من <span class="num">${totalSteps}</span></span>
+                    <span class="progress-percent">${Math.round(progressPercent)}٪</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
+                </div>
+                <p class="progress-eta">الوقت المتبقي تقريباً <span class="num">${expectedMinutes}</span> دقائق</p>
             </div>
         ` : '';
 
         const phaseLabel = getPhaseForStep(stepIndex);
         let html = `
             ${progressHTML}
-            <p class="text-xs text-gold font-medium mt-2 mb-1" aria-label="المرحلة التعليمية">${phaseLabel}</p>
+            <p class="step-phase" aria-label="المرحلة التعليمية">${phaseLabel}</p>
             <div class="step-content" key="${stepId}">
-                <h2 class="text-xl font-bold animate-entry" style="margin-bottom: var(--s-3)">${metadata.label}</h2>
+                <h2 class="animate-entry" style="margin-bottom: var(--s-3)">${metadata.label}</h2>
                 ${(function () {
                 const help = getStepHelp(stepIndex);
+                const hasFaq = EXPERT_FAQ && EXPERT_FAQ.length > 0;
                 if (!help || !help.why) return '';
-                return `<div class="step-help-box mb-4 p-3 rounded-lg border border-white/10 bg-white/5" role="region" aria-label="لماذا نطلب هذا وكيف تملأه">
-                        <p class="text-sm text-muted mb-1"><strong class="text-gold">لماذا نطلب هذا:</strong> ${help.why}</p>
-                        <p class="text-sm text-muted mb-0"><strong class="text-gold">كيف تملأه:</strong> ${help.how}</p>
-                    </div>`;
-            })()}
-                <details class="expert-faq-details mb-4 rounded-lg border border-white/10 bg-white/5" style="font-size: 0.9rem;">
-                    <summary class="p-3 cursor-pointer font-medium text-gold hover:bg-white/5 rounded-lg" style="list-style: none;">💡 نصائح الخبراء — أسئلة شائعة</summary>
-                    <div class="px-3 pb-3 pt-1 space-y-3">
-                        ${(EXPERT_FAQ || []).map(f => `
-                            <div class="border-r-2 border-gold/50 pr-2">
-                                <p class="font-medium text-sm mb-1">${f.q}</p>
-                                <p class="text-sm text-muted mb-0">${f.a}</p>
-                            </div>
-                        `).join('')}
+                
+                return `
+                    <div class="d-flex justify-end mb-4" style="margin-top: -1rem;">
+                        <button type="button" class="btn btn--secondary btn-sm" onclick="document.getElementById('stepHelpModal').showModal()" aria-label="مساعدة وتعليمات هذه الخطوة">
+                            كيف أملأ هذه الخطوة؟ 💡
+                        </button>
                     </div>
-                </details>
-                ${stepId === 'assumptions' ? `<div class="alert alert-info mb-4" style="font-size: 0.9rem;"><strong>ملاحظة:</strong> يمكن الاستناد إلى معدل التضخم ومعدل الخصم الصادر عن البنك المركزي السعودي (ساما) عند تحديد الافتراضات. <a href="https://www.sama.gov.sa" target="_blank" rel="noopener">ساما</a></div><div class="alert alert-warning mb-4" style="font-size: 0.85rem;"><strong>رأس المال العامل حاسم:</strong> إهماله سبب رئيسي لأزمات السيولة. تأكد من تمويل 3–6 أشهر تشغيل قبل الاعتماد على الإيرادات.</div><div class="alert alert--info mb-4" style="font-size: 0.85rem;"><strong>مبرر المبيعات:</strong> وضّح لماذا المبيعات ثابتة أو متزايدة أو متناقصة — مطلوب لتبرير التوقعات.</div><div class="alert alert--info mb-4" style="font-size: 0.85rem;"><strong>الأوفر هيد:</strong> احسب احتياطياً للتكاليف غير المحسوبة (قطع كهرباء، غياب عامل، طوارئ) — من أكثر ما يزعج المشاريع.</div>` : ''}
-                ${stepId === 'technical' ? `<div class="alert alert--info mb-4" style="font-size: 0.85rem;"><strong>معيار التصنيف:</strong> الآلات والمعدات = عناصر <em>أساسية</em> لتنفيذ المشروع (مثل ماكينة القهوة للمقهى). الأثاث = عناصر <em>مساعدة</em> (طاولات، كراسي). نفس العنصر قد يُصنّف مختلفاً حسب نوع المشروع.</div><div class="alert alert-info mb-4" style="font-size: 0.85rem;"><strong>وصف العملية الإنتاجية:</strong> وصف خطوات الإنتاج من المدخلات للمخرجات يساعد في تحديد الاحتياجات (عمالة، معدات، مواد) بدقة.</div>` : ''}
-                ${stepId === 'marketing' ? `<div class="alert alert-info mb-4" style="font-size: 0.85rem;"><strong>توازن العرض والطلب:</strong> الطلب &gt; العرض = فرصة؛ العرض &gt; الطلب = خطر. ادرس اتجاه الطلب خلال 5 سنوات على الأقل — الاتجاه الصاعد إيجابي. <strong>المصدر المقترح لاتجاهات الطلب:</strong> GASTAT، دراسات قطاعية، الغرف. <strong>أساليب التنبؤ:</strong> إذا لديك بيانات تاريخية (5+ سنوات)، يمكن استخدام: نمو بسيط، نمو مركب، متوسط متحرك — التنبؤ يعتمد على بيانات الماضي.</div>` : ''}
-                ${stepId === 'projectInfo' ? `<div class="alert alert-info mb-4" style="font-size: 0.85rem;"><strong>خطوات جمع المعلومات:</strong> أسبوع بحث أونلاين (كلمات مفتاحية، جروبات، إعلانات، أوليكس، بيانات حكومية) — ثم زيارة منافسين، جهات حكومية (تراخيص)، جهات تمويل. <strong>البحث أونلاين يصفي 50% من الأفكار</strong> — الباقي يحتاج نزول ميداني. "جمع المعلومات هو أكبر جزء في دراسة الجدوى".</div>` : ''}
-                ${stepId === 'revenue' ? `<div class="alert alert--info mb-4" style="font-size: 0.85rem; border-right: 4px solid var(--c-p-500);"><strong>أفضل الممارسات المحلية:</strong> جمع المعلومات الدقيقة هو أساس دراسة جدوى موثوقة.</div><div class="alert alert-warning mb-4" style="font-size: 0.85rem;"><strong>تجنّب وهم المبيعات:</strong> تقدير المبيعات يجب أن يُبنى على دراسة السوق والمنافسين — «كم ستبيع فعلياً؟» يُجاب بناءً على بيانات، وليس تقديراً وهمياً.</div><div class="alert alert--info mb-4" style="font-size: 0.85rem;"><strong>مخرَج الدراسة السوقية:</strong> جدول (صنف، عدد متوقع بيعه، سعر) — الخدمة = الصنف، العملاء/شهر × 12 = العدد السنوي، متوسط السعر = السعر. هذا الجدول يغذّي الدراسة الفنية.</div>` : ''}
+                    <dialog id="stepHelpModal" class="modal" aria-labelledby="helpModalTitle">
+                        <div class="modal-content" style="max-width: 600px;">
+                            <button type="button" class="modal-close" onclick="this.closest('dialog').close()" aria-label="إغلاق">&times;</button>
+                            <h3 id="helpModalTitle" class="text-gold mb-3">دليل الخطوة: ${metadata.label}</h3>
+                            <div class="help-section mb-4" style="background: var(--color-surface-hover); padding: 1.5rem; border-radius: var(--radius); border-right: 4px solid var(--color-primary);">
+                                <h4 class="mb-2">🤔 لماذا نطلب هذا؟</h4>
+                                <p class="mb-4 text-muted">${help.why}</p>
+                                <h4 class="mb-2">📝 كيف تملأه؟</h4>
+                                <p class="mb-0 text-muted">${help.how}</p>
+                            </div>
+                            ${hasFaq ? `
+                                <h4 class="mb-3">نصائح الخبراء والأسئلة الشائعة</h4>
+                                <div class="faq-list">
+                                    ${EXPERT_FAQ.map(f => `
+                                        <div class="faq-item mb-3 p-3" style="border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface);">
+                                            <p class="faq-q font-bold mb-2" style="color: var(--color-text);">${f.q}</p>
+                                            <p class="faq-a text-muted mb-0">${f.a}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </dialog>
+                `;
+            })()}
+                ${stepId === 'assumptions' ? `<div class="alert alert--info mb-4"><strong>ملاحظة:</strong> يمكن الاستناد إلى معدل التضخم ومعدل الخصم الصادر عن البنك المركزي السعودي (ساما) عند تحديد الافتراضات. <a href="https://www.sama.gov.sa" target="_blank" rel="noopener">ساما</a></div><div class="alert alert--warning mb-4"><strong>رأس المال العامل حاسم:</strong> إهماله سبب رئيسي لأزمات السيولة. تأكد من تمويل 3–6 أشهر تشغيل قبل الاعتماد على الإيرادات.</div><div class="alert alert--info mb-4"><strong>مبرر المبيعات:</strong> وضّح لماذا المبيعات ثابتة أو متزايدة أو متناقصة — مطلوب لتبرير التوقعات.</div><div class="alert alert--info mb-4"><strong>الأوفر هيد:</strong> احسب احتياطياً للتكاليف غير المحسوبة (قطع كهرباء، غياب عامل، طوارئ) — من أكثر ما يزعج المشاريع.</div>` : ''}
+                ${stepId === 'technical' ? `<div class="alert alert--info mb-4"><strong>معيار التصنيف:</strong> الآلات والمعدات = عناصر <em>أساسية</em> لتنفيذ المشروع (مثل ماكينة القهوة للمقهى). الأثاث = عناصر <em>مساعدة</em> (طاولات، كراسي). نفس العنصر قد يُصنّف مختلفاً حسب نوع المشروع.</div><div class="alert alert--info mb-4"><strong>وصف العملية الإنتاجية:</strong> وصف خطوات الإنتاج من المدخلات للمخرجات يساعد في تحديد الاحتياجات (عمالة، معدات، مواد) بدقة.</div>` : ''}
+                ${stepId === 'marketing' ? `<div class="alert alert--info mb-4"><strong>توازن العرض والطلب:</strong> الطلب &gt; العرض = فرصة؛ العرض &gt; الطلب = خطر. ادرس اتجاه الطلب خلال 5 سنوات على الأقل — الاتجاه الصاعد إيجابي. <strong>المصدر المقترح لاتجاهات الطلب:</strong> GASTAT، دراسات قطاعية، الغرف. <strong>أساليب التنبؤ:</strong> إذا لديك بيانات تاريخية (5+ سنوات)، يمكن استخدام: نمو بسيط، نمو مركب، متوسط متحرك — التنبؤ يعتمد على بيانات الماضي.</div>` : ''}
+                ${stepId === 'projectInfo' ? `<div class="alert alert--info mb-4"><strong>خطوات جمع المعلومات:</strong> أسبوع بحث أونلاين (كلمات مفتاحية، جروبات، إعلانات، أوليكس، بيانات حكومية) — ثم زيارة منافسين، جهات حكومية (تراخيص)، جهات تمويل. <strong>البحث أونلاين يصفي 50% من الأفكار</strong> — الباقي يحتاج نزول ميداني. "جمع المعلومات هو أكبر جزء في دراسة الجدوى".</div>` : ''}
+                ${stepId === 'revenue' ? `<div class="alert alert--info mb-4"><strong>أفضل الممارسات المحلية:</strong> جمع المعلومات الدقيقة هو أساس دراسة جدوى موثوقة.</div><div class="alert alert--warning mb-4"><strong>تجنّب وهم المبيعات:</strong> تقدير المبيعات يجب أن يُبنى على دراسة السوق والمنافسين — «كم ستبيع فعلياً؟» يُجاب بناءً على بيانات، وليس تقديراً وهمياً.</div><div class="alert alert--info mb-4"><strong>مخرَج الدراسة السوقية:</strong> جدول (صنف، عدد متوقع بيعه، سعر) — الخدمة = الصنف، العملاء/شهر × 12 = العدد السنوي، متوسط السعر = السعر. هذا الجدول يغذّي الدراسة الفنية.</div>` : ''}
         `;
 
         // ⚠️ FIX: Always get fresh data from store to ensure latest changes are reflected
         // Force a small delay to ensure any pending saves are completed
+        // بعض الخطوات معرّفها فريد للتنقل لكن بياناتها في قسم آخر (projectDetails → projectInfo)
+        stepId = metadata.dataSection || stepId;
         const studyData = this.store.get();
         // Ensure state is initialized
         if (!studyData || !studyData[stepId]) {
@@ -161,29 +215,52 @@ export class Wizard {
         const isArraySection = Array.isArray(sectionData);
 
         // Tables to render for this step
-        const tablesToRender = metadata.tables || [];
+        let tablesToRender = metadata.tables || [];
+        if (isQuickMode && stepId === 'projectInfo') {
+            // إخفاء الجداول المعقدة من الخطوة الأولى في الوضع السريع
+            tablesToRender = tablesToRender.filter(t => !['glossary', 'dataGatheringChecklist'].includes(t));
+        }
 
         // Render regular fields first (if section is object, not array)
         if (!isArraySection && sectionData && typeof sectionData === 'object') {
-            html += `<div class="card card-hover">`;
-            Object.entries(sectionData).forEach(([key, val]) => {
+            const renderEntry = ([key, val]) => {
                 // Skip array fields and complex objects - they'll be rendered as tables
-                if (Array.isArray(val)) return;
+                if (Array.isArray(val)) return '';
                 if (typeof val === 'object' && val !== null) {
                     // Nested object (like timeline, swot)
-                    html += `<h4 class="mt-4 text-gold font-medium" style="margin-bottom: 8px; border-bottom: 1px solid var(--c-border); padding-bottom: 8px;">${getLabel(key)}</h4>`;
+                    // التنسيق يأتي من .step-content .card h4 في wizard-forms.css — لا inline styles
+                    let part = `<h4>${getLabel(key)}</h4>`;
                     Object.entries(val).forEach(([subKey, subVal]) => {
                         // null قيمة مشروعة لحقل رقمي اختياري (dsoDays مثلاً) —
                         // typeof null === 'object' كان يتخطاها فلا تظهر إطلاقاً
                         if (!Array.isArray(subVal) && (subVal === null || typeof subVal !== 'object')) {
-                            html += this.renderField(stepId, `${key}.${subKey}`, subKey, subVal);
+                            part += this.renderField(stepId, `${key}.${subKey}`, subKey, subVal);
                         }
                     });
-                } else {
-                    html += this.renderField(stepId, key, key, val);
+                    return part;
                 }
-            });
-            html += `</div>`;
+                return this.renderField(stepId, key, key, val);
+            };
+
+            if (stepId === 'projectInfo') {
+                // ~49 حقلاً دفعة واحدة تُرهق المستخدم — الأساسي يظهر مباشرة والباقي مطوي
+                const entries = Object.entries(sectionData);
+                const basicHtml = entries.filter(([k]) => PROJECT_INFO_BASIC_KEYS.includes(k)).map(renderEntry).join('');
+                const advancedHtml = entries.filter(([k]) => !PROJECT_INFO_BASIC_KEYS.includes(k)).map(renderEntry).join('');
+                html += `<div class="card form-grid">${basicHtml}</div>`;
+                if (advancedHtml.trim()) {
+                    html += `
+                        <details class="card advanced-fields mt-4">
+                            <summary style="cursor: pointer; font-weight: 600; padding: 0.5rem 0;">حقول متقدمة (اختيارية) — يمكنك العودة لها لاحقاً</summary>
+                            <div class="form-grid mt-3">${advancedHtml}</div>
+                        </details>
+                    `;
+                }
+            } else {
+                html += `<div class="card form-grid">`;
+                Object.entries(sectionData).forEach(entry => { html += renderEntry(entry); });
+                html += `</div>`;
+            }
         }
 
         // Add table containers
@@ -197,24 +274,23 @@ export class Wizard {
         const showNav = this.steps.length > 1;
 
         if (showNav) {
+            // أسهم SVG بدل الرموز النصية — الاتجاهات صحيحة في RTL (السابق يميناً، التالي يساراً)
             html += `
                 <div class="wizard-nav">
                     <button type="button" class="btn btn--secondary" id="btnPrevStep" ${isFirstStep ? 'disabled' : ''}>
-                        <span>→</span>
+                        <svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
                         <span>السابق</span>
                     </button>
                     <div class="nav-actions">
-                        <button type="button" class="btn btn--success btn-sm" id="btnExportSection" title="تصدير هذا القسم">
-                            📊 تصدير إكسل
-                        </button>
+                        <button type="button" class="btn btn--ghost btn-sm" id="btnExportSection" title="تصدير هذا القسم">تصدير إكسل</button>
                         <div class="nav-indicator">
-                            <span class="text-muted text-xs">الخطوة التالية</span>
-                            <span class="font-medium">${isLastStep ? 'إنهاء الدراسة' : this.steps[stepIndex + 1]?.label}</span>
+                            <span class="nav-indicator__caption">الخطوة التالية</span>
+                            <span class="nav-indicator__label">${isLastStep ? 'إنهاء الدراسة' : this.steps[stepIndex + 1]?.label}</span>
                         </div>
                     </div>
                     <button type="button" class="btn btn--primary" id="btnNextStep" ${isLastStep ? 'disabled' : ''}>
                         <span>التالي</span>
-                        <span>←</span>
+                        <svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
                     </button>
                 </div>
             `;
@@ -275,18 +351,25 @@ export class Wizard {
                 btn.setAttribute('title', 'جاري التوليد...');
                 const state = this.store.get();
                 const currentValue = textarea.value || '';
+                // حماية من فقدان النص: إن كان الحقل يحوي كتابة فعلية للمستخدم، نؤكّد قبل الاستبدال.
+                if (currentValue.trim().length > 0 &&
+                    !confirm('سيستبدل الاقتراح النصَّ الحالي في هذا الحقل. هل تريد المتابعة؟')) {
+                    return;
+                }
+                const previousValue = currentValue; // للتراجع عند الفشل
                 try {
                     await generateSuggestionStreaming(key, currentValue, state, {
                         onChunk: (chunk) => { textarea.value = chunk; },
                         onDone: () => {
-                            const [section, ...pathParts] = key.split('.');
-                            this.store.updatePath(section, pathParts.join('.'), textarea.value);
+                            const target = getSuggestionUpdateTarget(stepId, key, textarea);
+                            this.store.updatePath(target.section, target.path, textarea.value);
                             btn.disabled = false;
                             btn.removeAttribute('aria-busy');
                             btn.setAttribute('title', originalTitle || 'اقتراح أو إعادة صياغة');
                             toast.success('تم اقتراح النص. يمكنك التعديل كما تريد.');
                         },
                         onError: (msg) => {
+                            textarea.value = previousValue; // استعادة نص المستخدم عند الفشل
                             btn.disabled = false;
                             btn.removeAttribute('aria-busy');
                             btn.setAttribute('title', originalTitle || 'اقتراح أو إعادة صياغة');
@@ -339,7 +422,7 @@ export class Wizard {
                 const sectionId = currentStep?.id || 'section';
                 const sectionLabel = currentStep?.label || 'القسم';
 
-                e.target.textContent = '⏳ جاري...';
+                e.target.textContent = 'جاري التصدير…';
                 e.target.disabled = true;
 
                 try {
@@ -348,23 +431,62 @@ export class Wizard {
                         sectionId,
                         sectionLabel
                     );
-                    e.target.textContent = '✅ تم!';
+                    e.target.textContent = 'تم التصدير';
                     if (outName) toast.success(`تم تصدير Excel: ${outName}`);
                     setTimeout(() => {
-                        e.target.textContent = '📊 تصدير إكسل';
+                        e.target.textContent = 'تصدير إكسل';
                         e.target.disabled = false;
                     }, 1500);
                 } catch (err) {
                     console.error('Export error:', err);
-                    e.target.textContent = '❌ خطأ';
+                    e.target.textContent = 'تعذّر التصدير';
                     toast.error('فشل تصدير القسم. تحقق من الاتصال ومكتبة Excel.');
                     setTimeout(() => {
-                        e.target.textContent = '📊 تصدير إكسل';
+                        e.target.textContent = 'تصدير إكسل';
                         e.target.disabled = false;
                     }, 1500);
                 }
             });
         }
+    }
+
+    appendNav(stepIndex) {
+        this.currentStepIndex = stepIndex;
+        const isFirstStep = stepIndex === 0;
+        const isLastStep = stepIndex === this.steps.length - 1;
+        const showNav = this.steps.length > 1;
+
+        if (!showNav) return;
+
+        // Check if navbar already exists in container
+        let nav = this.container.querySelector('.wizard-nav');
+        if (nav) {
+            nav.remove();
+        }
+
+        const nextStepLabel = isLastStep ? 'إنهاء الدراسة' : this.steps[stepIndex + 1]?.label;
+        const navHtml = `
+            <div class="wizard-nav">
+                <button type="button" class="btn btn--secondary" id="btnPrevStep" ${isFirstStep ? 'disabled' : ''}>
+                    <svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+                    <span>السابق</span>
+                </button>
+                <div class="nav-actions">
+                    <button type="button" class="btn btn--ghost btn-sm" id="btnExportSection" title="تصدير هذا القسم">تصدير إكسل</button>
+                    <div class="nav-indicator">
+                        <span class="nav-indicator__caption">الخطوة التالية</span>
+                        <span class="nav-indicator__label">${nextStepLabel}</span>
+                    </div>
+                </div>
+                <button type="button" class="btn btn--primary" id="btnNextStep" ${isLastStep ? 'disabled' : ''}>
+                    <span>التالي</span>
+                    <svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+                </button>
+            </div>
+        `;
+
+        this.container.insertAdjacentHTML('beforeend', navHtml);
+        this.bindNavigationEvents();
     }
 
     renderTable(stepId, tableKey, studyData) {
@@ -388,7 +510,7 @@ export class Wizard {
 
                 document.getElementById(btnId).addEventListener('click', (e) => {
                     e.target.disabled = true;
-                    e.target.textContent = 'جاري البحث... ⏳';
+                    e.target.textContent = 'جاري البحث…';
                     const state = this.store.get();
                     const newData = handler(state);
                     this.store.updatePath(stepId, this.getRelativePath(tableKey), newData);
@@ -397,7 +519,7 @@ export class Wizard {
                         this.tables[tableKey].render();
                     }
                     e.target.disabled = false;
-                    e.target.textContent = '✨ تم الجلب بنجاح';
+                    e.target.textContent = 'تم الجلب بنجاح';
                     setTimeout(() => { e.target.textContent = smart.label; }, 2000);
                 });
             }
@@ -565,12 +687,17 @@ export class Wizard {
         if (value === null && /days|months|rate|amount|years|count/i.test(labelKey)) {
             inputType = 'number';
         }
+        // شرح مبسّط (؟) للحقول غير البديهية — يُطابق كامل المفتاح أو جزءه الأخير
+        const helpEntry = getFieldHelp(fullKey) || getFieldHelp(labelKey);
+        const helpHtml = helpEntry ? fieldHelp(helpEntry.help, helpEntry.example) : '';
+
         // طريقة القيمة النهائية: قائمة اختيار بدل نص حر
         if (fullKey === 'terminalValue.method') {
             const arabicLbl = getLabelSDB(labelKey, getLabel(labelKey));
+            const tvEntry = getFieldHelp('terminalValue');
             return `
                 <div class="form-group">
-                    <label for="field-${fullKey}">${arabicLbl}</label>
+                    <label for="field-${fullKey}">${arabicLbl}${tvEntry ? fieldHelp(tvEntry.help, tvEntry.example) : ''}</label>
                     <select id="field-${fullKey}" data-key="${fullKey}" class="input" style="width:100%; max-width:320px;">
                         <option value="gordon" ${value !== 'none' ? 'selected' : ''}>استرشادية (نمو Gordon) — القرار يبقى على NPV المتحفظ</option>
                         <option value="none" ${value === 'none' ? 'selected' : ''}>بدون قيمة نهائية</option>
@@ -583,18 +710,21 @@ export class Wizard {
         const checked = value === true ? 'checked' : '';
         const arabicLabel = getLabelSDB(labelKey, getLabel(labelKey));
         const auditorHint = getAuditorTooltip(labelKey);
-        const tooltipHtml = auditorHint ? `<span class="tooltip-auditor" title="هذا ما يبحث عنه المدقق المالي: ${auditorHint.replace(/"/g, '&quot;')}" aria-label="تلميح للمدقق المالي">ℹ️</span>` : '';
+        // أيقونة (؟) تُلحق بكل مواضع رسم الملصق عبر tooltipHtml نفسه — بلا تعديل باقي الفروع
+        const tooltipHtml = (auditorHint ? `<span class="tooltip-auditor" title="هذا ما يبحث عنه المدقق المالي: ${auditorHint.replace(/"/g, '&quot;')}" aria-label="تلميح للمدقق المالي"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11.5 12H12v4h.5"/></svg></span>` : '') + helpHtml;
         // مثال/نطاق معتاد مرئي دائماً — يقلّل تردّد المستخدم أمام حقل مالي فارغ
         const fieldHint = getFieldHint(fullKey);
-        const hintHtml = fieldHint?.hint ? `<p class="field-hint text-xs text-muted mt-1">💡 ${fieldHint.hint}</p>` : '';
+        const hintHtml = fieldHint?.hint ? `<p class="field-hint">${fieldHint.hint}</p>` : '';
 
+        // حقول مُدارة كقوائم اختيار / أزرار نعم-لا (تقليل الكتابة اليدوية)
+        const spec = getFieldOptionSpec(fullKey, labelKey);
+        if (spec) {
+            return this.renderControlled(fullKey, arabicLabel, value, spec, { tooltipHtml, hintHtml });
+        }
+
+        // كل الأسئلة المنطقية (booleans) تُعرض كأزرار نعم/لا
         if (inputType === 'checkbox') {
-            return `
-                <div class="form-group d-flex items-center gap-2">
-                    <input type="checkbox" id="field-${fullKey}" data-key="${fullKey}" ${checked} style="width:auto; accent-color: var(--c-p-500);">
-                    <label for="field-${fullKey}" style="margin:0; cursor:pointer;">${arabicLabel}</label>${tooltipHtml}
-                </div>
-            `;
+            return this.renderControlled(fullKey, arabicLabel, value, { control: 'yesno' }, { tooltipHtml, hintHtml });
         }
 
         // عملات خليجية (المرحلة 4)
@@ -603,7 +733,7 @@ export class Wizard {
             return `
                 <div class="form-group">
                     <label for="field-${fullKey}">${arabicLabel}${tooltipHtml}</label>
-                    <select id="field-${fullKey}" data-key="${fullKey}" style="width:100%; background:var(--c-bg-app); border:1px solid var(--c-border); border-radius:var(--r-sm); padding:8px; color:var(--c-text-main);">${opts}</select>
+                    <select id="field-${fullKey}" data-key="${fullKey}" class="input">${opts}</select>
                 </div>
             `;
         }
@@ -619,24 +749,25 @@ export class Wizard {
                 <div class="form-group">
                     <label for="field-${fullKey}">${arabicLabel}${tooltipHtml}</label>
                     <div class="relative">
-                        <select id="field-${fullKey}" data-key="${fullKey}" class="input" style="width:100%;">
+                        <select id="field-${fullKey}" data-key="${fullKey}" class="input">
                             ${cityOpts}
                         </select>
-                        <p class="text-xs text-muted mt-1">💡 اختيار المدينة يساعدنا في تقدير **الإيجار والرواتب** بدقة أكبر.</p>
+                        <p class="field-hint">اختيار المدينة يساعدنا في تقدير <strong>الإيجار والرواتب</strong> بدقة أكبر.</p>
                     </div>
                 </div>
             `;
         }
 
         // Handle longer text fields — مع زر «عصا سحرية» لاقتراح AI
-        if (labelKey.includes('description') || labelKey.includes('notes') || labelKey.includes('trends') ||
+        if (LONG_TEXT_KEYS.includes(labelKey) ||
+            labelKey.includes('description') || labelKey.includes('notes') || labelKey.includes('trends') ||
             labelKey.includes('strengths') || labelKey.includes('weaknesses') || labelKey.includes('opportunities') || labelKey.includes('threats')) {
             return `
                 <div class="form-group">
                     <label for="field-${fullKey}">${arabicLabel}${tooltipHtml}</label>
                     <div class="input-with-ai">
-                        <textarea id="field-${fullKey}" data-key="${fullKey}" data-section="${section}" rows="3" class="input input--textarea" style="width:100%; background:var(--c-bg-app); border:1px solid var(--c-border); border-radius:var(--r-sm); color:var(--c-text-main); padding:8px;">${displayValue}</textarea>
-                        <button type="button" class="btn-magic-wand" data-key="${fullKey}" title="اقتراح أو إعادة صياغة بالذكاء الاصطناعي" aria-label="اقتراح نص">✨</button>
+                        <textarea id="field-${fullKey}" data-key="${fullKey}" data-section="${section}" rows="3" class="input input--textarea" placeholder="اكتب أفكارك هنا، أو اضغط على زر 🪄 ليقوم الذكاء الاصطناعي باقتراح نص مناسب لمشروعك...">${displayValue}</textarea>
+                        <button type="button" class="btn-magic-wand" data-key="${fullKey}" title="اقتراح أو إعادة صياغة بالذكاء الاصطناعي" aria-label="اقتراح نص"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4V2m0 20v-2m7-7h-2M4 13H2m18.5-6.5L19 8M6 21l9-9"/><path d="m19 8-3-3-2 2 3 3 2-2z"/></svg></button>
                     </div>
                 </div>
             `;
@@ -651,7 +782,7 @@ export class Wizard {
                 <div class="form-group">
                     <label for="field-${fullKey}">${arabicLabel}${tooltipHtml}</label>
                     <div class="flex items-center gap-1">
-                        <input type="number" id="field-${fullKey}" data-key="${fullKey}" value="${pctDisplay}" step="any" min="0" max="100" style="max-width:120px;" ${phAttr}>
+                        <input type="number" id="field-${fullKey}" data-key="${fullKey}" value="${pctDisplay}" step="any" min="0" max="100" ${phAttr}>
                         <span class="text-muted" aria-hidden="true">٪</span>
                     </div>
                     ${hintHtml}
@@ -660,10 +791,97 @@ export class Wizard {
         }
 
         const phGeneric = (fieldHint?.placeholder && displayValue === '') ? `placeholder="${fieldHint.placeholder}"` : '';
+        // حقل التاريخ يُعرض باتجاه LTR داخل نموذج RTL
+        const dirAttr = inputType === 'date' ? 'dir="ltr" style="text-align:right"' : '';
         return `
             <div class="form-group">
                 <label for="field-${fullKey}">${arabicLabel}${tooltipHtml}</label>
-                <input type="${inputType}" id="field-${fullKey}" data-key="${fullKey}" value="${displayValue}" step="any" ${phGeneric}>
+                <input type="${inputType}" id="field-${fullKey}" data-key="${fullKey}" value="${displayValue}" step="any" ${dirAttr} ${phGeneric}>
+                ${hintHtml}
+            </div>
+        `;
+    }
+
+    /** يُرندر الحقول المُتحكّم بها (قوائم منسدلة، datalist، أزرار yes/no) مع دعم أزرار Quick Selects */
+    renderControlled(fullKey, labelHtml, value, spec, extras) {
+        const { tooltipHtml = '', hintHtml = '' } = extras || {};
+        const safeVal = value === null || value === undefined ? '' : value;
+
+        if (spec.control === 'yesno') {
+            const isYes = safeVal === true || String(safeVal).toLowerCase() === 'yes' || safeVal === 'true';
+            const isNo = safeVal === false || String(safeVal).toLowerCase() === 'no' || safeVal === 'false';
+            return `
+                <div class="form-group">
+                    <label>${labelHtml}${tooltipHtml}</label>
+                    <div class="yesno-group d-flex gap-2 mt-2">
+                        <label class="yesno-btn flex-1 ${isYes ? 'active' : ''}">
+                            <input type="radio" name="field-${fullKey}" data-key="${fullKey}" value="true" class="hidden-radio" ${isYes ? 'checked' : ''}>
+                            نعم
+                        </label>
+                        <label class="yesno-btn flex-1 ${isNo ? 'active' : ''}">
+                            <input type="radio" name="field-${fullKey}" data-key="${fullKey}" value="false" class="hidden-radio" ${isNo ? 'checked' : ''}>
+                            لا
+                        </label>
+                    </div>
+                    ${hintHtml}
+                </div>
+            `;
+        }
+
+        if (spec.control === 'select') {
+            const optsHtml = (spec.options || []).map(o => {
+                const isSelected = String(o.value) === String(safeVal) ? 'selected' : '';
+                return `<option value="${o.value}" ${isSelected}>${o.label}</option>`;
+            }).join('');
+            return `
+                <div class="form-group">
+                    <label for="field-${fullKey}">${labelHtml}${tooltipHtml}</label>
+                    <select id="field-${fullKey}" data-key="${fullKey}" class="input input--select">
+                        <option value="" disabled ${safeVal === '' ? 'selected' : ''}>-- اختر --</option>
+                        ${optsHtml}
+                    </select>
+                    ${hintHtml}
+                </div>
+            `;
+        }
+
+        if (spec.control === 'datalist') {
+            const listId = `dl-${fullKey}`;
+            const optsHtml = (spec.options || []).map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+            
+            // إضافة أزرار Quick Selects (Pills) لخيارات datalist المهمة لمساعدة المبتدئين
+            const isQuickMode = localStorage.getItem('study_mode_preference') === 'quick';
+            let pillsHtml = '';
+            if (isQuickMode && spec.options && spec.options.length <= 6) {
+                pillsHtml = `
+                    <div class="quick-select-pills d-flex flex-wrap gap-2 mt-2">
+                        ${spec.options.map(o => `
+                            <button type="button" class="btn btn--ghost btn-xs btn-pill" onclick="const i=document.getElementById('field-${fullKey}'); i.value='${o.value}'; i.dispatchEvent(new Event('change'));">
+                                ${o.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="form-group">
+                    <label for="field-${fullKey}">${labelHtml}${tooltipHtml}</label>
+                    <input type="text" id="field-${fullKey}" data-key="${fullKey}" value="${safeVal}" list="${listId}" class="input input--datalist" placeholder="اختر من القائمة أو اكتب بحرية...">
+                    <datalist id="${listId}">
+                        ${optsHtml}
+                    </datalist>
+                    ${pillsHtml}
+                    ${hintHtml}
+                </div>
+            `;
+        }
+
+        // Fallback
+        return `
+            <div class="form-group">
+                <label for="field-${fullKey}">${labelHtml}${tooltipHtml}</label>
+                <input type="text" id="field-${fullKey}" data-key="${fullKey}" value="${safeVal}" class="input">
                 ${hintHtml}
             </div>
         `;
@@ -671,7 +889,7 @@ export class Wizard {
 
     /** المفاتيح المخزّنة ككسر (0–1) وتُعرض كنسبة مئوية (0–100). */
     static isFractionPercentKey(keyPath) {
-        const PERCENT_FRACTION_KEYS = ['discountRate', 'taxRate', 'inflationRate', 'contingencyRate', 'gosiRate', 'foreignOwnershipRate', 'growthRate'];
+        const PERCENT_FRACTION_KEYS = ['discountRate', 'taxRate', 'inflationRate', 'contingencyRate', 'gosiRate', 'foreignOwnershipRate', 'growthRate', 'minIRR', 'minROI'];
         return PERCENT_FRACTION_KEYS.some(p => keyPath === p || keyPath.endsWith('.' + p));
     }
 
@@ -733,7 +951,7 @@ export class Wizard {
                 // Only show error if it's different from last one (prevent spam)
                 if (this.lastValidationError !== errorKey) {
                     this.lastValidationError = errorKey;
-                    toast.error('⚠️ يرجى إضافة مصدر إيرادات واحد على الأقل للمتابعة.');
+                    toast.error('يرجى إضافة مصدر إيرادات واحد على الأقل للمتابعة.');
                 }
                 return false;
             }
@@ -745,7 +963,7 @@ export class Wizard {
                 const errorKey = 'revenue_invalid_prices';
                 if (this.lastValidationError !== errorKey) {
                     this.lastValidationError = errorKey;
-                    toast.error('⚠️ يرجى التأكد من إدخال أسعار صحيحة لجميع الخدمات.');
+                    toast.error('يرجى التأكد من إدخال أسعار صحيحة لجميع الخدمات.');
                 }
                 return false;
             }
@@ -755,9 +973,11 @@ export class Wizard {
         if (step.id === 'projectInfo') {
             if (!data?.name || data?.name.trim() === '') {
                 const errorKey = 'projectInfo_no_name';
+                // إظهار الخطأ inline أسفل حقل الاسم + نقل التركيز إليه
+                this.showFieldError('name', 'اسم المشروع مطلوب للمتابعة.');
                 if (this.lastValidationError !== errorKey) {
                     this.lastValidationError = errorKey;
-                    toast.error('⚠️ يرجى إدخال اسم المشروع.', { duration: 3000 });
+                    toast.error('يرجى إدخال اسم المشروع.', { duration: 3000 });
                     this.validationDebounce = setTimeout(() => { this.lastValidationError = null; }, 2000);
                 }
                 return false;
@@ -770,7 +990,7 @@ export class Wizard {
             if (!a.valid && a.errors?.length > 0) {
                 if (this.lastValidationError !== 'assumptions') {
                     this.lastValidationError = 'assumptions';
-                    toast.warning('⚠️ ' + (a.errors[0] || 'يرجى مراجعة الافتراضات المالية.'), 4000);
+                    toast.warning((a.errors[0] || 'يرجى مراجعة الافتراضات المالية.'), 4000);
                 }
                 return false;
             }
@@ -782,7 +1002,7 @@ export class Wizard {
             if (!f.valid && f.errors?.length > 0) {
                 if (this.lastValidationError !== 'financing') {
                     this.lastValidationError = 'financing';
-                    toast.warning('⚠️ ' + (f.errors[0] || 'يرجى مراجعة بيانات التمويل.'), 4000);
+                    toast.warning((f.errors[0] || 'يرجى مراجعة بيانات التمويل.'), 4000);
                 }
                 return false;
             }

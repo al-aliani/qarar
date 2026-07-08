@@ -2,6 +2,8 @@
  * إعدادات التطبيق — تُعدّل حسب البيئة
  * رابط حجز الاستشارة: Calendly / Cal.com / أو نظام حجز داخلي
  */
+import { PRICING_PACKAGES, PRICE_MIN } from './core/pricing.js';
+
 export const APP_CONFIG = {
     /** رابط حجز استشارة Zoom مع خبير (Calendly/Cal.com — مثال: https://calendly.com/your-link)
      * فارغ = عرض رسالة "تواصل مع إدارة المنصة" */
@@ -9,6 +11,9 @@ export const APP_CONFIG = {
     /** عرض التحليل الجغرافي (خرائط OpenStreetMap) */
     enableGeoMap: true
 };
+
+/** القيمة الافتراضية لجهة إعداد الدراسة في نموذج المشروع الفارغ. */
+export const DEFAULT_STUDY_PREPARED_BY = 'مؤسسة بن صاحب التجارية — عبدالعزيز العلياني';
 
 /**
  * أرقام المنصة / لماذا تثق بنا — للعرض في "أرقامنا" و"معاييرنا".
@@ -55,11 +60,15 @@ export const REFUND_POLICY = {
 /** عرض التسعير بوضوح (PlanGuru / Business Plan Shop — شهري/سنوي، المميزات، حد التجربة) */
 export const PRICING_DISPLAY = {
     freeTrial: 'حد التجربة المجاني: جدوى سريعة + دراسة كاملة بدون اشتراك.',
-    /** تسعير ثابت لطبقة "ابدأ" (جدوى تك — اختياري). null = إخفاء السعر وإبراز "ابدأ مجاناً". مثال: "ابدأ من 49 ر.س" */
+    /** الباقات المعلنة — مشتقّة من المصدر الموحّد web/js/core/pricing.js (لا تُكتب يدوياً هنا ولا في landing.html). */
+    packages: PRICING_PACKAGES,
+    /** سعر البداية المعلن (نص جاهز إن احتيج) — يُشتقّ من أقل باقة. */
+    startPriceText: `من ${PRICE_MIN} ﷼`,
+    /** null عمداً: لوحة التطبيق تُبرز «ابدأ مجاناً» (النموذج مجاني للتجربة، والدفع لفتح التعديل). */
     startPrice: null,
     monthly: null,
     yearly: null,
-    features: ['جدوى سريعة في 3 خطوات', 'دراسة كاملة مع النماذج المالية', 'تصدير PDF و Excel و Word', 'قوالب قطاعية مجانية', 'لوحة القرار وفحص الجودة (QA)']
+    features: ['جدوى سريعة في 3 خطوات', 'دراسة كاملة مع النماذج المالية', 'تصدير PDF و Excel و Word', 'قوالب مختصين عند اعتمادها', 'لوحة القرار وفحص الجودة (QA)']
 };
 
 /** نص الثقة (Modeliks) — للصفحة الرئيسية أو «عن المنصة» */
@@ -72,10 +81,7 @@ export const BANK_COMPLIANCE_SENTENCE = 'هيكل التقرير متوافق م
  * موارد وإرشاد — جهات مفيدة (غرف تجارية، تمويل، منشآت)
  * للربط بالمستخدم دون التعهد بخدمات طرف ثالث. نبرة مساعدة ومحايدة.
  */
-/**
- * أمثلة دراسات نموذجية (أسماء وهمية) — للقسم "استلهم" / LivePlan
- * كل عنصر: templateId من TEMPLATES، displayName للعرض.
- */
+/** أمثلة دراسات مختصين معتمدة. تبقى فارغة حتى لا نعرض قوالب بأرقام غير موثقة. */
 /**
  * نصائح الخبراء / أسئلة شائعة (Bizplan) — للعرض في المعالج أو صفحة التعلم.
  */
@@ -88,14 +94,7 @@ export const EXPERT_FAQ = [
     { q: 'كيف أقدّر فترة الاسترداد؟', a: 'يُحسب تلقائياً من التدفق النقدي: عدد السنوات حتى يصبح مجموع التدفقات موجباً. كلما قلت الفترة كان المشروع أقل مجازفة من ناحية السيولة.' },
 ];
 
-export const EXAMPLE_STUDIES = [
-    { templateId: 'coffee_shop', displayName: 'مقهى الروح', sector: 'كافيه مختص', icon: '☕' },
-    { templateId: 'burger_joint', displayName: 'مطعم النخبة', sector: 'مطعم برجر', icon: '🍔' },
-    { templateId: 'retail', displayName: 'متجر الأمل', sector: 'متجر تجزئة', icon: '🛒' },
-    { templateId: 'service', displayName: 'خدمة الاستشارات السريعة', sector: 'مشروع خدمي', icon: '📋' },
-    { templateId: 'cloud_kitchen', displayName: 'مطبخ سحابي النجاح', sector: 'مطبخ سحابي', icon: '🍳' },
-    { templateId: 'software_saas', displayName: 'شركة برمجيات المستقبل', sector: 'SaaS', icon: '💻' }
-];
+export const EXAMPLE_STUDIES = [];
 
 export const RESOURCES_GUIDANCE_LINKS = [
     { name: 'الغرفة التجارية', url: 'https://chambers.sa/', description: 'تمثل قطاع الأعمال وتقدم إرشاداً وربطاً بالخدمات والممولين حسب المنطقة.' },

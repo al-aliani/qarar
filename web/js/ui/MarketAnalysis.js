@@ -8,6 +8,14 @@ import { generateTableSuggestions } from '../services/AIConnector.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { getTAMSuggestion } from '../services/SaudiDemographicsService.js';
 import { toast } from '../utils/toast.js';
+import { SAUDI_REGIONS } from '../data/SaudiCityStats.js';
+
+// أحياء شائعة لأبرز المدن — datalist يسمح بالكتابة الحرة
+const COMMON_NEIGHBORHOODS = [
+    'العليا', 'النرجس', 'الملقا', 'الياسمين', 'حطين', 'القيروان',
+    'الروضة', 'الشاطئ', 'السلامة', 'الحمراء',
+    'العقربية', 'الراكة', 'العزيزية', 'الششة', 'قباء', 'العوالي'
+];
 
 function escapeHtml(s) {
     if (s == null) return '';
@@ -98,11 +106,15 @@ export class MarketAnalysis {
                     <div class="form-row form-row--2">
                         <div class="form-group">
                             <label for="target-district">المنطقة/القطاع المستهدف</label>
-                            <input type="text" id="target-district" class="input" placeholder="مثال: شرق الرياض، القطيف" value="${(marketSizing.targetDistrict || '').replace(/</g, '&lt;')}">
+                            <select id="target-district" class="input">
+                                <option value="" ${!marketSizing.targetDistrict ? 'selected' : ''} disabled>اختر المنطقة…</option>
+                                ${SAUDI_REGIONS.map(r => `<option value="${escapeHtml(r.name)}" ${marketSizing.targetDistrict === r.name ? 'selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="target-neighborhood">الحي/الموقع المحدد</label>
-                            <input type="text" id="target-neighborhood" class="input" placeholder="مثال: حي النخيل، وسط البلد" value="${(marketSizing.targetNeighborhood || '').replace(/</g, '&lt;')}">
+                            <input type="text" id="target-neighborhood" class="input" list="dl-target-neighborhood" autocomplete="off" placeholder="مثال: حي النخيل، العليا" value="${(marketSizing.targetNeighborhood || '').replace(/</g, '&lt;')}">
+                            <datalist id="dl-target-neighborhood">${COMMON_NEIGHBORHOODS.map(n => `<option value="${escapeHtml(n)}"></option>`).join('')}</datalist>
                         </div>
                     </div>
                 </div>

@@ -11,6 +11,7 @@ coverage/
 # === Test artifacts ===
 test-results/
 playwright-report/
+tmp/
 
 # === Environment & secrets ===
 .env

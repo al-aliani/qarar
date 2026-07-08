@@ -7,6 +7,7 @@ import { formatCurrency } from '../js/utils/formatters.js';
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { getLabelSDB } from '../js/core/regulatoryLabels.js';
 import { BankReportGenerator } from './BankReportGenerator.js';
+import { SAFE } from './utils.js';
 
 function L(key) {
     try { return getLabelSDB(key) || key; } catch (_) { return key; }
@@ -185,7 +186,7 @@ export class ProfessionalReviewReportGenerator {
             <div class="pr-kpi">
                 <div class="pr-kpi-card"><div class="label">${L('npv')}</div><div class="value">${_fmt(ind.npv || 0)}</div></div>
                 <div class="pr-kpi-card"><div class="label">${L('irr')}</div><div class="value">${((ind.irr || 0) * 100).toFixed(1)}%</div></div>
-                <div class="pr-kpi-card"><div class="label">${L('paybackPeriod')}</div><div class="value">${(ind.paybackPeriod ?? ind.payback ?? 0).toFixed(1)} سنة</div></div>
+                <div class="pr-kpi-card"><div class="label">${L('paybackPeriod')}</div><div class="value">${SAFE.payback(ind.paybackPeriod ?? ind.payback)}</div></div>
                 <div class="pr-kpi-card"><div class="label">${L('breakEvenPointValue')}</div><div class="value">${_fmt(ind.breakEvenPointValue || 0)}</div></div>
             </div>
             <p><strong>هيكل التمويل:</strong></p>

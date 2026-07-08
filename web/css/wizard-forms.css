@@ -1,0 +1,418 @@
+/* ═════════════════════════════════════════════════════════════
+   wizard-forms.css — طبقة أناقة المعالج والنماذج
+   تُحمَّل بعد main.css: تعرّف الفئات المفقودة في قوالب Wizard.js
+   وتوحّد النماذج مع عائلة landing.html (pill، أرقام mono مصطفّة،
+   تركيز ذهبي، ظلال خضراء). إضافات وتجاوزات فقط — لا مساس بأي
+   معرف أو فئة يعتمد عليها JS.
+   ═════════════════════════════════════════════════════════════ */
+
+/* ── 1) فئات كانت مفقودة تماماً ── */
+.flex { display: flex; }
+.items-end { align-items: flex-end; }
+.gap-1 { gap: 4px; }
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: var(--s-1); }
+.mt-1 { margin-top: var(--s-1); }
+.text-xs { font-size: 0.75rem; }
+.text-xl { font-size: 1.35rem; }
+.rounded-lg { border-radius: var(--r-lg); }
+.rounded-full { border-radius: 999px; }
+.p-3 { padding: var(--s-3); }
+.px-3 { padding-inline: var(--s-3); }
+.pb-3 { padding-bottom: var(--s-3); }
+.pt-1 { padding-top: var(--s-1); }
+.space-y-3 > * + * { margin-top: var(--s-3); }
+.font-mono, .num { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums lining-nums; letter-spacing: -0.01em; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.btn-xs { padding: 4px 12px; font-size: 0.75rem; border-radius: 999px; border: 1px solid var(--c-border); background: var(--c-bg-card); color: var(--c-text-muted); cursor: pointer; }
+
+/* بقايا ثيم Tailwind داكن في القوالب — تحييد لرموز الثيم الحالي */
+.text-white { color: var(--c-text-main); }
+.border { border: 1px solid var(--c-border); }
+.border-white\/10 { border-color: var(--c-border); }
+.bg-white\/5 { background-color: color-mix(in srgb, var(--c-text-main) 4%, transparent); }
+.bg-gray-700 { background-color: var(--c-p-subtle); }
+.shadow-inner { box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06); }
+.h-3 { height: 8px; }
+.border-r-2 { border-inline-start: 2px solid var(--c-gold-deco); }
+.border-gold\/50 { border-color: var(--c-gold-deco); }
+.pr-2 { padding-inline-start: var(--s-2); }
+.text-green-400 { color: var(--c-success); }
+.text-blue-400 { color: var(--c-accent-blue); }
+.animate-bounce-slight, .animate-pulse-slow { animation: none; }
+
+/* ── 2) رأس التقدم — يُظهر الشريط المخفي ── */
+.wizard-progress { margin-bottom: var(--s-4); }
+.progress-info { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.progress-step-label { font-size: 0.85rem; font-weight: 500; color: var(--c-text-muted); }
+.progress-percent { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; font-size: 1.05rem; color: var(--c-gold-500); }
+.progress-bar-container { position: relative; height: 8px; background: var(--c-p-subtle); border-radius: 999px; overflow: hidden; margin-bottom: 8px; }
+.progress-bar-container .progress-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--c-p-600), var(--c-p-500)); transition: width 0.5s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.progress-eta { font-size: 0.78rem; color: var(--c-text-muted); margin: 0 0 var(--s-2); }
+
+/* شارة المرحلة — بأسلوب eyebrow في صفحة الهبوط */
+.step-phase { display: inline-flex; align-items: center; gap: 7px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--c-gold-subtle); background: var(--c-gold-subtle); color: var(--c-gold-500); font-size: 0.72rem; font-weight: 700; margin: 0 0 var(--s-2); }
+.step-phase::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.step-content h2 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
+
+/* ── 3) صناديق الإرشاد ── */
+.step-help-box { border: 1px solid var(--c-border); border-inline-start: 3px solid var(--c-p-500); background: var(--c-bg-card); border-radius: var(--r-md); padding: var(--s-3); box-shadow: var(--shadow-sm); }
+.step-help-box p { font-size: 0.85rem; line-height: 1.7; }
+/* سطرا «لماذا/كيف» يتباعدان قليلاً؛ عنوان كل سطر نحاسي بارز */
+.step-help-box p + p { margin-top: var(--s-2); }
+.step-help-box strong, .step-help-box .text-gold { color: var(--c-gold-500); font-weight: 700; }
+
+.expert-faq-details { border: 1px solid var(--c-border); background: var(--c-bg-card); border-radius: var(--r-md); overflow: hidden; }
+.expert-faq-details summary { display: flex; align-items: center; gap: var(--s-2); min-height: 44px; padding: var(--s-2) var(--s-3); font-size: 0.85rem; font-weight: 500; color: var(--c-text-muted); cursor: pointer; list-style: none; transition: background 0.15s, color 0.15s; }
+.expert-faq-details summary::-webkit-details-marker { display: none; }
+.expert-faq-details summary::before { content: ""; width: 7px; height: 7px; border-inline-end: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform 0.2s; flex: none; }
+.expert-faq-details[open] summary::before { transform: rotate(-135deg); }
+.expert-faq-details summary:hover { background: var(--c-p-subtle); color: var(--c-text-main); }
+.expert-faq-details summary:focus-visible { outline: none; box-shadow: inset var(--focus-ring); color: var(--c-text-main); }
+.expert-faq-details[open] summary { border-bottom: 1px solid var(--c-border); color: var(--c-text-main); }
+.faq-list { padding: var(--s-2) var(--s-3) var(--s-3); display: grid; gap: var(--s-3); }
+.faq-item { border-inline-start: 2px solid var(--c-gold-deco); padding-inline-start: 10px; }
+.faq-q { font-weight: 600; font-size: 0.85rem; margin-bottom: 2px; }
+.faq-a { font-size: 0.85rem; color: var(--c-text-muted); margin: 0; }
+
+/* ── 4) التنبيهات (يغطي التهجئتين alert-info و alert--info) ── */
+.alert { display: block; border: 1px solid var(--c-border); border-inline-start: 3px solid var(--c-accent-blue); background: var(--c-bg-card); border-radius: var(--r-md); padding: var(--s-2) var(--s-3); font-size: 0.85rem; line-height: 1.7; color: var(--c-text-muted); }
+.alert strong { color: var(--c-text-main); font-weight: 600; }
+.alert a { color: var(--c-p-500); font-weight: 500; }
+.alert-info, .alert--info { border-inline-start-color: var(--c-p-500); }
+.alert-warning, .alert--warning { border-inline-start-color: var(--c-gold-deco); background: color-mix(in srgb, var(--c-gold-subtle) 45%, var(--c-bg-card)); }
+/* المتتاليات تتراص بإيقاع خفيف بدل فجوات 1.5rem */
+.step-content .alert.mb-4 { margin-bottom: var(--s-2); }
+
+/* ── 5) النماذج: إيقاع وتسميات وخطوط ── */
+.form-group { margin-bottom: var(--s-4); }
+/* التسمية كتلة كاملة العرض حتى يعمل margin-bottom فعلياً (label سطري افتراضاً)
+   وتصطفّ التلميحات/النجمة معها على خط أساس واحد. */
+.form-group > label {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--c-text-main);
+    margin-bottom: var(--s-2);
+    transition: color 0.15s;
+}
+.form-group:focus-within > label { color: var(--c-p-500); }
+/* التلميح والنجمة يبقيان مصطفّين وسط سطر التسمية */
+.form-group > label .tooltip-auditor,
+.form-group > label .req-mark { align-self: center; }
+
+/* L3: حقول التاريخ داخل صفحة RTL تعرض صيغة yyyy/mm/dd ونصّها المصاحب معكوسة بصرياً
+   («ةنس/رهش/موي»). تثبيت الاتجاه LTR مع محاذاة يمنى يصلحها أينما وُجدت (المعالج + SmartGoals
+   + أي حقل تاريخ مستقبلي) بقاعدة واحدة بدل سمة inline في كل موضع. */
+input[type="date"] { direction: ltr; text-align: right; }
+
+input[type="text"], input[type="email"], input[type="password"],
+input[type="date"], input[type="number"], select, textarea {
+    width: 100%;
+    min-height: 44px; /* حد اللمس الموصى به (WCAG 2.5.5 / إرشادات الجوال) */
+    padding: 0.55rem 0.8rem;
+    background-color: var(--c-bg-app);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    color: var(--c-text-main);
+    font-family: var(--font-ui); /* العربية بخطها — لا mono على النصوص */
+    font-size: 0.9rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:hover, select:hover, textarea:hover { border-color: color-mix(in srgb, var(--c-text-main) 30%, transparent); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--c-p-500); box-shadow: var(--focus-ring); }
+
+/* الأرقام والتواريخ وحدها بالخط الأحادي المصطف — الهوية البنكية */
+input[type="number"], input[type="date"] {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.01em;
+    direction: ltr;
+    text-align: end;
+}
+
+textarea, .input--textarea { min-height: 90px; resize: vertical; line-height: 1.7; }
+
+select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235b665f' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 0.8rem center;
+    padding-inline-start: 2rem;
+}
+[data-theme="dark"] select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%2393a39a' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+
+input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500); cursor: pointer; }
+
+/* حقل النسبة المئوية (input مضغوط + علامة ٪) */
+.form-group .flex.items-center { gap: var(--s-2); }
+.form-group .flex > input[type="number"] { max-width: 140px; }
+.form-group .flex > .text-muted { font-weight: 600; color: var(--c-text-muted); font-size: 0.9rem; }
+
+/* التلميح تحت الحقل — إيقاع موحّد مع رسالة الخطأ (كلاهما 6px تحت الحقل) */
+.field-hint { font-size: 0.75rem; color: var(--c-text-muted); line-height: 1.6; margin: var(--s-2) 0 0; }
+/* عند وجود تلميح فوق رسالة الخطأ لا نضاعف الفراغ */
+.form-group.has-error > .field-hint { margin-bottom: 0; }
+
+/* تلميح المدقق: أيقونة SVG هادئة بجوار التسمية (استُبدل الإيموجي في Wizard.js) */
+.tooltip-auditor { display: inline-flex; vertical-align: middle; margin-inline-start: 4px; color: var(--c-text-muted); opacity: 0.65; cursor: help; }
+.tooltip-auditor:hover { opacity: 1; color: var(--c-p-500); }
+
+/* ── 6) حالات الخطأ/النجاح على مستوى الحقل ── */
+.form-group input:user-invalid, .form-group select:user-invalid, .form-group textarea:user-invalid,
+.form-group.has-error input, .form-group.has-error select, .form-group.has-error textarea {
+    border-color: var(--c-danger);
+    background-color: var(--c-danger-subtle);
+    /* بالرموز لا بقيمة صلبة — يبقى صحيحاً في الثيم الداكن */
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-danger) 14%, transparent);
+}
+.form-group .error-msg { display: none; font-size: 0.75rem; color: var(--c-danger); margin-top: 6px; }
+.form-group.has-error .error-msg { display: block; }
+.form-group.has-success input { border-color: var(--c-success); }
+
+/* ── 7) بطاقة الحقول: شبكة عمودين للكثافة (تفعّل مع فئة form-grid) ── */
+.step-content > .card { padding: var(--s-4); border-radius: var(--r-lg); }
+/* إيقاع موحّد: فجوة صفّية حقيقية بدل الاعتماد على margin-bottom لكل حقل،
+   فتتساوى المسافات بين الصفوف وتختفي فجوة الصف الأخير المزدوجة. */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--s-4); align-items: start; }
+.form-grid > .form-group { margin-bottom: 0; }
+.form-grid h4 { grid-column: 1 / -1; }
+.form-grid .form-group:has(textarea), .form-grid .form-group:has(.input-with-ai) { grid-column: 1 / -1; }
+/* رأس قسم داخل البطاقة: خط نحاسي رفيع أسفله يفصل المجموعات بصرياً */
+.step-content .card h4 {
+    margin-top: var(--s-3);
+    margin-bottom: var(--s-1);
+    padding-bottom: var(--s-2);
+    border-bottom: 1px solid var(--c-gold-border);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--c-gold-500);
+}
+/* أول رأس في البطاقة لا يحتاج هامشاً علوياً */
+.step-content .card > h4:first-child { margin-top: 0; }
+
+/* ── 8) شريط التنقل: حبّة pill من عائلة صفحة الهبوط ── */
+.wizard-nav {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    margin-top: var(--s-5);
+    padding: var(--s-2) var(--s-3);
+    background: var(--c-bg-card);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-lg);
+}
+.wizard-nav .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-2);
+    border-radius: var(--r-pill);
+    min-height: 44px;
+    padding-inline: 22px;
+    font-weight: 600;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+.btn:focus-visible { outline: 2px solid var(--c-gold-deco); outline-offset: 2px; }
+.btn--primary:hover { transform: translateY(-2px); }
+.btn--primary:active { transform: translateY(0) scale(0.985); }
+#btnNextStep { background: linear-gradient(180deg, var(--c-p-500), var(--c-p-600)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 12px 24px -14px color-mix(in srgb, var(--c-p-600) 80%, transparent); }
+/* السهم يتحرّك قليلاً باتجاه رأسه عند المرور — إشارة اتجاه لطيفة.
+   في RTL: سهم «التالي» يشير يساراً، وسهم «السابق» يشير يميناً. */
+.wizard-nav .btn .ic-nav { transition: transform 0.15s ease; }
+#btnNextStep:hover:not(:disabled) .ic-nav { transform: translateX(-3px); }
+#btnPrevStep:hover:not(:disabled) .ic-nav { transform: translateX(3px); }
+/* حالة التعطيل: تُفقد كل التأثيرات الحركية والظلال */
+.wizard-nav .btn:disabled { transform: none; box-shadow: none; cursor: not-allowed; }
+
+/* الزر الثانوي — كان بلا تعريف إطلاقاً */
+.btn--secondary { background: var(--c-bg-card); color: var(--c-text-main); border-color: var(--c-border); }
+.btn--secondary:hover:not(:disabled) { border-color: var(--c-p-500); color: var(--c-p-500); }
+
+/* زر التصدير: من أخضر صارخ إلى ghost هادئ (بالمعرف — يعمل دون تعديل JS) */
+#btnExportSection { background: transparent; border: 1px solid var(--c-border); color: var(--c-text-muted); font-weight: 500; border-radius: 999px; }
+#btnExportSection:hover:not(:disabled) { color: var(--c-p-500); border-color: var(--c-p-500); background: var(--c-p-subtle); }
+
+.nav-indicator { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.nav-indicator .text-xs, .nav-indicator__caption { font-size: 0.68rem; color: var(--c-text-muted); }
+.nav-indicator .font-medium, .nav-indicator__label { font-size: 0.82rem; font-weight: 500; }
+.ic-nav { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ── 9) الجداول الديناميكية: بطاقة هادئة بأرقام مصطفة ── */
+.dynamic-table { border: 1px solid var(--c-border); border-radius: var(--r-md); background: var(--c-bg-card); padding: var(--s-2) var(--s-3) var(--s-3); box-shadow: var(--shadow-sm); }
+.dynamic-table .table-header { padding-bottom: var(--s-2); border-bottom: 1px solid var(--c-border); margin-bottom: var(--s-2); }
+.dynamic-table .table-header h4 { font-size: 0.95rem; font-weight: 700; color: var(--c-text-main); margin: 0; }
+.dynamic-table th { background: transparent; font-size: 0.75rem; letter-spacing: 0.02em; }
+.dynamic-table td { padding: 6px; }
+.dynamic-table tbody tr { transition: background 0.12s; }
+.dynamic-table tbody tr:hover { background: color-mix(in srgb, var(--c-p-500) 5%, transparent); }
+.dynamic-table .table-input { font-variant-numeric: tabular-nums; }
+.dynamic-table .table-input:not([type]), .dynamic-table select.table-input { font-family: var(--font-ui); }
+.dynamic-table .computed-cell { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.table-footer { margin-top: var(--s-2); padding-top: var(--s-2); border-top: 1px dashed var(--c-border); }
+.table-footer .text-gold { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+/* نبض «اقتراح بنود» ثلاث مرات ثم يهدأ — بدل نبض لا نهائي */
+.dynamic-table .btn-suggest.animate-pulse { animation-iteration-count: 3; }
+
+@media (prefers-reduced-motion: reduce) {
+    .wizard-nav .btn, .btn--primary:hover { transform: none; }
+    .wizard-nav .btn, .wizard-nav .btn .ic-nav { transition: none; }
+    #btnNextStep:hover:not(:disabled) .ic-nav,
+    #btnPrevStep:hover:not(:disabled) .ic-nav { transform: none; }
+    .progress-bar-container .progress-bar-fill { transition: none; }
+}
+
+/* ── 8) أزرار نعم/لا — بدل مربّعات الاختيار للأسئلة المنطقية ──
+   التوكنات تتكيّف مع الوضع الداكن تلقائياً (variables.css). */
+.yesno { display: inline-flex; gap: var(--s-2); }
+.yesno__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    min-height: 44px;
+    padding: 0.5rem 1.1rem;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: var(--c-text-muted);
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.yesno__btn:hover { border-color: color-mix(in srgb, var(--c-p-500) 55%, var(--c-border)); color: var(--c-text-main); }
+.yesno__btn:focus-visible { outline: 2px solid var(--c-gold-deco); outline-offset: 2px; }
+.yesno__btn.is-active {
+    background: var(--c-p-500);
+    border-color: var(--c-p-500);
+    color: var(--c-p-contrast);
+    font-weight: 700;
+    box-shadow: var(--shadow-sm);
+}
+.yesno__btn.is-active:hover { color: var(--c-p-contrast); border-color: var(--c-p-600); }
+
+/* ── 8-ب) الصيغة البديلة yesno-btn (زر = <label> يلفّ راديو مخفياً) ──
+   تستخدمها الدراسة المبدئية والأهداف الذكية والحقول المنطقية في Wizard؛
+   كانت بلا تنسيق فيظهر زر الراديو خاماً — هذه القواعد تكمّلها. */
+.hidden-radio { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.yesno-group { display: flex; gap: var(--s-2); }
+.yesno-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.5rem 1.1rem;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: var(--c-text-muted);
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.yesno-btn:hover { border-color: color-mix(in srgb, var(--c-p-500) 55%, var(--c-border)); color: var(--c-text-main); }
+.yesno-btn:focus-within { outline: 2px solid var(--c-gold-deco); outline-offset: 2px; }
+.yesno-btn.active {
+    background: var(--c-p-500);
+    border-color: var(--c-p-500);
+    color: var(--c-p-contrast);
+    font-weight: 700;
+    box-shadow: var(--shadow-sm);
+}
+.yesno-btn.flex-1 { flex: 1; }
+
+/* شرائح اختيار متعددة (الموارد الأولية، عوامل الملاءمة) */
+.res-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: var(--c-text-muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.res-chip:hover { border-color: color-mix(in srgb, var(--c-p-500) 55%, var(--c-border)); color: var(--c-text-main); }
+.res-chip.active {
+    background: color-mix(in srgb, var(--c-p-500) 12%, transparent);
+    border-color: var(--c-p-500);
+    color: var(--c-text-main);
+    font-weight: 600;
+}
+.res-chip input[type="checkbox"] { accent-color: var(--c-p-500); width: 16px; height: 16px; }
+
+/* ═══════════════════════════════════════════════════════════
+   بطاقات تحجيم السوق (TAM/SAM/SOM) ومصفوفة TOWS — تحسينات دفعة 3
+   ═══════════════════════════════════════════════════════════ */
+.market-sizing-card .ms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--s-3);
+    align-items: start;
+}
+.market-sizing-card .ms-tier {
+    border-radius: var(--r-md);
+    padding: var(--s-3);
+    border: 1px solid var(--c-border);
+    background: var(--c-bg-app);
+}
+/* تدرّج بصري: TAM أوسع (فاتح) ← SAM ← SOM أضيق (ذهبي) لإيصال قمع السوق */
+.market-sizing-card .ms-tier--tam { border-top: 3px solid color-mix(in srgb, var(--c-accent-blue) calc(0.5 * 100%), transparent); }
+.market-sizing-card .ms-tier--sam { border-top: 3px solid color-mix(in srgb, var(--c-success) calc(0.5 * 100%), transparent); }
+.market-sizing-card .ms-tier--som { border-top: 3px solid var(--c-gold-deco, var(--c-gold-deco)); background: color-mix(in srgb, var(--c-gold-deco, var(--c-gold-deco)) 6%, var(--c-bg-app)); }
+.market-sizing-card .ms-tier-head { font-weight: 700; margin-bottom: var(--s-2); }
+.market-sizing-card .ms-tier label { display: block; margin-top: var(--s-2); }
+.market-sizing-card .ms-tier input,
+.market-sizing-card .ms-tier textarea { margin-top: 2px; }
+.market-sizing-card .ms-share { font-size: 0.95rem; }
+.market-sizing-card .ms-share-value { font-weight: 700; color: var(--c-gold-deco, var(--c-gold-deco)); }
+/* جسر التقدير التنازلي/التصاعدي */
+.ms-bridge { margin-top: var(--s-2); }
+.ms-bridge__ok { color: var(--c-success, var(--c-success)); }
+.ms-bridge__warn { color: var(--c-danger, var(--c-danger)); font-weight: 600; }
+
+/* مصفوفة TOWS — تعيد استخدام شبكة SWOT، ونضبط مربّع النص ليملأ الربع */
+.tows-grid { margin-top: var(--s-2); }
+.tows-quadrant .tows-input {
+    width: 100%;
+    min-height: 90px;
+    resize: vertical;
+    background: transparent;
+    border: 1px dashed var(--c-border);
+}
+.tows-quadrant .tows-input:focus { border-style: solid; border-color: var(--c-p-500); }
+
+/* Quick Select Pills (Beginner UX) */
+.quick-select-pills {
+    margin-top: 0.5rem;
+}
+.btn-pill {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.85rem;
+    border-radius: 9999px;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    transition: all 0.2s ease;
+}
+.btn-pill:hover, .btn-pill:focus {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary-dark);
+    border-color: var(--color-primary);
+}

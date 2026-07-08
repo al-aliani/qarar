@@ -32,7 +32,7 @@ export class ReviewCharts {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'right', labels: { color: '#aaa' } },
-                    title: { display: true, text: 'الحصص السوقية للمنافسين', color: '#d4af37' }
+                    title: { display: true, text: 'الحصص السوقية للمنافسين', color: '#8a5f1c' }
                 }
             }
         });
@@ -62,7 +62,7 @@ export class ReviewCharts {
                 responsive: true,
                 plugins: {
                     legend: { display: false },
-                    title: { display: true, text: 'توزيع رواتب الموظفين (سنوياً)', color: '#d4af37' }
+                    title: { display: true, text: 'توزيع رواتب الموظفين (سنوياً)', color: '#8a5f1c' }
                 },
                 scales: {
                     x: { ticks: { color: '#888' } },

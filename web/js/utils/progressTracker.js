@@ -72,28 +72,19 @@ export class ProgressTracker {
     }
 
     /**
-     * Render compact version for sidebar — خريطة تقدم (الجدوى Aljdwa)
-     * "أنت في الخطوة X من Y" يعطي إحساس التقدم ضمن الرحلة الكاملة
+     * Render compact version for sidebar — صف رفيع واحد داخل بطاقة الحالة المدمجة
+     * (الفئات status-row/track/fill/value معرّفة في chrome-declutter.css)
      */
     renderCompact() {
         const progress = this.getProgress();
         const currentDisplay = typeof progress.current === 'number' ? progress.current + 1 : 1;
-        const stepLabel = `أنت في الخطوة ${currentDisplay} من ${progress.total}`;
-
+        const stepLabel = `الخطوة ${currentDisplay} من ${progress.total}`;
         return `
-      <div class="progress-widget" role="status" aria-label="${stepLabel}">
-        <div class="progress-info">
-          <span class="progress-text">${stepLabel}</span>
-          <span class="progress-percentage">${progress.percentage}%</span>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width: ${progress.percentage}%"></div>
-        </div>
-        <div style="margin-top: 6px; font-size: 10px; text-align: center; color: var(--c-text-muted);">
-          ${progress.completed} خطوة مكتملة
-        </div>
-      </div>
-    `;
+      <div class="progress-widget status-row" role="status" aria-label="${stepLabel} — ${progress.percentage}%">
+        <span class="status-label">${stepLabel}</span>
+        <span class="status-track" aria-hidden="true"><span class="status-fill" style="width:${progress.percentage}%"></span></span>
+        <span class="status-value">${progress.percentage}%</span>
+      </div>`;
     }
 
     /**
@@ -103,17 +94,17 @@ export class ProgressTracker {
         const percentage = this.getProgress().percentage;
 
         if (percentage === 0) {
-            return '🚀 لنبدأ! خطوة بخطوة نحو دراسة جدوى احترافية';
+            return 'لنبدأ! خطوة بخطوة نحو دراسة جدوى احترافية';
         } else if (percentage < 25) {
-            return '💪 بداية قوية! استمر في التقدم';
+            return 'بداية قوية! استمر في التقدم';
         } else if (percentage < 50) {
-            return '⭐ ربع الطريق! أنت تسير بشكل رائع';
+            return 'ربع الطريق! أنت تسير بشكل رائع';
         } else if (percentage < 75) {
-            return '🔥 نصف الطريق! الإنجاز قريب';
+            return 'نصف الطريق! الإنجاز قريب';
         } else if (percentage < 100) {
-            return '🎯 تقريباً انتهيت! اللمسات الأخيرة';
+            return 'تقريباً انتهيت! اللمسات الأخيرة';
         } else {
-            return '🎉 مبروك! أكملت الدراسة بنجاح';
+            return 'مبروك! أكملت الدراسة بنجاح';
         }
     }
 
@@ -141,17 +132,20 @@ export class ProgressTracker {
             return storeData.templateId !== undefined;
         }
 
+        // بعض الخطوات معرّفها فريد وبياناتها في قسم آخر (dataSection) — مثل projectDetails
+        const sectionKey = step.dataSection || step.id;
+
         // For table-based steps, check if tables have data
         if (step.tables && step.tables.length > 0) {
             return step.tables.some(tableName => {
-                const section = storeData[step.id];
+                const section = storeData[sectionKey];
                 return section && section[tableName] && section[tableName].length > 0;
             });
         }
 
         // For custom components, check if section exists
-        if (step.id && storeData[step.id]) {
-            const section = storeData[step.id];
+        if (sectionKey && storeData[sectionKey]) {
+            const section = storeData[sectionKey];
             // Check if section has any meaningful data
             if (typeof section === 'object') {
                 return Object.keys(section).length > 0;

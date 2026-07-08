@@ -17,9 +17,9 @@ export class Sidebar {
 
         this.sections = SIDEBAR_SECTIONS;
 
-        // Accordion: افتح قسماً واحداً افتراضياً + احتفظ بقسم الدراسات منفصلاً
+        // Accordion: افتح قسماً واحداً افتراضياً — قسم «الدراسات» مطويّ افتراضياً (نقرة واحدة تفتحه)
         const first = (this.sections && this.sections[0] && this.sections[0].id) ? this.sections[0].id : null;
-        this.expandedSections = new Set(['studies']);
+        this.expandedSections = new Set();
         if (first) this.expandedSections.add(first);
 
         // ربط التنقل بالتفويض مرة واحدة — يبقى شغالاً مهما أُعيد بناء المحتوى
@@ -56,6 +56,13 @@ export class Sidebar {
             if (header && this.container.contains(header)) {
                 const sectionId = header.dataset.sectionId;
                 if (!sectionId) return;
+                // قسم «الدراسات» مطويّ افتراضياً: يُفتح ويُطوى بنقرة دون المساس بالأقسام الرئيسية
+                if (sectionId === 'studies') {
+                    if (this.expandedSections.has('studies')) this.expandedSections.delete('studies');
+                    else this.expandedSections.add('studies');
+                    this.render();
+                    return;
+                }
                 const keepStudies = this.expandedSections.has('studies');
                 // Keep one main section expanded at a time
                 this.expandedSections = new Set();
@@ -67,54 +74,10 @@ export class Sidebar {
     }
 
     getStepIcon(index) {
-        // مطابقة واحد-بواحد مع STEPS في wizardSteps.js (44 خطوة) — عند إضافة خطوة أضف أيقونتها هنا
-        const icons = [
-            '🔍', // 0: الدراسة المبدئية
-            '⚖️', // 1: اختيار المشروع (مقارنة أفكار)
-            '🚀', // 2: ابدأ من قالب قطاعي
-            '🏠', // 3: معلومات المشروع ونموذج العمل
-            '🎯', // 4: تفاصيل الفكرة (المنتجات والخدمات)
-            '👥', // 5: الأشخاص الرئيسون
-            '📜', // 6: مقدمة الجدوى الموحدة
-            '🏆', // 7: الأهداف الذكية
-            '🏗️', // 8: الدراسة الفنية (الأصول)
-            '🧑‍💼', // 9: الموارد البشرية (الرواتب)
-            '💻', // 10: الموارد التقنية
-            '🚚', // 11: الموارد اللوجستية
-            '📂', // 12: الموارد الإدارية
-            '🏢', // 13: الهيكل التنظيمي والحوكمة
-            '🏭', // 14: محاكاة التشغيل
-            '⚖️', // 15: الدراسة القانونية
-            '📈', // 16: الدراسة السوقية
-            '🧩', // 17: التحليل الاستراتيجي (SWOT)
-            '💰', // 18: مصادر الإيرادات
-            '🛠️', // 19: تحليل الخدمات المفصل
-            '🏦', // 20: مصادر وهيكلة التمويل
-            '🤝', // 21: تحليل الجدوى الاستثمارية
-            '📝', // 22: الافتراضات المالية
-            '📊', // 23: القوائم المالية التقديرية
-            '🧾', // 24: جدول سداد القرض
-            '⚖️', // 25: الميزانية العمومية
-            '📉', // 26: تحليل نقطة التعادل
-            '💹', // 27: مؤشرات التقييم المالي
-            '🧠', // 28: التحليل الاستراتيجي
-            '⚠️', // 29: تحليل المخاطر
-            '⛈️', // 30: اختبار التحمل
-            '🔬', // 31: تحليل الحساسية
-            '🔮', // 32: مستويات السيناريوهات
-            '📅', // 33: الجدول الزمني للتنفيذ
-            '🌙', // 34: حساب الزكاة والضريبة
-            '🎲', // 35: محاكاة مونت كارلو
-            '💎', // 36: تقييم الشركة
-            '🔭', // 37: مراقبة الأداء الفعلي
-            '📎', // 38: الملاحق والمصادر والمراجع
-            '💼', // 39: نموذج العمل
-            '🚦', // 40: لوحة القرار الاستثماري
-            '🏁', // 41: الملخص التنفيذي النهائي
-            '🧱', // 42: بناء التقرير
-            '🖥️', // 43: لوحة التحكم المالي العامة
-        ];
-        return icons[index] || '🔹';
+        // تنظيف الأيقونات — لا إيموجي في شجرة التنقل:
+        // الخانة الفارغة تُرسم نقطةً محايدة عبر CSS ‏(.step-icon:empty::before)،
+        // وعلامة ✓ للخطوات المكتملة يمررها المستدعي كنص عادي.
+        return '';
     }
 
     getCompletenessMessage(percentage) {
@@ -165,11 +128,11 @@ export class Sidebar {
                 ${sorted.map(p => `
                     <div class="step-item studies-load-item flex items-center gap-1 justify-between" data-id="${p.id}" data-name="${(p.name || '').replace(/"/g, '&quot;')}" role="button" tabindex="0" style="padding: 6px 8px; font-size: 12px; border-radius: 4px; margin-bottom: 2px;">
                         <div class="flex-1 min-w-0 flex items-center gap-1" data-action="open">
-                            <span class="step-icon">📄</span>
+                            <span class="step-icon"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg></span>
                             <span class="step-label truncate">${(p.name || 'بدون اسم').substring(0, 24)}</span>
                             <span class="text-muted text-[10px]">${this._formatStudyDate(p.lastModified)}</span>
                         </div>
-                        <button type="button" class="studies-delete-btn p-0.5 rounded opacity-70 hover:opacity-100" data-id="${p.id}" title="حذف الدراسة" aria-label="حذف">🗑️</button>
+                        <button type="button" class="studies-delete-btn p-0.5 rounded opacity-70 hover:opacity-100" data-id="${p.id}" title="حذف الدراسة" aria-label="حذف"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></button>
                     </div>
                 `).join('')}
             </div>
@@ -245,7 +208,7 @@ export class Sidebar {
             if (user) {
                 authContainer.innerHTML = `
                     <div class="auth-box logged-in">
-                        <div class="auth-avatar">👤</div>
+                        <div class="auth-avatar"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg></div>
                         <div class="auth-info">
                             <span class="auth-email" title="${user.email}">${user.email.split('@')[0]}</span>
                             <span id="saveStatus" class="auth-status text-success">● محفوظ</span>
@@ -371,28 +334,13 @@ export class Sidebar {
             const idea = calculateIdeaScore(state);
             const score = Math.min(100, Math.max(0, idea.score));
             const colorClass = idea.color === 'green' ? 'idea-score--green' : idea.color === 'yellow' ? 'idea-score--yellow' : 'idea-score--red';
-            const strokeColor = idea.color === 'green' ? 'var(--c-success)' : idea.color === 'yellow' ? 'var(--c-p-500)' : 'var(--c-danger)';
-            const rotation = -90 + (score / 100) * 180;
+            // صف رفيع داخل بطاقة الحالة المدمجة (.sidebar-status) — التفاصيل تبقى في title/aria
             ideaScoreHTML = `
-                <div class="idea-score-widget mb-3 p-3 rounded-lg border border-border ${colorClass}" role="status" aria-label="نتيجة الفكرة ${score} من 100">
-                    <div class="idea-score-header flex items-center justify-between mb-2">
-                        <span class="text-xs text-muted">نتيجة الفكرة</span>
-                        <span class="idea-score-value text-lg font-bold" style="color: ${idea.color === 'green' ? 'var(--c-success)' : idea.color === 'yellow' ? 'var(--c-p-500)' : 'var(--c-danger)'}">${score}</span>
-                    </div>
-                    <div class="idea-score-gauge" style="--idea-rotation: ${rotation}deg; --idea-color: ${strokeColor};">
-                        <svg viewBox="0 0 60 32" class="idea-score-svg" aria-hidden="true">
-                            <path d="M 6 28 A 24 24 0 0 1 54 28" fill="none" stroke="var(--c-bg-panel)" stroke-width="6"/>
-                            <path d="M 6 28 A 24 24 0 0 1 54 28" fill="none" stroke="var(--idea-color)" stroke-width="6" stroke-dasharray="${(score / 100) * 75.4} 75.4" stroke-linecap="round"/>
-                        </svg>
-                    </div>
-                    <div class="text-xs text-center mt-1 idea-score-message">${idea.message}</div>
-                    <div class="text-[10px] text-muted mt-2 flex justify-between">
-                        <span title="اكتمال البيانات">📋 ${idea.breakdown.completeness}</span>
-                        <span title="هامش الربح">📈 ${idea.breakdown.margin}</span>
-                        <span title="حجم السوق TAM">🌐 ${idea.breakdown.tam}</span>
-                    </div>
-                </div>
-            `;
+                <div class="status-row status-row--score ${colorClass}" role="status" aria-label="نتيجة الفكرة ${score} من 100: ${idea.message}" title="${idea.message}">
+                    <span class="status-label">نتيجة الفكرة</span>
+                    <span class="status-track" aria-hidden="true"><span class="status-fill" style="width:${score}%"></span></span>
+                    <span class="status-value">${score}</span>
+                </div>`;
         } catch (e) {
             console.warn('Idea Score calculation failed:', e);
         }
@@ -411,38 +359,15 @@ export class Sidebar {
 
                 const percentage = completeness.percentage;
                 const colorClass = percentage >= 80 ? 'text-success' : percentage >= 50 ? 'text-warning' : 'text-danger';
-                const icon = percentage >= 80 ? '✅' : percentage >= 50 ? '⚠️' : '📋';
 
-                const missingSections = completeness.getMissingSections().slice(0, 3);
+                // صف رفيع + رابط التفاصيل — قوائم النواقص والنصائح كاملة في نافذة showCompletenessDetails
                 completenessHTML = `
-                    <div class="completeness-widget mb-4 p-3 bg-card rounded-lg border border-border">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm text-muted">نسبة الاكتمال</span>
-                            <span class="text-lg font-bold ${colorClass}">${percentage}%</span>
-                        </div>
-                        <div class="progress-bar bg-bg-card" style="height: 6px; border-radius: 3px; overflow: hidden;">
-                            <div class="progress-bar-fill ${colorClass.replace('text-', 'bg-')}" 
-                                 style="width: ${percentage}%; height: 100%; transition: width 0.3s ease;"></div>
-                        </div>
-                        <div class="text-xs text-muted mt-1 text-center mb-2">${icon} ${this.getCompletenessMessage(percentage)}</div>
-                        ${missingSections.length > 0 && percentage < 80 ? `
-                            <div class="text-xs text-muted mt-2 pt-2 border-t border-border">
-                                <div class="font-medium mb-1">💡 يحتاج إكمال:</div>
-                                <div class="space-y-1">
-                                    ${missingSections.map(s => `<div class="text-xs">• ${s.label} (${Math.round(s.percentage)}%)</div>`).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-                        ${percentage < 100 && typeof completeness.getTipsToRaiseScore === 'function' ? (() => {
-                        const tips = completeness.getTipsToRaiseScore().slice(0, 2);
-                        if (tips.length === 0) return '';
-                        return `<div class="text-xs text-gold mt-2 pt-2 border-t border-border"><div class="font-medium mb-1">📈 نصائح لرفع النقاط:</div><div class="space-y-0.5">${tips.map(t => `<div class="text-xs">• ${t}</div>`).join('')}</div></div>`;
-                    })() : ''}
-                        <button class="btn btn--xs btn--ghost w-full mt-2 btn-completeness-details" style="font-size: 0.75rem;">
-                            📋 عرض التفاصيل
-                        </button>
+                    <div class="status-row" role="status" aria-label="نسبة الاكتمال ${percentage}% — ${this.getCompletenessMessage(percentage)}" title="${this.getCompletenessMessage(percentage)}">
+                        <span class="status-label">الاكتمال</span>
+                        <span class="status-track" aria-hidden="true"><span class="status-fill" style="width:${percentage}%"></span></span>
+                        <span class="status-value ${colorClass}">${percentage}%</span>
                     </div>
-                `;
+                    <button type="button" class="btn-completeness-details status-details-link">ما الذي ينقص الدراسة؟</button>`;
             }
         } catch (e) {
             console.warn('Could not calculate completeness:', e);
@@ -455,41 +380,38 @@ export class Sidebar {
         // تجميع المحتوى: نتيجة الفكرة أولاً ثم Auth ثم الوضع ثم الاكتمال ثم التقدم ثم الدراسات ثم الأقسام
         const state = (this.store?.getState && this.store.getState()) || (this.store?.get && this.store.get()) || {};
         const mode = state.appSettings?.mode || 'advanced';
+        // مبدّل النمط: شريط مقسّم حبّي رفيع — المظهر كله من CSS (.btn-mode-sidebar.active)
         const modeToggleHTML = `
-            <div class="mode-toggle-widget mb-3 p-2 rounded-lg border border-border" style="background: var(--c-bg-card, #1a1d24);" role="group" aria-label="وضع العرض">
-                <div class="text-xs text-muted mb-1">نمط الدراسة</div>
-                <div class="flex gap-1 flex-wrap">
-                    <button class="btn-mode-sidebar flex-1 px-2 py-1 text-xs rounded min-w-0 ${mode === 'quick' ? 'active' : ''}" data-mode="quick" title="سريع ومختصر (للمبتدئين)" aria-pressed="${mode === 'quick'}">🚀 سريع</button>
-                    <button class="btn-mode-sidebar flex-1 px-2 py-1 text-xs rounded min-w-0 ${mode === 'advanced' ? 'active' : ''}" data-mode="advanced" title="كامل وتفصيلي (للمحترفين)" aria-pressed="${mode === 'advanced'}">💼 مفصل</button>
-                </div>
-            </div>
-        `;
+            <div class="mode-toggle-widget" role="group" aria-label="نمط الدراسة">
+                <button class="btn-mode-sidebar ${mode === 'quick' ? 'active' : ''}" data-mode="quick" title="إخفاء التفاصيل المعقدة (للمبتدئين)" aria-pressed="${mode === 'quick'}">الأساسي</button>
+                <button class="btn-mode-sidebar ${mode === 'advanced' ? 'active' : ''}" data-mode="advanced" title="عرض كافة التحليلات (للمستشارين)" aria-pressed="${mode === 'advanced'}">المتقدم</button>
+            </div>`;
 
         // قسم الدراسات (قبل البداية والتعريف): دراسة جديدة + الدراسات المحفوظة
         const studiesSectionHTML = `
             <div class="nav-section studies-section ${this.expandedSections.has('studies') ? 'is-expanded' : ''}">
                 <div class="nav-section-header" data-section-id="studies">
-                    <span class="nav-section-title">📂 الدراسات</span>
+                    <span class="nav-section-title">الدراسات</span>
                     <span class="nav-section-arrow">${this.expandedSections.has('studies') ? '▾' : '▸'}</span>
                 </div>
                 <div class="nav-section-items" style="${this.expandedSections.has('studies') ? '' : 'display: none'}">
                     <div class="step-item studies-action" data-action="new" role="button" tabindex="0">
-                        <span class="step-icon">➕</span>
+                        <span class="step-icon"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></span>
                         <span class="step-label">دراسة جديدة</span>
                     </div>
                     <div class="step-item studies-action" data-action="open-list" role="button" tabindex="0">
-                        <span class="step-icon">📂</span>
+                        <span class="step-icon"><svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg></span>
                         <span class="step-label">الدراسات المحفوظة</span>
                     </div>
                     <div class="step-item studies-action" data-action="integrations" role="button" tabindex="0">
-                        <span class="step-icon">🔗</span>
+                        <span class="step-icon"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg></span>
                         <span class="step-label">التكاملات</span>
                     </div>
                     <div class="step-item studies-action" data-action="trash" role="button" tabindex="0">
-                        <span class="step-icon">🗑️</span>
+                        <span class="step-icon"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></span>
                         <span class="step-label">سلة المحذوفات</span>
                     </div>
-                    <div id="studiesListContainer" class="studies-list-container" style="display:none; padding: 4px 0 4px 8px; max-height: 200px; overflow-y: auto;"></div>
+                    <div id="studiesListContainer" class="studies-list-container" style="display:none;"></div>
                 </div>
             </div>
         `;
@@ -513,7 +435,7 @@ export class Sidebar {
                 const isComplete = this.progressTracker?.isCompleted(globalIdx) || false;
                 return `
                         <div class="step-item ${isActive ? 'is-active' : ''} ${isComplete ? 'is-complete' : ''}" data-index="${globalIdx}" data-local-idx="${localIdx}">
-                            <div class="step-icon">${isComplete && !isActive ? '✓' : this.getStepIcon(globalIdx)}</div>
+                            <span class="step-icon" aria-hidden="true">${isComplete && !isActive ? '✓' : this.getStepIcon(globalIdx)}</span>
                             <div class="step-label">${step.label}</div>
                         </div>
                     `;
@@ -551,7 +473,11 @@ export class Sidebar {
             `;
         }).join('');
 
-        this.container.innerHTML = ideaScoreHTML + authHTML + modeToggleHTML + completenessHTML + progressHTML + studiesSectionHTML + renderedSections;
+        // بطاقة حالة واحدة تلمّ الصفوف الثلاثة (نتيجة الفكرة/الاكتمال/التقدم) بدل 3 بطاقات
+        const statusHTML = (ideaScoreHTML || completenessHTML || progressHTML)
+            ? `<div class="sidebar-status">${ideaScoreHTML}${completenessHTML}${progressHTML}</div>`
+            : '';
+        this.container.innerHTML = statusHTML + authHTML + modeToggleHTML + studiesSectionHTML + renderedSections;
         console.log('[Sidebar] HTML injected');
 
         // Init Auth Widget content
@@ -641,26 +567,27 @@ export class Sidebar {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const m = btn.dataset.mode;
-                if (!m || !this.store?.update) return;
-                const s = (this.store.getState && this.store.getState()) || (this.store.get && this.store.get()) || {};
-                this.store.update('appSettings', { ...(s.appSettings || {}), mode: m });
+                if (!m) return;
+                
+                if (this.modeController) {
+                    this.modeController.setMode(m);
+                } else if (this.store?.update) {
+                    const s = (this.store.getState && this.store.getState()) || (this.store.get && this.store.get()) || {};
+                    this.store.update('appSettings', { ...(s.appSettings || {}), mode: m });
+                }
+
+                // المظهر من CSS عبر الفئة .active فقط — لا أنماط مضمّنة تتجاوز الثيم
                 this.container.querySelectorAll('.btn-mode-sidebar').forEach(b => {
-                    b.classList.toggle('active', b.dataset.mode === m);
-                    b.style.background = b.dataset.mode === m ? 'var(--c-p-500)' : 'transparent';
-                    b.style.color = b.dataset.mode === m ? '#fff' : '';
+                    const isActive = b.dataset.mode === m;
+                    b.classList.toggle('active', isActive);
+                    b.setAttribute('aria-pressed', String(isActive));
                 });
-                const msg = m === 'quick' ? 'الوضع السريع' : 'الوضع المفصل';
+                const msg = m === 'quick' ? 'الوضع الأساسي (مبتدئ)' : 'الوضع المتقدم (مستشار)';
                 toast.info('تم التبديل إلى ' + msg, 2500);
 
                 // Reload to apply changes cleanly (step filtering affects everything)
                 setTimeout(() => window.location.reload(), 500);
             });
-        });
-        // تطبيق نمط الزر النشط عند العرض
-        this.container.querySelectorAll('.btn-mode-sidebar').forEach(b => {
-            const isActive = b.dataset.mode === mode;
-            b.style.background = isActive ? 'var(--c-p-500)' : 'transparent';
-            b.style.color = isActive ? '#fff' : '';
         });
     }
 
@@ -680,7 +607,7 @@ export class Sidebar {
             modal.innerHTML = `
                 <div class="modal-card" style="max-width: 600px;">
                     <div class="modal-header">
-                        <h3>📊 تفاصيل نسبة الاكتمال</h3>
+                        <h3>تفاصيل نسبة الاكتمال</h3>
                         <button class="btn-close">×</button>
                     </div>
                     <div class="modal-body">
@@ -732,7 +659,7 @@ export class Sidebar {
 
                         ${missingSections.length > 0 ? `
                             <div class="mt-4 p-3 bg-warning/10 border border-warning/30 rounded-lg">
-                                <div class="font-medium mb-2">💡 توصيات للإكمال:</div>
+                                <div class="font-medium mb-2">توصيات للإكمال:</div>
                                 <ul class="text-sm space-y-1">
                                     ${missingSections.map(s => {
                 const stepIdx = (this.steps || []).findIndex(st => st.id === s.key);

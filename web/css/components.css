@@ -8,31 +8,36 @@
     box-shadow: var(--shadow-sm);
 }
 
-/* --- Buttons --- */
+/* --- Buttons: حبّة بتدرج أخضر — نفس لغة landing --- */
 .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.5rem 1rem;
-    border-radius: var(--r-sm);
+    gap: 8px;
+    padding: 0.55rem 1.25rem;
+    border-radius: var(--r-pill);
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform .2s cubic-bezier(.2,.7,.2,1), background .2s ease, border-color .2s ease, box-shadow .2s ease, color .2s ease, filter .2s ease;
     border: 1px solid transparent;
     font-family: inherit;
 }
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0) scale(.985); }
+.btn:focus-visible { outline: 2px solid var(--c-gold-deco); outline-offset: 2px; }
 
 .btn--primary {
-    background-color: var(--c-p-500);
-    /* كان #000 صريحاً — أسود على أساسي داكن غير مقروء. الرمز يتبدّل مع الثيم. */
+    /* تدرج عمودي مبني على الرموز — يعمل في الثيمين لأن p-500/p-600 يتبدلان */
+    background: linear-gradient(180deg, var(--c-p-500), var(--c-p-600));
     color: var(--c-p-contrast);
-    font-weight: 600;
-    box-shadow: var(--shadow-sm);
+    font-weight: 700;
+    box-shadow: var(--shadow-btn);
 }
 
 .btn--primary:hover {
-    background-color: var(--c-p-600);
+    background: linear-gradient(180deg, var(--c-p-500), var(--c-p-600));
     color: var(--c-p-contrast);
+    filter: brightness(1.07);
 }
 
 .btn--ghost {
@@ -42,18 +47,21 @@
 }
 
 .btn--ghost:hover {
-    color: var(--c-text-main);
-    border-color: var(--c-text-muted);
+    color: var(--c-p-500);
+    border-color: var(--c-p-500);
+    background: var(--c-p-subtle);
 }
 
 .btn--success {
-    background-color: #10b981;
-    color: white;
+    background-color: var(--c-success);
+    color: #fff;
 }
 
 .btn--success:hover {
-    background-color: #059669;
+    background-color: var(--c-success);
+    filter: brightness(1.08);
 }
+[data-theme="dark"] .btn--success { color: #06231a; }
 
 .btn-sm {
     padding: 0.35rem 0.75rem;
@@ -100,7 +108,7 @@
     transition: background 0.2s, transform 0.15s;
 }
 .btn-magic-wand:hover {
-    background: rgba(212, 175, 55, 0.25);
+    background: var(--c-gold-subtle);
     transform: scale(1.05);
 }
 .btn-magic-wand:disabled {
@@ -166,7 +174,7 @@ select:focus {
 }
 
 .nav-section.contains-active {
-    background: rgba(212, 175, 55, 0.03);
+    background: var(--c-surface-2);
 }
 
 .nav-section-header {
@@ -175,13 +183,13 @@ select:focus {
     align-items: center;
     padding: var(--s-2) var(--s-3);
     cursor: pointer;
-    background: rgba(255, 255, 255, 0.02);
+    background: transparent;
     border-bottom: 1px solid transparent;
     transition: all 0.2s;
 }
 
 .nav-section-header:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--c-surface-2);
 }
 
 .nav-section.is-expanded .nav-section-header {
@@ -231,7 +239,7 @@ select:focus {
 }
 
 .step-item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: var(--c-surface-3);
     color: var(--c-text-main);
     transform: translateX(-4px);
 }
@@ -249,15 +257,15 @@ select:focus {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
-    filter: grayscale(1);
+    font-size: 0.8rem;
+    color: var(--c-text-muted);
     transition: 0.2s;
 }
-
-.step-item.is-active .step-icon {
-    filter: grayscale(0);
-    transform: scale(1.1);
-}
+/* خطوة بلا أيقونة = نقطة هادئة؛ الخطوة المكتملة تعرض ✓ نصاً فتتلون أخضر */
+.step-icon:empty::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: currentColor; opacity: .4; }
+.step-item.is-active .step-icon { color: var(--c-p-500); }
+.step-item.is-active .step-icon:empty::before { opacity: 1; transform: scale(1.25); }
+.step-item.is-complete .step-icon { color: var(--c-success); }
 
 /* Studies list (sidebar): sort + delete */
 .studies-list-sort .studies-sort-btn.active {
@@ -315,6 +323,7 @@ select:focus {
 .dynamic-table .table-input:focus {
     border-color: var(--c-p-500);
     outline: none;
+    box-shadow: var(--focus-ring);
 }
 
 .dynamic-table .computed-cell {
@@ -357,16 +366,24 @@ select:focus {
     font-size: 1.2rem;
 }
 
+/* بانرات القرار برموز الثيمين: GO ممتلئ بأخضر الهوية، NO-GO بأسلوب subtle الورقي */
 .decision-banner.is-go {
-    background: linear-gradient(135deg, #1a472a, #2d5a3d);
-    color: #4ade80;
-    border: 1px solid #22c55e;
+    background: linear-gradient(135deg, var(--c-p-600), var(--c-p-500));
+    color: var(--c-p-contrast);
+    border: 1px solid var(--c-p-500);
 }
 
 .decision-banner.is-nogo {
-    background: linear-gradient(135deg, #4a1a1a, #5a2d2d);
-    color: #f87171;
-    border: 1px solid #ef4444;
+    background: var(--c-danger-subtle);
+    color: var(--c-danger);
+    border: 1px solid var(--c-danger);
+}
+
+/* REVISE — يحتاج مراجعة: تحذير لا رفض (يخالف الدستور اختزاله إلى «غير مجدٍ» الأحمر) */
+.decision-banner.is-revise {
+    background: var(--c-warning-subtle, #fff4e0);
+    color: var(--c-warning, #9a6a00);
+    border: 1px solid var(--c-warning, #d99a00);
 }
 
 .indicators-grid {
@@ -397,11 +414,11 @@ select:focus {
 }
 
 .kpi-positive .kpi-value {
-    color: #4ade80;
+    color: var(--c-success);
 }
 
 .kpi-negative .kpi-value {
-    color: #f87171;
+    color: var(--c-danger);
 }
 
 .summary-table {
@@ -450,18 +467,16 @@ select:focus {
 }
 
 .income-statement .subtotal-row td {
-    background: rgba(212, 175, 55, 0.05);
+    background: var(--c-surface-2);
     font-weight: 500;
 }
 
 .income-statement .total-row td {
-    background: rgba(212, 175, 55, 0.1);
+    background: var(--c-gold-subtle);
     border-top: 2px solid var(--c-p-500);
 }
 
-.text-danger {
-    color: #f87171;
-}
+/* حُذف تعريف .text-danger المكرر — التعريف المرمّز في نهاية الملف يكفي */
 
 /* --- QA Status Checks --- */
 .qa-check {
@@ -482,13 +497,13 @@ select:focus {
 }
 
 .qa-check.qa-pass {
-    border-color: rgba(34, 197, 94, 0.3);
-    background: rgba(34, 197, 94, 0.05);
+    border-color: color-mix(in srgb, var(--c-success) calc(0.3 * 100%), transparent);
+    background: color-mix(in srgb, var(--c-success) calc(0.05 * 100%), transparent);
 }
 
 .qa-check.qa-fail {
-    border-color: rgba(239, 68, 68, 0.3);
-    background: rgba(239, 68, 68, 0.05);
+    border-color: color-mix(in srgb, var(--c-danger) calc(0.3 * 100%), transparent);
+    background: color-mix(in srgb, var(--c-danger) calc(0.05 * 100%), transparent);
 }
 
 .qa-label {
@@ -593,7 +608,7 @@ select:focus {
 }
 .fab-export:hover {
     transform: scale(1.08);
-    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+    box-shadow: var(--shadow-lg);
 }
 
 @media (min-width: 769px) {
@@ -776,11 +791,11 @@ select:focus {
 }
 
 .service-card.service-viable {
-    border-color: rgba(34, 197, 94, 0.3);
+    border-color: color-mix(in srgb, var(--c-success) calc(0.3 * 100%), transparent);
 }
 
 .service-card.service-not-viable {
-    border-color: rgba(239, 68, 68, 0.3);
+    border-color: color-mix(in srgb, var(--c-danger) calc(0.3 * 100%), transparent);
 }
 
 .service-header {
@@ -809,7 +824,7 @@ select:focus {
 .service-status {
     font-size: 0.8rem;
     padding: 4px 8px;
-    border-radius: var(--r-sm);
+    border-radius: var(--r-pill);
     background: var(--c-bg-app);
 }
 
@@ -864,7 +879,7 @@ select:focus {
 }
 
 .comparison-table .row-warning {
-    background: rgba(239, 68, 68, 0.05);
+    background: color-mix(in srgb, var(--c-danger) calc(0.05 * 100%), transparent);
 }
 
 /* جدول مقارنة الخدمات: ثيم داكن ووضوح النص (تجنّب أبيض على أبيض) */
@@ -900,12 +915,12 @@ select:focus {
 }
 
 .service-comparison-table .row-warning {
-    background: rgba(239, 68, 68, 0.08);
+    background: color-mix(in srgb, var(--c-danger) calc(0.08 * 100%), transparent);
 }
 
-.service-comparison-table .text-gold { color: var(--c-p-500); }
-.service-comparison-table .text-success { color: #22c55e; }
-.service-comparison-table .text-danger { color: #ef4444; }
+.service-comparison-table .text-gold { color: var(--c-gold-500); }
+.service-comparison-table .text-success { color: var(--c-success); }
+.service-comparison-table .text-danger { color: var(--c-danger); }
 .service-comparison-table .text-mono { font-family: var(--font-mono); }
 
 /* Ranking */
@@ -931,8 +946,8 @@ select:focus {
 }
 
 .ranking-item.ranking-top {
-    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
-    border-color: var(--c-p-500);
+    background: var(--c-gold-subtle);
+    border-color: var(--c-gold-border);
 }
 
 .ranking-position {
@@ -970,7 +985,7 @@ select:focus {
     background: var(--c-p-500);
     color: var(--c-p-contrast);
     padding: 4px 8px;
-    border-radius: var(--r-sm);
+    border-radius: var(--r-pill);
     font-size: 0.75rem;
     font-weight: 600;
 }
@@ -989,10 +1004,7 @@ select:focus {
     min-height: 250px;
 }
 
-/* Text utilities */
-.text-success {
-    color: #22c55e;
-}
+/* حُذف تعريف .text-success المكرر — التعريف المرمّز في نهاية الملف يكفي */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    STRATEGIC ANALYSIS COMPONENTS
@@ -1050,6 +1062,7 @@ select:focus {
 .input:focus {
     outline: none;
     border-color: var(--c-p-500);
+    box-shadow: var(--focus-ring);
 }
 
 textarea.input {
@@ -1163,23 +1176,23 @@ textarea.input {
 }
 
 .swot-strengths {
-    border: 2px solid rgba(34, 197, 94, 0.3);
-    background: rgba(34, 197, 94, 0.05);
+    border: 2px solid color-mix(in srgb, var(--c-success) calc(0.3 * 100%), transparent);
+    background: color-mix(in srgb, var(--c-success) calc(0.05 * 100%), transparent);
 }
 
 .swot-weaknesses {
-    border: 2px solid rgba(239, 68, 68, 0.3);
-    background: rgba(239, 68, 68, 0.05);
+    border: 2px solid color-mix(in srgb, var(--c-danger) calc(0.3 * 100%), transparent);
+    background: color-mix(in srgb, var(--c-danger) calc(0.05 * 100%), transparent);
 }
 
 .swot-opportunities {
-    border: 2px solid rgba(59, 130, 246, 0.3);
-    background: rgba(59, 130, 246, 0.05);
+    border: 2px solid color-mix(in srgb, var(--c-accent-blue) calc(0.3 * 100%), transparent);
+    background: color-mix(in srgb, var(--c-accent-blue) calc(0.05 * 100%), transparent);
 }
 
 .swot-threats {
-    border: 2px solid rgba(251, 191, 36, 0.3);
-    background: rgba(251, 191, 36, 0.05);
+    border: 2px solid color-mix(in srgb, var(--c-warning) calc(0.3 * 100%), transparent);
+    background: color-mix(in srgb, var(--c-warning) calc(0.05 * 100%), transparent);
 }
 
 .swot-quadrant-header {
@@ -1232,7 +1245,7 @@ textarea.input {
 }
 
 .btn-remove-swot {
-    color: #f87171;
+    color: var(--c-danger);
     font-size: 1.2rem;
 }
 
@@ -1326,8 +1339,8 @@ textarea.input {
     width: 280px;
     height: 280px;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
-    border: 2px solid rgba(59, 130, 246, 0.5);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--c-accent-blue) calc(0.2 * 100%), transparent), color-mix(in srgb, var(--c-accent-blue) calc(0.1 * 100%), transparent));
+    border: 2px solid color-mix(in srgb, var(--c-accent-blue) calc(0.5 * 100%), transparent);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1338,8 +1351,8 @@ textarea.input {
     width: 200px;
     height: 200px;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
-    border: 2px solid rgba(34, 197, 94, 0.5);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--c-success) calc(0.2 * 100%), transparent), color-mix(in srgb, var(--c-success) calc(0.1 * 100%), transparent));
+    border: 2px solid color-mix(in srgb, var(--c-success) calc(0.5 * 100%), transparent);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1350,8 +1363,8 @@ textarea.input {
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(212, 175, 55, 0.2));
-    border: 2px solid var(--c-p-500);
+    background: var(--c-gold-subtle);
+    border: 2px solid var(--c-gold-deco);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1391,18 +1404,18 @@ textarea.input {
 }
 
 .badge--tam {
-    background: rgba(59, 130, 246, 0.2);
-    color: #3b82f6;
+    background: color-mix(in srgb, var(--c-accent-blue) calc(0.2 * 100%), transparent);
+    color: var(--c-accent-blue);
 }
 
 .badge--sam {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
+    background: color-mix(in srgb, var(--c-success) calc(0.2 * 100%), transparent);
+    color: var(--c-success);
 }
 
 .badge--som {
-    background: rgba(212, 175, 55, 0.2);
-    color: var(--c-p-500);
+    background: var(--c-gold-subtle);
+    color: var(--c-gold-500);
 }
 
 /* --- Segments & Competitor Tables --- */
@@ -1500,19 +1513,19 @@ textarea.input {
 }
 
 .risk-low {
-    background: rgba(34, 197, 94, 0.1);
+    background: color-mix(in srgb, var(--c-success) calc(0.1 * 100%), transparent);
 }
 
 .risk-medium {
-    background: rgba(251, 191, 36, 0.1);
+    background: color-mix(in srgb, var(--c-warning) calc(0.1 * 100%), transparent);
 }
 
 .risk-high {
-    background: rgba(249, 115, 22, 0.2);
+    background: color-mix(in srgb, var(--c-warning) calc(0.2 * 100%), transparent);
 }
 
 .risk-critical {
-    background: rgba(239, 68, 68, 0.2);
+    background: color-mix(in srgb, var(--c-danger) calc(0.2 * 100%), transparent);
 }
 
 .risk-dot {
@@ -1563,19 +1576,19 @@ textarea.input {
 }
 
 .legend-box.risk-critical {
-    background: rgba(239, 68, 68, 0.5);
+    background: color-mix(in srgb, var(--c-danger) calc(0.5 * 100%), transparent);
 }
 
 .legend-box.risk-high {
-    background: rgba(249, 115, 22, 0.5);
+    background: color-mix(in srgb, var(--c-warning) calc(0.5 * 100%), transparent);
 }
 
 .legend-box.risk-medium {
-    background: rgba(251, 191, 36, 0.5);
+    background: color-mix(in srgb, var(--c-warning) calc(0.5 * 100%), transparent);
 }
 
 .legend-box.risk-low {
-    background: rgba(34, 197, 94, 0.5);
+    background: color-mix(in srgb, var(--c-success) calc(0.5 * 100%), transparent);
 }
 
 /* --- Risk Register Table --- */
@@ -1584,23 +1597,23 @@ textarea.input {
 }
 
 .badge--danger {
-    background: rgba(239, 68, 68, 0.2);
-    color: #f87171;
+    background: color-mix(in srgb, var(--c-danger) calc(0.2 * 100%), transparent);
+    color: var(--c-danger);
 }
 
 .badge--warning {
-    background: rgba(251, 191, 36, 0.2);
-    color: #fbbf24;
+    background: color-mix(in srgb, var(--c-warning) calc(0.2 * 100%), transparent);
+    color: var(--c-warning);
 }
 
 .badge--info {
-    background: rgba(59, 130, 246, 0.2);
-    color: #3b82f6;
+    background: color-mix(in srgb, var(--c-accent-blue) calc(0.2 * 100%), transparent);
+    color: var(--c-accent-blue);
 }
 
 .badge--success {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
+    background: color-mix(in srgb, var(--c-success) calc(0.2 * 100%), transparent);
+    color: var(--c-success);
 }
 
 .badge--neutral {
@@ -1610,7 +1623,7 @@ textarea.input {
 
 .badge {
     padding: 4px 8px;
-    border-radius: var(--r-sm);
+    border-radius: var(--r-pill);
     font-size: 0.75rem;
     font-weight: 600;
 }
@@ -1636,7 +1649,7 @@ textarea.input {
 }
 
 .scenario-pessimistic {
-    border-color: rgba(239, 68, 68, 0.3);
+    border-color: color-mix(in srgb, var(--c-danger) calc(0.3 * 100%), transparent);
 }
 
 .scenario-base {
@@ -1644,7 +1657,7 @@ textarea.input {
 }
 
 .scenario-optimistic {
-    border-color: rgba(34, 197, 94, 0.3);
+    border-color: color-mix(in srgb, var(--c-success) calc(0.3 * 100%), transparent);
 }
 
 .scenario-header {
@@ -1698,15 +1711,15 @@ textarea.input {
 }
 
 .verdict-success {
-    background: rgba(34, 197, 94, 0.1);
-    border: 1px solid rgba(34, 197, 94, 0.3);
-    color: #22c55e;
+    background: color-mix(in srgb, var(--c-success) calc(0.1 * 100%), transparent);
+    border: 1px solid color-mix(in srgb, var(--c-success) calc(0.3 * 100%), transparent);
+    color: var(--c-success);
 }
 
 .verdict-warning {
-    background: rgba(251, 191, 36, 0.1);
-    border: 1px solid rgba(251, 191, 36, 0.3);
-    color: #fbbf24;
+    background: color-mix(in srgb, var(--c-warning) calc(0.1 * 100%), transparent);
+    border: 1px solid color-mix(in srgb, var(--c-warning) calc(0.3 * 100%), transparent);
+    color: var(--c-warning);
 }
 
 /* --- Sensitivity Analysis --- */
@@ -1865,11 +1878,11 @@ textarea.input {
 }
 
 .equity-source {
-    border-color: rgba(34, 197, 94, 0.3);
+    border-color: color-mix(in srgb, var(--c-success) calc(0.3 * 100%), transparent);
 }
 
 .loan-source {
-    border-color: rgba(59, 130, 246, 0.3);
+    border-color: color-mix(in srgb, var(--c-accent-blue) calc(0.3 * 100%), transparent);
 }
 
 .investors-source {
@@ -2094,19 +2107,20 @@ textarea.input {
 }
 
 .nitaqat-green {
-    background: linear-gradient(135deg, #16a34a, #22c55e);
+    background: linear-gradient(135deg, #16a34a, var(--c-success));
 }
 
 .nitaqat-lightgreen {
-    background: linear-gradient(135deg, #22c55e, #4ade80);
+    background: linear-gradient(135deg, var(--c-success), #4ade80);
 }
 
-.nitaqat-yellow {
-    background: linear-gradient(135deg, #ca8a04, #eab308);
+/* النطاق «الأصفر» أُلغي رسمياً (2021) — استُبدل ببلاتيني (أعلى نطاق) بلون فضي-أزرق */
+.nitaqat-platinum {
+    background: linear-gradient(135deg, #64748b, #94a3b8);
 }
 
 .nitaqat-red {
-    background: linear-gradient(135deg, #dc2626, #ef4444);
+    background: linear-gradient(135deg, #dc2626, var(--c-danger));
 }
 
 .saudization-inputs {
@@ -2134,19 +2148,19 @@ textarea.input {
 
 .smart-badge {
     padding: 8px 16px;
-    border-radius: var(--r-md);
+    border-radius: var(--r-pill);
     font-weight: 600;
     font-size: 0.85rem;
 }
 
 .smart-s {
-    background: rgba(59, 130, 246, 0.2);
-    color: #3b82f6;
+    background: color-mix(in srgb, var(--c-accent-blue) calc(0.2 * 100%), transparent);
+    color: var(--c-accent-blue);
 }
 
 .smart-m {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
+    background: color-mix(in srgb, var(--c-success) calc(0.2 * 100%), transparent);
+    color: var(--c-success);
 }
 
 .smart-a {
@@ -2169,11 +2183,11 @@ textarea.input {
 }
 
 .goals-green {
-    border-right: 4px solid #22c55e;
+    border-right: 4px solid var(--c-success);
 }
 
 .goals-blue {
-    border-right: 4px solid #3b82f6;
+    border-right: 4px solid var(--c-accent-blue);
 }
 
 .goals-purple {
@@ -2227,7 +2241,7 @@ textarea.input {
 
 .goal-status {
     padding: 4px 8px;
-    border-radius: var(--r-sm);
+    border-radius: var(--r-pill);
     font-size: 0.75rem;
 }
 
@@ -2237,13 +2251,13 @@ textarea.input {
 }
 
 .status-progress {
-    background: rgba(59, 130, 246, 0.2);
-    color: #3b82f6;
+    background: color-mix(in srgb, var(--c-accent-blue) calc(0.2 * 100%), transparent);
+    color: var(--c-accent-blue);
 }
 
 .status-achieved {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
+    background: color-mix(in srgb, var(--c-success) calc(0.2 * 100%), transparent);
+    color: var(--c-success);
 }
 
 .goal-details {
@@ -2307,11 +2321,11 @@ textarea.input {
 }
 
 .summary-achieved .summary-value {
-    color: #22c55e;
+    color: var(--c-success);
 }
 
 .summary-progress .summary-value {
-    color: #3b82f6;
+    color: var(--c-accent-blue);
 }
 
 .summary-pending .summary-value {
@@ -2351,13 +2365,13 @@ textarea.input {
 }
 
 .score-excellent {
-    border-color: #22c55e;
-    background: rgba(34, 197, 94, 0.1);
+    border-color: var(--c-success);
+    background: color-mix(in srgb, var(--c-success) calc(0.1 * 100%), transparent);
 }
 
 .score-good {
-    border-color: #3b82f6;
-    background: rgba(59, 130, 246, 0.1);
+    border-color: var(--c-accent-blue);
+    background: color-mix(in srgb, var(--c-accent-blue) calc(0.1 * 100%), transparent);
 }
 
 .score-fair {
@@ -2366,8 +2380,8 @@ textarea.input {
 }
 
 .score-poor {
-    border-color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--c-danger);
+    background: color-mix(in srgb, var(--c-danger) calc(0.1 * 100%), transparent);
 }
 
 .score-value {
@@ -2377,11 +2391,11 @@ textarea.input {
 }
 
 .score-excellent .score-value {
-    color: #22c55e;
+    color: var(--c-success);
 }
 
 .score-good .score-value {
-    color: #3b82f6;
+    color: var(--c-accent-blue);
 }
 
 .score-fair .score-value {
@@ -2389,7 +2403,7 @@ textarea.input {
 }
 
 .score-poor .score-value {
-    color: #ef4444;
+    color: var(--c-danger);
 }
 
 .score-label {
@@ -2481,11 +2495,11 @@ textarea.input {
 }
 
 .highlight-card.positive {
-    border: 1px solid rgba(34, 197, 94, 0.3);
+    border: 1px solid color-mix(in srgb, var(--c-success) calc(0.3 * 100%), transparent);
 }
 
 .highlight-card.negative {
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    border: 1px solid color-mix(in srgb, var(--c-danger) calc(0.3 * 100%), transparent);
 }
 
 .highlight-icon {
@@ -2537,9 +2551,9 @@ textarea.input {
 }
 
 .is-conditional {
-    background: linear-gradient(135deg, #78350f, #92400e);
-    color: #fbbf24;
-    border: 1px solid #f59e0b;
+    background: var(--c-gold-subtle);
+    color: var(--c-gold-500);
+    border: 1px solid var(--c-gold-deco);
 }
 
 .recommendation-message {
@@ -2583,21 +2597,21 @@ textarea.input {
 }
 
 .decision-banner-premium.go {
-    background: linear-gradient(135deg, #064e3b, #065f46);
-    border-color: #10b981;
-    color: #ecfdf5;
+    background: linear-gradient(135deg, var(--c-p-600), var(--c-p-500));
+    border-color: var(--c-p-500);
+    color: var(--c-p-contrast);
 }
 
 .decision-banner-premium.nogo {
-    background: linear-gradient(135deg, #7f1d1d, #991b1b);
-    border-color: #ef4444;
-    color: #fef2f2;
+    background: var(--c-danger-subtle);
+    border-color: var(--c-danger);
+    color: var(--c-danger);
 }
 
 .decision-banner-premium.conditional {
-    background: linear-gradient(135deg, #78350f, #92400e);
-    border-color: #f59e0b;
-    color: #fffbeb;
+    background: var(--c-gold-subtle);
+    border-color: var(--c-gold-deco);
+    color: var(--c-gold-500);
 }
 
 .decision-icon {
@@ -2645,7 +2659,7 @@ textarea.input {
 .stress-slider-label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--c-text);
+    color: var(--c-text-main); /* كان var(--c-text) غير المعرف */
 }
 .stress-slider-wrap {
     display: flex;
@@ -2658,7 +2672,7 @@ textarea.input {
     height: 8px;
     border-radius: 4px;
     background: var(--c-border);
-    accent-color: var(--c-p-500, #d4af37);
+    accent-color: var(--c-p-500);
 }
 .stress-slider-value {
     min-width: 3rem;
@@ -2672,7 +2686,7 @@ textarea.input {
     grid-template-columns: 1fr 1fr;
     gap: var(--s-3);
     padding: var(--s-3);
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--c-surface-2);
     border-radius: var(--r-md);
     border: 1px solid var(--c-border);
 }
@@ -2687,12 +2701,12 @@ textarea.input {
 }
 .stress-kpi-value {
     font-size: 1.25rem;
-    font-weight: 800;
+    font-weight: 700; /* الخطوط المحملة 400/500/700 فقط — 800 يُصطنع مشوهاً */
     font-family: var(--font-mono);
     transition: color 0.2s ease;
 }
-.stress-kpi-value.text-success { color: #10b981; }
-.stress-kpi-value.text-danger { color: #ef4444; }
+.stress-kpi-value.text-success { color: var(--c-success); }
+.stress-kpi-value.text-danger { color: var(--c-danger); }
 .stress-test-chart-wrap {
     margin-top: var(--s-3);
 }
@@ -2704,17 +2718,17 @@ textarea.input {
 .stress-bar-track {
     height: 10px;
     border-radius: 5px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--c-surface-3);
     overflow: hidden;
 }
 .stress-bar-fill {
     height: 100%;
     border-radius: 5px;
-    background: linear-gradient(90deg, #ef4444, #d4af37);
+    background: linear-gradient(90deg, var(--c-danger), var(--c-gold-deco));
     transition: width 0.3s ease;
 }
 .stress-bar-fill.stress-bar-negative {
-    background: #ef4444;
+    background: var(--c-danger);
 }
 
 /* بناء التقرير — بطاقات قابلة للسحب والإفلات */
@@ -2732,26 +2746,26 @@ textarea.input {
     align-items: center;
     gap: var(--s-3);
     padding: var(--s-3) var(--s-4);
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--c-bg-card);
     border: 1px solid var(--c-border);
     border-radius: var(--r-md);
     cursor: grab;
     transition: box-shadow 0.2s, transform 0.2s;
 }
 .report-builder-card:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--c-bg-card);
     border-color: var(--c-p-500);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-sm);
 }
 .report-builder-card:active { cursor: grabbing; }
 .report-builder-card.report-builder-card-dragging {
     opacity: 0.85;
     transform: scale(1.02);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-lg);
 }
 .report-builder-card.report-builder-card-drag-over {
     border-color: var(--c-p-500);
-    background: rgba(212, 175, 55, 0.1);
+    background: var(--c-p-subtle);
 }
 .report-builder-card-grip {
     color: var(--c-text-muted);
@@ -2763,17 +2777,17 @@ textarea.input {
 
 .kpi-mini-card {
     padding: var(--s-3);
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--c-bg-card);
     border-radius: var(--r-md);
     border: 1px solid var(--c-border);
 }
 
 .kpi-mini-card.positive .mini-value {
-    color: #10b981;
+    color: var(--c-success);
 }
 
 .kpi-mini-card.negative .mini-value {
-    color: #ef4444;
+    color: var(--c-danger);
 }
 
 .mini-label {
@@ -2798,7 +2812,7 @@ textarea.input {
     display: flex;
     justify-content: space-between;
     padding: var(--s-2);
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--c-surface-2);
     border-radius: var(--r-sm);
 }
 
@@ -2832,7 +2846,7 @@ textarea.input {
     z-index: 1;
     background: var(--c-bg-card);
     padding: 4px 10px;
-    border-radius: 20px;
+    border-radius: var(--r-pill);
     border: 1px solid var(--c-border);
     display: flex;
     flex-direction: column;
@@ -2840,14 +2854,14 @@ textarea.input {
 }
 
 .row-subtotal {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--c-surface-2);
     font-weight: 600;
 }
 
 .row-total {
-    background: rgba(212, 175, 55, 0.05);
+    background: var(--c-gold-subtle);
     font-weight: 700;
-    border-top: 1px solid var(--c-p-500);
+    border-top: 1px solid var(--c-gold-500);
 }
 
 /* Balance Sheet Layout */
@@ -2859,7 +2873,7 @@ textarea.input {
 
 .balance-section {
     padding: var(--s-3);
-    background: rgba(255, 255, 255, 0.01);
+    background: var(--c-surface-2);
     border-radius: var(--r-md);
 }
 
@@ -2868,7 +2882,7 @@ textarea.input {
     justify-content: space-between;
     padding: 8px 0;
     font-size: 0.85rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--c-border);
 }
 
 .balance-total {
@@ -2897,7 +2911,7 @@ textarea.input {
 }
 
 .template-card {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--c-bg-card);
     border: 1px solid var(--c-border);
     border-radius: var(--r-lg);
     padding: var(--s-4);
@@ -2911,9 +2925,9 @@ textarea.input {
 
 .template-card:hover {
     transform: translateY(-8px);
-    background: rgba(212, 175, 55, 0.05);
+    background: var(--c-bg-card);
     border-color: var(--c-p-500);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-lg);
 }
 
 .template-icon {
@@ -2927,7 +2941,7 @@ textarea.input {
     justify-content: center;
     border-radius: 50%;
     border: 1px solid var(--c-border);
-    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.05);
+    box-shadow: none; /* حذف inset الأبيض الموروث من الثيم الداكن */
 }
 
 .template-body h3 {
@@ -2958,7 +2972,7 @@ textarea.input {
 
 .gantt-header {
     display: flex;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--c-surface-2);
     border-bottom: 2px solid var(--c-border);
     position: sticky;
     top: 0;
@@ -2989,7 +3003,7 @@ textarea.input {
     text-align: center;
     font-size: 0.75rem;
     color: var(--c-text-muted);
-    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-left: 1px solid var(--c-border);
 }
 
 .gantt-body {
@@ -2998,12 +3012,12 @@ textarea.input {
 
 .gantt-row {
     display: flex;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--c-border);
     transition: background 0.2s;
 }
 
 .gantt-row:hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--c-surface-2);
 }
 
 .gantt-bar-container {
@@ -3011,7 +3025,7 @@ textarea.input {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
     padding: 10px 0;
-    background-image: linear-gradient(to left, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-image: linear-gradient(to left, var(--c-border) 1px, transparent 1px);
     background-size: calc(100% / 12) 100%;
 }
 
@@ -3023,7 +3037,7 @@ textarea.input {
     justify-content: center;
     font-size: 0.7rem;
     color: #fff;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-sm);
     cursor: help;
     transition: transform 0.2s;
     white-space: nowrap;
@@ -3042,12 +3056,12 @@ textarea.input {
 
 /* Categories */
 .cat-legal {
-    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    background: linear-gradient(90deg, var(--c-accent-blue), #60a5fa);
 }
 
 .cat-technical {
-    background: linear-gradient(90deg, #d4af37, #f7d774);
-    color: #000;
+    background: var(--grad-gold);
+    color: #2a1c05; /* نص داكن مقروء على النحاسي */
 }
 
 .cat-hr {
@@ -3055,7 +3069,7 @@ textarea.input {
 }
 
 .cat-marketing {
-    background: linear-gradient(90deg, #f97316, #fb923c);
+    background: linear-gradient(90deg, var(--c-warning), #fb923c);
 }
 
 .cat-launch {
@@ -3101,7 +3115,7 @@ textarea.input {
 
 .circle-bg {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.05);
+    stroke: var(--c-border);
     stroke-width: 2.8;
 }
 
@@ -3122,11 +3136,11 @@ textarea.input {
 }
 
 .sim-hero-content.danger .circle {
-    stroke: #ef4444;
+    stroke: var(--c-danger);
 }
 
 .percentage {
-    fill: #fff;
+    fill: var(--c-text-main); /* كان #fff — يختفي على الأرضية الورقية الفاتحة */
     font-family: var(--font-mono);
     font-size: 0.5rem;
     text-anchor: middle;
@@ -3148,7 +3162,7 @@ textarea.input {
 
 .sim-stat-box {
     padding: var(--s-3);
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--c-surface-2);
     border-radius: var(--r-md);
     border: 1px solid var(--c-border);
     display: flex;
@@ -3157,11 +3171,11 @@ textarea.input {
 
 /* Valuation Styles */
 .valuation-hero {
-    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(0, 0, 0, 0.2));
+    background: linear-gradient(135deg, var(--c-gold-subtle), transparent);
     padding: var(--s-4);
     border-radius: var(--r-md);
     text-align: center;
-    border: 1px solid rgba(212, 175, 55, 0.2);
+    border: 1px solid var(--c-gold-border);
 }
 
 .val-label {
@@ -3173,7 +3187,7 @@ textarea.input {
 
 .val-price {
     font-size: 1.8rem;
-    font-weight: 800;
+    font-weight: 700; /* الخطوط المحملة 400/500/700 فقط */
     font-family: var(--font-mono);
 }
 
@@ -3182,7 +3196,7 @@ textarea.input {
     justify-content: space-between;
     padding: 8px 0;
     font-size: 0.9rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--c-border);
 }
 
 .investor-terms-grid {
@@ -3194,15 +3208,15 @@ textarea.input {
 
 .term-box {
     padding: var(--s-4);
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--c-surface-2);
     border-radius: var(--r-lg);
     border: 1px solid var(--c-border);
     text-align: center;
 }
 
 .term-box.highlight {
-    background: rgba(212, 175, 55, 0.05);
-    border-color: var(--c-p-500);
+    background: var(--c-gold-subtle);
+    border-color: var(--c-gold-deco);
 }
 
 .term-label {
@@ -3219,8 +3233,8 @@ textarea.input {
 
 .valuation-tip {
     padding: var(--s-3);
-    background: rgba(255, 255, 255, 0.02);
-    border-right: 4px solid var(--c-p-500);
+    background: var(--c-surface-2);
+    border-right: 4px solid var(--c-gold-deco);
     font-size: 0.9rem;
 }
 
@@ -3240,7 +3254,7 @@ textarea.input {
 
 .variance-item {
     padding: var(--s-4);
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--c-surface-2);
     border-radius: var(--r-md);
     border-right: 4px solid var(--c-border);
     display: flex;
@@ -3248,11 +3262,11 @@ textarea.input {
 }
 
 .variance-item.positive {
-    border-right-color: #10b981;
+    border-right-color: var(--c-success);
 }
 
 .variance-item.negative {
-    border-right-color: #ef4444;
+    border-right-color: var(--c-danger);
 }
 
 .variance-item .label {
@@ -3272,11 +3286,12 @@ textarea.input {
     font-weight: 600;
 }
 
+/* حقل المتابعة الفعلية — كان نصاً أبيض على خلفية شفافة (غير مقروء على الفاتح) */
 .input-actual {
     width: 100%;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: var(--c-bg-app);
+    border: 1px solid var(--c-border);
+    color: var(--c-text-main);
     padding: 6px 10px;
     border-radius: var(--r-sm);
     font-family: var(--font-mono);
@@ -3286,7 +3301,8 @@ textarea.input {
 .input-actual:focus {
     border-color: var(--c-p-500);
     outline: none;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--c-bg-card);
+    box-shadow: var(--focus-ring);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -3315,7 +3331,7 @@ textarea.input {
     background: var(--c-bg-panel);
     border: 1px solid var(--c-border);
     border-radius: var(--r-lg);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-lg);
     max-width: 90vw;
     max-height: 90vh;
     overflow: hidden;
@@ -3377,15 +3393,15 @@ textarea.input {
     border-top: 1px solid var(--c-border);
 }
 
-/* قائمة التصدير الجانبية: hover بدون inline handlers (CSP-friendly) */
+/* قائمة التصدير الجانبية: hover أخضر هوياتي بدل البنفسجي الدخيل (CSP-friendly) */
 .export-dropdown .export-option:hover {
-    background: rgba(139, 92, 246, 0.1);
+    background: var(--c-p-subtle);
 }
 .export-dropdown .export-option[data-export="excel"]:hover {
     background: rgba(16, 185, 129, 0.1);
 }
 .export-dropdown .export-option[data-export="bank"]:hover {
-    background: rgba(59, 130, 246, 0.1);
+    background: color-mix(in srgb, var(--c-accent-blue) calc(0.1 * 100%), transparent);
 }
 .export-dropdown .export-option[data-export="json"]:hover {
     background: rgba(107, 114, 128, 0.1);
@@ -3412,9 +3428,9 @@ textarea.input {
 
 .export-card:hover {
     border-color: var(--c-p-500);
-    background: rgba(139, 92, 246, 0.05);
+    background: var(--c-p-subtle);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+    box-shadow: 0 4px 14px -4px rgba(14, 91, 68, 0.25);
 }
 
 .export-card .icon {
@@ -3533,13 +3549,13 @@ textarea.input {
 }
 
 .idea-score-widget.idea-score--red {
-    border-color: rgba(239, 68, 68, 0.3);
-    background: rgba(239, 68, 68, 0.06);
+    border-color: color-mix(in srgb, var(--c-danger) calc(0.3 * 100%), transparent);
+    background: color-mix(in srgb, var(--c-danger) calc(0.06 * 100%), transparent);
 }
 
 .idea-score-widget.idea-score--yellow {
-    border-color: rgba(212, 175, 55, 0.35);
-    background: rgba(212, 175, 55, 0.08);
+    border-color: var(--c-gold-border);
+    background: var(--c-gold-subtle);
 }
 
 .idea-score-widget.idea-score--green {
@@ -3603,7 +3619,7 @@ textarea.input {
 }
 
 .bg-danger\/20 {
-    background: rgba(239, 68, 68, 0.2);
+    background: color-mix(in srgb, var(--c-danger) calc(0.2 * 100%), transparent);
 }
 
 .bg-success {
@@ -3693,10 +3709,11 @@ textarea.input {
     color: var(--c-text-main);
 }
 
-.toast-info { border-left: 4px solid var(--c-p-500); }
-.toast-success { border-left: 4px solid #22c55e; }
-.toast-warning { border-left: 4px solid #f59e0b; }
-.toast-magic { border-left: 4px solid #8b5cf6; background: linear-gradient(to right, rgba(139, 92, 246, 0.05), var(--c-bg-card)); }
+/* شريط التمييز على الجهة المنطقية الصحيحة في RTL + ألوان مرمّزة */
+.toast-info { border-inline-start: 4px solid var(--c-p-500); }
+.toast-success { border-inline-start: 4px solid var(--c-success); }
+.toast-warning { border-inline-start: 4px solid var(--c-warning); }
+.toast-magic { border-inline-start: 4px solid var(--c-accent-purple); background: linear-gradient(to left, rgba(124, 58, 237, 0.06), var(--c-bg-card)); }
 
 .animate-fade-in-up {
     animation: fadeInUp 0.3s ease-out forwards;
@@ -3714,4 +3731,44 @@ textarea.input {
 @keyframes fadeOutDown {
     from { opacity: 1; transform: translateY(0); }
     to { opacity: 0; transform: translateY(20px); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   أرقام مصطفّة — نفس لغة landing (tabular-nums lining-nums)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.kpi-value,
+.text-mono,
+.qa-value,
+.result-value,
+.validation-value,
+.wacc-value,
+.ranking-npv,
+.score-value,
+.summary-value,
+.highlight-value,
+.mini-value,
+.stress-kpi-value,
+.stress-slider-value,
+.val-price,
+.term-value,
+.variance-item .value,
+.dynamic-table .table-input,
+.dynamic-table .computed-cell,
+.income-statement td:not(:first-child),
+.input-actual,
+input[type="number"] {
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.01em;
+}
+
+/* focus ذهبي موحد للعناصر التفاعلية غير النصية — لغة landing */
+.export-card:focus-visible,
+.report-builder-card:focus-visible,
+.step-item:focus-visible,
+.nav-section-header:focus-visible,
+.btn-close:focus-visible,
+.btn-icon:focus-visible,
+.btn-magic-wand:focus-visible {
+    outline: 2px solid var(--c-gold-deco);
+    outline-offset: 2px;
 }

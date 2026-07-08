@@ -5,6 +5,42 @@
 
 import { DataService } from '../services/DataService.js';
 import { toast } from '../utils/toast.js';
+import { fieldHelp } from './components/FieldHelp.js';
+
+// خيارات «قابل للتحقيق» — value معياري، label عربي معروض ومخزّن
+const ACHIEVABLE_CHOICES = [
+    { value: 'yes', label: 'نعم' },
+    { value: 'unsure', label: 'غير متأكد' },
+    { value: 'no', label: 'لا' }
+];
+
+/**
+ * توافق خلفي: goal.achievable القديم نص حر (والقوالب الجاهزة كذلك).
+ * نقبل بادئة معيارية (yes/no/unsure) أو عربية؛ وإلا يُعرض النص كله في حقل الموارد.
+ */
+function parseAchievable(raw) {
+    const text = (raw ?? '').toString().trim();
+    if (!text) return { choice: '', resources: '' };
+    for (const c of ACHIEVABLE_CHOICES) {
+        for (const prefix of [c.value, c.label]) {
+            if (text.toLowerCase().startsWith(prefix.toLowerCase())) {
+                const rest = text.slice(prefix.length);
+                // البادئة تصلح فقط إن انتهى النص أو تبعها فاصل (وإلا «لايوجد» تُحسب «لا»)
+                if (rest === '' || /^[\s،,.:—-]/.test(rest)) {
+                    return { choice: c.value, resources: rest.replace(/^[\s،,.:—-]+/, '').trim() };
+                }
+            }
+        }
+    }
+    return { choice: '', resources: text };
+}
+
+// التخزين نص بادئته التسمية العربية — بقية القرّاء (التقارير) يطبعون القيمة خاماً
+function composeAchievable(choice, resources) {
+    const found = ACHIEVABLE_CHOICES.find(c => c.value === choice);
+    if (!found) return (resources || '').trim();
+    return resources?.trim() ? `${found.label} — ${resources.trim()}` : found.label;
+}
 
 export class SmartGoals {
     constructor(containerId, store, onNavigate) {
@@ -140,7 +176,7 @@ export class SmartGoals {
             <div class="add-goal-form">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="goalSpecific">الهدف (Specific - محدد)</label>
+                        <label for="goalSpecific">الهدف (Specific - محدد) ${fieldHelp('صِغ الهدف بوضوح: ماذا بالضبط تريد تحقيقه؟ هدف واحد لكل بطاقة.', 'مثال: الوصول إلى 150 عميلاً يومياً في مطعمي خلال السنة الأولى.')}</label>
                         <input type="text" class="input" id="goalSpecific" placeholder="ماذا تريد تحقيقه بالضبط؟">
                     </div>
                     <div class="form-group">
@@ -155,7 +191,7 @@ export class SmartGoals {
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="goalMeasurable">كيف ستقيسه؟ (Measurable - قابل للقياس)</label>
+                        <label for="goalMeasurable">كيف ستقيسه؟ (Measurable - قابل للقياس) ${fieldHelp('حدد رقماً أو نسبة تعرف بها أنك حققت الهدف — بلا رقم لا يمكن القياس.', 'مثال: مبيعات شهرية 90 ألف ريال، أو متوسط فاتورة 60 ريالاً.')}</label>
                         <input type="text" class="input" id="goalMeasurable" placeholder="مثال: زيادة المبيعات بنسبة 20%">
                     </div>
                 </div>
@@ -171,7 +207,7 @@ export class SmartGoals {
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="goalRelevant">كيف يحقق الهدف الفكرة والهوية؟ (Relevant - مرتبط)</label>
+                        <label for="goalRelevant">كيف يحقق الهدف الفكرة والهوية؟ (Relevant - مرتبط) ${fieldHelp('اربط الهدف بفكرة المشروع: لماذا هذا الهدف مهم لنجاحه تحديداً؟', 'مثال: زيادة عملاء الفطور تدعم هوية المطعم كوجهة عائلية صباحية.')}</label>
                         <input type="text" class="input" id="goalRelevant" placeholder="كيف يدعم هذا الهدف فكرة المشروع وهويته؟">
                     </div>
                 </div>
@@ -181,12 +217,25 @@ export class SmartGoals {
                         <input type="date" class="input" id="goalStartDate">
                     </div>
                     <div class="form-group">
-                        <label for="goalTimeBound">تاريخ النهاية (Time-bound - محدد بوقت)</label>
+                        <label for="goalTimeBound">تاريخ النهاية (Time-bound - محدد بوقت) ${fieldHelp('حدد موعداً نهائياً واقعياً — الهدف بلا موعد يبقى أمنية.', 'مثال: نهاية الربع الثاني من السنة الأولى لتشغيل المطعم.')}</label>
                         <input type="date" class="input" id="goalTimeBound">
                     </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
-                        <label for="goalAchievable">هل الهدف قابل للتحقيق؟ (Achievable)</label>
-                        <input type="text" class="input" id="goalAchievable" placeholder="ما الموارد المطلوبة؟">
+                        <label>هل الهدف قابل للتحقيق؟ (Achievable) ${fieldHelp('قيّم بواقعية: هل الهدف ممكن بمواردك وقدراتك الحالية؟', 'مثال: 150 عميلاً يومياً قابل للتحقيق لمطعم بموقع رئيسي و40 مقعداً.')}</label>
+                        <div class="yesno-group d-flex gap-2 mt-2" id="goalAchievableGroup">
+                            ${ACHIEVABLE_CHOICES.map(c => `
+                                <label class="yesno-btn flex-1">
+                                    <input type="radio" name="goalAchievable" value="${c.value}" class="hidden-radio">
+                                    ${c.label}
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="goalAchievableResources">الموارد المطلوبة للتحقيق (اختياري)</label>
+                        <input type="text" class="input" id="goalAchievableResources" placeholder="مثال: طباخ إضافي وميزانية تسويق 5 آلاف ريال شهرياً">
                     </div>
                 </div>
                 <button class="btn btn--primary btn-add-goal">${this.editingId ? 'حفظ التعديلات' : '+ إضافة الهدف'}</button>
@@ -240,6 +289,15 @@ export class SmartGoals {
         // Add goal button
         this.container.querySelector('.btn-add-goal')?.addEventListener('click', () => this.addGoal());
 
+        // تفعيل بصري لأزرار «قابل للتحقيق»
+        this.container.querySelectorAll('input[name="goalAchievable"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                this.container.querySelectorAll('#goalAchievableGroup .yesno-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.querySelector('input')?.checked);
+                });
+            });
+        });
+
         // Remove goal buttons
         this.container.querySelectorAll('.btn-remove-goal').forEach(btn => {
             btn.addEventListener('click', (e) => this.removeGoal(e));
@@ -278,7 +336,9 @@ export class SmartGoals {
         try {
             const specific = document.getElementById('goalSpecific')?.value;
             const measurable = document.getElementById('goalMeasurable')?.value;
-            const achievable = document.getElementById('goalAchievable')?.value;
+            const achievableChoice = this.container.querySelector('input[name="goalAchievable"]:checked')?.value || '';
+            const achievableResources = document.getElementById('goalAchievableResources')?.value || '';
+            const achievable = composeAchievable(achievableChoice, achievableResources);
             const relevant = document.getElementById('goalRelevant')?.value;
             const startDate = document.getElementById('goalStartDate')?.value;
             const timeBound = document.getElementById('goalTimeBound')?.value;
@@ -349,7 +409,14 @@ export class SmartGoals {
                 };
                 setValue('goalSpecific', goal.specific);
                 setValue('goalMeasurable', goal.measurable);
-                setValue('goalAchievable', goal.achievable);
+                // توافق خلفي: النص القديم بلا بادئة معيارية يذهب كاملاً لحقل الموارد
+                const { choice, resources } = parseAchievable(goal.achievable);
+                setValue('goalAchievableResources', resources);
+                const radio = this.container.querySelector(`input[name="goalAchievable"][value="${choice}"]`);
+                if (radio) {
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change', { bubbles: true }));
+                }
                 setValue('goalRelevant', goal.relevant);
                 setValue('goalStartDate', goal.startDate);
                 setValue('goalTimeBound', goal.timeBound || goal.deadline);

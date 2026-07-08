@@ -101,10 +101,10 @@ export function adaptRunFullModelForExcel(state, runResult) {
     kpis: {
       npv: ind.npv ?? 0,
       irr: ind.irr ?? 0,
-      payback: ind.paybackPeriod ?? ind.payback ?? 0,
+      payback: ind.paybackPeriod ?? ind.payback ?? null,
     },
     breakeven: {
-      ordersPerDay: (ind.breakevenUnitsPerMonth ?? 0) / 30 || 0,
+      ordersPerDay: (ind.breakevenUnitsPerMonth ?? (Number.isFinite(ind.breakEvenUnits) ? ind.breakEvenUnits / 12 : 0)) / 30 || 0,
     },
   };
 

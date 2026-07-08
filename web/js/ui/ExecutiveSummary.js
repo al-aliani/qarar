@@ -4,6 +4,9 @@
  */
 
 import { calculateStudy as runFullModel } from '../core/engine.js';
+import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
+import { calculateProjectScore } from '../core/scoring.js';
+import { checkDriversAgainstBenchmarks } from '../core/sectorBenchmarks.js';
 import { aiConnector } from '../services/AIConnector.js'; // Updated: use unified AI service
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
@@ -34,7 +37,9 @@ export class ExecutiveSummary {
         this.container.innerHTML = `
             <div class="executive-summary">
                 <h2 class="section-title">📋 الملخص التنفيذي</h2>
-                
+                ${investmentDataWarningHtml(investmentDataWarning(state, financialResults))}
+                ${this.renderAuditorBanner(state, financialResults)}
+
                 <!-- Feasibility Score -->
                 <div class="card analysis-card">
                     <h3 class="card-title">درجة الجدوى التلقائية</h3>
@@ -97,52 +102,10 @@ export class ExecutiveSummary {
     }
 
     calculateFeasibilityScore(state, financialResults) {
-        let score = 0;
-        const breakdown = {};
-
-        // Financial (40 points) — من runFullModel.indicators (يُمرَّر من render)
-        let financialScore = 0;
-        const ind = financialResults?.indicators || {};
-        if ((ind.npv ?? 0) > 0) financialScore += 20;
-        if ((ind.irr ?? 0) > 0.15) financialScore += 10;
-        const payback = ind.paybackPeriod ?? ind.payback ?? 999;
-        if (payback < 5 && payback >= 0) financialScore += 10;
-        if (financialResults == null && Object.keys(ind).length === 0) financialScore = 10; // default عند فشل النموذج
-        breakdown.financial = { score: financialScore, max: 40, label: 'المالية' };
-        score += financialScore;
-
-        // Market (20 points)
-        let marketScore = 0;
-        const marketSizing = state.marketSizing || {};
-        if (marketSizing.tam?.value > 0) marketScore += 5;
-        if (marketSizing.sam?.value > 0) marketScore += 5;
-        if (marketSizing.som?.value > 0) marketScore += 5;
-        if ((marketSizing.segments || []).length > 0) marketScore += 5;
-        breakdown.market = { score: marketScore, max: 20, label: 'السوق' };
-        score += marketScore;
-
-        // Risk (20 points)
-        let riskScore = 20;
-        const risks = state.riskAnalysis?.risks || [];
-        const criticalRisks = risks.filter(r => r.probability === 'high' && r.impact === 'high').length;
-        riskScore -= criticalRisks * 5;
-        if (risks.every(r => r.mitigation)) riskScore = Math.min(20, riskScore + 5);
-        breakdown.risk = { score: Math.max(0, riskScore), max: 20, label: 'المخاطر' };
-        score += Math.max(0, riskScore);
-
-        // Completeness (20 points)
-        let completenessScore = 0;
-        const sections = ['projectInfo', 'technical', 'hr', 'marketing', 'revenue', 'assumptions', 'financing'];
-        sections.forEach(section => {
-            const data = state[section];
-            if (data && Object.keys(data).length > 0) {
-                completenessScore += Math.floor(20 / sections.length);
-            }
-        });
-        breakdown.completeness = { score: completenessScore, max: 20, label: 'اكتمال البيانات' };
-        score += completenessScore;
-
-        return { score: Math.min(100, score), breakdown };
+        // Unified score source: same calculateProjectScore the Decision Dashboard uses —
+        // the exec summary previously had its own algorithm giving a different number (89 vs 100).
+        const evaluation = calculateProjectScore(state, financialResults);
+        return { score: evaluation.score, breakdown: evaluation.breakdown || {} };
     }
 
     renderFeasibilityScore(score, breakdown) {
@@ -304,11 +267,45 @@ export class ExecutiveSummary {
         `;
     }
 
+    /**
+     * بانر «نظرة المدقق» أعلى الملخص التنفيذي — يرفع تحذيرات معايير القطاع + فحوص معقولية IRR/الاسترداد
+     * التي كانت مدفونة في لوحات فرعية، كي لا يظهر رقم يعرف النظام أنه غير واقعي بلا تنبيه بارز.
+     */
+    renderAuditorBanner(state, results) {
+        const ind = results?.indicators || {};
+        const warnings = [];
+        try {
+            (checkDriversAgainstBenchmarks(state, results) || []).forEach(w => { if (w?.message) warnings.push(w.message); });
+        } catch (_) { }
+        const irr = Number(ind.irr);
+        if (Number.isFinite(irr) && irr > 0.60) {
+            warnings.push(`معدل العائد الداخلي ${(irr * 100).toFixed(0)}% مرتفع بشكل غير واقعي — عادةً يعني إيرادات متفائلة أو تكاليف ناقصة؛ راجع الفرضيات قبل الاعتماد عليه أمام ممول.`);
+        }
+        const pb = Number(ind.paybackPeriod ?? ind.payback);
+        if (Number.isFinite(pb) && pb > 0 && pb < 1) {
+            warnings.push(`فترة الاسترداد ${pb.toFixed(1)} سنة أسرع من المعتاد لهذا القطاع — تحقّق من واقعية المبيعات واكتمال التكاليف.`);
+        }
+        if (!warnings.length) return '';
+        const items = warnings.slice(0, 4).map(m => `<li>${String(m).replace(/</g, '&lt;')}</li>`).join('');
+        return `
+            <div class="alert alert--warning" role="alert" style="margin-bottom:1rem;">
+                <strong>🔍 نظرة المدقق — انتبه قبل الاعتماد على النتيجة:</strong>
+                <ul style="margin:.4rem 0 .2rem; padding-inline-start:1.2rem;">${items}</ul>
+                <small class="text-muted">راجع «هل أرقامي منطقية؟» و«نظرة المدقق» في اللوحة المالية للتفاصيل.</small>
+            </div>`;
+    }
+
     renderKeyRisks(state) {
         // مرتبط بصفحة «تحليل المخاطر» / مصفوفة المخاطر: state.riskAnalysis.risks
+        // نرتّب بنفس درجة الخطورة الرقمية التي يستخدمها السجل (احتمال × أثر ≥ 6)،
+        // بدل اشتراط السلسلة الحرفية 'high' — فمخاطرة «متوسط×متوسط»=6 كانت تُستبعد رغم أنها مهمة.
+        const probScore = { low: 1, medium: 2, high: 3 };
+        const impactScore = { low: 1, medium: 3, high: 5 };
+        const sev = r => (probScore[r.probability] || 1) * (impactScore[r.impact] || 1);
         const raw = state.riskAnalysis?.risks || [];
         const risks = raw
-            .filter(r => (r.probability === 'high' || r.impact === 'high') && (r.name || r.description))
+            .filter(r => (r.name || r.description) && sev(r) >= 6)
+            .sort((a, b) => sev(b) - sev(a))
             .slice(0, 5);
 
         if (risks.length === 0) {
@@ -319,8 +316,8 @@ export class ExecutiveSummary {
             <div class="risks-list">
                 ${risks.map(risk => `
                     <div class="risk-item">
-                        <span class="risk-severity ${risk.probability === 'high' && risk.impact === 'high' ? 'critical' : 'high'}">
-                            ${risk.probability === 'high' && risk.impact === 'high' ? '🔴' : '🟡'}
+                        <span class="risk-severity ${sev(risk) >= 9 ? 'critical' : 'high'}">
+                            ${sev(risk) >= 9 ? '🔴' : '🟡'}
                         </span>
                         <span class="risk-name">${risk.name || risk.description || 'خطر غير محدد'}</span>
                         <span class="risk-mitigation">${risk.mitigation || 'لا توجد خطة مواجهة'}</span>
@@ -335,18 +332,21 @@ export class ExecutiveSummary {
         let message = '';
         let actions = [];
 
-        if (score >= 70 && ((results?.indicators?.npv) ?? 0) > 0) {
+        // التوصية من نفس المصدر الموحّد (calculateProjectScore ← قرار المحرك) كي تطابق لوحة القرار،
+        // بدل عتبة score>=70 مستقلة قد تعطي «نفّذ» بينما تعرض اللوحة «مراجعة» لنفس المشروع.
+        const evalr = calculateProjectScore(state, results);
+        if (evalr.recommendation === 'go') {
             recommendation = 'go';
             message = 'المشروع مجدي ويُنصح بالمضي قدماً في التنفيذ';
             actions = ['البدء في إجراءات التأسيس', 'تأمين التمويل', 'بناء الفريق'];
-        } else if (score >= 40) {
-            recommendation = 'conditional';
-            message = 'المشروع يحتاج معالجة بعض النقاط قبل اتخاذ القرار النهائي';
-            actions = ['معالجة الفجوات المحددة', 'إعادة النظر في التكاليف', 'استشارة خبراء'];
-        } else {
+        } else if (evalr.recommendation === 'nogo') {
             recommendation = 'nogo';
             message = 'المشروع غير مجدي في شكله الحالي ويحتاج إعادة هيكلة جوهرية';
             actions = ['إعادة دراسة نموذج العمل', 'تقليل التكاليف بشكل كبير', 'البحث عن أسواق بديلة'];
+        } else {
+            recommendation = 'conditional';
+            message = 'المشروع يحتاج معالجة بعض النقاط قبل اتخاذ القرار النهائي';
+            actions = ['معالجة الفجوات المحددة', 'إعادة النظر في التكاليف', 'استشارة خبراء'];
         }
 
         const bannerClass = recommendation === 'go' ? 'is-go' : recommendation === 'nogo' ? 'is-nogo' : 'is-conditional';
@@ -379,9 +379,10 @@ export class ExecutiveSummary {
             tech: { name: 'التقنية', profitMargin: [15, 25], roi: [25, 40], payback: [2, 4] }
         };
 
-        const projectMargin = results?.indicators?.profitMargin ?? (results?.revenueProjection?.[0]?.total > 0 ? (results?.incomeStatement?.[0]?.netIncome ?? 0) / results.revenueProjection[0].total : 0);
-        const projectROI = results?.indicators?.roi ?? 0;
-        const projectPayback = results?.indicators?.paybackPeriod ?? results?.indicators?.payback ?? 0;
+        const projectMargin = results?.indicators?.profitMargin ?? (results?.incomeStatement?.[0]?.revenue > 0 ? (results?.incomeStatement?.[0]?.netIncome ?? 0) / results.incomeStatement[0].revenue : 0);
+        const projectAnnualROI = results?.indicators?.annualROI ?? results?.indicators?.arr ?? 0;
+        const projectPayback = results?.indicators?.paybackPeriod ?? results?.indicators?.payback ?? null;
+        const projectPaybackText = Number.isFinite(projectPayback) && projectPayback > 0 ? `${projectPayback.toFixed(1)} سنة` : 'غير محقق';
 
         return `
             <div class="benchmarks-container">
@@ -391,16 +392,16 @@ export class ExecutiveSummary {
                             <tr>
                                 <th>الصناعة</th>
                                 <th>هامش الربح</th>
-                                <th>العائد على الاستثمار</th>
+                                <th>العائد السنوي على الاستثمار</th>
                                 <th>فترة الاسترداد</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr class="project-row">
                                 <td><strong>مشروعك</strong></td>
-                                <td class="${projectMargin >= 10 ? 'text-success' : 'text-danger'}">${(projectMargin * 100).toFixed(1)}%</td>
-                                <td class="${projectROI >= 0.20 ? 'text-success' : 'text-danger'}">${(projectROI * 100).toFixed(0)}%</td>
-                                <td class="${projectPayback <= 4 ? 'text-success' : 'text-danger'}">${projectPayback.toFixed(1)} سنة</td>
+                                <td class="${projectMargin >= 0.10 ? 'text-success' : 'text-danger'}">${(projectMargin * 100).toFixed(1)}%</td>
+                                <td class="${projectAnnualROI >= 0.20 ? 'text-success' : 'text-danger'}">${(projectAnnualROI * 100).toFixed(0)}%</td>
+                                <td class="${Number.isFinite(projectPayback) && projectPayback <= 4 ? 'text-success' : 'text-danger'}">${projectPaybackText}</td>
                             </tr>
                             ${Object.entries(benchmarks).map(([key, b]) => `
                                 <tr>
@@ -412,6 +413,7 @@ export class ExecutiveSummary {
                             `).join('')}
                         </tbody>
                     </table>
+                    <p class="text-xs text-muted mt-2">المقارنة القطاعية تستخدم عائداً سنوياً قابلاً للمقارنة، وليس العائد التراكمي لكامل فترة الدراسة.</p>
                 </div>
             </div>
         `;

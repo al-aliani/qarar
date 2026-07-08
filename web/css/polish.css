@@ -1,0 +1,161 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   polish.css — طبقة تلميع عالمية (إحساس فقط، لا تخطيط)
+   ──────────────────────────────────────────────────────────────────────────
+   تُحمَّل مبكراً بعد main.css فتكون أساساً يمكن لأنماط الأسطح تجاوزه.
+   • كل تحسين على مستوى مكوّن (.btn/.card/.step-item…) يُكتب داخل :where()
+     كي تبقى خصوصيته صفراً فلا يتغلّب على أنماط المكوّنات في components.css.
+   • ألوان التوكنات حصراً — لا أي hex/رمادي/أبيض/أسود صريح.
+   • RTL بالخصائص المنطقية؛ لا تخطيط (grid/flex/أبعاد) — رفع «إحساس» فقط.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* منحنى وزمن انتقال موحّد لكل تفاعلات hover/focus */
+  --transition-base: 0.18s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* ── صقل الطباعة: تنعيم الخطوط وقراءة أوضح على الأرضية الورقية ── */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* تناسق أوزان العناوين (≤700 كما يفرض عقد التصميم) */
+:where(h1, h2, h3, h4, h5, h6) {
+  font-weight: 700;
+}
+
+/* ── ::selection موحّد بلون الهوية ── */
+::selection {
+  background: var(--c-p-subtle);
+  color: var(--c-text-main);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   focus-visible موحّد لكل عنصر تفاعلي
+   ──────────────────────────────────────────────────────────────────────────
+   outline شفاف (يبقى مرئياً في أوضاع التباين العالي/forced-colors) + حلقة تركيز
+   من التوكن. عند النقر بالفأرة (focus لا يطابق focus-visible) نُزيل الحلقة.
+   نستخدم :where() لتبقى الخصوصية صفراً فلا نُبطل أي focus-visible مخصّص في
+   components.css؛ ومع ذلك نضمن حلقة افتراضية لكل عنصر لم يُعرَّف له تركيز.
+   ══════════════════════════════════════════════════════════════════════════ */
+:where(a, button, input, select, textarea, [tabindex], [role="button"]):focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+/* لا تُظهر الحلقة عند التركيز بالفأرة (نقر) — فقط عبر لوحة المفاتيح */
+:where(a, button, input, select, textarea, [tabindex], [role="button"]):focus:not(:focus-visible) {
+  box-shadow: none;
+}
+
+/* ── انتقالات ناعمة متناسقة (خصوصية صفر عبر :where) ── */
+:where(a) {
+  transition: color var(--transition-base);
+}
+
+:where(.btn) {
+  transition:
+    transform var(--transition-base),
+    background var(--transition-base),
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    color var(--transition-base),
+    filter var(--transition-base);
+}
+
+:where(.card, .kpi-card, .service-card, .pestel-item, .ranking-item, .org-card) {
+  transition:
+    transform var(--transition-base),
+    border-color var(--transition-base),
+    box-shadow var(--transition-base);
+}
+
+/* ── تحسين حالات الأزرار (متناسقة، خصوصية صفر) ── */
+:where(.btn) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(.btn):hover {
+  transform: translateY(-1px);
+}
+
+:where(.btn):active {
+  transform: translateY(0) scale(0.985);
+}
+
+:where(.btn):disabled,
+:where(.btn)[aria-disabled="true"],
+:where(.btn).is-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+  filter: none;
+}
+
+/* رفع بطاقة خفيف عند المرور — لمسة عمق دون إزاحة تخطيط */
+:where(.card):hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ── إزالة توهّج اللمس الأزرق العام على كل العناصر التفاعلية ── */
+:where(a, button, input, select, textarea, [role="button"], [tabindex]) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   أشرطة تمرير رقيقة متناسقة مع الثيم
+   ──────────────────────────────────────────────────────────────────────────
+   Firefox: scrollbar-width/‏scrollbar-color بالتوكنات.
+   WebKit/Blink: مقبض من --c-surface-3 يتغمّق قليلاً عند المرور.
+   ══════════════════════════════════════════════════════════════════════════ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-surface-3) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--c-surface-3);
+  border-radius: var(--r-pill);
+  /* حدّ شفاف عبر background-clip لإبقاء المقبض رفيعاً داخل مساره */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--c-text-muted);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   احترام تفضيل تقليل الحركة — تحييد كل ما سبق
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  :where(a),
+  :where(.btn),
+  :where(.card, .kpi-card, .service-card, .pestel-item, .ranking-item, .org-card) {
+    transition: none;
+  }
+
+  :where(.btn):hover,
+  :where(.btn):active,
+  :where(.card):hover {
+    transform: none;
+  }
+}

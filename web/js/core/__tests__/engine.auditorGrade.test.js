@@ -8,6 +8,7 @@ import { calculateStudy } from '../engine.js';
 import { SECTIONS } from '../schema.js';
 import { runQAChecks } from '../../utils/qaChecks.js';
 import { detectSectorBenchmark, checkDriversAgainstBenchmarks } from '../sectorBenchmarks.js';
+import { FIELD_OPTIONS } from '../fieldOptions.js';
 
 function makeStudy(overrides = {}) {
     const base = {
@@ -36,6 +37,95 @@ const qaCodes = async (study, results) => {
     const qa = await runQAChecks(study, results);
     return [...(qa.softWarnings || []), ...(qa.hardErrors || [])].map(w => w.code);
 };
+
+describe('قائمة «نوع النشاط» تُطابق قطاعات المحرك (لا خيار غذائي فقط)', () => {
+    // بعد توسيع CONCEPT_OPTIONS للقطاعات غير الغذائية: كل خيار (عدا «أخرى») يجب أن
+    // يكشفه detectSectorBenchmark لقطاع حقيقي، وإلا تضيع مقارنات المدقق لذلك النشاط.
+    const options = FIELD_OPTIONS.concept.options.filter(o => o.value !== 'أخرى');
+
+    it('كل خيار نشاط يُطابق قطاعاً معيارياً معروفاً', () => {
+        const unmatched = options.filter(o => !detectSectorBenchmark(o.value));
+        expect(unmatched.map(o => o.value)).toEqual([]);
+    });
+
+    it('تغطّي القائمة قطاعات غير غذائية (تجزئة/خدمي/صناعي/لوجستي/تقني)', () => {
+        const labels = new Set(options.map(o => detectSectorBenchmark(o.value)?.label));
+        expect(labels.has('تجزئة')).toBe(true);
+        expect(labels.has('خدمي')).toBe(true);
+        expect(labels.has('صناعي')).toBe(true);
+        expect(labels.has('لوجستي')).toBe(true);
+        expect(labels.has('منصة رقمية/SaaS')).toBe(true);
+    });
+});
+
+describe('حارس IRR: مشروع خاسر لا يُظهر عائداً داخلياً مرتفعاً زائفاً', () => {
+    // اختبار انحدار لخلل «IRR=1000% رغم NPV سالب واسترداد غير محقق» (تقرير ٢٠٢٦-٠٧-٠٦).
+    // استثمار ضخم مقابل إيراد ضئيل ⇒ NPV سالب بعمق ⇒ يجب أن يكون IRR = null (غير قابل للحساب)
+    // لا رقماً خارقاً ناتجاً عن تباعُد نيوتن المقصوص سابقاً عند 1000%.
+    const losing = makeStudy({
+        [SECTIONS.TECHNICAL]: {
+            equipment: [{ name: 'معدات باهظة', price: 5000000, quantity: 1 }],
+            buildings: [], furniture: [], establishmentCosts: [], capacityUtilization: []
+        },
+        [SECTIONS.REVENUE]: {
+            streams: [{ service: 'مبيعات ضئيلة', type: 'operating', customersPerMonth: 10, avgPrice: 5, variableCostRate: 0.32, growthRate: 0.0 }]
+        }
+    });
+
+    it('NPV سالب ⇒ IRR ليس رقماً موجباً مرتفعاً (لا 1000%)', () => {
+        const r = calculateStudy(losing);
+        expect(r.indicators.npv).toBeLessThan(0);
+        // القيمة إمّا null (غير قابلة للحساب) أو ≤ 0 — لكنها قطعاً ليست عائداً موجباً مرتفعاً
+        const irr = r.indicators.irr;
+        expect(irr == null || irr <= 0).toBe(true);
+        expect(irr === 10).toBe(false); // القيمة الزائفة القديمة (1000%)
+    });
+
+    it('مشروع رابح يحتفظ بـ IRR موجب صالح', () => {
+        const r = calculateStudy(makeStudy());
+        expect(r.indicators.npv).toBeGreaterThan(0);
+        expect(typeof r.indicators.irr).toBe('number');
+        expect(r.indicators.irr).toBeGreaterThan(0);
+        expect(r.indicators.irr).toBeLessThan(5); // ضمن نطاق واقعي (<500%)
+    });
+
+    // إصلاح الحارس الأعمى: NPV<0 لا يعني IRR غير موجود. عائد صحيح أقل من معدل الخصم
+    // (IRR≈6% وخصم 10%) ينتج NPV سالباً وهو وضع متسق — يجب ألا يُمحى إلى null.
+    // معدات 1.2M بنفس مدخلات makeStudy ⇒ NPV≈−146k وIRR≈6.1% (تحقق حيّ على 5199).
+    it('عائد داخلي صحيح أقل من معدل الخصم يبقى رغم NPV سالب (لا يُمسح كالسابق)', () => {
+        const discountRate = 0.10;
+        const r = calculateStudy(makeStudy({
+            [SECTIONS.TECHNICAL]: {
+                equipment: [{ name: 'معدات مرتفعة', price: 1200000, quantity: 1 }],
+                buildings: [], furniture: [], establishmentCosts: [], capacityUtilization: []
+            }
+        }));
+        expect(r.indicators.npv).toBeLessThan(0);
+        expect(typeof r.indicators.irr).toBe('number'); // لم يُمحَ إلى null
+        expect(r.indicators.irr).toBeGreaterThan(0);
+        expect(r.indicators.irr).toBeLessThan(discountRate); // على الجانب الصحيح من الخصم
+    });
+});
+
+describe('القيمة النهائية على أساس حقوق الملكية: تطرح الدين المتبقي عند نهاية الأفق', () => {
+    // قيمة المنشأة (unlevered NOPAT) كانت تُضاف إلى NPV الملكية دون طرح رصيد الدين
+    // المتبقي عند نهاية الأفق ⇒ تضخيم حين loanTerm>projectionYears. نفس EBIT في السيناريوهين
+    // ⇒ نفس قيمة المنشأة؛ الفرق الوحيد هو الدين المتبقي المطروح (تحقق حيّ على 5199).
+    const mkLoan = (termYears) => makeStudy({
+        assumptions: { projectionYears: 5, discountRate: 0.10, inflationRate: 0.02, hiddenOverheadsRate: 0, terminalValue: { method: 'gordon', growthRate: 0.02 } },
+        [SECTIONS.TECHNICAL]: { equipment: [{ name: 'معدات', price: 500000, quantity: 1 }], buildings: [], furniture: [], establishmentCosts: [], capacityUtilization: [] },
+        [SECTIONS.FINANCING]: { sources: { bankLoan: { amount: 400000, interestRate: 0.08, termYears } } }
+    });
+
+    it('قرض أطول من الأفق ⇒ قيمة نهائية أقل (الدين المتبقي يُطرح)', () => {
+        const shortL = calculateStudy(mkLoan(5));   // يُسدَّد عند نهاية الأفق ⇒ لا دين متبقٍّ
+        const longL = calculateStudy(mkLoan(20));   // رصيد كبير متبقٍّ عند نهاية الأفق
+        expect(shortL.indicators.terminalValue).toBeGreaterThan(0);
+        expect(longL.indicators.terminalValue).toBeGreaterThan(0);
+        expect(longL.indicators.terminalValue).toBeLessThan(shortL.indicators.terminalValue);
+        expect(longL.indicators.npvWithTerminal).toBeLessThan(shortL.indicators.npvWithTerminal);
+    });
+});
 
 describe('أ. مصالحة الطاقة', () => {
     it('خطة تتجاوز الطاقة القصوى = خطأ مانع', async () => {
@@ -102,9 +192,12 @@ describe('ج. القيمة النهائية (Gordon)', () => {
         const r = calculateStudy(makeStudy());
         expect(r.indicators.terminalValue).toBeGreaterThan(0);
         expect(r.indicators.npvWithTerminal).toBeCloseTo(r.indicators.npv + r.indicators.terminalValue, 4);
-        // معادلة Gordon: آخر تدفق × (1+g) ÷ (r−g) مخصومة لسنوات الدراسة
-        const lastCF = r.incomeStatement[4].cashFlow;
-        const expected = (lastCF * 1.02) / (0.10 - 0.02) / Math.pow(1.10, 5);
+        // معادلة Gordon على تدفق معياري (NOPAT غير مرفوع بالدين) لا التدفق الأخير الخام
+        // — بعد إصلاح تدقيق ٢٠٢٦-٠٧-٠٦ #2: normalizedFCF × (1+g) ÷ (r−g) مخصومة للسنوات.
+        const last = r.incomeStatement[4];
+        const effLevy = last.ebt > 0 ? Math.min(1, (last.zakat + last.tax) / last.ebt) : 0;
+        const normFCF = last.ebit * (1 - effLevy);
+        const expected = (normFCF * 1.02) / (0.10 - 0.02) / Math.pow(1.10, 5);
         expect(r.indicators.terminalValue).toBeCloseTo(expected, 2);
     });
 

@@ -28,7 +28,7 @@ export class Charts {
                     {
                         label: 'الإيرادات',
                         data: revenue,
-                        backgroundColor: '#d4af37',
+                        backgroundColor: '#8a5f1c',
                     },
                     {
                         label: 'صافي الربح',
@@ -41,11 +41,11 @@ export class Charts {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: '#8b949e' } }
+                    legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--c-text-main').trim() || '#1a1a1a' } }
                 },
                 scales: {
-                    y: { ticks: { color: '#8b949e' }, grid: { color: '#30363d' } },
-                    x: { ticks: { color: '#8b949e' }, grid: { display: false } }
+                    y: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--c-text-muted').trim() || '#555' }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--c-text-muted').trim() || '#555' }, grid: { display: false } }
                 }
             }
         });

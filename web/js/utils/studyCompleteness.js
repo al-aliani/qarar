@@ -6,6 +6,18 @@
 export function calculateStudyCompleteness(studyData) {
     if (!studyData) return { percentage: 0, details: {} };
 
+    // الافتراضات المنهجية (معدل خصم، سيناريوهات، هيكل تمويل...) موجودة في المخطط
+    // منذ الإنشاء — لا تُحتسب نقاطها إلا بعد أول إدخال فعلي من المستخدم، وإلا
+    // يعرض مشروع فارغ نسبة اكتمال وهمية (~17%).
+    const hasAnyUserInput = Boolean(
+        studyData.projectInfo?.name ||
+        studyData.projectInfo?.description ||
+        studyData.revenue?.streams?.length ||
+        studyData.technical?.equipment?.length ||
+        studyData.technical?.buildings?.length ||
+        studyData.hr?.positions?.length
+    );
+
     const weights = {
         // الأساسيات (30%)
         projectInfo: 8,
@@ -57,7 +69,8 @@ export function calculateStudyCompleteness(studyData) {
 
         if (p.name) score += 2; else missing.push('اسم المشروع');
         if (p.description) score += 1; else missing.push('وصف المشروع');
-        if (p.city) score += 1; else missing.push('المدينة');
+        // المدينة لها قيمة افتراضية — تُحتسب فقط بعد تسمية المشروع
+        if (p.city && p.name) score += 1; else missing.push('المدينة');
         if (p.district) score += 1; else missing.push('الحي');
         if (p.concept) score += 1; else missing.push('فكرة المشروع');
         if (p.areaSize > 0) score += 2; else missing.push('المساحة');
@@ -68,7 +81,8 @@ export function calculateStudyCompleteness(studyData) {
         if (la.coordinates?.lat != null && la.coordinates?.lng != null) score += 0.5;
         if (la.address || la.selectionFactors) score += 0.5;
         const checklist = p.dataGatheringChecklist || [];
-        if (checklist.length > 0 && checklist.some(c => c.step || c.notes)) score += 0.5;
+        // خطوات الجمع الافتراضية لا تُحتسب — يلزم إنجاز خطوة أو تدوين ملاحظة
+        if (checklist.length > 0 && checklist.some(c => c.done || (c.notes && String(c.notes).trim()))) score += 0.5;
 
         addDetail('projectInfo', Math.min(score, weights.projectInfo), weights.projectInfo, missing);
     }
@@ -112,7 +126,7 @@ export function calculateStudyCompleteness(studyData) {
 
     // 4. Assumptions (7%)
     {
-        const a = studyData.assumptions || {};
+        const a = hasAnyUserInput ? (studyData.assumptions || {}) : {};
         let score = 0;
         const missing = [];
 
@@ -233,7 +247,8 @@ export function calculateStudyCompleteness(studyData) {
 
         if (s.pestel?.length > 0 && s.pestel.some(p => p.description)) score += 2; else missing.push('تحليل بيستل (PESTEL)');
         if (s.swot?.strengths?.length > 0 || s.swot?.weaknesses?.length > 0) score += 2; else missing.push('تحليل نقاط القوة والضعف');
-        if (s.porter) score += 1;
+        // بنية porter الافتراضية موجودة دائماً — تُحتسب فقط عند تعبئة وصف واحد على الأقل
+        if (s.porter && Object.values(s.porter).some(f => f && String(f.description || '').trim())) score += 1;
 
         addDetail('strategic', score, weights.strategic, missing);
     }
@@ -266,7 +281,7 @@ export function calculateStudyCompleteness(studyData) {
     {
         let score = 0;
         const missing = [];
-        if (studyData.scenarios?.base && studyData.scenarios?.pessimistic && studyData.scenarios?.optimistic) {
+        if (hasAnyUserInput && studyData.scenarios?.base && studyData.scenarios?.pessimistic && studyData.scenarios?.optimistic) {
             score = weights.scenarios;
         } else {
             missing.push('إعداد السيناريوهات (متشائم، متفائل)');
@@ -278,7 +293,12 @@ export function calculateStudyCompleteness(studyData) {
     {
         let score = 0;
         const missing = [];
-        if (studyData.financing?.sources) {
+        // بنية sources موجودة افتراضياً — يلزم مبلغ تمويل فعلي واحد على الأقل
+        const fin = studyData.financing || {};
+        const srcs = fin.sources || {};
+        const hasFinancingAmount = (Number(fin.totalInvestment) || 0) > 0 ||
+            Object.values(srcs).some(s => (Number(s?.amount) || 0) > 0);
+        if (hasFinancingAmount) {
             score = weights.financing;
         } else {
             missing.push('هيكل التمويل (رأس المال/القروض)');

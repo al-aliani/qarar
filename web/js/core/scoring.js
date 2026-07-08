@@ -66,25 +66,45 @@ export function calculateProjectScore(state, results) {
         details.push({ category: 'financial', label: 'فترة الاسترداد غير محققة', score: 0, max: 25, issue: true });
     }
 
-    // هامش الربح / العائد (حتى 25)
+    // هامش الربح / العائد (حتى 15) — الأوزان تجمع 100 بالضبط: مالية 90 + بيانات 10
     if (roi >= minROI || (minROI <= 0 && margin > 0.1)) {
-        score += 25;
-        details.push({ category: 'financial', label: 'العائد على الاستثمار أو هامش الربح مقبول', score: 25, max: 25 });
+        score += 15;
+        details.push({ category: 'financial', label: 'العائد على الاستثمار أو هامش الربح مقبول', score: 15, max: 15 });
     } else if (margin > 0 || roi > 0) {
-        score += 10;
-        details.push({ category: 'financial', label: 'ربحية منخفضة', score: 10, max: 25, issue: true });
+        score += 6;
+        details.push({ category: 'financial', label: 'ربحية منخفضة', score: 6, max: 15, issue: true });
     } else {
-        details.push({ category: 'financial', label: 'الربحية غير محققة', score: 0, max: 25, issue: true });
+        details.push({ category: 'financial', label: 'الربحية غير محققة', score: 0, max: 15, issue: true });
     }
 
-    // اكتمال البيانات (اختياري، لا يغيّر التوصية المعتمدة على الـ Thresholds)
+    // اكتمال البيانات (10 نقاط) — تُضاف للدرجة كي تساوي الدرجة مجموع التفاصيل (مالية 90 + بيانات 10 = 100)
     if (state) {
         if ((state.marketSizing?.som?.value ?? state.marketSizing?.tam?.value) > 0) {
+            score += 5;
             details.push({ category: 'data', label: 'حجم السوق مُدخل', score: 5, max: 5 });
+        } else {
+            details.push({ category: 'data', label: 'حجم السوق غير مُدخل', score: 0, max: 5, issue: true });
         }
         if ((state.hr?.positions?.length || state.technical?.equipment?.length) > 0) {
+            score += 5;
             details.push({ category: 'data', label: 'البنود الأساسية مكتملة', score: 5, max: 5 });
+        } else {
+            details.push({ category: 'data', label: 'البنود الأساسية ناقصة', score: 0, max: 5, issue: true });
         }
+    }
+
+    // سقف 100 (الأوزان مضبوطة على 100، والسقف حماية إضافية)
+    score = Math.min(100, score);
+
+    // تجميع التفاصيل في فئات — مصدر واحد للدرجة يستهلكه كلٌّ من لوحة القرار والملخص التنفيذي
+    // (كان لكلٍّ خوارزمية مستقلة فتظهر درجات متضاربة لنفس المشروع).
+    const CATEGORY_LABELS = { financial: 'الجدوى المالية', data: 'اكتمال البيانات' };
+    const breakdown = {};
+    for (const item of details) {
+        const cat = item.category || 'other';
+        if (!breakdown[cat]) breakdown[cat] = { label: CATEGORY_LABELS[cat] || cat, score: 0, max: 0 };
+        breakdown[cat].score += item.score || 0;
+        breakdown[cat].max += item.max || 0;
     }
 
     let rating = 'F';
@@ -129,6 +149,7 @@ export function calculateProjectScore(state, results) {
         score,
         rating,
         details,
+        breakdown,
         recommendation,
         recommendationLabel,
         color

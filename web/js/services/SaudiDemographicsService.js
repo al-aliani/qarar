@@ -5,13 +5,21 @@
 
 let _cache = null;
 
+// المصادر: أعداد السكان (population) مبنية على تعداد الهيئة العامة للإحصاء 2022.
+// أمّا متوسط دخل الفرد (perCapitaIncomeSAR) فهو تقدير داخلي (ASSUMPTION) — الهيئة لا تنشر
+// دخل الفرد على مستوى المدينة، لذا يُوسم صراحةً كتقدير لا كرقم مصدري رسمي.
 const FALLBACK_DATA = {
-    meta: { source: 'الهيئة العامة للإحصاء (GASTAT)', url: 'https://www.stats.gov.sa', year: 2022 },
+    meta: {
+        populationSource: 'الهيئة العامة للإحصاء (GASTAT) — تعداد 2022',
+        populationUrl: 'https://www.stats.gov.sa',
+        incomeSource: 'تقدير داخلي (ASSUMPTION) — ليس رقماً رسمياً منشوراً',
+        year: 2022
+    },
     cities: {
         'الرياض': { population: 7676654, perCapitaIncomeSAR: 98500, region: 'منطقة الرياض' },
-        'جدة': { population: 4685000, perCapitaIncomeSAR: 92000, region: 'منطقة مكة المكرمة' },
-        'مكة المكرمة': { population: 2042000, perCapitaIncomeSAR: 78000, region: 'منطقة مكة المكرمة' },
-        'مكة': { population: 2042000, perCapitaIncomeSAR: 78000, region: 'منطقة مكة المكرمة' },
+        'جدة': { population: 3751722, perCapitaIncomeSAR: 92000, region: 'منطقة مكة المكرمة' },
+        'مكة المكرمة': { population: 2427924, perCapitaIncomeSAR: 78000, region: 'منطقة مكة المكرمة' },
+        'مكة': { population: 2427924, perCapitaIncomeSAR: 78000, region: 'منطقة مكة المكرمة' },
         'المدينة المنورة': { population: 1481000, perCapitaIncomeSAR: 82000, region: 'منطقة المدينة المنورة' },
         'المدينة': { population: 1481000, perCapitaIncomeSAR: 82000, region: 'منطقة المدينة المنورة' },
         'الدمام': { population: 1208000, perCapitaIncomeSAR: 95000, region: 'المنطقة الشرقية' },
@@ -68,9 +76,11 @@ export async function getCityData(city) {
     return {
         population: Number(raw.population) || 0,
         perCapitaIncomeSAR: Number(raw.perCapitaIncomeSAR) || 70000,
-        source: data.meta?.source || 'الهيئة العامة للإحصاء (GASTAT)',
+        // مصدر السكان رسمي (تعداد GASTAT)؛ مصدر دخل الفرد تقديري (ASSUMPTION)
+        populationSource: data.meta?.populationSource || data.meta?.source || 'الهيئة العامة للإحصاء (GASTAT) — تعداد 2022',
+        incomeSource: data.meta?.incomeSource || 'تقدير داخلي (ASSUMPTION) — ليس رقماً رسمياً منشوراً',
         year: String(data.meta?.year || '2022'),
-        url: data.meta?.url || 'https://www.stats.gov.sa',
+        url: data.meta?.populationUrl || data.meta?.url || 'https://www.stats.gov.sa',
         region: raw.region || ''
     };
 }
@@ -101,8 +111,8 @@ export async function getTAMSuggestion(city, sector) {
             tam: 0,
             sam: 0,
             som: 0,
-            source: 'الهيئة العامة للإحصاء (GASTAT)',
-            sourceLabel: 'بيانات هيئة الإحصاء',
+            source: 'الهيئة العامة للإحصاء (GASTAT) — للسكان فقط',
+            sourceLabel: 'السكان: تعداد GASTAT — الدخل ونِسب الاستهلاك: تقديرية',
             year: '2022',
             description: 'لم تُحدد مدينة أو لا توجد بيانات للمدينة المختارة.',
             population: 0,
@@ -110,23 +120,33 @@ export async function getTAMSuggestion(city, sector) {
         };
     }
 
+    // افتراضات (ليست بيانات مصدرية) — موحّدة منهجياً مع SaudiMarketEngine:
+    // SAM = نسبة من TAM (الشريحة القابلة للخدمة)، وSOM = نسبة من SAM (لا من TAM).
+    // كان SOM = 8% من TAM يعطي ≈907 مليون ريال لمطعم واحد بالرياض (فرق ×48 عن منهجية المحرك).
+    const SAM_OF_TAM = 0.10;  // الشريحة القابلة للخدمة من السوق الكلي
+    const SOM_OF_SAM = 0.05;  // ما يمكن لمنشأة جديدة واحدة التقاطه من السوق القابل للخدمة (تقدير مبكر)
+
     const data = await loadDemographics();
     const share = getSectorShare(sector, data.sectorConsumptionShare);
     const pop = cityData.population;
     const income = cityData.perCapitaIncomeSAR;
     const tam = Math.round(pop * income * share);
-    const sam = Math.round(tam * 0.4);
-    const som = Math.round(tam * 0.08);
+    const sam = Math.round(tam * SAM_OF_TAM);
+    const som = Math.round(sam * SOM_OF_SAM); // نسبة من SAM لا TAM
 
     const cityName = (city || '').trim() || 'المدينة';
-    const description = `السوق الكلي (TAM) المقدر لـ ${cityName}: عدد السكان ${pop.toLocaleString('ar-SA')} نسمة × متوسط دخل الفرد ${income.toLocaleString('ar-SA')} ريال/سنوياً × نسبة استهلاك القطاع (${(share * 100).toFixed(1)}%) ≈ ${tam.toLocaleString('ar-SA')} ريال سنوياً.`;
+    const description = `السوق الكلي (TAM) المقدر لـ ${cityName}: عدد السكان ${pop.toLocaleString('ar-SA')} نسمة (مصدر رسمي: ${cityData.populationSource}) × متوسط دخل الفرد ${income.toLocaleString('ar-SA')} ريال/سنوياً (تقديري — ${cityData.incomeSource}) × نسبة استهلاك القطاع (${(share * 100).toFixed(1)}% — تقديرية) ≈ ${tam.toLocaleString('ar-SA')} ريال سنوياً. راجع الأرقام التقديرية وعدّلها بمصدر عند توفره.`;
 
     return {
         tam,
         sam,
         som,
-        source: cityData.source,
-        sourceLabel: `الهيئة العامة للإحصاء — تعداد ${cityData.year}`,
+        samIsAssumption: true,
+        somIsAssumption: true,
+        incomeIsAssumption: true,
+        sectorShareIsAssumption: true,
+        source: cityData.populationSource,
+        sourceLabel: `السكان: ${cityData.populationSource} — الدخل ونِسب الاستهلاك: تقديرية (ASSUMPTION). SOM سقف مدينة — طابِقه بطاقتك التشغيلية الفعلية`,
         year: cityData.year,
         description,
         population: pop,

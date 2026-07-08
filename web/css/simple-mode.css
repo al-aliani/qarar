@@ -16,24 +16,24 @@ body.mode-simple .advanced-only {
     display: none !important;
 }
 
-/* Visual cues for modes */
+/* إشارات بصرية للأنماط — برموز الثيم (كانت ألواناً صلبة من الهوية القديمة) */
 body.mode-mini #appHeader {
-    background: linear-gradient(to right, #1a1d24, #2c3e50); /* Calm blue */
+    background: linear-gradient(to left, var(--c-bg-panel), var(--c-p-subtle)); /* هدوء أخضر بدل الكحلي القديم */
 }
 
 body.mode-mini .sidebar {
-    background: #f8f9fa;
-    border-right: 1px solid #ddd;
+    background: var(--c-bg-panel);
+    border-right: 1px solid var(--c-border);
 }
 body.mode-mini .sidebar .nav-section-title {
-    color: #333;
+    color: var(--c-text-main);
 }
 body.mode-mini .step-item {
-    color: #555;
+    color: var(--c-text-muted);
 }
 body.mode-mini .step-item.is-active {
-    background: #e9ecef;
-    color: #000;
+    background: var(--c-p-subtle);
+    color: var(--c-p-500);
 }
 
 /* Focus Mode Animations */

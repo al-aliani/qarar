@@ -1,7 +1,7 @@
 /* Live Scenario Switcher Styles */
 
 .scenario-switcher-panel {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--c-accent-blue) calc(0.1 * 100%), transparent), rgba(16, 185, 129, 0.1));
     border-radius: 12px;
     padding: 24px;
     margin: 20px 0;
@@ -58,7 +58,7 @@
     background: linear-gradient(135deg, var(--c-primary), var(--c-success));
     border-color: var(--c-primary);
     color: white;
-    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--c-accent-blue) calc(0.3 * 100%), transparent);
 }
 
 .scenario-icon {
@@ -140,7 +140,7 @@
 }
 
 .impact-value.negative {
-    color: #ef4444;
+    color: var(--c-danger);
 }
 
 /* Comparison Table */
@@ -186,7 +186,7 @@
 }
 
 .comparison-table tbody tr:hover {
-    background: rgba(59, 130, 246, 0.05);
+    background: color-mix(in srgb, var(--c-accent-blue) calc(0.05 * 100%), transparent);
 }
 
 .comparison-table td:first-child {
@@ -201,19 +201,19 @@
 }
 
 .comparison-table td.negative {
-    color: #ef4444;
+    color: var(--c-danger);
     font-weight: 600;
 }
 
 /* Highlight the active scenario column */
 .comparison-table th:nth-child(2),
 .comparison-table td:nth-child(2) {
-    background: rgba(239, 68, 68, 0.05);
+    background: color-mix(in srgb, var(--c-danger) calc(0.05 * 100%), transparent);
 }
 
 .comparison-table th:nth-child(3),
 .comparison-table td:nth-child(3) {
-    background: rgba(59, 130, 246, 0.05);
+    background: color-mix(in srgb, var(--c-accent-blue) calc(0.05 * 100%), transparent);
     font-weight: 600;
 }
 

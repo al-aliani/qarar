@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https://www.youtube.com https://player.vimeo.com; connect-src 'self'; base-uri 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; base-uri 'self'; form-action 'self';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <title>لوحة المستثمر | ملخص دراسة الجدوى</title>
   <meta name="description" content="عرض ملخص دراسة الجدوى للمستثمر — للقراءة فقط." />
@@ -20,34 +22,6 @@
 </head>
 <body>
   <div id="pitchRoot"></div>
-  <script type="module">
-    import { InvestorDashboard, getPitchFromStorage } from './js/ui/InvestorDashboard.js';
-
-    function getPayloadFromUrl() {
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get('token');
-      const dataB64 = params.get('data');
-
-      if (dataB64) {
-        try {
-          const json = atob(dataB64.replace(/-/g, '+').replace(/_/g, '/'));
-          return JSON.parse(json);
-        } catch (e) {
-          console.warn('Invalid data param:', e);
-          return null;
-        }
-      }
-
-      if (token) {
-        return getPitchFromStorage(token);
-      }
-
-      return null;
-    }
-
-    const payload = getPayloadFromUrl();
-    const dashboard = new InvestorDashboard('pitchRoot', { animate: true });
-    dashboard.render(payload);
-  </script>
+  <script type="module" src="./js/investor-page.js"></script>
 </body>
 </html>

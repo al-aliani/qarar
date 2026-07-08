@@ -69,7 +69,7 @@ export class OperationalSim {
                         <div class="kpi-value" id="resQueueLen">-- عميل</div>
                     </div>
                     <div class="kpi-card">
-                        <div class="kpi-label">ضغط الموظفين (Utilization)</div>
+                        <div class="kpi-label">ضغط الموظفين (نسبة الانشغال)</div>
                         <div class="kpi-value" id="resUtil">--%</div>
                     </div>
                 </div>
@@ -137,7 +137,7 @@ export class OperationalSim {
         // Calculation
         if (rho >= 1) {
             this.showResults('infinite', 'infinite', rho);
-            this.showAlert('danger', '🛑 **نظام منهار!** (Utilization >= 100%) - يجب زيادة الموظفين فوراً.');
+            this.showAlert('danger', '<strong>نظام غير مستقر:</strong> نسبة الانشغال وصلت إلى 100% أو أكثر؛ يجب زيادة عدد الموظفين فوراً.');
         } else {
             // Erlang-C Probability of Waiting P(W)
             // C(m, lambda/mu)
@@ -158,7 +158,7 @@ export class OperationalSim {
 
             if (avgWaitTime > 5) {
                 const optimal = this.findOptimalStaffing(params.arrivalRate, params.serviceTime, 5);
-                this.showAlert('warning', `⚠️ وقت الانتظار مرتفع (${Math.round(avgWaitTime)} د). للحفاظ على أقل من 5 دقائق، نقترح تعيين **${optimal}** موظفين. <button class="btn-xs btn--text underline" id="btnApplyOptim">تطبيق الاقتراح</button>`);
+                this.showAlert('warning', `وقت الانتظار مرتفع (${Math.round(avgWaitTime)} د). للحفاظ على أقل من 5 دقائق، نقترح تعيين <strong>${optimal}</strong> موظفين. <button class="btn-xs btn--text underline" id="btnApplyOptim">تطبيق الاقتراح</button>`);
 
                 // Bind apply button
                 setTimeout(() => {
@@ -169,7 +169,7 @@ export class OperationalSim {
                     });
                 }, 100);
             } else {
-                this.showAlert('success', '✅ **نظام ممتاز:** أوقات الانتظار ضمن الحدود المقبولة.');
+                this.showAlert('success', '<strong>نظام ممتاز:</strong> أوقات الانتظار ضمن الحدود المقبولة.');
             }
         }
 

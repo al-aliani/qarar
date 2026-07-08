@@ -195,4 +195,50 @@ export class ProjectManager {
             return { success: false, error: e.message };
         }
     }
+
+    /**
+     * Export project to JSON string
+     * @param {string} id - Project ID
+     * @returns {Promise<{success: boolean, json?: string, filename?: string, error?: string}>}
+     */
+    static async exportProjectBackup(id) {
+        try {
+            const result = await this.loadProject(id);
+            if (!result?.data) return { success: false, error: 'المشروع غير موجود' };
+            
+            const data = result.data;
+            const projectName = data.projectInfo?.name || 'مشروع';
+            const safeName = projectName.replace(/[^a-zA-Z0-9\u0600-\u06FF\s_-]/g, '').trim().replace(/\s+/g, '_');
+            const dateStr = new Date().toISOString().split('T')[0];
+            
+            const json = JSON.stringify(data, null, 2);
+            return { success: true, json, filename: `qarar_backup_${safeName}_${dateStr}.json` };
+        } catch (e) {
+            console.error('Export failed', e);
+            return { success: false, error: e.message };
+        }
+    }
+
+    /**
+     * Import project from JSON text
+     * @param {string} jsonString - JSON content of the project
+     * @returns {Promise<{success: boolean, id?: string, error?: string}>}
+     */
+    static async importProjectBackup(jsonString) {
+        try {
+            const data = JSON.parse(jsonString);
+            if (!data || typeof data !== 'object') return { success: false, error: 'ملف غير صالح' };
+            
+            // Generate a new ID to avoid overwriting existing projects if imported multiple times
+            const newId = crypto.randomUUID();
+            data.projectInfo = data.projectInfo || {};
+            data.projectInfo.id = newId;
+            data.projectInfo.name = (data.projectInfo.name || 'مشروع مستورد') + ' (مستورد)';
+            
+            return await this.saveProject(data);
+        } catch (e) {
+            console.error('Import failed', e);
+            return { success: false, error: 'تعذر قراءة الملف، تأكد أنه بصيغة صحيحة.' };
+        }
+    }
 }

@@ -2,7 +2,7 @@
  * مسار "جدوى سريعة" / "جدوى في حوالي ساعة" (Modeliks) — 3 خطوات: تعريف المشروع → الأرقام الأساسية → القرار والتصدير.
  * استنساخ لنقاط قوة منافس (جدوى تك، Modeliks): تبسيط، تحميل PDF فوري، ملء بالذكاء الاصطناعي اختياري.
  */
-import { quickFeasibilityCalc, QUICK_DEFAULTS_BY_SECTOR } from '../utils/quickFeasibilityCalc.js';
+import { quickFeasibilityCalc, QUICK_DEFAULTS_BY_SECTOR, estimateAllInInvestment, quickSanityChecks } from '../utils/quickFeasibilityCalc.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { toast } from '../utils/toast.js';
 import { QuickPDFGenerator } from '../../export/quickPdfGenerator.js';
@@ -10,7 +10,7 @@ import { IntelligenceService } from '../services/IntelligenceService.js';
 
 const SECTORS = [
     { value: 'مطعم', label: 'مطعم / مقهى' },
-    { value: 'retail', label: 'تجزئة (Retail)' },
+    { value: 'retail', label: 'تجزئة' },
     { value: 'خدمي', label: 'خدمي' },
     { value: 'صناعي', label: 'صناعي' },
     { value: 'تقني', label: 'تقني' },
@@ -32,25 +32,37 @@ export class QuickFeasibilityWizard {
         this.onFinish = options.onFinish || (() => {}); // الانتقال للمسار الكامل
         this.onExit = options.onExit || (() => {});      // العودة للوحة المشاريع
         this.step = 1;
+        // القيم المالية تبدأ فارغة (null) — لا نُعبّئ أرقاماً «تقديرية» ونعرضها كأنها أرقام المستخدم.
+        // التقدير القطاعي يُخزَّن منفصلاً في this.estimates ويُعرض كتلميح/زر اختياري فقط.
         this.quickData = {
             projectName: '',
             sector: 'مطعم',
             city: 'الرياض',
             area: 100,
             budget: 0,
-            monthlyRevenue: QUICK_DEFAULTS_BY_SECTOR.مطعم.monthlyRevenue,
-            monthlyCosts: QUICK_DEFAULTS_BY_SECTOR.مطعم.monthlyCosts,
-            initialInvestment: QUICK_DEFAULTS_BY_SECTOR.مطعم.initialInvestment,
+            monthlyRevenue: null,
+            monthlyCosts: null,
+            initialInvestment: null,
             fundingSource: 'self',
             apiDefaults: null
         };
+        this.estimates = { ...QUICK_DEFAULTS_BY_SECTOR.مطعم };
+        this.estimateSource = 'sector'; // 'sector' (متوسط قطاعي ثابت) أو 'market' (محرك السوق حسب المدينة/المساحة)
     }
 
+    /** يحدّث التقدير القطاعي المعروض (لا يلمس أرقام المستخدم في quickData). */
     applySectorDefaults() {
         const def = QUICK_DEFAULTS_BY_SECTOR[this.quickData.sector] || QUICK_DEFAULTS_BY_SECTOR.أخرى;
-        this.quickData.monthlyRevenue = def.monthlyRevenue;
-        this.quickData.monthlyCosts = def.monthlyCosts;
-        this.quickData.initialInvestment = def.initialInvestment;
+        this.estimates = { ...def };
+        this.estimateSource = 'sector';
+    }
+
+    /** هل القيم الحالية مطابقة للتقدير القطاعي (أي أن المستخدم اعتمد التقدير ولم يُدخل أرقامه)؟ */
+    isUsingEstimates() {
+        const d = this.quickData, e = this.estimates;
+        return Number(d.monthlyRevenue) === Number(e.monthlyRevenue)
+            && Number(d.monthlyCosts) === Number(e.monthlyCosts)
+            && Number(d.initialInvestment) === Number(e.initialInvestment);
     }
 
     render() {
@@ -117,26 +129,31 @@ export class QuickFeasibilityWizard {
     }
 
     /**
-     * إشعار مصدر الأرقام: يميّز بوضوح بين تقدير حقيقي من محرك السوق (مدينة/قطاع)
-     * وبين قيم افتراضية ثابتة (Offline Fallback) — لا نعرض الاثنين بنفس الثقة.
+     * إشعار مصدر الأرقام: صندوق ثابت الظهور يشرح أن الحقول أرقامك أنت،
+     * وأن التقدير القطاعي مجرد نقطة بداية اختيارية موسومة بوضوح — لا يُعرض كأنه أرقام مؤكدة.
      */
-    _renderDefaultsNotice(d) {
-        if (!d.apiDefaults) return '';
-        const isFallback = d.apiDefaults.source === 'Offline Fallback';
-        if (isFallback) {
-            return `<p class="text-sm mb-4" role="status">
-                <span class="badge badge--warning">قيم عامة تقريبية</span>
-                خادم محرك السوق غير متاح الآن، فعُبّئت الحقول بقيم عامة ثابتة (غير مخصّصة لمدينتك/قطاعك). راجع كل رقم وعدّله يدوياً قبل الاعتماد عليه.
-            </p>`;
-        }
-        return `<p class="text-sm text-gold mb-4" role="status">
-            <span class="badge badge--warning">تقديري</span>
-            تم تعبئة الأرقام من محرك السوق بناءً على مدينتك وقطاعك. يمكنك تعديل أي حقل.
-        </p>`;
+    _renderEstimatesNotice() {
+        const e = this.estimates;
+        const srcLabel = this.estimateSource === 'market'
+            ? 'محرك السوق (حسب مدينتك ومساحتك)'
+            : 'متوسط قطاعي عام (غير مخصّص لمشروعك)';
+        return `
+            <div class="alert alert--warning mb-4" role="note">
+                <strong>هذه أرقامك أنت.</strong> اترك الحقول فارغة وأدخل أرقامك الحقيقية (من عروض أسعار، إيجار فعلي، ومبيعات مدروسة).
+                إن أردت نقطة بداية فقط، يمكنك ملؤها بتقدير قطاعي — لكنه <u>متوسط عام لا يخص مشروعك</u> ويجب مراجعته.
+                <div class="text-xs text-muted mt-2">مصدر التقدير: ${srcLabel} • إيراد ~${formatCurrency(e.monthlyRevenue)} / تكاليف ~${formatCurrency(e.monthlyCosts)} / استثمار ~${formatCurrency(e.initialInvestment)}</div>
+                <button type="button" id="qf-apply-estimate" class="btn btn--sm btn--ghost mt-2">املأ بالتقدير القطاعي (يمكنك تعديله)</button>
+            </div>`;
+    }
+
+    /** قيمة الحقل: رقم المستخدم إن أدخله، وإلا فارغ (لا نعرض التقدير كقيمة). */
+    _fieldVal(v) {
+        return (v === null || v === undefined || Number.isNaN(v)) ? '' : v;
     }
 
     renderStep2() {
         const d = this.quickData;
+        const e = this.estimates;
         const progress = (2 / TOTAL_STEPS) * 100;
         this.container.innerHTML = `
             <div class="quick-feasibility animate-entry" dir="rtl">
@@ -155,19 +172,22 @@ export class QuickFeasibilityWizard {
                 </div>
                 <h2 class="text-2xl font-bold mb-2">الأرقام الأساسية</h2>
                 <p class="text-muted mb-6">خطوة واحدة متبقية — ثم تحصل على القرار وتحميل PDF (حوالي 5 دقائق).</p>
-                ${this._renderDefaultsNotice(d)}
+                ${this._renderEstimatesNotice()}
                 <div class="card card-hover max-w-xl space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">الإيراد الشهري المتوقع (ريال)</label>
-                        <input type="number" id="qf-monthlyRevenue" class="input w-full" value="${d.monthlyRevenue}" min="0" step="1000" />
+                        <input type="number" id="qf-monthlyRevenue" class="input w-full" dir="ltr" value="${this._fieldVal(d.monthlyRevenue)}" min="0" step="1000" placeholder="تقدير قطاعي: ${e.monthlyRevenue}" />
+                        <p class="field-hint text-xs text-muted mt-1">أدخل مبيعاتك الشهرية المتوقعة بناءً على دراسة السوق والمنافسين — لا تقديراً متفائلاً.</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">التكاليف التشغيلية الشهرية (ريال)</label>
-                        <input type="number" id="qf-monthlyCosts" class="input w-full" value="${d.monthlyCosts}" min="0" step="1000" />
+                        <input type="number" id="qf-monthlyCosts" class="input w-full" dir="ltr" value="${this._fieldVal(d.monthlyCosts)}" min="0" step="1000" placeholder="تقدير قطاعي: ${e.monthlyCosts}" />
+                        <p class="field-hint text-xs text-muted mt-1">اشمل: إيجار، رواتب، مواد/بضاعة، كهرباء وماء، تسويق، صيانة.</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">الاستثمار الأولي (ريال)</label>
-                        <input type="number" id="qf-initialInvestment" class="input w-full" value="${d.initialInvestment}" min="0" step="10000" />
+                        <input type="number" id="qf-initialInvestment" class="input w-full" dir="ltr" value="${this._fieldVal(d.initialInvestment)}" min="0" step="10000" placeholder="تقدير قطاعي: ${e.initialInvestment}" />
+                        <p class="field-hint text-xs text-muted mt-1">اشمل كل التكاليف لمرة واحدة: تجهيز المكان، معدات، أثاث، تراخيص، ما قبل التشغيل، ورأس مال عامل للأشهر الأولى.</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">مصدر التمويل</label>
@@ -195,7 +215,29 @@ export class QuickFeasibilityWizard {
         const d = this.quickData;
         const result = quickFeasibilityCalc(d);
         const progress = 100;
-        const recClass = result.recommendation === 'go' ? 'text-success' : result.recommendation === 'revise' ? 'text-warning' : 'text-danger';
+
+        // بوابة جودة مصغّرة: نُبرز الأرقام غير الواقعية بدل عرض «GO» واثق فوقها
+        const warnings = quickSanityChecks(d, result, { estimatesApplied: this.isUsingEstimates() });
+        const hardWarnings = warnings.filter(w => w.level === 'hard');
+        const hasHard = hardWarnings.length > 0;
+
+        // توصية أمينة: عند وجود تحذيرات جوهرية لا نعرض GO قاطعاً بل «مبدئي — يتطلب مراجعة»
+        let displayLabel = result.recommendationLabel;
+        let recClass = result.recommendation === 'go' ? 'text-success' : result.recommendation === 'revise' ? 'text-warning' : 'text-danger';
+        if (hasHard && result.recommendation === 'go') {
+            displayLabel = 'مبدئي — يتطلب مراجعة قبل القرار';
+            recClass = 'text-warning';
+        }
+
+        const warningsHtml = warnings.length ? `
+            <div class="alert ${hasHard ? 'alert--warning' : 'alert--info'} max-w-xl mb-6" role="alert">
+                <strong>${hasHard ? '⚠ قبل أن تثق بهذه النتيجة، انتبه:' : 'ملاحظات على الأرقام:'}</strong>
+                <ul class="mt-2 space-y-2 text-sm" style="list-style:disc; padding-inline-start:1.25rem;">
+                    ${warnings.map(w => `<li>${w.text}</li>`).join('')}
+                </ul>
+                <p class="text-xs text-muted mt-3">للتحقق الكامل من هذه النقاط (فترة تهيئة، تدفق شهري، طاقة استيعابية، معايير القطاع) استخدم «الدراسة الكاملة» — فيها بوابة جودة تفصيلية.</p>
+            </div>` : '';
+
         this.container.innerHTML = `
             <div class="quick-feasibility animate-entry" dir="rtl">
                 <div class="progress-step-map flex gap-2 justify-center mb-4" role="navigation" aria-label="خريطة الخطوات">
@@ -213,9 +255,11 @@ export class QuickFeasibilityWizard {
                 <h2 class="text-2xl font-bold mb-2">ملخص القرار</h2>
                 <p class="text-muted mb-6">تم تقييم المشروع بناءً على المدخلات. يمكنك تحميل التقرير المختصر الآن.</p>
                 <p class="text-gold font-semibold mb-4">تم إعداد مسودة دراستك في حوالي ساعة.</p>
+                ${warningsHtml}
                 <div class="card card-hover max-w-xl mb-6 p-6">
                     <div class="text-center mb-6">
-                        <span class="text-4xl font-black ${recClass}">${result.recommendationLabel}</span>
+                        <span class="text-4xl font-black ${recClass}">${displayLabel}</span>
+                        ${hasHard ? '<div class="text-xs text-muted mt-2">هذا مؤشر مبدئي سريع وليس قراراً نهائياً — راجع التحذيرات أعلاه.</div>' : ''}
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                         <div class="p-3 bg-white/5 rounded-lg">
@@ -244,7 +288,7 @@ export class QuickFeasibilityWizard {
                 <p class="text-xs text-muted mt-6 max-w-xl">التقرير المبني على معايير دراسات جدوى متوافقة مع أفضل الممارسات المحلية (رؤية 2030، منشآت، بنك التنمية). لا يُعد اعتماداً رسمياً إلا بموجب اتفاق.</p>
             </div>
         `;
-        this.bindStep3(result);
+        this.bindStep3(result, warnings);
     }
 
     bindStep1() {
@@ -275,12 +319,15 @@ export class QuickFeasibilityWizard {
                     const staffCount = 2;
                     const monthlySalaries = (sal.manager || 6000) + (staffCount * (sal.staff || 3500));
                     const marketing = (defaults.marketing && defaults.marketing.monthly) || 1500;
-                    this.quickData.monthlyCosts = Math.round(rent + monthlySalaries + marketing);
-                    this.quickData.initialInvestment = Math.round((defaults.fitout_per_sqm || 1500) * area);
-                    this.quickData.monthlyRevenue = Math.max(this.quickData.monthlyRevenue, Math.round(this.quickData.monthlyCosts * 1.25));
+                    const monthlyCosts = Math.round(rent + monthlySalaries + marketing);
+                    // تقدير قطاعي محدَّث (لا نلمس أرقام المستخدم) — استثمار *شامل* لا تجهيزاً فقط
+                    this.estimates.monthlyCosts = monthlyCosts;
+                    this.estimates.initialInvestment = estimateAllInInvestment(defaults, area, monthlyCosts);
+                    this.estimates.monthlyRevenue = Math.max(this.estimates.monthlyRevenue, Math.round(monthlyCosts * 1.25));
+                    this.estimateSource = defaults.source === 'Offline Fallback' ? 'sector' : 'market';
                 }
             } catch (e) {
-                /* استمر بالافتراضات المحلية */
+                /* استمر بالتقدير القطاعي الثابت */
             }
             this.step = 2;
             this.render();
@@ -292,6 +339,14 @@ export class QuickFeasibilityWizard {
         this.container.querySelector('#qf-prev-2')?.addEventListener('click', () => {
             this.step = 1;
             this.render();
+        });
+        // ملء اختياري بالتقدير القطاعي — يسجّل موافقة صريحة من المستخدم (وليس تعبئة صامتة)
+        this.container.querySelector('#qf-apply-estimate')?.addEventListener('click', () => {
+            this.quickData.monthlyRevenue = this.estimates.monthlyRevenue;
+            this.quickData.monthlyCosts = this.estimates.monthlyCosts;
+            this.quickData.initialInvestment = this.estimates.initialInvestment;
+            this.render();
+            toast.info('تم ملء الحقول بتقدير قطاعي عام — راجع كل رقم وعدّله بأرقامك الحقيقية قبل القرار.');
         });
         this.container.querySelector('#qf-next-2')?.addEventListener('click', () => {
             this.quickData.monthlyRevenue = Number(this.container.querySelector('#qf-monthlyRevenue')?.value) || 0;
@@ -359,7 +414,7 @@ export class QuickFeasibilityWizard {
         });
     }
 
-    bindStep3(result) {
+    bindStep3(result, warnings = []) {
         this.container.querySelector('#qf-download-pdf')?.addEventListener('click', async () => {
             const btn = this.container.querySelector('#qf-download-pdf');
             if (btn?.disabled) return;
@@ -368,12 +423,12 @@ export class QuickFeasibilityWizard {
                 btn.textContent = '⏳ جاري الإعداد...';
             }
             try {
-                const gen = new QuickPDFGenerator(this.quickData, result, this.store);
+                const gen = new QuickPDFGenerator(this.quickData, result, this.store, { warnings });
                 await gen.generate();
                 toast.success('تم فتح نافذة الطباعة — اختر «حفظ كـ PDF»');
             } catch (e) {
                 console.error(e);
-                toast.error('تعذر فتح التقرير. يرجى السماح بالنوافذ المنبثقة.');
+                toast.error('تعذر إعداد التقرير. حاول مجدداً أو استخدم «الدراسة الكاملة» للتصدير.');
             }
             if (btn) {
                 btn.disabled = false;

@@ -6,9 +6,22 @@ export class LivePanel {
         this.store = store;
         this.chart = null;
         this.lastResults = null;
+        this._updateTimer = null;
 
-        // Subscribe to store changes
-        this.store.subscribe(() => this.update());
+        // اشتراك مُهدأ: كل notify كان يشغّل update() فوراً، وupdate تستدعي المحرك الكامل
+        // (الذي يشغّل داخلياً ~17 نسخة من نفسه للحساسية/التورنادو/السيناريوهات) + هدم وإنشاء
+        // مخطط Chart.js — فدفعة إدخال سريعة (لصق/تعبئة جدول) تعني مئات تشغيلات المحرك
+        // وتباطؤاً يتفاقم مع طول الجلسة حتى يبدو المنتج مجمّداً (تدقيق ٢٠٢٦-٠٧-٠٦).
+        this.store.subscribe(() => this.scheduleUpdate());
+    }
+
+    /** تهدئة زنادية: آخر تغيير في العاصفة هو الذي يشغّل الحساب — مرة واحدة. */
+    scheduleUpdate() {
+        if (this._updateTimer) clearTimeout(this._updateTimer);
+        this._updateTimer = setTimeout(() => {
+            this._updateTimer = null;
+            this.update();
+        }, 250);
     }
 
     /**
@@ -115,9 +128,18 @@ export class LivePanel {
         const cf = this.lastResults.cashFlow;
         const ctx = canvas.getContext('2d');
 
-        // Destroy previous chart
+        // إعادة استخدام المخطط القائم بتحديث بياناته — الهدم/الإنشاء مع كل تغيير كان
+        // يستنزف الذاكرة والمعالج تدريجياً (canvas contexts متراكمة) ويبطئ الجلسات الطويلة.
         if (this.chart) {
+            if (this.chart.canvas === canvas) {
+                this.chart.data.labels = cf.map(c => c.year === 0 ? 'البداية' : `س${c.year}`);
+                this.chart.data.datasets[0].data = cf.map(c => c.cumulative);
+                this.chart.update('none');
+                return;
+            }
+            // الكانفس تغيّر (إعادة رسم للوحة) — الهدم هنا مشروع
             this.chart.destroy();
+            this.chart = null;
         }
 
         if (typeof Chart !== 'undefined') {
@@ -128,12 +150,12 @@ export class LivePanel {
                     datasets: [{
                         label: 'التراكمي',
                         data: cf.map(c => c.cumulative),
-                        borderColor: '#d4af37',
-                        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+                        borderColor: '#8a5f1c',
+                        backgroundColor: 'rgba(138, 95, 28, 0.1)',
                         fill: true,
                         tension: 0.4,
                         pointRadius: 3,
-                        pointBackgroundColor: '#d4af37'
+                        pointBackgroundColor: '#8a5f1c'
                     }]
                 },
                 options: {

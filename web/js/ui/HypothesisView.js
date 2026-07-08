@@ -71,13 +71,13 @@ export class HypothesisView {
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="form-group">
-                        <label class="block font-bold text-sm mb-2">نوع الميزة (Unfair Advantage)</label>
+                        <label class="block font-bold text-sm mb-2">نوع الميزة (Unfair Advantage) — يمكن اختيار أكثر من واحدة</label>
                         <div class="space-y-2 p-3 bg-white rounded border">
-                             ${this._renderRadio('insight_type', 'founder', 'مؤسس (Founder)', 'أنت خبير في هذا المجال (Top 1%)', unfairAdvantage.types)}
-                             ${this._renderRadio('insight_type', 'market', 'سوق (Market)', 'السوق ينمو بانفجار (>20%)', unfairAdvantage.types)}
-                             ${this._renderRadio('insight_type', 'product', 'منتج (10x Product)', 'أفضل بـ 10 مرات (ليس فقط 10% أفضل)', unfairAdvantage.types)}
-                             ${this._renderRadio('insight_type', 'acquisition', 'اكتساب (0$ Acquisition)', 'النمو مجاني (Word of mouth)', unfairAdvantage.types)}
-                             ${this._renderRadio('insight_type', 'monopoly', 'احتكار (Monopoly)', 'تأثير الشبكة يجعل المنافسة مستحيلة', unfairAdvantage.types)}
+                             ${this._renderTypeCheckbox('founder', 'مؤسس (Founder)', 'أنت خبير في هذا المجال (Top 1%)', unfairAdvantage.types)}
+                             ${this._renderTypeCheckbox('market', 'سوق (Market)', 'السوق ينمو بانفجار (>20%)', unfairAdvantage.types)}
+                             ${this._renderTypeCheckbox('product10x', 'منتج (10x Product)', 'أفضل بـ 10 مرات (ليس فقط 10% أفضل)', unfairAdvantage.types)}
+                             ${this._renderTypeCheckbox('acquisition', 'اكتساب (0$ Acquisition)', 'النمو مجاني (Word of mouth)', unfairAdvantage.types)}
+                             ${this._renderTypeCheckbox('network', 'تأثير شبكي (Network)', 'كلما كبرت الشبكة زادت القيمة وصعبت المنافسة', unfairAdvantage.types)}
                         </div>
                     </div>
 
@@ -113,13 +113,13 @@ export class HypothesisView {
         `;
     }
 
-    _renderRadio(name, value, label, desc, currentTypes) {
-        // currentTypes might be an array or string, handle both
+    _renderTypeCheckbox(value, label, desc, currentTypes) {
+        // القيم موحّدة مع schema.js وIntroductionView (founder/market/product10x/acquisition/network)
         const isChecked = Array.isArray(currentTypes) ? currentTypes.includes(value) : (currentTypes === value);
 
         return `
             <label class="flex items-center p-2 rounded hover:bg-gray-50 cursor-pointer">
-                <input type="radio" name="${name}" class="insight-radio ml-2 text-purple-600 focus:ring-purple-500" value="${value}" ${isChecked ? 'checked' : ''}>
+                <input type="checkbox" class="insight-type-check ml-2 text-purple-600 focus:ring-purple-500" value="${value}" ${isChecked ? 'checked' : ''}>
                 <span class="text-sm">
                     <span class="font-bold">${label}</span> - <span class="text-gray-500 text-xs">${desc}</span>
                 </span>
@@ -154,10 +154,10 @@ export class HypothesisView {
             checklist[cb.value] = cb.checked;
         });
 
-        // 3. Insight/Unfair Advantage
-        const selectedRadio = this.container.querySelector('.insight-radio:checked');
+        // 3. Insight/Unfair Advantage — مصفوفة كاملة كي لا يمسح الحفظ الاختيارات المتعددة من IntroductionView
+        const types = Array.from(this.container.querySelectorAll('.insight-type-check:checked')).map(el => el.value);
         const unfairAdvantage = {
-            types: selectedRadio ? [selectedRadio.value] : [], // Store as array for future multiple selection support
+            types,
             insightText: hypothesis.insight // Sync insight text here as well
         };
 

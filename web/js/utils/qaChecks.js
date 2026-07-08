@@ -90,6 +90,71 @@ export async function runQAChecks(state, results) {
                 });
             }
 
+            // جاهزية النسخة للبيع/التمويل: هذه البنود لا تكسر الحسابات، لكنها تخفض جودة الدراسة أمام مستشار أو ممول.
+            {
+                const marketText = String(state?.marketing?.marketAnalysis?.summary || state?.marketing?.marketAnalysis?.description || '').trim();
+                if (marketText.length < 80) {
+                    qaResults.softWarnings.push({
+                        code: 'MARKET_NARRATIVE_MISSING',
+                        message: 'تحليل السوق النصي مختصر أو غير موجود — أضف وصفاً مدعوماً للطلب، الشريحة المستهدفة، واتجاهات السوق قبل بيع الدراسة كنسخة مخصصة.',
+                        path: 'marketing.marketAnalysis.summary'
+                    });
+                }
+
+                const competitors = state?.marketing?.competitors || [];
+                if (competitors.length < 2) {
+                    qaResults.softWarnings.push({
+                        code: 'COMPETITORS_MISSING',
+                        message: 'تحليل المنافسين غير كافٍ — أضف منافسين محليين على الأقل مع نقاط القوة والضعف والأسعار/الحركة التقريبية. هذا من أهم ما يرفع الدراسة من 7/10 إلى مستوى تمويلي.',
+                        path: 'marketing.competitors'
+                    });
+                }
+
+                const district = String(state?.projectInfo?.district || state?.marketSizing?.targetNeighborhood || state?.marketSizing?.targetDistrict || '').trim();
+                if (!district) {
+                    qaResults.softWarnings.push({
+                        code: 'TARGET_LOCATION_MISSING',
+                        message: 'النطاق الجغرافي غير محدد بدقة (حي/منطقة مستهدفة) — دراسة مقهى بلا حي واضح تجعل أرقام السوق والمنافسين عامة أكثر من اللازم.',
+                        path: 'marketSizing.targetNeighborhood'
+                    });
+                }
+
+                const licenses = state?.legal?.licenses || [];
+                if (licenses.length === 0) {
+                    qaResults.softWarnings.push({
+                        code: 'LICENSES_MISSING',
+                        message: 'التراخيص والرسوم غير موثقة — أضف السجل التجاري، رخصة البلدية، الدفاع المدني، وأي اشتراطات غذائية/تشغيلية حسب النشاط.',
+                        path: 'legal.licenses'
+                    });
+                }
+
+                const appendices = state?.appendices || {};
+                if (!(appendices.references || []).length) {
+                    qaResults.softWarnings.push({
+                        code: 'REFERENCES_MISSING',
+                        message: 'لا توجد مصادر ومراجع في الملاحق — أضف مصادر السوق/السكان/القطاع أو روابط الجهات الرسمية لرفع مصداقية الدراسة.',
+                        path: 'appendices.references'
+                    });
+                }
+                if (!(appendices.priceQuotes || []).length && Number(results?.capex?.total || 0) > 0) {
+                    qaResults.softWarnings.push({
+                        code: 'PRICE_QUOTES_MISSING',
+                        message: 'لا توجد عروض أسعار أو مرفقات أسعار للمعدات والتجهيزات — النسخة التمويلية القوية تحتاج عروض موردين أو مصادر أسعار واضحة.',
+                        path: 'appendices.priceQuotes'
+                    });
+                }
+
+                const risks = state?.riskAnalysis?.risks || [];
+                const weakRisks = risks.filter(r => !String(r?.mitigation || '').trim());
+                if (risks.length < 5 || weakRisks.length > 0) {
+                    qaResults.softWarnings.push({
+                        code: 'RISK_PLAN_WEAK',
+                        message: 'خطة المخاطر تحتاج تفصيلاً أكثر — وثّق 5 مخاطر رئيسية على الأقل مع خطة تخفيف واضحة ومسؤول/إجراء لكل خطر.',
+                        path: 'riskAnalysis.risks'
+                    });
+                }
+            }
+
             // ═══ فحوصات الاتساق الداخلي (تدقيق 2026-07-04) ═══
             // تتحقق أن أعمدة قائمة الدخل «تُجمَع» فعلاً وأن الميزانية متوازنة —
             // أي كسر هنا يعني تناقضاً سيصل للعميل في الملف المُصدَّر.
@@ -141,7 +206,7 @@ export async function runQAChecks(state, results) {
                 });
             }
             const netMargin = Number(kpis?.netMargin ?? NaN);
-            if (Number.isFinite(netMargin) && netMargin > 0.40) {
+            if (Number.isFinite(netMargin) && netMargin > 0.30) {
                 qaResults.softWarnings.push({
                     code: 'MARGIN_UNREALISTIC',
                     message: `هامش الربح الصافي ${(netMargin * 100).toFixed(0)}% أعلى من المعتاد لمعظم الأنشطة (10–25%) — تأكد أن كل التكاليف مُدخلة.`,
@@ -202,6 +267,27 @@ export async function runQAChecks(state, results) {
                             path: 'revenue'
                         });
                     }
+                }
+            }
+
+            // 6.5) B1: تطابق مصادر التمويل المُدخلة مع إجمالي الاستثمار المطلوب.
+            //    الميزانية تشتق «رأس المال المدفوع» كموازِن (إجمالي الاستثمار − القرض)، فإن أدخل
+            //    المستخدم مصادر تمويل لا تساوي إجمالي الاستثمار ظهر رقم رأس مال مختلف عمّا أدخله
+            //    دون تفسير. ننبّهه ليطابقهما بدل ترك التناقض الظاهري في الميزانية.
+            if (Number.isFinite(capexTotal) && capexTotal > 0) {
+                const src = state?.financing?.sources || {};
+                const enteredSources =
+                    (Number(src.equity?.amount) || 0) +
+                    (Number(src.bankLoan?.amount) || 0) +
+                    (Number(src.investors?.amount) || 0) +
+                    (Number(src.governmentSupport?.amount) || 0);
+                if (enteredSources > 0 && Math.abs(enteredSources - capexTotal) > 0.01 * capexTotal) {
+                    const fmt = (n) => Math.round(n).toLocaleString('ar-SA');
+                    qaResults.softWarnings.push({
+                        code: 'FUNDING_SOURCES_MISMATCH',
+                        message: `مصادر التمويل المُدخلة (${fmt(enteredSources)} ريال) لا تساوي إجمالي الاستثمار المطلوب (${fmt(capexTotal)} ريال) — فرق ${fmt(Math.abs(enteredSources - capexTotal))}. طابِق المصدرين كي يعكس «رأس المال المدفوع» في الميزانية مساهمتك الفعلية.`,
+                        path: 'financing.sources'
+                    });
                 }
             }
 

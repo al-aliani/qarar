@@ -462,6 +462,8 @@ class StudyStore {
             }
         }
 
+        this._syncSwot(section);
+
         this._dirty = true;
         this.save();
         this.notify(section);
@@ -469,6 +471,41 @@ class StudyStore {
 
     update(section, data) {
         this.updateSection(section, data);
+    }
+
+    /**
+     * مزامنة SWOT ثنائية الاتجاه: strategic.swot (مصفوفات — المصدر الغني بالتوليد)
+     * ↔ marketing.swot (نصوص أسطر — تقرؤها خطوة الدراسة السوقية والتقارير).
+     * كان في الدراسة تحليلان رباعيان منفصلان يتناقضان، وسوقيّهما بلا «فرص» أصلاً
+     * (تدقيق ٢٠٢٦-٠٧-٠٦). حُرّاس التساوي يمنعون أي حلقة تحديث.
+     */
+    _syncSwot(section, path = '') {
+        const touchesStrategic = section === 'strategic' && (path === '' || path.startsWith('swot'));
+        const touchesMarketing = section === 'marketing' && (path === '' || path.startsWith('swot'));
+        if (!touchesStrategic && !touchesMarketing) return;
+
+        const KEYS = ['strengths', 'weaknesses', 'opportunities', 'threats'];
+        const toText = (arr) => (Array.isArray(arr) ? arr : []).map(x => String(x ?? '').trim()).filter(Boolean).join('\n');
+        const toList = (txt) => String(txt ?? '').split(/\n|؛/).map(s => s.trim()).filter(Boolean);
+
+        this.state.marketing = this.state.marketing || {};
+        this.state.marketing.swot = this.state.marketing.swot || {};
+        this.state.strategic = this.state.strategic || {};
+        this.state.strategic.swot = this.state.strategic.swot || {};
+        const mk = this.state.marketing.swot;
+        const stg = this.state.strategic.swot;
+
+        if (touchesStrategic) {
+            KEYS.forEach(k => {
+                const txt = toText(stg[k]);
+                if ((mk[k] ?? '') !== txt) mk[k] = txt;
+            });
+        } else {
+            KEYS.forEach(k => {
+                const list = toList(mk[k]);
+                if (toText(stg[k]) !== list.join('\n')) stg[k] = list;
+            });
+        }
     }
 
     updatePath(section, path, value) {
@@ -494,6 +531,8 @@ class StudyStore {
                     console.log('🌉 DataBridge: Synced services to revenue');
                 }
             }
+
+            this._syncSwot(section);
 
             this._dirty = true;
             this.save();
@@ -527,6 +566,8 @@ class StudyStore {
                 console.log('🌉 DataBridge: Synced services to revenue');
             }
         }
+
+        this._syncSwot(section, path);
 
         this._dirty = true;
         this.save();

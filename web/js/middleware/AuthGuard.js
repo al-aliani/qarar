@@ -4,7 +4,7 @@
  */
 
 import { getSupabaseClient, getAuthUser } from '../../supabaseClient.js';
-import { showAuthScreen } from '../ui/AuthScreen.js';
+// واجهة مصادقة موحّدة: نستخدم النافذة (AuthModalStub) في كل المسارات بدل شاشة منفصلة.
 
 class AuthGuardClass {
     constructor() {
@@ -106,18 +106,24 @@ class AuthGuardClass {
     /**
      * عرض شاشة المصادقة
      */
-    showAuthPrompt(onSuccess = () => {}) {
-        showAuthScreen({
-            onAuthSuccess: (user) => {
-                this.currentUser = user;
+    async showAuthPrompt(onSuccess = () => {}) {
+        const { AuthModal } = await import('../ui/AuthModalStub.js');
+        const modal = new AuthModal('authModalContainer', {
+            onSuccess: async () => {
+                try {
+                    const { user } = await getAuthUser();
+                    this.currentUser = user || this.currentUser;
+                } catch (_) {}
                 this.isAuthenticated = true;
-                onSuccess({ user, isAuthenticated: true });
+                onSuccess({ user: this.currentUser, isAuthenticated: true });
             },
-            onSkip: () => {
-                console.log('[AuthGuard] User skipped authentication');
+            // إغلاق النافذة بلا تسجيل = تخطٍّ (نفس دلالة onSkip سابقاً)
+            onClose: () => {
+                console.log('[AuthGuard] User dismissed auth (skipped)');
                 onSuccess({ user: null, isAuthenticated: false, skipped: true });
             }
         });
+        modal.open();
     }
 
     /**
@@ -189,8 +195,8 @@ class AuthGuardClass {
     hasPermission(permission) {
         if (!this.currentUser) return false;
 
-        // Basic permission check based on subscription tier
-        const tier = this.currentUser.user_metadata?.subscription_tier || 'free';
+        // الطبقة من app_metadata (يضبطها الخادم فقط) لا user_metadata (يعدّلها المستخدم)
+        const tier = this.getSubscriptionTier();
 
         const permissions = {
             free: ['create_project', 'export_pdf', 'save_local'],
@@ -202,10 +208,14 @@ class AuthGuardClass {
     }
 
     /**
-     * الحصول على tier الاشتراك
+     * الحصول على tier الاشتراك.
+     * أمني: نقرأه من app_metadata (لا يُكتب إلا من الخادم بمفتاح service_role) وليس من
+     * user_metadata (يستطيع المستخدم تعديله بنفسه عبر supabase.auth.updateUser فيرقّي
+     * نفسه لـ enterprise). الافتراضي 'free' = رفض بالافتراض. هذه الطبقة للعرض فقط —
+     * الفرض الحقيقي عبر سياسات RLS على الخادم (انظر supabase/policies.sql).
      */
     getSubscriptionTier() {
-        return this.currentUser?.user_metadata?.subscription_tier || 'free';
+        return this.currentUser?.app_metadata?.subscription_tier || 'free';
     }
 
     /**

@@ -217,7 +217,7 @@ export class IntroductionView {
                             <option value="">-- اختر --</option>
                             <option value="low" ${(pi.techInvestmentLevel || '') === 'low' ? 'selected' : ''}>منخفضة</option>
                             <option value="medium" ${(pi.techInvestmentLevel || '') === 'medium' ? 'selected' : ''}>متوسطة</option>
-                ` : ''}                            <option value="high" ${(pi.techInvestmentLevel || '') === 'high' ? 'selected' : ''}>عالية — مشاريع تقنية تحمل مخاطر اختراق</option>
+                            <option value="high" ${(pi.techInvestmentLevel || '') === 'high' ? 'selected' : ''}>عالية — مشاريع تقنية تحمل مخاطر اختراق</option>
                         </select>
                     </div>
                     <div class="form-group relative">
@@ -228,6 +228,7 @@ export class IntroductionView {
                         <textarea id="national-importance" class="input" rows="2" placeholder="بعض المشاريع تُفضّل لأهميتها للاقتصاد أو الأمن القومي">${esc(pi.nationalEconomicImportance)}</textarea>
                     </div>
                 </div>
+                ` : ''}
 
                 <!-- المؤهل العكسي — قيّم نفسك (حسين بكري) -->
                 <details class="card analysis-card mb-4">
@@ -628,6 +629,13 @@ export class IntroductionView {
             const el = this.container.querySelector('#' + fieldId);
             if (!el) return;
 
+            // نص العميل المكتوب لا يُستبدل بلا إذن — كان الزر يمسح صياغته المخصصة فوراً
+            // ويستبدلها بنص مولّد عام (فقدان عمل موثق في تدقيق ٢٠٢٦-٠٧-٠٦).
+            if ((el.value || '').trim().length > 20) {
+                const okReplace = window.confirm('يوجد نص مكتوب في هذا الحقل.\n\nموافق = استبداله بالنص المولد.\nإلغاء = الإبقاء على نصك.');
+                if (!okReplace) return;
+            }
+
             // Show loading state
             const originalVal = el.value;
             el.setAttribute('disabled', 'true');
@@ -882,15 +890,49 @@ export class IntroductionView {
             const state = this.store.getState();
             const out = InternalAIGenerator.generateIntroSuggestions(state);
             const pi = { ...state.projectInfo };
-            pi.ideaCriteria = out.ideaCriteria || pi.ideaCriteria;
-            pi.identityStatement = out.identityStatement || pi.identityStatement;
-            pi.valueProposition = out.valueProposition || pi.valueProposition;
-            pi.locationAnalysis = { ...pi.locationAnalysis, ...out.locationAnalysis };
-            if (Array.isArray(out.products) && out.products.length > 0) pi.products = out.products;
-            if (Array.isArray(out.introServices) && out.introServices.length > 0) pi.introServices = out.introServices;
-            if (Array.isArray(out.customerValues) && out.customerValues.length > 0) pi.customerValues = out.customerValues;
+
+            // «التوليد التلقائي» كان يستبدل كل شيء بصمت — نقرة واحدة مسحت ٩ حقول كتبها
+            // المستخدم بيده (هوية، قيمة مقترحة، معايير الفكرة، تحليل الموقع بإحداثياته —
+            // تدقيق ٢٠٢٦-٠٧-٠٦). السلوك الجديد: تعبئة الحقول الفارغة فقط افتراضياً،
+            // والاستبدال الشامل لا يتم إلا بموافقة صريحة.
+            const filled = (v) => typeof v === 'string' && v.trim().length > 0;
+            const overwriteTargets = [];
+            if (filled(pi.identityStatement)) overwriteTargets.push('بيان الهوية');
+            if (filled(pi.valueProposition)) overwriteTargets.push('القيمة المقترحة');
+            if (Object.values(pi.ideaCriteria || {}).some(filled)) overwriteTargets.push('معايير الفكرة');
+            if (Object.values(pi.locationAnalysis || {}).some(filled)) overwriteTargets.push('تحليل الموقع');
+            if ((pi.products || []).length > 0) overwriteTargets.push('المنتجات');
+            if ((pi.introServices || []).length > 0) overwriteTargets.push('الخدمات');
+            if ((pi.customerValues || []).length > 0) overwriteTargets.push('القيمة للعميل');
+
+            let replaceAll = false;
+            if (overwriteTargets.length > 0) {
+                replaceAll = window.confirm(
+                    'الحقول التالية معبأة مسبقاً:\n• ' + overwriteTargets.join('\n• ') +
+                    '\n\nموافق = استبدالها كلها بالنص المولد.\nإلغاء = تعبئة الحقول الفارغة فقط والإبقاء على ما كتبته.'
+                );
+            }
+
+            const take = (genVal, curVal) => (replaceAll || !filled(curVal)) ? (genVal || curVal) : curVal;
+            pi.identityStatement = take(out.identityStatement, pi.identityStatement);
+            pi.valueProposition = take(out.valueProposition, pi.valueProposition);
+            const ic = { ...(pi.ideaCriteria || {}) };
+            Object.entries(out.ideaCriteria || {}).forEach(([k, v]) => { ic[k] = take(v, ic[k]); });
+            pi.ideaCriteria = ic;
+            const la = { ...(pi.locationAnalysis || {}) };
+            Object.entries(out.locationAnalysis || {}).forEach(([k, v]) => {
+                if (typeof v === 'string') la[k] = take(v, la[k]);
+                else if (replaceAll || la[k] == null) la[k] = v;
+            });
+            pi.locationAnalysis = la;
+            if (Array.isArray(out.products) && out.products.length > 0 && (replaceAll || (pi.products || []).length === 0)) pi.products = out.products;
+            if (Array.isArray(out.introServices) && out.introServices.length > 0 && (replaceAll || (pi.introServices || []).length === 0)) pi.introServices = out.introServices;
+            if (Array.isArray(out.customerValues) && out.customerValues.length > 0 && (replaceAll || (pi.customerValues || []).length === 0)) pi.customerValues = out.customerValues;
+
             this.store.update('projectInfo', pi);
-            toast.success('تم توليد مقترح مقدمة الجدوى.');
+            toast.success(replaceAll || overwriteTargets.length === 0
+                ? 'تم توليد مقترح مقدمة الجدوى.'
+                : 'تمت تعبئة الحقول الفارغة فقط — نصوصك المكتوبة لم تُمس.');
             this.render(this.stepIndex);
         } catch (e) {
             console.error('generateIntro error:', e);

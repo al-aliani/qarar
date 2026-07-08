@@ -1,10 +1,9 @@
 import { store } from './js/core/store.js';
 import { TEMPLATES } from './js/core/templates.js';
-import { TABLE_SCHEMAS } from './js/core/schema.js';
-import { STEPS, SECTIONS, SIDEBAR_SECTIONS } from './js/core/wizardSteps.js';
+import { TABLE_SCHEMAS, createEmptyStudy } from './js/core/schema.js';
+import { STEPS, SECTIONS, SIDEBAR_SECTIONS, stepIndexById } from './js/core/wizardSteps.js';
 import { Sidebar } from './js/ui/Sidebar.js';
 import { Wizard } from './js/ui/Wizard.js';
-import { LivePanel } from './js/ui/LivePanel.js';
 import { calculateStudy as runFullModel } from './js/core/engine.js';
 // المكونات الثقيلة تُحمّل عند أول زيارة للخطوة (Lazy Loading في navigateTo)
 import { toast } from './js/utils/toast.js';
@@ -13,16 +12,156 @@ import { AutoSave } from './js/utils/autoSave.js';
 import { ProgressTracker } from './js/utils/progressTracker.js';
 import { monitoring } from './js/utils/monitoring.js';
 import { AuthGuard } from './js/middleware/AuthGuard.js';
+import './js/services/connectors/index.js';
 import { initShellController } from './js/app-controller.js';
 import { ModeSelector } from './js/ui/ModeSelector.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const installArabicUiGuard = () => {
+    const replacements = [
+      [/Market Structure/gi, 'هيكل السوق'],
+      [/Perfect Competition/gi, 'منافسة تامة'],
+      [/Monopolistic Competition/gi, 'منافسة احتكارية'],
+      [/Oligopoly/gi, 'احتكار القلة'],
+      [/Monopoly/gi, 'احتكار تام'],
+      [/Market Gap/gi, 'الفجوة السوقية'],
+      [/Market Simulation/gi, 'محاكاة السوق'],
+      [/Market Analysis/gi, 'تحليل السوق'],
+      [/Market Opportunity/gi, 'فرصة السوق'],
+      [/Market Snapshot/gi, 'لمحة السوق'],
+      [/Market Share/gi, 'الحصة السوقية'],
+      [/Market/gi, 'السوق'],
+      [/Structure/gi, 'الهيكل'],
+      [/Dashboard/gi, 'لوحة التحكم'],
+      [/Pitch Deck/gi, 'العرض التقديمي'],
+      [/Pitch/gi, 'العرض'],
+      [/PowerPoint/gi, 'عرض تقديمي'],
+      [/PDF/gi, 'تقرير'],
+      [/Excel/gi, 'جداول'],
+      [/Word/gi, 'ملف قابل للتعديل'],
+      [/CSV/gi, 'ملف جدولي'],
+      [/JSON/gi, 'نسخة احتياطية'],
+      [/HTML/gi, 'صفحة قابلة للطباعة'],
+      [/GO\/NO-GO/gi, 'نفّذ أو راجع'],
+      [/NO-GO/gi, 'لا تنفّذ'],
+      [/\bGO\b/g, 'نفّذ'],
+      [/NPV/gi, 'صافي القيمة الحالية'],
+      [/IRR/gi, 'معدل العائد الداخلي'],
+      [/ROI/gi, 'العائد على الاستثمار'],
+      [/WACC/gi, 'متوسط تكلفة رأس المال'],
+      [/EBITDA/gi, 'الأرباح قبل الفوائد والضرائب والإهلاك'],
+      [/DCF/gi, 'التدفقات النقدية المخصومة'],
+      [/TAM\/SAM\/SOM/gi, 'إجمالي السوق والسوق المتاح والحصة المستهدفة'],
+      [/TAM/gi, 'إجمالي السوق'],
+      [/SAM/gi, 'السوق المتاح'],
+      [/SOM/gi, 'الحصة المستهدفة'],
+      [/SWOT/gi, 'تحليل نقاط القوة والضعف والفرص والتهديدات'],
+      [/TOWS/gi, 'مصفوفة الاستراتيجيات'],
+      [/KPI/gi, 'مؤشر أداء'],
+      [/QA/gi, 'فحص الجودة'],
+      [/Startup/gi, 'شركة ناشئة'],
+      [/Quick Feasibility/gi, 'جدوى سريعة'],
+      [/Quick/gi, 'سريع'],
+      [/Benchmarking/gi, 'المقارنة المرجعية'],
+      [/Benchmark/gi, 'معيار مقارنة'],
+      [/Payback/gi, 'فترة الاسترداد'],
+      [/Breakeven|Break-Even/gi, 'نقطة التعادل'],
+      [/COGS/gi, 'تكلفة البضاعة المباعة'],
+      [/OPEX/gi, 'المصروفات التشغيلية'],
+      [/CAPEX/gi, 'المصاريف الرأسمالية'],
+      [/Google Sheets/gi, 'جداول جوجل'],
+      [/Google/gi, 'جوجل'],
+      [/Supabase/gi, 'خدمة قاعدة البيانات'],
+      [/OpenStreetMap/gi, 'خريطة مفتوحة المصدر'],
+      [/Zoom/gi, 'اجتماع مرئي'],
+      [/Calendly|Cal\.com/gi, 'نظام حجز المواعيد'],
+      [/LivePlan|Bizplan|Upmetrics|PlanGuru/gi, 'منصة أجنبية']
+    ];
+
+    const arabize = (value) => {
+      if (!value || !/[A-Za-z]/.test(value)) return value;
+      // L8: اختصار إنجليزي مفرد بين قوسين بعد المصطلح العربي — مثل (NPV) أو (EBITDA) —
+      // يُحفظ كما هو: لا يُعرّب ولا يُحذف. نقنّعه قبل التعريب ثم نعيده.
+      const keep = [];
+      let out = String(value).replace(/\(([A-Z][A-Za-z]{1,9})\)/g, (m, abbr) => '￼' + (keep.push(abbr) - 1) + '￼');
+      for (const [pattern, replacement] of replacements) {
+        out = out.replace(pattern, replacement);
+      }
+      out = out.replace(/\s*\([A-Za-z][A-Za-z0-9\s/&+_.:-]*\)/g, '');
+      out = out.replace(/￼(\d+)￼/g, (m, i) => '(' + keep[+i] + ')');
+      return out;
+    };
+
+    const attrs = ['title', 'placeholder', 'aria-label', 'alt'];
+    const processNode = (node) => {
+      if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
+      if (node.matches?.('script, style, code, pre')) return;
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+        acceptNode(textNode) {
+          const parent = textNode.parentElement;
+          if (!parent || parent.matches('script, style, code, pre')) return NodeFilter.FILTER_REJECT;
+          return /[A-Za-z]/.test(textNode.nodeValue || '') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+        }
+      });
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
+      textNodes.forEach(textNode => {
+        const next = arabize(textNode.nodeValue);
+        if (next !== textNode.nodeValue) textNode.nodeValue = next;
+      });
+      node.querySelectorAll?.('*').forEach(el => {
+        if (el.matches('script, style, code, pre')) return;
+        attrs.forEach(attr => {
+          if (!el.hasAttribute(attr)) return;
+          const current = el.getAttribute(attr);
+          const next = arabize(current);
+          if (next !== current) el.setAttribute(attr, next);
+        });
+      });
+      attrs.forEach(attr => {
+        if (!node.hasAttribute?.(attr)) return;
+        const current = node.getAttribute(attr);
+        const next = arabize(current);
+        if (next !== current) node.setAttribute(attr, next);
+      });
+    };
+
+    processNode(document.body);
+    const observer = new MutationObserver(mutations => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'characterData') {
+          const next = arabize(mutation.target.nodeValue);
+          if (next !== mutation.target.nodeValue) mutation.target.nodeValue = next;
+        }
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const next = arabize(node.nodeValue);
+            if (next !== node.nodeValue) node.nodeValue = next;
+          } else {
+            processNode(node);
+          }
+        });
+        if (mutation.type === 'attributes') {
+          processNode(mutation.target);
+        }
+      }
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: attrs
+    });
+  };
+  installArabicUiGuard();
+
   // Check for study mode preference
   const savedMode = localStorage.getItem('study_mode_preference');
 
   // نافذة ModeSelector عند أول زيارة مُعطَّلة: نافذة الترحيب (Onboarding) في DashboardView
   // تغطي اختيار الوضع، وظهور نافذتين متراكبتين يُربك المستخدم.
-  // يمكن التبديل بين الوضعين لاحقاً من الشريط الجانبي (🚀 سريع / 💼 مفصل).
+  // يمكن التبديل بين الوضعين لاحقاً من الشريط الجانبي (سريع / مفصل).
   const SHOW_FIRST_VISIT_MODE_SELECTOR = false;
   if (SHOW_FIRST_VISIT_MODE_SELECTOR && !savedMode) {
     const modeSelector = new ModeSelector((mode) => {
@@ -31,10 +170,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Here you would trigger specific logic based on mode
       // For now, we just save the preference
       if (mode === 'quick') {
-        toast.success('تم تفعيل وضع الدراسة السريعة 🚀');
+        toast.success('تم تفعيل وضع الدراسة السريعة');
         setTimeout(() => window.location.reload(), 1500);
       } else {
-        toast.success('تم تفعيل وضع الدراسة التفصيلية 💼');
+        toast.success('تم تفعيل وضع الدراسة التفصيلية');
         setTimeout(() => window.location.reload(), 1500);
       }
     });
@@ -85,26 +224,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnToggleSidebar = document.getElementById('btnToggleSidebar');
   const sidebarOverlay = document.getElementById('sidebarOverlay');
   const sidebarDom = document.querySelector('.sidebar');
-  const livePanelEl = document.querySelector('.live-panel');
-  const livePanelOverlay = document.getElementById('livePanelOverlay');
-  const btnToggleLivePanel = document.getElementById('btnToggleLivePanel');
-  const btnToggleLivePanelFab = document.getElementById('btnToggleLivePanelFab');
-  const btnCloseLivePanel = document.getElementById('btnCloseLivePanel');
-
-  const { setLivePanelOpen } = initShellController({
+  initShellController({
     sidebarDom,
     sidebarOverlay,
-    btnToggleSidebar,
-    livePanelEl,
-    livePanelOverlay,
-    btnToggleLivePanel,
-    btnToggleLivePanelFab,
-    btnCloseLivePanel
-  });
-
-  // شريط المؤشرات الحيّ للجوّال: الضغط عليه يفتح لوحة النظرة الحية الكاملة
-  document.getElementById('btnMobileKpiBar')?.addEventListener('click', (e) => {
-    setLivePanelOpen(true, { opener: e.currentTarget });
+    btnToggleSidebar
   });
 
   // Component Instance Cache
@@ -113,38 +236,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Dashboard vars defined above (lines 141-142), duplicates removed.
   let projectsDashboard = null; // The main landing dashboard
 
-  // Function to switch to workspace mode (show sidebar, hide dashboard)
+  // Function to switch to workspace mode. The full journey now lives in-page,
+  // so the legacy left sidebar stays hidden and the main stage uses the full width.
   const enterWorkspaceMode = () => {
-    document.querySelector('.app-shell')?.classList.remove('dashboard-mode');
+    const shell = document.querySelector('.app-shell');
+    shell?.classList.remove('dashboard-mode');
+    shell?.classList.add('no-sidebar');
     const appHeader = document.getElementById('appHeader');
     if (appHeader) appHeader.style.removeProperty('display');
 
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
-      // Remove any inline display:none set by landing dashboard
-      sidebar.style.removeProperty('display');
-
-      // Force show on desktop (CSS media query handles mobile)
-      if (window.innerWidth > 768) {
-        sidebar.style.display = 'flex';
-      }
-
-      // Re-render sidebar to ensure content is visible
-      if (window.sidebarInstance) {
-        window.sidebarInstance.render().catch(err => {
-          console.error('[enterWorkspaceMode] Failed to render sidebar:', err);
-        });
-      }
+      sidebar.classList.remove('is-open');
+      sidebar.style.display = 'none';
     }
 
-    // Also ensure stepperNav is visible
     const stepperNav = document.getElementById('stepperNav');
     if (stepperNav) {
-      stepperNav.style.removeProperty('display');
-      stepperNav.style.display = '';
+      stepperNav.style.display = 'none';
     }
 
-    console.log('[enterWorkspaceMode] Sidebar should be visible now');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    sidebarOverlay?.classList.remove('is-open');
+    document.getElementById('btnToggleSidebar')?.setAttribute('aria-expanded', 'false');
   };
 
   // ═══════════════════════════════════════════════════════════════════
@@ -171,15 +285,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         </span>
       `;
     }).join('');
+
+    // مؤشّر «أين أنا» على الجوّال — الترويسة العلوية مخفية على الجوّال فيبقى المستخدم بلا معلم
+    const mobileStage = document.getElementById('mobileStageIndicator');
+    if (mobileStage) {
+      const curSection = stageSections.find((s) => {
+        const start = s?.range?.[0] ?? 0;
+        const end = s?.range?.[1] ?? 0;
+        return activeStepIndex >= start && activeStepIndex <= end;
+      });
+      const total = Array.isArray(STEPS) ? STEPS.length : 0;
+      mobileStage.textContent = curSection
+        ? `${curSection.label} · ${activeStepIndex + 1}/${total}`
+        : '';
+    }
   };
 
   const showLandingDashboard = async () => {
+    syncHash('home');
     document.querySelector('.app-shell')?.classList.add('dashboard-mode');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     if (sidebarEl) sidebarEl.style.display = 'none';
     if (stepperNavEl) stepperNavEl.style.display = 'none';
     const { DashboardView } = await import('./js/ui/DashboardView.js');
+    const goToStudyStep = (matcher, fallbackIndex = 0) => {
+      enterWorkspaceMode();
+      const idx = STEPS.findIndex(matcher);
+      navigateTo(idx >= 0 ? idx : fallbackIndex);
+    };
     projectsDashboard = new DashboardView('wizardContainer', store, (projectId) => {
       enterWorkspaceMode();
       const state = store.getState();
@@ -189,7 +323,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         navigateTo(3);
       }
     }, {
+      onShowStudyStep: (index) => {
+        enterWorkspaceMode();
+        navigateTo(index);
+      },
       onStartQuickFeasibility: () => startQuickFeasibilityWizard(),
+      // خطوة القوالب أُزيلت من المسار — «اختيار نقطة البداية» صار نافذةً (TemplateGallery)
+      onShowTemplateSelector: () => window.dispatchEvent(new CustomEvent('feasibility:newStudy')),
+      onShowPreliminaryCheck: () => goToStudyStep(s => s.isPreliminaryCheck, 0),
+      onShowProjectAlternatives: () => goToStudyStep(s => s.isProjectAlternatives, 1),
       onShowAdvisory: () => showAdvisoryView(),
       onShowMonshaatCompliance: () => showMonshaatComplianceView(),
       onShowFinancingGuide: () => showFinancingGuideView(),
@@ -205,16 +347,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       onShowQuickStartGuide: () => showQuickStartGuideView(),
       onShowExamplesInspire: () => showExamplesInspireView(),
       onShowBenchmarking: () => {
-        enterWorkspaceMode();
-        const idx = STEPS.findIndex(s => s.isDashboard);
-        if (idx >= 0) navigateTo(idx);
-        else navigateTo(STEPS.length - 1); // fallback: last step
+        // «هل أرقامي منطقية؟»: القسم مضمّن داخل لوحة التحكم المالي — ننتقل ثم نمرّر إليه بدل الوقوف بأعلى الصفحة
+        goToStudyStep(s => s.isDashboard, STEPS.length - 1);
+        setTimeout(() => document.getElementById('benchmarkingSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+      },
+      onShowStudyCompleteness: async () => {
+        // «فحص اكتمال الدراسة»: كان يذهب للوحة المالية العامة (معرّف مكرّر). الآن يعرض نسبة الاكتمال والنواقص
+        try {
+          const { calculateStudyCompleteness } = await import('./js/utils/studyCompleteness.js');
+          const c = calculateStudyCompleteness(store.getState());
+          const missing = c.getMissingSections().slice(0, 4).map(s => s.label).join('، ');
+          toast.info(`نسبة اكتمال الدراسة: ${c.percentage}%` + (missing ? ` — النواقص: ${missing}` : ' — مكتملة'), 8000);
+        } catch (e) { console.warn('completeness check failed', e); }
+        goToStudyStep(s => s.isDecisionDashboard, STEPS.length - 4);
+      },
+      onShowOperationalSimulator: () => goToStudyStep(s => s.isOperationalSim, 14),
+      onShowStressTest: () => goToStudyStep(s => s.isStressTest, 30),
+      onShowSensitivity: () => goToStudyStep(s => s.isSensitivity, 31),
+      onShowMonteCarlo: () => goToStudyStep(s => s.isMonteCarlo || s.id === SECTIONS.MONTE_CARLO, 35),
+      onShowReportBuilder: () => goToStudyStep(s => s.isReportBuilder, STEPS.length - 2),
+      onShowPostLaunch: () => goToStudyStep(s => s.isPostLaunch, 37),
+      onOpenExport: () => {
+        if (typeof openExportMenu === 'function') openExportMenu();
       }
     });
     projectsDashboard.render();
   };
 
   const showExamplesInspireView = () => {
+    syncHash('examples');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -246,6 +407,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showAdvisoryView = () => {
+    syncHash('advisory');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -269,6 +431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showMonshaatComplianceView = () => {
+    syncHash('monshaat');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -292,6 +455,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showFinancingGuideView = () => {
+    syncHash('financing');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -318,6 +482,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showBeginnerGuideView = () => {
+    syncHash('beginner');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -348,6 +513,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showIdeaAssessmentView = () => {
+    syncHash('idea');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -371,6 +537,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showHypothesisView = () => {
+    syncHash('hypothesis');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -388,6 +555,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showPartnerSelectionView = () => {
+    syncHash('partner');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -411,6 +579,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showResourcesGuideView = () => {
+    syncHash('resources');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -434,6 +603,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showTrustCriteriaView = () => {
+    syncHash('trust');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -457,6 +627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showKnowledgeCenterView = () => {
+    syncHash('knowledge');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -480,6 +651,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showAcceleratorTipsView = () => {
+    syncHash('accelerator');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -504,6 +676,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showPostFeasibilityView = () => {
+    syncHash('postfeasibility');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -527,6 +700,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showQuickStartGuideView = () => {
+    syncHash('quickstart');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -560,6 +734,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const startQuickFeasibilityWizard = () => {
+    syncHash('quickwizard');
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -617,36 +792,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const navigateTo = async (index) => {
     try {
-      // Always ensure sidebar is visible when navigating (unless on mobile)
-      const sidebarEl = document.querySelector('.sidebar');
-      const stepperNavEl = document.getElementById('stepperNav');
+      enterWorkspaceMode();
 
-      // Clean up inline styles first
-      if (sidebarEl) sidebarEl.style.removeProperty('display');
-      if (stepperNavEl) stepperNavEl.style.removeProperty('display');
+      let targetIndex = index;
+      // (أُزيلت خطوة القوالب من المسار؛ نقطة البداية صارت نافذةً قبل الدخول)
 
-      if (window.innerWidth > 768) {
-        // Force show sidebar on desktop
-        if (sidebarEl) {
-          sidebarEl.style.display = 'flex';
-        }
-        if (stepperNavEl) {
-          stepperNavEl.style.display = '';
-        }
-        enterWorkspaceMode();
-      } else {
-        // On mobile, just ensure we are in workspace mode (CSS handles visibility)
-        enterWorkspaceMode();
-      }
-
-      const step = STEPS[index];
+      const step = STEPS[targetIndex];
       if (!step) return;
 
-      sidebar.setActive(index);
-      wizard.renderStep(step.id, step, index);
+      index = targetIndex; // تحديث المتغير المحلي ليتناسق مع الحلقات أدناه
+
+      try {
+        localStorage.setItem('feas_last_step_index', String(targetIndex));
+      } catch (_) { }
+
+      syncHash('step/' + targetIndex);
+
+      sidebar.setActive(targetIndex);
+      wizard.renderStep(step.id, step, targetIndex);
 
       // Keep header stage bar in sync with navigation
-      renderHeaderStageBar({ activeStepIndex: index, progressTracker, sections: sidebar.sections });
+      renderHeaderStageBar({ activeStepIndex: targetIndex, progressTracker, sections: sidebar.sections });
 
       // Breadcrumbs
       const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -685,15 +851,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           components.projectAlternatives = new ProjectAlternativesView(containerId, store, navigateTo);
         }
         components.projectAlternatives.render();
-      } else if (step.isTemplateSelector || step.id === 'templates') {
-        if (!components.templates) {
-          const { TemplateSelector } = await import('./js/ui/TemplateSelector.js');
-          components.templates = new TemplateSelector(containerId, store, (template) => {
-            navigateTo(3);
-            sidebar.render();
-          });
-        }
-        components.templates.render();
       } else if (step.isTimeline || step.id === SECTIONS.TIMELINE) {
         if (!components.timeline) {
           const { Timeline } = await import('./js/ui/Timeline.js');
@@ -749,9 +906,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           const { DecisionDashboard } = await import('./js/ui/DecisionDashboard.js');
           components.decisionDashboard = new DecisionDashboard(containerId, store);
         }
-        components.decisionDashboard.render().catch(err => {
+        try {
+          await components.decisionDashboard.render();
+        } catch (err) {
           console.error('Failed to render DecisionDashboard:', err);
-        });
+        }
       } else if (step.isExecutiveSummary) {
         if (!components.executiveSummary) {
           const { ExecutiveSummary } = await import('./js/ui/ExecutiveSummary.js');
@@ -877,6 +1036,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         wizard.renderStep(step.id, step, index);
       }
+
+      // خطوات التحليل الحسابي تكتب innerHTML خاصاً بها بلا شريط تنقّل — نُلحق «السابق/التالي»
+      // كي لا يعلق المستخدم المبتدئ فيها (idempotent: لا يكرّر شريط خطوات النموذج).
+      wizard.appendNav(index);
     } catch (error) {
       console.error('Navigation error:', error);
       toast.error('حدث خطأ أثناء الانتقال بين الخطوات');
@@ -954,11 +1117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   // ------------------------------------------
 
-  // 2. Initialize Live Panel
-  const livePanel = new LivePanel(store);
-  livePanel.init();
-
-  // 2.5. Initialize Auth Component
+  // 2. Initialize Auth Component
   const authComponent = new AuthComponent('authContainer');
   authComponent.render();
   window.addEventListener('feasibility:userProfileUpdated', () => authComponent.render());
@@ -968,9 +1127,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (breadcrumbHome) {
     breadcrumbHome.addEventListener('click', (e) => {
       e.preventDefault();
-      navigateTo(0);
+      showLandingDashboard();
     });
   }
+
+  const hasMeaningfulUnsavedChanges = () => {
+    if (!store._dirty) return false;
+    const ignoredKeys = new Set(['id', 'createdAt', 'updatedAt', 'version', 'appSettings']);
+    const normalize = (value) => JSON.stringify(value, (key, val) => (
+      ignoredKeys.has(key) ? undefined : val
+    ));
+
+    try {
+      return normalize(store.getState()) !== normalize(createEmptyStudy());
+    } catch (_) {
+      return true;
+    }
+  };
 
   // الدراسات: دراسة جديدة — تنبيه حفظ (مركز تنمية) ثم فتح معرض القوالب
   window.addEventListener('feasibility:newStudy', async () => {
@@ -979,7 +1152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         new TemplateGallery('templateGalleryOverlay', store).open();
       }).catch(() => { });
     };
-    if (store._dirty) {
+    if (hasMeaningfulUnsavedChanges()) {
       const overlay = document.createElement('div');
       overlay.className = 'unsaved-modal-overlay';
       overlay.setAttribute('role', 'dialog');
@@ -1021,7 +1194,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // الاستماع لحدث تحميل المشروع (من القالب أو غيره)
   window.addEventListener('project-loaded', async (e) => {
-    navigateTo(3); // الانتقال لمعلومات المشروع مباشرة
+    const source = e.detail?.source || '';
+    if (source === 'blank') {
+      navigateTo(0);
+    } else {
+    const projectInfoIdx = stepIndexById('projectInfo'); // أول تطابق = خطوة النموذج الرئيسية
+    navigateTo(projectInfoIdx >= 0 ? projectInfoIdx : 0); // الانتقال لمعلومات المشروع مباشرة
+    }
     const { toast } = await import('./js/utils/toast.js');
     if (e.detail?.name) {
       toast.success(`بدأ العمل على: ${e.detail.name}`);
@@ -1150,8 +1329,130 @@ document.addEventListener('DOMContentLoaded', async () => {
   // If we have a stored current project ID? No, we don't track "active project" in localStorage per se, just last save.
   // Let's always show Dashboard first for this "Platform" feel.
 
-  // الصفحة الرئيسية: مكتبة المشاريع + "ابدأ جدوى سريعة" و "دراسة جديدة (كاملة)"
-  showLandingDashboard();
+  // ═══════════════════════════════════════════════════════════════════
+  // موجّه داخلي (In-App Router) — تنقّل واعٍ بتاريخ المتصفح
+  // كل انتقال يكتب عنواناً في الرابط (#/…)، فيشتغل زر الرجوع/التقديم صح،
+  // وتصير روابط الخطوات قابلة للحفظ والمشاركة.
+  // ═══════════════════════════════════════════════════════════════════
+  let _currentRoute = null;   // العنوان المعروض حالياً (مثل 'home' أو 'step/3')
+  let _isRestoring = false;   // true أثناء الرسم استجابةً لتغيّر الرابط (رجوع/تقديم/رابط مباشر)
+
+  // خريطة الصفحات الفرعية: اسم العنوان → دالة العرض
+  const SUBVIEW_ROUTES = {
+    examples: showExamplesInspireView,
+    advisory: showAdvisoryView,
+    monshaat: showMonshaatComplianceView,
+    financing: showFinancingGuideView,
+    beginner: showBeginnerGuideView,
+    idea: showIdeaAssessmentView,
+    hypothesis: showHypothesisView,
+    partner: showPartnerSelectionView,
+    resources: showResourcesGuideView,
+    trust: showTrustCriteriaView,
+    knowledge: showKnowledgeCenterView,
+    accelerator: showAcceleratorTipsView,
+    postfeasibility: showPostFeasibilityView,
+    quickstart: showQuickStartGuideView,
+    quickwizard: startQuickFeasibilityWizard
+  };
+
+  // قراءة العنوان من الرابط (بدون '#/')
+  const parseHash = () => (window.location.hash || '').replace(/^#\/?/, '').trim();
+
+  // تسجيل انتقال جديد في تاريخ المتصفح (لا يفعل شيئاً أثناء الاستعادة)
+  const syncHash = (route) => {
+    const isFirst = (_currentRoute === null);
+    _currentRoute = route;
+    if (_isRestoring) return;
+    const target = '#/' + route;
+    if (window.location.hash === target) return;
+    try {
+      if (isFirst) window.history.replaceState(null, '', target);
+      else window.history.pushState(null, '', target);
+    } catch (_) {
+      window.location.hash = target;
+    }
+  };
+
+  // عرض صفحة المشاركة (وضع المستثمر) — عرض مغمور بلا شريط جانبي
+  const renderShareRoute = async (projectId) => {
+    const sidebarEl = document.querySelector('.sidebar');
+    const stepperNavEl = document.getElementById('stepperNav');
+    const breadcrumbBar = document.getElementById('breadcrumbBar');
+    if (sidebarEl) sidebarEl.style.display = 'none';
+    if (stepperNavEl) stepperNavEl.style.display = 'none';
+    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+    try {
+      const { ShareView } = await import('./js/ui/ShareView.js');
+      new ShareView('wizardContainer', store, null).render(projectId);
+    } catch (e) {
+      console.error('ShareView load failed:', e);
+      toast.error('تعذر فتح صفحة المشاركة');
+    }
+  };
+
+  // رسم الواجهة المطابقة للعنوان — بدون كتابة تاريخ جديد (يُستدعى عند الرجوع/التقديم)
+  const routeToView = async (route) => {
+    _isRestoring = true;
+    _currentRoute = route;
+    try {
+      if (route === '' || route === 'home') {
+        await showLandingDashboard();
+      } else if (route.startsWith('step/')) {
+        const idx = parseInt(route.slice(5), 10);
+        if (Number.isInteger(idx) && idx >= 0 && idx < STEPS.length) await navigateTo(idx);
+        else await showLandingDashboard();
+      } else if (route.startsWith('share/')) {
+        await renderShareRoute(route.slice(6));
+      } else if (SUBVIEW_ROUTES[route]) {
+        SUBVIEW_ROUTES[route]();
+      } else {
+        await showLandingDashboard();
+      }
+    } catch (e) {
+      console.error('[Router] routeToView failed:', e);
+    } finally {
+      _isRestoring = false;
+    }
+  };
+
+  // استجابة لزر الرجوع/التقديم أو أي تغيّر خارجي في الرابط
+  const syncFromUrl = () => {
+    const route = parseHash();
+    const normalized = route === '' ? 'home' : route;
+    if (normalized === _currentRoute) return; // نعرضها أصلاً → تفادي الحلقات المتكررة
+    routeToView(normalized);
+  };
+
+  window.addEventListener('popstate', syncFromUrl);
+  window.addEventListener('hashchange', syncFromUrl);
+
+  // شعار «قرار» في الترويسات = زر العودة للصفحة الرئيسية
+  ['.app-header__brand', '.brand-name', '.brand-name-mobile'].forEach((sel) => {
+    document.querySelectorAll(sel).forEach((el) => {
+      el.style.cursor = 'pointer';
+      el.setAttribute('title', 'العودة للصفحة الرئيسية');
+      el.setAttribute('role', 'link');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-label', 'قرار — العودة للصفحة الرئيسية');
+      el.addEventListener('click', () => showLandingDashboard());
+      // WCAG 2.1.1: تفعيل بلوحة المفاتيح (Enter/Space) لا بالفأرة فقط
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          showLandingDashboard();
+        }
+      });
+    });
+  });
+
+  // أول رسم — نحترم الرابط: رابط مباشر لصفحة يفتحها، وإلا الصفحة الرئيسية
+  const initialRoute = parseHash();
+  if (initialRoute && initialRoute !== 'home') {
+    routeToView(initialRoute);
+  } else {
+    showLandingDashboard();
+  }
 
   // 4. Initialize Auto-save
   const autoSave = new AutoSave(store);
@@ -1171,7 +1472,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // تنبيه الحفظ عند إغلاق التبويب أو الخروج (مركز تنمية)
   window.addEventListener('beforeunload', (e) => {
-    if (store._dirty) {
+    if (hasMeaningfulUnsavedChanges()) {
       e.preventDefault();
       e.returnValue = 'لم تحفظ التغييرات. هل تريد الحفظ قبل الخروج؟';
     }
@@ -1188,14 +1489,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     ];
     // نموذج مصغر: فكرة، سوق، تكاليف، إيرادات، قرار — الحد الأدنى لبنك التنمية/الغرفة
     const miniVisible = [
-      'preliminaryCheck', 'projectAlternatives', 'templates', SECTIONS.PROJECT_INFO, SECTIONS.KEY_PEOPLE, 'projectIntro', SECTIONS.SMART_GOALS,
+      'preliminaryCheck', 'projectAlternatives', SECTIONS.PROJECT_INFO, 'projectDetails', SECTIONS.KEY_PEOPLE, 'projectIntro', SECTIONS.SMART_GOALS,
       SECTIONS.TECHNICAL, SECTIONS.HR, SECTIONS.LEGAL, SECTIONS.MARKETING, SECTIONS.STRATEGIC, SECTIONS.REVENUE,
       SECTIONS.FINANCING, SECTIONS.ASSUMPTIONS, SECTIONS.FINANCIAL_STATEMENTS, 'financial_eval', 'sensitivity',
       SECTIONS.EXECUTIVE_SUMMARY
     ];
     // المسار السريع: 5-7 خطوات أساسية فقط
     const quickVisible = [
-      SECTIONS.PROJECT_INFO, // Basic Info (Main + Details)
+      SECTIONS.PROJECT_INFO, // Basic Info
+      'projectDetails',      // تفاصيل الفكرة (كانت تلتقط بتكرار PROJECT_INFO قبل توحيد المعرّفات)
       'projectIntro',        // Description (Simplified)
       SECTIONS.TECHNICAL,    // Costs (Magic Fill)
       SECTIONS.HR,           // Staff (Magic Fill)
@@ -1223,8 +1525,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Group 1: Inputs (Indices 0-5: Info*2, Intro, Tech, HR, Revenue)
       // Group 2: Results (Indices 6-8: Statements, Decision, Summary)
       sidebar.sections = [
-        { id: 'quick_inputs', label: '📝 البيانات الأساسية', range: [0, 5] },
-        { id: 'quick_results', label: '🚀 النتائج والقرار', range: [6, visibleSteps.length - 1] }
+        { id: 'quick_inputs', label: 'البيانات الأساسية', range: [0, 5] },
+        { id: 'quick_results', label: 'النتائج والقرار', range: [6, visibleSteps.length - 1] }
       ];
     } else {
       // Reset to default sections for advanced mode
@@ -1328,15 +1630,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnFabExport.addEventListener('click', () => openExportMenu());
   }
 
-  /* Header toolbar: "تفاصيل" opens live panel */
-  const headerKpiDetails = document.getElementById('headerKpiDetails');
-  if (headerKpiDetails && livePanelEl) {
-    headerKpiDetails.addEventListener('click', () => {
-      const isOpen = livePanelEl.classList.contains('is-open');
-      if (!isOpen) setLivePanelOpen(true, { opener: headerKpiDetails });
-    });
-  }
-
   // مشاركة الدراسة (Runway: تعاون + صلاحيات محرر/مشاهد)
   const btnShareStudy = document.getElementById('btnShareStudy');
   if (btnShareStudy) {
@@ -1415,23 +1708,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       URL.revokeObjectURL(url);
 
       const missingSections = completeness.getMissingSections().slice(0, 3);
-      let message = `✅ تم حفظ الدراسة بنجاح!\n📊 نسبة الاكتمال: ${completeness.percentage}%`;
+      let message = `تم حفظ الدراسة بنجاح — نسبة الاكتمال: ${completeness.percentage}%`;
       if (missingSections.length > 0 && completeness.percentage < 80) {
         const missingLabels = missingSections.map(s => s.label).join('، ');
-        message += `\n\n💡 ننصح بإكمال: ${missingLabels}`;
+        message += `\nننصح بإكمال: ${missingLabels}`;
       }
       toast.success(message, 7000);
 
+      // الأزرار تحوي أيقونات SVG — نلتقط innerHTML ونستعيده كي لا تُمحى الأيقونة بعد الحفظ
       if (saveStudyText) {
-        const originalText = saveStudyText.textContent;
-        saveStudyText.textContent = '✅ تم الحفظ';
-        setTimeout(() => { if (saveStudyText) saveStudyText.textContent = originalText; }, 2000);
+        const originalHTML = saveStudyText.innerHTML;
+        saveStudyText.textContent = 'تم الحفظ ✓';
+        setTimeout(() => { if (saveStudyText) saveStudyText.innerHTML = originalHTML; }, 2000);
       }
       const headerSaveEl = document.getElementById('headerSaveStudy');
       if (headerSaveEl) {
-        const orig = headerSaveEl.textContent;
-        headerSaveEl.textContent = '✅ تم';
-        setTimeout(() => { if (headerSaveEl) headerSaveEl.textContent = orig; }, 2000);
+        const orig = headerSaveEl.innerHTML;
+        headerSaveEl.textContent = 'تم ✓';
+        setTimeout(() => { if (headerSaveEl) headerSaveEl.innerHTML = orig; }, 2000);
       }
     } catch (error) {
       console.error('Save study error:', error);
@@ -1577,7 +1871,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       overlay.innerHTML = `
         <div class="modal-card" style="max-width:400px;" role="dialog" aria-modal="true">
           <div class="modal-header">
-            <h3>📜 تاريخ الإصدارات</h3>
+            <h3>تاريخ الإصدارات</h3>
             <button type="button" class="btn-close" aria-label="إغلاق">×</button>
           </div>
           <div class="modal-body text-sm">
@@ -1606,6 +1900,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
   }
+
+  // نافذة «كيف يُولَّد المحتوى؟» — إعلامية فقط (أُزيل مسار مفتاح OpenAI العميلي الميت والمضلِّل)
+  const btnAISettings = document.getElementById('btnAISettings');
+  const aiSettingsModal = document.getElementById('aiSettingsModal');
+
+  if (btnAISettings && aiSettingsModal) {
+    btnAISettings.addEventListener('click', () => aiSettingsModal.showModal());
+  }
+  // تنظيف: إزالة أي مفتاح OpenAI مخزَّن سابقاً (لم يعد يُستخدم)
+  try { localStorage.removeItem('openai_api_key'); } catch (_) {}
 
   // Reset Study (clear and start over)
   const btnReset = document.getElementById('btnReset');
@@ -1685,12 +1989,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  window.addEventListener('hashchange', handleRoute);
-
-  // Initial check (if loaded with hash)
-  if (window.location.hash.includes('/share')) {
-    handleRoute();
-  }
+  // التوجيه موحّد الآن أعلى الملف (In-App Router) ويستمع لـ popstate/hashchange مرة واحدة.
+  // handleRoute القديم لم يعد مربوطاً؛ أي تغيّر في الرابط (بما فيه فتح رابط مشاركة) يمر عبر syncFromUrl.
 
   // Global Click delegation for Share Buttons
   document.addEventListener('click', (e) => {
@@ -1721,7 +2021,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const renderMobileNav = () => {
     if (!mobileStepperNav) return;
     // احترام وضع العرض (سريع/مبسّط/مصغّر): نعرض نفس الخطوات المرئية في الشريط الجانبي،
-    // لا كل الـ44 خطوة — سابقاً كانت قائمة الجوّال تتجاهل الوضع فتُغرق مستخدم الجوّال.
+    // لا كامل STEPS.length دائماً — سابقاً كانت قائمة الجوّال تتجاهل الوضع فتُغرق مستخدم الجوّال.
     const visibleSteps = (sidebar.steps && sidebar.steps.length) ? sidebar.steps : STEPS;
     const globalIndexOf = (step, localIdx) =>
       (sidebar.stepIndexMap && sidebar.stepIndexMap[localIdx] != null)

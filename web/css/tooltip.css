@@ -122,16 +122,16 @@
 }
 
 .tooltip-info .tooltip-content {
-    background-color: rgba(59, 130, 246, 0.95);
+    background-color: color-mix(in srgb, var(--c-accent-blue) calc(0.95 * 100%), transparent);
 }
 
 .tooltip-info .tooltip-content::after {
-    border-color: rgba(59, 130, 246, 0.95) transparent transparent transparent;
+    border-color: color-mix(in srgb, var(--c-accent-blue) calc(0.95 * 100%), transparent) transparent transparent transparent;
 }
 
 /* Emphasis in tooltip */
 .tooltip-content strong {
-    color: #fbbf24;
+    color: var(--c-warning);
     font-weight: 600;
 }
 

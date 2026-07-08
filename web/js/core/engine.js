@@ -2,7 +2,13 @@
 import { SECTIONS } from './schema.js';
 import { computeLoanSchedule } from '../../../lib/calc/loanSchedule.js';
 import { generateBalanceSheets } from '../../../lib/calc/balanceSheet.js';
-
+import { analyzeSaaSMetrics } from './SaaSEngine.js';
+import { analyzeSaudiMarket } from './SaudiMarketEngine.js';
+import { explainDecisionBreakers } from './DecisionExplainer.js';
+import { calculateZakatAndTax } from './financial/tax.js';
+import { calculateNPV, calculateIRR, calculateMIRR, calculateTerminalValue } from './financial/cashflow.js';
+import { buildDepreciationModel } from './financial/depreciation.js';
+import { buildRevenueModel } from './financial/revenue.js';
 function toArray(v) {
     if (v == null) return [];
     return Array.isArray(v) ? v : [v];
@@ -44,7 +50,30 @@ export function calculateStudy(study, overrides) {
     const techResources = study[SECTIONS.TECH_RESOURCES] || {};
     const legal = study[SECTIONS.LEGAL] || {};
     const services = study[SECTIONS.SERVICES] || {};
-    const discountRate = study.assumptions?.discountRate || 0.10;
+
+    // ═══════════════════════════════════════════════════════════
+    // Risk-to-Quant Engine: حساب علاوة المخاطر بناءً على المخاطر والـ SWOT
+    // ═══════════════════════════════════════════════════════════
+    let riskPremium = 0;
+    const risks = toArray(study[SECTIONS.RISK_ANALYSIS]?.risks);
+    const swot = study[SECTIONS.STRATEGIC]?.swot || {};
+
+    risks.forEach(r => {
+        const impact = (r.impact || '').toLowerCase();
+        const prob = (r.probability || '').toLowerCase();
+        if (impact === 'high' && prob === 'high') riskPremium += 0.015;
+        else if (impact === 'high' || prob === 'high') riskPremium += 0.005;
+    });
+
+    const weaknessesCount = toArray(swot.weaknesses).length;
+    const threatsCount = toArray(swot.threats).length;
+    riskPremium += (weaknessesCount + threatsCount) * 0.002;
+
+    riskPremium = Math.min(0.08, riskPremium); // سقف علاوة المخاطر 8%
+
+    const baseDiscountRate = Number(study.assumptions?.discountRate) || 0.10;
+    const discountRate = baseDiscountRate + riskPremium;
+    const computedContingencyRate = Number(study.assumptions?.contingencyRate ?? 0.10) + (riskPremium * 0.5);
 
     // ═══════════════════════════════════════════════════════════
     // الزكاة والضريبة (النظام السعودي):
@@ -63,7 +92,11 @@ export function calculateStudy(study, overrides) {
     const admin = study[SECTIONS.ADMINISTRATIVE] || {};
     const serviceItems = toArray(services.items);
 
-    const gosiRate = study.assumptions?.gosiRate || hr.gosiRate || 0.1175;
+    // حصة صاحب العمل في التأمينات (GOSI) للسعودي: نظام التأمينات الاجتماعية الجديد (3 يوليو 2024)
+    // يرفع نسبة المشترك الجديد تدريجياً؛ مشروع جديد كل موظفيه «مشتركون جدد» ⇒ ~12.75% في 2026.
+    // قابل للتجاوز عبر assumptions.gosiRate. (المرجع: التأمينات الاجتماعية — النظام الجديد)
+    const SAUDI_GOSI_RATE_2026 = 0.1275;
+    const gosiRate = study.assumptions?.gosiRate || hr.gosiRate || SAUDI_GOSI_RATE_2026;
     const positions = toArray(hr.positions);
     const totalSalaries = positions.reduce((acc, pos) => {
         return acc + (Number(pos.salary || 0) * Number(pos.count || 1) * Number(pos.months || 12));
@@ -72,12 +105,12 @@ export function calculateStudy(study, overrides) {
     // GOSI حسب الجنسية — مطابق لصيغة جدول الرواتب في الواجهة (schema positions.annualCost)
     const gosiCost = positions.reduce((acc, pos) => {
         const basic = Number(pos.salary || 0) * Number(pos.count || 1) * Number(pos.months || 12);
-        const rate = pos.nationality === 'saudi' ? 0.1175 : (pos.nationality === 'expat' ? 0.02 : gosiRate);
+        const rate = pos.nationality === 'saudi' ? SAUDI_GOSI_RATE_2026 : (pos.nationality === 'expat' ? 0.02 : gosiRate);
         return acc + basic * rate;
     }, 0);
 
     const totalHeadcount = positions.reduce((acc, pos) => acc + Number(pos.count || 1), 0);
-    const insuranceCost = totalHeadcount * (hr.healthInsurancePerHead || 1200);
+    const insuranceCost = totalHeadcount * (hr.healthInsurancePerHead || 1500);
 
     // رسوم العمالة الوافدة الحكومية السنوية (مقابل مالي + تذاكر + إقامة)
     const govtFees = hr.govtFees || {};
@@ -97,12 +130,10 @@ export function calculateStudy(study, overrides) {
     };
 
     const annualLogistics = toArray(logistics.logistics).reduce((acc, item) => acc + (Number(item.monthly || 0) * 12), 0);
-    const hasGovtFees = toArray(admin.administrative).some(i => i.name && i.name.includes('حكوم'));
     let annualAdmin = toArray(admin.administrative).reduce((acc, item) => acc + (Number(item.monthly || 0) * 12), 0);
-    if (!hasGovtFees) {
-        // رسوم حكومية سنوية تقديرية (سجل، بلدية، دفاع مدني) لمنشأة صغيرة
-        annualAdmin += 2500;
-    }
+    // ملاحظة: أُزيلت إضافة 2,500 ريال «رسوم حكومية» الصامتة — كانت تُحقَن في OPEX دون علم
+    // المستخدم أو إفصاح، فيجد فرقاً لا يفسَّر عند مطابقة تكاليفه بقائمة الدخل (نقض لشفافية المعادلات).
+    // بديلها الصحيح: بند ظاهر في «الموارد الإدارية» يضيفه المستخدم أو تحذير QA يطلب إدخاله.
     // المواد المستهلكة الشهرية (technical.consumables)
     annualAdmin += toArray(technical.consumables).reduce((acc, item) => acc + (Number(item.monthlyCost ?? item.monthly ?? 0) * 12), 0);
 
@@ -139,15 +170,33 @@ export function calculateStudy(study, overrides) {
         return acc + (cost * qty * (1 - saving));
     }, 0);
 
-    // طوارئ 10% على المعدات + مضاعف استراتيجية الإطلاق
+    // طوارئ على المعدات + مضاعف استراتيجية الإطلاق
     const equipmentBase = sumAsset(technical.equipment, 'Equipment') * (launchStrategy === 'Outsourcing' ? 0.3 : (launchStrategy === 'Pilot_Phase' ? 0.5 : 1.0));
-    const equipmentContingency = equipmentBase * 0.10;
+    const equipmentContingency = equipmentBase * computedContingencyRate;
     const equipmentTotal = equipmentBase + equipmentContingency;
+
+    // معدل إهلاك/إطفاء يحترم الصفر الصريح: «0» قرارُ مستخدمٍ واعٍ (أصل لا يُستهلك — أرض/مخزون)
+    // وليس غياباً للقيمة. النمط القديم `rate || default` كان يعامل الصفر كفراغ فيفرض الافتراضي
+    // (مخزون 200 ألف بمعدل 0 كان يُطفأ 40 ألفاً سنوياً وللأبد).
+    const rateOrDefault = (v, dflt) => {
+        if (v === null || v === undefined || v === '') return dflt;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : dflt;
+    };
 
     const initialEstablishmentTotal = toArray(technical.establishmentCosts).reduce((acc, item) => acc + Number(item.amount || 0), 0);
     const establishmentAmortization = toArray(technical.establishmentCosts).reduce((acc, item) => {
-        return acc + (Number(item.amount || 0) * Number(item.amortizationRate || 0.20));
+        return acc + (Number(item.amount || 0) * rateOrDefault(item.amortizationRate, 0.20));
     }, 0);
+    // إطفاء التأسيس بند-ببند مع عمره (life = round(1/rate)، الافتراضي 20% ⇒ 5 سنوات).
+    // كان يُحمَّل ثابتاً كل سنوات الإسقاط فيتجاوز 100% من كلفته عند أفق>5 سنوات
+    // (أفق 10 ⇒ 200%). يُقصّ الآن عند استنفاد عمره مثل البنود القابلة للإحلال. (تدقيق ٢٠٢٦-٠٧-٠٨)
+    const establishmentAmortItems = toArray(technical.establishmentCosts).map(item => {
+        const rate = rateOrDefault(item.amortizationRate, 0.20);
+        return { dep: Number(item.amount || 0) * rate, life: rate > 0 ? Math.round(1 / rate) : 0 };
+    });
+    const establishmentAmortAtYear = (yr) => establishmentAmortItems.reduce(
+        (d, it) => d + (it.life > 0 && yr <= it.life ? it.dep : 0), 0);
 
     const capexBreakdown = {
         establishment: initialEstablishmentTotal,
@@ -177,23 +226,21 @@ export function calculateStudy(study, overrides) {
         capexBreakdown.ventureBuilder +
         capexBreakdown.validation +
         capexBreakdown.envMitigation;
-
-    const assetDepreciation = (arr, defaultRate, category) => toArray(arr).reduce((acc, item) => {
-        const cost = Number(item.price || item.cost || 0);
-        const qty = Number(item.quantity || item.count || 1);
-        const rate = Number(item.depreciationRate || defaultRate);
-        const saving = getSaving(category);
-        return acc + (cost * qty * rate * (1 - saving));
-    }, 0);
-
-    const annualDepreciation =
-        establishmentAmortization +
-        assetDepreciation(technical.buildings, 0.05, 'Buildings') +
-        (equipmentTotal * 0.15) +
-        assetDepreciation(technical.furniture, 0.20, 'Furniture') +
-        assetDepreciation(technical.vehicles, 0.20, 'Vehicles') +
-        assetDepreciation(techResources.techResources, 0.25, 'TechResources') +
-        (capexBreakdown.servicesCapex * 0.15);
+    const {
+        annualDepreciation,
+        permanentAnnualDep,
+        replaceableDepAtYear,
+        getReplacementCostAtYear
+    } = buildDepreciationModel({
+        technical,
+        techResources,
+        equipmentTotal,
+        capexBreakdown,
+        launchStrategy,
+        getSaving,
+        establishmentAmortization,
+        establishmentAmortAtYear
+    });
 
     let totalCapex = Object.values(capexBreakdown).reduce((a, b) => a + b, 0);
     if (capexMult !== 1) totalCapex *= capexMult;
@@ -201,40 +248,11 @@ export function calculateStudy(study, overrides) {
     // ═══════════════════════════════════════════════════════════
     // 3. مصادر الإيراد الموحدة (تشغيلية/غير تشغيلية) مع نمو لكل مصدر
     // ═══════════════════════════════════════════════════════════
-    const revenueStreams = toArray(study[SECTIONS.REVENUE]?.streams);
-    const hasServices = serviceItems.length > 0;
-    const defaultGrowth = 0.05;
-
-    /** @type {{rev1:number, vc1:number, units1:number, growth:number, operating:boolean}[]} */
-    const revenueSources = [];
-
-    // الخدمات المفصلة: تشغيلية دائماً
-    serviceItems.forEach(item => {
-        const customers = Number(item.customersPerMonth || 0) * 12;
-        const saving = getSaving('Services');
-        revenueSources.push({
-            rev1: customers * Number(item.pricePerUnit || 0),
-            vc1: customers * Number(item.variableCostPerUnit || 0) * (1 - saving),
-            units1: customers,
-            growth: Number(item.growthRate ?? defaultGrowth),
-            operating: true
-        });
-    });
-
-    // مصادر الإيرادات: التشغيلية تُستبدل بالخدمات إن وُجدت؛
-    // غير التشغيلية (إيجار جزء من المقر…) تُحسب دائماً (كانت تُهمل مع وجود خدمات).
-    revenueStreams.forEach(stream => {
-        const type = stream.type || 'operating';
-        if (type === 'operating' && hasServices) return;
-        const annualCust = Number(stream.customersPerMonth || 0) * 12;
-        const revenue = annualCust * Number(stream.avgPrice || 0);
-        revenueSources.push({
-            rev1: revenue,
-            vc1: type === 'operating' ? revenue * Number(stream.variableCostRate ?? 0.30) : 0,
-            units1: annualCust,
-            growth: Number(stream.growthRate ?? defaultGrowth),
-            operating: type === 'operating'
-        });
+    const { revenueSources, sourcesAtYear } = buildRevenueModel({
+        study,
+        SECTIONS,
+        serviceItems,
+        getSaving
     });
 
     const sumSources = (operating, field) =>
@@ -243,11 +261,6 @@ export function calculateStudy(study, overrides) {
     const year1OperatingVCBase = sumSources(true, 'vc1');
     const year1Units = sumSources(true, 'units1');
     const year1NonOperatingRevenueBase = sumSources(false, 'rev1');
-
-    // قيمة الفئة في سنة معينة وفق نمو كل مصدر (yearIndex = 0 للسنة الأولى)
-    const sourcesAtYear = (operating, field, yearIndex) =>
-        revenueSources.filter(s => s.operating === operating)
-            .reduce((a, s) => a + s[field] * Math.pow(1 + (Number.isFinite(s.growth) ? s.growth : defaultGrowth), yearIndex), 0);
 
     // ═══════════════════════════════════════════════════════════
     // 3.5 مصالحة الطاقة (Capacity Reconciliation) — سقف مادي للمبيعات
@@ -322,7 +335,11 @@ export function calculateStudy(study, overrides) {
     }
 
     const workingCapital = wcRent + wcSalaries + wcMarketing + wcCOGS;
-    const totalInvestment = totalCapex + workingCapital;
+    // المخزون الافتتاحي: بند رأسمالي يُموَّل عند التأسيس لكنه أصل متداول — خارج capexBreakdown
+    // عمداً كي لا يدخل الإهلاك الدفتري ولا مجمعات الإهلاك الزكوي (كان حشره في نفقات التأسيس
+    // يُطفئه 20% سنوياً ويخفيه من الأصول المتداولة — تدقيق ٢٠٢٦-٠٧-٠٦).
+    const openingInventory = Math.max(0, Number(technical.openingInventory || 0));
+    const totalInvestment = totalCapex + openingInventory + workingCapital;
 
     // ═══════════════════════════════════════════════════════════
     // 4.5 إهلاك نظامي (زكوي/ضريبي) بالقسط المتناقص — مجموعات ZATCA مبسطة:
@@ -382,14 +399,16 @@ export function calculateStudy(study, overrides) {
     // ═══════════════════════════════════════════════════════════
     const financing = study[SECTIONS.FINANCING] || {};
     const loanAmount = financing.sources?.bankLoan?.amount || 0;
-    const interestRate = financing.sources?.bankLoan?.interestRate || 0.08;
+    // rateOrDefault يحترم الصفر الصريح: قرض 0% (بنك التنمية الاجتماعية/الزراعية) يجب أن يبقى 0% لا 8%.
+    const interestRate = rateOrDefault(financing.sources?.bankLoan?.interestRate, 0.08);
     const loanTerm = financing.sources?.bankLoan?.termYears || 5;
     const gracePeriodMonths = Number(financing.sources?.bankLoan?.gracePeriodMonths || 0);
+    const repaymentType = financing.sources?.bankLoan?.repaymentType || 'equal';
 
     let loanScheduleData = null;
     if (loanAmount > 0) {
         try {
-            loanScheduleData = computeLoanSchedule(loanAmount, interestRate, loanTerm, gracePeriodMonths);
+            loanScheduleData = computeLoanSchedule(loanAmount, interestRate, loanTerm, gracePeriodMonths, repaymentType);
         } catch (_) { loanScheduleData = null; }
     }
     const loanYear = (y) => loanScheduleData?.annualSummary?.find(s => s.year === y) || null;
@@ -398,13 +417,29 @@ export function calculateStudy(study, overrides) {
     // 7. الإسقاطات (قائمة الدخل والتدفقات لسنوات الدراسة)
     // ═══════════════════════════════════════════════════════════
     const incomeStatement = [];
-    let cumulativeCashFlow = -totalInvestment;
-    let cumulativeDiscountedCashFlow = -totalInvestment;
+
+    // ═══ إزالة ازدواج عبء القرض (تدقيق ٢٠٢٦-٠٧-٠٦) ═══
+    // التدفقات السنوية «بعد التمويل» أصلاً (الفائدة تُخصم عبر EBT وأصل القرض عبر financingCF)،
+    // بينما كانت سنة الصفر تتحمل كامل الاستثمار دون إثبات دخول القرض — فيُدفع القرض مرتين
+    // (مرة ضمن الاستثمار ومرة كأقساط) ويظهر الرصيد التراكمي سالباً بمقدار القرض زوراً.
+    // التصحيح: سنة الصفر تتحمل حصة المالك النقدية فقط (الاستثمار − القرض)، فتصبح
+    // NPV/IRR/الاسترداد كلها على أساس حقوق الملكية (levered/equity basis) — متسقة مع تدفقاتها.
+    const equityOutlay = Math.max(0, totalInvestment - loanAmount);
+    let cumulativeCashFlow = -equityOutlay;
+    let cumulativeDiscountedCashFlow = -equityOutlay;
     let paybackPeriod = Infinity;
     let discountedPaybackPeriod = Infinity;
 
-    // وعاء الزكاة الحقيقي يتطلب تتبع حقوق الملكية والأصول سنة بسنة
-    const paidCapital = Math.max(0, totalInvestment - loanAmount);
+    // حقوق الملكية للوعاء الزكوي والميزانية: مساهمة المالك المُدخلة في خطوة التمويل هي
+    // مصدر الحقيقة؛ الاشتقاق (الاستثمار − القرض) يبقى احتياطاً فقط عند غياب الإدخال —
+    // كان يُشتق دائماً فيظهر «رأس مال مدفوع» لا يطابق ما أدخله المستخدم (رقم plug).
+    const enteredEquityLike =
+        Number(financing.sources?.equity?.amount || 0) +
+        Number(financing.sources?.investors?.amount || 0) +
+        Number(financing.sources?.governmentSupport?.amount || 0);
+    const paidCapital = enteredEquityLike > 0 ? enteredEquityLike : equityOutlay;
+    // فجوة التمويل الصريحة: موجبة = مصادر أقل من الاستثمار (يجب سدها)، سالبة = فائض
+    const fundingGap = totalInvestment - (paidCapital + loanAmount);
     let retainedEarningsStart = 0; // الأرباح المحتجزة في بداية كل سنة
 
     for (let i = 1; i <= years; i++) {
@@ -459,7 +494,7 @@ export function calculateStudy(study, overrides) {
 
         // إحلال الأصول قصيرة العمر (يبدأ من السنة التالية لانتهاء العمر)
         const checkReplacement = (arr, defaultRate) => toArray(arr).reduce((acc, item) => {
-            const rate = Number(item.depreciationRate || defaultRate);
+            const rate = rateOrDefault(item.depreciationRate, defaultRate);
             if (rate <= 0) return acc;
             const life = Math.round(1 / rate);
             if (life > 0 && (i - 1) % life === 0 && i > 1) {
@@ -474,7 +509,10 @@ export function calculateStudy(study, overrides) {
         replacementCost += checkReplacement(technical.furniture, 0.20);
         replacementCost += checkReplacement(techResources.techResources, 0.25);
 
-        const depreciation = annualDepreciation;
+        // Bug B: الإهلاك الدفتري لا يبقى ثابتاً للأبد — الأصناف القابلة للإحلال
+        // تتوقف عن الإهلاك الدفتري بعد استنفاد عمرها الأصلي (صُرِفت نقداً كإحلال)،
+        // بينما يستمر الجزء الدائم (مبانٍ/تأسيس/خدمات). هذا يزيل ازدواج الصرف.
+        const depreciation = permanentAnnualDep + replaceableDepAtYear(i) + establishmentAmortAtYear(i);
         const ebit = ebitdaFinal - depreciation;
 
         // فائدة وأصل القرض من جدول السداد الفعلي (PMT + فترة سماح)
@@ -492,13 +530,20 @@ export function calculateStudy(study, overrides) {
             ? (i === 1 ? loanAmount : (loanScheduleData.annualSummary.find(s => s.year === i - 1)?.endingBalance ?? 0))
             : 0;
         const netFixedStart = Math.max(0, totalCapex - annualDepreciation * yearIndex);
-        const fundingSourcesBase = paidCapital + retainedEarningsStart + loanBalanceStart - netFixedStart;
         const taxDepY = taxDepByYear[yearIndex] || 0;
-        const adjustedProfit = ebt + depreciation - taxDepY; // الربح المعدل (إهلاك نظامي بدل الدفتري)
-        const zakatBase = Math.max(0, Math.max(adjustedProfit, fundingSourcesBase));
-        const zakat = zakatBase * zakatRate * (1 - foreignShare);
-        // ضريبة دخل حصة الأجانب تُحسب على الربح المعدل (الإهلاك النظامي هو المعتمد ضريبياً)
-        const tax = foreignShare > 0 ? Math.max(0, adjustedProfit) * taxRate * foreignShare : 0;
+        
+        const { zakatBase, zakat, tax, adjustedProfit } = calculateZakatAndTax({
+            paidCapital,
+            retainedEarningsStart,
+            loanBalanceStart,
+            netFixedStart,
+            taxDepY,
+            ebt,
+            depreciation,
+            zakatRate,
+            foreignShare,
+            taxRate
+        });
         const netIncome = ebt - zakat - tax;
         retainedEarningsStart += netIncome; // ترحيل لبداية السنة التالية
 
@@ -546,12 +591,15 @@ export function calculateStudy(study, overrides) {
             depreciation,
             ebit,
             interest,
+            interestExpense: interest,
             ebt,
+            profitBeforeZakat: ebt,
             zakat,
             zakatBase,
             adjustedProfit,
             taxDepreciation: taxDepY,
             tax,
+            levy: zakat + tax,
             netIncome,
             replacementCost,
             loanPrincipalPaid: principalPaid,
@@ -562,26 +610,33 @@ export function calculateStudy(study, overrides) {
     // ═══════════════════════════════════════════════════════════
     // 8. المؤشرات
     // ═══════════════════════════════════════════════════════════
-    const cashFlows = [-totalInvestment, ...incomeStatement.map(y => y.cashFlow)];
-
-    const npv = calculateNPV(discountRate, cashFlows);
-    const irr = calculateIRR(cashFlows);
-    const mirr = calculateMIRR(cashFlows, discountRate, discountRate);
+    // سلسلة التقييم على أساس حقوق الملكية: سنة الصفر = حصة المالك النقدية (الاستثمار − القرض)
+    // لأن التدفقات السنوية بعد خدمة الدين أصلاً — انظر تعليق equityOutlay أعلاه.
+    const cashFlows = [-equityOutlay, ...incomeStatement.map(y => y.cashFlow)];
 
     // ═══ القيمة النهائية (Terminal Value — نمو Gordon) ═══
-    // استرشادية دائماً: القرار يبقى على NPV المتحفظ بدونها (البنوك لا تعتد بها)،
-    // لكن غيابها كلياً يعني افتراض تصفية المشروع بلا قيمة بعد سنوات الدراسة.
     const tvCfg = study.assumptions?.terminalValue || {};
-    let terminalValueDiscounted = 0;
-    if ((tvCfg.method || 'gordon') !== 'none') {
-        const lastCF = incomeStatement[incomeStatement.length - 1]?.cashFlow || 0;
-        // نمو مستدام مقصوص تحت معدل الخصم (شرط صحة معادلة Gordon)
-        const g = Math.min(Number(tvCfg.growthRate ?? 0.02), Math.max(0, discountRate - 0.02));
-        if (lastCF > 0 && discountRate > g) {
-            const tv = (lastCF * (1 + g)) / (discountRate - g);
-            terminalValueDiscounted = tv / Math.pow(1 + discountRate, years);
-        }
+    const lastYearIncomeStatement = incomeStatement[incomeStatement.length - 1] || {};
+    
+    const { tvEquity, terminalValueDiscounted } = calculateTerminalValue({
+        tvCfg,
+        lastYearIncomeStatement,
+        discountRate,
+        years,
+        loanScheduleData
+    });
+
+    // القيمة النهائية استرشادية، لا تُخلط مع سلسلة التدفقات النقدية الأساسية
+    const npv = calculateNPV(discountRate, cashFlows);
+    const npvWithTerminal = npv + terminalValueDiscounted;
+    
+    let irr = calculateIRR(cashFlows);
+    if (irr != null) {
+        const tol = 1e-6;
+        if (npv < -tol && irr > discountRate) irr = null;
+        else if (npv > tol && irr < discountRate) irr = null;
     }
+    const mirr = calculateMIRR(cashFlows, discountRate, discountRate);
 
     // ═══ ضريبة القيمة المضافة (15%) — توقيت نقدي، لا ربحية ═══
     // الأسعار تُفترض غير شاملة للضريبة؛ تُحصَّل على المبيعات وتُخصم على المشتريات
@@ -600,7 +655,9 @@ export function calculateStudy(study, overrides) {
         })
     };
     const roi = (incomeStatement.reduce((acc, y) => acc + y.netIncome, 0) / totalInvestment) * 100;
-    const pi = (npv + totalInvestment) / totalInvestment;
+    // مؤشر الربحية على نفس أساس سلسلة NPV (حصة المالك) — كان يقسم على إجمالي الاستثمار
+    // بينما NPV محسوبة على المساهمة فيختل المؤشر عند وجود قرض.
+    const pi = equityOutlay > 0 ? (npv + equityOutlay) / equityOutlay : 0;
     const avgAnnualProfit = incomeStatement.reduce((acc, y) => acc + y.netIncome, 0) / incomeStatement.length;
     const arr = (avgAnnualProfit / totalInvestment) * 100;
 
@@ -608,26 +665,36 @@ export function calculateStudy(study, overrides) {
     const year1Revenue = year1 ? year1.revenue : 0;
     const year1VariableCosts = year1 ? year1.variableCosts : 0;
 
-    // نقطة التعادل (السنة الأولى)
+    // نقطة التعادل (السنة الأولى) — تعريف واحد قانوني لكل الشاشات والتقارير:
+    // الثوابت المحتسبة = ثوابت السنة الأولى الفعلية (شاملة الأوفرهيد الخفي) + الإهلاك الدفتري.
+    // كانت الشاشات تتضارب: المحرك بلا إهلاك/أوفرهيد، وشاشة التعادل تضيفهما، والنص المولد ثالثة —
+    // ثلاث قيم مختلفة لنفس «نقطة التعادل» في دراسة واحدة (تدقيق ٢٠٢٦-٠٧-٠٦).
+    const year1FixedForBE = year1 ? (year1.fixedCosts + year1.depreciation) : totalFixedOpexYear1;
     const cmRatio = year1Revenue > 0 ? (year1Revenue - year1VariableCosts) / year1Revenue : 0;
-    const breakEvenValue = cmRatio > 0 ? totalFixedOpexYear1 / cmRatio : 0;
+    const breakEvenValue = cmRatio > 0 ? year1FixedForBE / cmRatio : 0;
     // هامش المساهمة للوحدة يُحسب على أساس 100% طاقة للطرفين (سعر − تكلفة متغيرة للوحدة)
     // — كان يقسم إيراداً مخفّضاً بالاستغلال على وحدات كاملة فيضاعف نقطة التعادل زوراً
     const contributionMarginPerUnit = year1Units > 0
         ? (year1OperatingRevenueBase - year1OperatingVCBase) / year1Units
         : 0;
-    const breakEvenUnits = contributionMarginPerUnit > 0 ? totalFixedOpexYear1 / contributionMarginPerUnit : 0;
+    const breakEvenUnits = contributionMarginPerUnit > 0 ? year1FixedForBE / contributionMarginPerUnit : 0;
 
-    // DSCR من جدول السداد الفعلي
-    const year1Ebitda = year1 ? year1.ebitda : 0;
+    // DSCR من جدول السداد الفعلي — بسطه CFADS (النقد المتاح لخدمة الدين) لا EBITDA خام.
+    // CFADS = EBITDA − الضرائب النقدية (الزكاة+الضريبة = levy) − الإنفاق الرأسمالي للإحلال
+    // (replacementCost). المعيار البنكي: خدمة الدين تُسدَّد من نقد فعلي بعد اقتطاع الزكاة/الضريبة
+    // والإحلال، لا من ربح تشغيلي خام يتجاهلهما (فيُبالِغ في تغطية الدين). (تدقيق ٢٠٢٦-٠٧-٠٨)
+    const cfads = (stmt) => Math.max(0,
+        (Number(stmt.ebitda) || 0) - (Number(stmt.levy) || 0) - (Number(stmt.replacementCost) || 0));
+    const year1Cfads = year1 ? cfads(year1) : 0;
     const debtServiceYear1 = loanYear(1)?.totalPayment || 0;
-    const dscrYear1 = debtServiceYear1 > 0 && year1Ebitda > 0
-        ? year1Ebitda / debtServiceYear1
+    const dscrYear1 = debtServiceYear1 > 0 && year1Cfads > 0
+        ? year1Cfads / debtServiceYear1
         : null;
     const dscrAnalysis = loanScheduleData ? incomeStatement.slice(0, loanTerm).map((stmt, idx) => {
         const y = idx + 1;
         const debtService = loanYear(y)?.totalPayment || 0;
-        const dscr = debtService > 0 && stmt.ebitda > 0 ? stmt.ebitda / debtService : null;
+        const stmtCfads = cfads(stmt);
+        const dscr = debtService > 0 && stmtCfads > 0 ? stmtCfads / debtService : null;
         return { year: y, dscr: dscr != null ? Number(dscr.toFixed(2)) : null, status: dscr >= 1.25 ? 'مريح للممول' : dscr >= 1 ? 'مقبول' : 'يحتاج مراجعة' };
     }) : [];
 
@@ -657,12 +724,13 @@ export function calculateStudy(study, overrides) {
             }
         },
         operating: {
-            total: workingCapital,
+            total: workingCapital + openingInventory,
             breakdown: {
                 rent: wcRent,
                 salaries: wcSalaries,
                 marketing: wcMarketing,
-                cogs: wcCOGS
+                cogs: wcCOGS,
+                openingInventory
             },
             months: coverage
         }
@@ -692,7 +760,11 @@ export function calculateStudy(study, overrides) {
                 loanSchedule,
                 incomeStatements: incomeStatement,
                 workingCapital,
-                equityAmount: Math.max(0, totalInvestment - loanAmount)
+                openingInventory,
+                // مساهمة المالك المُدخلة (وليس رقماً مشتقاً) + الفجوة صراحةً كي تُعرض
+                // «فجوة تمويل غير مغطاة» بدل رأس مال مدفوع مختلَق يوازن الميزانية صمتاً
+                equityAmount: paidCapital,
+                fundingGap
             }, years);
         } catch (_) { balanceSheets = []; }
 
@@ -748,28 +820,59 @@ export function calculateStudy(study, overrides) {
                 breakeven: { ordersPerDay: (breakEvenUnits || 0) / 360 }
             }
         };
-        const opt = runCase({ revenueChange: 0.10, costChange: -0.05 });
-        const pess = runCase({ revenueChange: -0.15, costChange: 0.10 });
+        // B2: السيناريوهات تُقرأ من مدخلات المستخدم (خطوة 30) لا من أرقام مثبتة — كي يتطابق
+        // التقرير ولوحة القرار مع ما يعدّله المستخدم فعلاً. القيم الافتراضية احتياط فقط.
+        const userScenarios = study[SECTIONS.SCENARIOS] || {};
+        const optIn = userScenarios.optimistic || {};
+        const pessIn = userScenarios.pessimistic || {};
+        const opt = runCase({
+            revenueChange: rateOrDefault(optIn.revenueChange, 0.25),
+            costChange: rateOrDefault(optIn.costChange, -0.10)
+        });
+        const pess = runCase({
+            revenueChange: rateOrDefault(pessIn.revenueChange, -0.20),
+            costChange: rateOrDefault(pessIn.costChange, 0.15)
+        });
         if (opt) scenarios.optimistic = opt;
         if (pess) scenarios.pessimistic = pess;
     }
 
-    // التدفق النقدي التراكمي
-    let _cum = -totalInvestment;
+    // التدفق النقدي التراكمي — سنة الصفر تفصح عن التمويل بدل دفنه:
+    // الاستثمار كاملاً خارج، ودخول القرض داخل، والصافي = حصة المالك النقدية.
+    let _cum = -equityOutlay;
     const cashFlowRows = [
-        { year: 0, cashFlow: -totalInvestment, netIncome: 0, depreciation: 0, cumulative: -totalInvestment },
+        {
+            year: 0,
+            investment: -totalInvestment,
+            loanInflow: loanAmount,
+            cashFlow: -equityOutlay,
+            netIncome: 0,
+            depreciation: 0,
+            loanPrincipalPaid: 0,
+            replacementCost: 0,
+            cumulative: -equityOutlay
+        },
         ...incomeStatement.map(y => {
             _cum += y.cashFlow;
-            return { year: y.year, cashFlow: y.cashFlow, netIncome: y.netIncome, depreciation: y.depreciation, cumulative: _cum };
+            return {
+                year: y.year,
+                cashFlow: y.cashFlow,
+                netIncome: y.netIncome,
+                depreciation: y.depreciation,
+                loanPrincipalPaid: y.loanPrincipalPaid || 0,
+                replacementCost: y.replacementCost || 0,
+                cumulative: _cum
+            };
         })
     ];
 
-    return {
+    const result = {
         capex: {
             capitalStructure,
             breakdown: capexBreakdown,
             subtotal: totalCapex,
             workingCapital,
+            openingInventory,
             contingency: 0,
             total: totalInvestment
         },
@@ -806,11 +909,23 @@ export function calculateStudy(study, overrides) {
             discountRate,
             inflationRate: inflation
         },
+        // فحص التمويل الموحد — كل الشاشات تقرأ منه (خطوة التمويل، بوابة التصدير، الميزانية)
+        financingCheck: {
+            totalInvestment,
+            loanAmount,
+            paidCapital,
+            equityOutlay,
+            totalFundingSources: paidCapital + loanAmount,
+            fundingGap
+        },
         indicators: {
             npv,
+            npvWithTerminal,
+            terminalValue: tvEquity,
             irr,
             mirr,
             paybackPeriod: paybackOut,
+            payback: paybackOut,
             roi: roi / 100,
             breakEvenPointValue: breakEvenValue,
             breakEvenUnits: Math.round(breakEvenUnits),
@@ -821,11 +936,14 @@ export function calculateStudy(study, overrides) {
             ebitdaYear1: year1 ? year1.ebitda : 0,
             freeCashFlowYear1: year1 ? year1.cashFlow : 0,
             workingCapital,
-            roe: totalInvestment > 0 ? (incomeStatement.reduce((acc, y) => acc + y.netIncome, 0) / incomeStatement.length) / totalInvestment : 0,
+            // ROE يُقسَم على حقوق الملكية (رأس المال المدفوع) لا على إجمالي الاستثمار،
+            // وإلا تطابق مع ROA حرفياً. paidCapital = totalInvestment − loanAmount.
+            roe: paidCapital > 0 ? (incomeStatement.reduce((acc, y) => acc + y.netIncome, 0) / incomeStatement.length) / Math.max(1, paidCapital) : 0,
             roa: totalInvestment > 0 ? (incomeStatement.reduce((acc, y) => acc + y.netIncome, 0) / incomeStatement.length) / totalInvestment : 0,
             profitabilityIndex: pi,
             discountedPaybackPeriod: discountedPaybackOut,
             arr: arr / 100,
+            annualROI: arr / 100,
             // القيمة النهائية (مخصومة) — استرشادية؛ القرار على NPV المتحفظ أعلاه
             terminalValue: terminalValueDiscounted,
             npvWithTerminal: npv + terminalValueDiscounted
@@ -835,20 +953,51 @@ export function calculateStudy(study, overrides) {
             const d = computeDecision(study.assumptions?.thresholds, {
                 npv, irr,
                 paybackPeriod: paybackOut,
-                roi: roi / 100
+                roi: roi / 100,
+                netMargin: year1Revenue > 0 ? (incomeStatement[0].netIncome / year1Revenue) : 0
             });
             // مبيعات تتجاوز الطاقة القصوى المادية لا يمكن أن تكون GO مهما كانت
-            // المؤشرات — الأرقام مبنية على حجم مستحيل التحقيق
-            if (capacityCheck?.exceeded && d.decision === 'GO') {
-                d.decision = 'REVISE';
+            // المؤشرات — الأرقام مبنية على حجم مستحيل التحقيق. نُضيف السبب دائماً عند
+            // تجاوز الطاقة (حتى لو كان القرار REVISE أصلاً بسبب مؤشرات غير واقعية)،
+            // وإلا اختفى سبب «الطاقة القصوى» خلف رسالة المؤشرات المرتفعة.
+            if (capacityCheck?.exceeded) {
+                if (d.decision === 'GO') d.decision = 'REVISE';
                 d.decisionReasons.unshift(
                     `المبيعات المخططة (${capacityCheck.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر) تتجاوز الطاقة القصوى (${capacityCheck.maxUnitsPerMonth.toLocaleString('ar-SA')}) — خفّض التوقعات أو وسّع الطاقة`
+                );
+            }
+            if (Number(fundingGap) > 1) {
+                if (d.decision === 'GO') d.decision = 'REVISE';
+                d.decisionReasons.unshift(
+                    `مصادر التمويل أقل من الاستثمار المطلوب بفجوة ${Math.round(fundingGap).toLocaleString('ar-SA')} ريال — لا تعتمد القرار قبل رفع رأس المال أو خفض التكاليف الرأسمالية/رأس المال العامل`
+                );
+            }
+            const minDscr = Number(financing.targetDSCR ?? 1.25);
+            if (loanAmount > 0 && (dscrYear1 == null || dscrYear1 < minDscr)) {
+                if (d.decision === 'GO') d.decision = 'REVISE';
+                const dscrText = dscrYear1 == null ? 'غير قابل للحساب بسبب EBITDA سالبة/صفرية' : dscrYear1.toFixed(2);
+                d.decisionReasons.unshift(
+                    `تغطية خدمة الدين في السنة الأولى (${dscrText}) أقل من الحد المستهدف ${minDscr.toFixed(2)} — راجع مبلغ القرض أو فترة السماح أو أضف رأس مال عامل`
+                );
+            }
+            // مرونة السيناريو المتشائم: GO مبني فقط على الحالة الأساسية بينما ينهار المشروع
+            // (NPV سلبي) تحت سيناريو متشائم معقول (نفس مدخلات خطوة السيناريوهات) هو «GO هش»
+            // يخالف روح بوابة الجودة — لا نُظهر ثقة لا تصمد أمام أول صدمة سوق معتادة.
+            const pessNpv = scenarios?.pessimistic?.kpis?.npv;
+            if (d.decision === 'GO' && pessNpv != null && pessNpv < 0) {
+                d.decision = 'REVISE';
+                d.decisionReasons.unshift(
+                    `المشروع مجدٍ في الحالة الأساسية لكنه يخسر (NPV سلبي) تحت السيناريو المتشائم — راجع هامش الأمان قبل الاعتماد على القرار`
                 );
             }
             return d;
         })(),
         get kpis() { return this.indicators; }
     };
+    result.saasMetrics = analyzeSaaSMetrics(study, result);
+    result.saudiMarket = analyzeSaudiMarket(study, result);
+    result.decisionExplanation = explainDecisionBreakers(study, result);
+    return result;
 }
 
 /**
@@ -887,6 +1036,18 @@ function computeDecision(th, k) {
         decision = 'GO';
     } else if (passed <= 1) {
         decision = 'NO-GO';
+    }
+
+    // سقف معقولية: «أفضل من أن يكون حقيقياً» لا يكون GO قاطعاً. مؤشرات مرتفعة بغرابة
+    // (IRR ≥ 100%، استرداد < 1.2 سنة، أو هامش صافٍ > 35%) غالباً تعني تكاليف ناقصة — نخفّضها لمراجعة.
+    if (decision === 'GO') {
+        const implausible = (k.irr ?? 0) >= 1
+            || (k.paybackPeriod != null && k.paybackPeriod > 0 && k.paybackPeriod < 1.2)
+            || (k.netMargin ?? 0) > 0.35;
+        if (implausible) {
+            decision = 'REVISE';
+            reasons.unshift('المؤشرات مرتفعة بشكل غير معتاد (عائد/استرداد/هامش) — تحقّق من اكتمال التكاليف وواقعية المبيعات قبل عرضها على ممول.');
+        }
     }
 
     return { decision, decisionReasons: reasons };
@@ -933,57 +1094,4 @@ export function calculateSensitivityScenarios(study) {
 }
 
 // Helpers
-function calculateNPV(rate, cashflows) {
-    return cashflows.reduce((acc, val, i) => acc + val / Math.pow(1 + rate, i), 0);
-}
 
-function calculateIRR(cashflows, guess = 0.1) {
-    // حراسات صحة: IRR حقيقي يتطلب تدفقين على الأقل وتغيّر إشارة واحداً
-    if (!Array.isArray(cashflows) || cashflows.length < 2) return 0;
-    if (!cashflows.some(v => v > 0) || !cashflows.some(v => v < 0)) return 0;
-
-    const maxIter = 1000;
-    const precision = 1e-7;
-    let rate = guess;
-
-    for (let i = 0; i < maxIter; i++) {
-        const npv = calculateNPV(rate, cashflows);
-        if (Math.abs(npv) < precision) break;
-
-        const derivative = cashflows.reduce((acc, val, t) => {
-            if (t === 0) return acc;
-            return acc - t * val * Math.pow(1 + rate, -t - 1);
-        }, 0);
-
-        if (derivative === 0) break;
-        const newRate = rate - npv / derivative;
-        if (!Number.isFinite(newRate) || newRate <= -0.9999 || newRate > 1e4) break;
-        if (Math.abs(newRate - rate) < precision) { rate = newRate; break; }
-        rate = newRate;
-    }
-    if (!Number.isFinite(rate)) return 0;
-    // مشروع فائق الربحية: قصّ عند 1000% بدل إرجاع 0 (كان 0 يقلب القرار إلى NO-GO زوراً)
-    if (rate > 10) return 10;
-    if (rate < -0.9999) return -0.9999;
-    return rate;
-}
-
-/**
- * MIRR (Modified Internal Rate of Return)
- * @param {number[]} cashflows - [CF0, CF1, ...]
- * @param {number} financeRate - cost of borrowing
- * @param {number} reinvestRate - rate for reinvesting positive flows
- */
-function calculateMIRR(cashflows, financeRate, reinvestRate) {
-    if (!cashflows?.length) return 0;
-    const n = cashflows.length;
-    let pvNeg = 0;
-    let fvPos = 0;
-    for (let i = 0; i < n; i++) {
-        const cf = cashflows[i];
-        if (cf < 0) pvNeg += cf / Math.pow(1 + financeRate, i);
-        else if (cf > 0) fvPos += cf * Math.pow(1 + reinvestRate, n - 1 - i);
-    }
-    if (pvNeg >= 0 || fvPos <= 0) return 0;
-    return Math.pow(-fvPos / pvNeg, 1 / (n - 1)) - 1;
-}

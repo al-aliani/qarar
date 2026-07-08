@@ -7,7 +7,10 @@ export class AuthModal {
     constructor(containerId, options = {}) {
         this.containerId = containerId;
         this.onSuccess = options.onSuccess || null;
+        this.onClose = options.onClose || null; // يُستدعى عند الإغلاق بلا نجاح (يعامله الحارس كتخطٍّ)
         this.overlay = null;
+        this._succeeded = false;
+        this._prevFocus = null;
     }
 
     open() {
@@ -16,9 +19,9 @@ export class AuthModal {
         this.overlay.id = 'authModalOverlay';
         this.overlay.className = 'modal-overlay is-open';
         this.overlay.innerHTML = `
-            <div class="modal-card" style="max-width: 400px;">
+            <div class="modal-card" style="max-width: 400px;" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
                 <div class="modal-header">
-                    <h3>دخول / تسجيل</h3>
+                    <h3 id="authModalTitle">دخول / تسجيل</h3>
                     <button type="button" class="btn-close" aria-label="إغلاق">×</button>
                 </div>
                 <div class="modal-body">
@@ -32,11 +35,11 @@ export class AuthModal {
                     <form id="authModalForm" style="display:block;">
                         <div class="mb-3">
                             <label class="block text-sm mb-1" for="authEmail">البريد الإلكتروني</label>
-                            <input type="email" id="authEmail" class="input w-full" placeholder="you@example.com" required>
+                            <input type="email" id="authEmail" class="input w-full" placeholder="you@example.com" required autocomplete="username" dir="ltr">
                         </div>
                         <div class="mb-3">
                             <label class="block text-sm mb-1" for="authPassword">كلمة المرور</label>
-                            <input type="password" id="authPassword" class="input w-full" placeholder="••••••••" required minlength="8" title="8+ أحرف، رقم واحد على الأقل، رمز واحد على الأقل">
+                            <input type="password" id="authPassword" class="input w-full" placeholder="••••••••" required minlength="8" title="8+ أحرف، رقم واحد على الأقل، رمز واحد على الأقل" autocomplete="current-password">
                             <div id="authPasswordStrength" class="text-xs mt-1" style="display:none;"></div>
                         </div>
                         <div class="flex gap-2 mb-2">
@@ -55,7 +58,7 @@ export class AuthModal {
                     </form>
                     <div id="authModalForgotPanel" class="mb-3" style="display:none;">
                         <label class="block text-sm mb-1" for="authForgotEmail">أدخل بريدك لإرسال رابط إعادة التعيين</label>
-                        <input type="email" id="authForgotEmail" class="input w-full mb-2" placeholder="you@example.com">
+                        <input type="email" id="authForgotEmail" class="input w-full mb-2" placeholder="you@example.com" autocomplete="email" dir="ltr">
                         <div class="flex gap-2">
                             <button type="button" id="authBtnSendReset" class="btn btn--primary flex-1">إرسال الرابط</button>
                             <button type="button" id="authBtnBackToLogin" class="btn btn--secondary">رجوع</button>
@@ -71,6 +74,20 @@ export class AuthModal {
         const onEscape = (e) => { if (e.key === 'Escape') this.close(); };
         document.addEventListener('keydown', onEscape);
         this._onEscape = onEscape;
+
+        // إدارة التركيز: احفظ العنصر السابق، ركّز أول حقل، واحبس Tab داخل النافذة (a11y)
+        this._prevFocus = document.activeElement;
+        setTimeout(() => { this.overlay?.querySelector('#authEmail')?.focus(); }, 30);
+        this._onTrap = (e) => {
+            if (e.key !== 'Tab' || !this.overlay) return;
+            const f = Array.from(this.overlay.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])'))
+                .filter(el => !el.disabled && el.offsetParent !== null);
+            if (!f.length) return;
+            const first = f[0], last = f[f.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        };
+        this.overlay.addEventListener('keydown', this._onTrap);
 
         this.overlay.querySelector('.btn-close').addEventListener('click', () => this.close());
         this.overlay.addEventListener('click', (e) => { if (e.target === this.overlay) this.close(); });
@@ -101,13 +118,14 @@ export class AuthModal {
                 if (/[^A-Za-z0-9]/.test(p)) s++;
                 const label = s <= 1 ? 'ضعيفة' : s <= 2 ? 'متوسطة' : s <= 3 ? 'جيدة' : 'قوية';
                 strengthEl.textContent = 'قوة كلمة المرور: ' + label;
-                strengthEl.style.color = s <= 1 ? 'var(--c-danger)' : s <= 2 ? '#d4af37' : 'var(--c-success)';
+                strengthEl.style.color = s <= 1 ? 'var(--c-danger)' : s <= 2 ? 'var(--c-warning)' : 'var(--c-success)';
             });
         }
 
         const runAuth = async (isSignUp) => {
+            const passEl = this.overlay.querySelector('#authPassword');
             const email = this.overlay.querySelector('#authEmail').value.trim();
-            const pass = this.overlay.querySelector('#authPassword').value;
+            const pass = passEl.value;
             if (!email || !pass) { showErr('أدخل البريد وكلمة المرور'); return; }
             if (isSignUp) {
                 const pErr = validatePassword(pass);
@@ -125,6 +143,7 @@ export class AuthModal {
                 const fn = isSignUp ? signUp : signIn;
                 const { ok: authOk, error } = await fn(email, pass);
                 if (authOk) {
+                    this._succeeded = true;
                     if (this.onSuccess) this.onSuccess({ success: true });
                     this.close();
                 } else {
@@ -136,6 +155,7 @@ export class AuthModal {
             } catch (e) {
                 showErr(e?.message || 'خطأ في الاتصال.');
             } finally {
+                if (passEl) passEl.value = '';
                 btn.disabled = false;
                 btn.textContent = orig;
             }
@@ -232,11 +252,21 @@ export class AuthModal {
         if (this._onEscape) document.removeEventListener('keydown', this._onEscape);
         this._onEscape = null;
         if (this.overlay) {
+            if (this._onTrap) this.overlay.removeEventListener('keydown', this._onTrap);
+            this._onTrap = null;
             this.overlay.classList.remove('is-open');
             this.overlay.remove();
             this.overlay = null;
         }
         document.body.style.overflow = '';
+        // أعِد التركيز للعنصر الذي فتح النافذة (a11y)
+        try { this._prevFocus?.focus?.(); } catch (_) {}
+        // إن أُغلقت بلا نجاح، أبلغ المستدعي مرّة واحدة (يعامله الحارس كتخطٍّ)
+        if (!this._succeeded && this.onClose) {
+            const cb = this.onClose;
+            this.onClose = null;
+            cb();
+        }
     }
 
     render() {}

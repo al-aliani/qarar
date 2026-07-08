@@ -26,7 +26,7 @@ export async function exportToGoogleSheets(studyData, results) {
             indicators: {
                 npv: results.indicators?.npv || 0,
                 irr: (results.indicators?.irr || 0) * 100,
-                payback: results.indicators?.paybackPeriod || 0,
+                payback: results.indicators?.paybackPeriod ?? results.indicators?.payback ?? null,
                 roi: (results.indicators?.roi || 0) * 100
             },
             capex: results.capex?.total || 0,

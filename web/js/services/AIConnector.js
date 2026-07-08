@@ -6,11 +6,11 @@
 import { InternalAIGenerator } from './InternalAIGenerator.js';
 import { SmartAdvisor } from './SmartAdvisor.js';
 
+// توليد محلي فقط: لا يوجد اتصال بأي مزوّد LLM خارجي. النقاط الخارجية (OpenAI/Anthropic/…)
+// غير مفعّلة ومحذوفة عمداً كي لا يوحي الكود بذكاء خارجي غير موجود. المصدر الوحيد للمحتوى
+// هو المولّد الداخلي (InternalAIGenerator) أو خادم محلي اختياري على /api/generate.
 const AI_ENDPOINTS = {
-    local: '/api/generate',
-    openai: 'https://api.openai.com/v1/chat/completions',
-    anthropic: 'https://api.anthropic.com/v1/messages',
-    perplexity: 'https://api.perplexity.ai/chat/completions'
+    local: '/api/generate'
 };
 
 const STORAGE_KEY_INTERNAL_ONLY = 'feasibility_ai_internal_only';
@@ -38,6 +38,10 @@ export class AIConnector {
         if (path.startsWith('/')) return path;
         return `/${path}`;
     }
+
+    // ملاحظة: أُزيل مسار OpenAI العميلي بالكامل (كان يناقض إعلان «داخلي فقط» أعلاه، ويفشل
+    // بصمت في الإنتاج لأن CSP لا يسمح بـ api.openai.com، ويسرّب المفتاح من المتصفح، وبرومبت
+    // حجم السوق كان يطلب اختلاق أرقام). المصدر الوحيد الآن: المولّد الداخلي / الخادم المحلي.
 
     async _postJson(path, body, { timeoutMs = 20000 } = {}) {
         const url = this._normalizeApiUrl(path);
@@ -149,6 +153,9 @@ export class AIConnector {
         if (type === 'suggest_campaigns') { try { return InternalAIGenerator.generateCampaigns(state); } catch (e) { console.warn('Internal fallback suggest_campaigns failed', e); return undefined; } }
         if (type === 'suggest_revenue') { try { return InternalAIGenerator.generateRevenueStreams(state); } catch (e) { console.warn('Internal fallback suggest_revenue failed', e); return undefined; } }
         if (type === 'suggest_staff') { try { return InternalAIGenerator.generatePositions(state); } catch (e) { console.warn('Internal fallback suggest_staff failed', e); return undefined; } }
+        if (type === 'suggest_products') { try { return InternalAIGenerator.generateProducts(state); } catch (e) { console.warn('Internal fallback suggest_products failed', e); return undefined; } }
+        if (type === 'suggest_intro_services') { try { return InternalAIGenerator.generateIntroServices(state); } catch (e) { console.warn('Internal fallback suggest_intro_services failed', e); return undefined; } }
+        if (type === 'suggest_customer_values') { try { return InternalAIGenerator.generateCustomerValues(state); } catch (e) { console.warn('Internal fallback suggest_customer_values failed', e); return undefined; } }
         if (type === 'suggest_buildings') { try { return InternalAIGenerator.generateBuildings(state); } catch (e) { console.warn('Internal fallback suggest_buildings failed', e); return undefined; } }
         if (type === 'suggest_equipment') { try { return InternalAIGenerator.generateEquipment(state); } catch (e) { console.warn('Internal fallback suggest_equipment failed', e); return undefined; } }
         if (type === 'suggest_furniture') { try { return InternalAIGenerator.generateFurniture(state); } catch (e) { console.warn('Internal fallback suggest_furniture failed', e); return undefined; } }
@@ -173,8 +180,10 @@ export class AIConnector {
                 const desc = proj.description || 'خدمات متميزة';
                 const concept = proj.concept || desc;
                 const sector = proj.sector || 'القطاع';
-                const npv = ind.npv ?? 0, irr = ind.irr ?? 0, payback = ind.paybackPeriod ?? ind.payback ?? 0, roi = ind.roi ?? 0;
-                return `سكربت العرض التقديمي (Pitch) — ${name}\nمدة مقترحة: 1–2 دقيقة\n\n[الافتتاحية — 15 ثانية]\nمرحباً، أنا هنا لأقدم لكم فرصة استثمارية واضحة: مشروع «${name}» في ${city}. نحن نقدم ${desc}، ونستهدف فجوة حقيقية في السوق.\n\n[المشكلة والحل — 25 ثانية]\nالمشكلة التي نعالجها: عدم وجود عرض يوفّر ${concept} بجودة عالية وسعر مناسب في نطاقنا. حلنا يقوم على ${concept} مع فريق محترف وموقع استراتيجي في ${city}.\n\n[السوق والفرصة — 20 ثانية]\n• السوق المستهدف: ${city} والمناطق المحيطة.\n• القطاع: ${sector}.\n\n[الأرقام الرئيسية — 25 ثانية]\n• صافي القيمة الحالية (NPV): ${Number(npv).toLocaleString('ar-SA')} ريال.\n• معدل العائد الداخلي (IRR): ${(Number(irr) * 100).toFixed(1)}%.\n• فترة الاسترداد: ${Number(payback).toFixed(1)} سنوات.\n• العائد على الاستثمار (ROI): ${(Number(roi) * 100).toFixed(0)}%.\n\n[الإغلاق — 15 ثانية]\nنطلب منكم الشراكة معنا لتحقيق هذه الرؤية. شكراً لكم، وأنا جاهز لأسئلتكم.`;
+                const npv = ind.npv ?? 0, irr = ind.irr ?? 0, payback = ind.paybackPeriod ?? ind.payback ?? null, roi = ind.roi ?? 0;
+                const paybackNum = Number(payback);
+                const paybackText = Number.isFinite(paybackNum) && paybackNum > 0 ? `${paybackNum.toFixed(1)} سنوات` : 'غير محققة ضمن فترة الدراسة';
+                return `سكربت العرض التقديمي (Pitch) — ${name}\nمدة مقترحة: 1–2 دقيقة\n\n[الافتتاحية — 15 ثانية]\nمرحباً، أنا هنا لأقدم لكم فرصة استثمارية واضحة: مشروع «${name}» في ${city}. نحن نقدم ${desc}، ونستهدف فجوة حقيقية في السوق.\n\n[المشكلة والحل — 25 ثانية]\nالمشكلة التي نعالجها: عدم وجود عرض يوفّر ${concept} بجودة عالية وسعر مناسب في نطاقنا. حلنا يقوم على ${concept} مع فريق محترف وموقع استراتيجي في ${city}.\n\n[السوق والفرصة — 20 ثانية]\n• السوق المستهدف: ${city} والمناطق المحيطة.\n• القطاع: ${sector}.\n\n[الأرقام الرئيسية — 25 ثانية]\n• صافي القيمة الحالية (NPV): ${Number(npv).toLocaleString('ar-SA')} ريال.\n• معدل العائد الداخلي (IRR): ${(Number(irr) * 100).toFixed(1)}%.\n• فترة الاسترداد: ${paybackText}.\n• العائد على الاستثمار (ROI): ${(Number(roi) * 100).toFixed(0)}%.\n\n[الإغلاق — 15 ثانية]\nنطلب منكم الشراكة معنا لتحقيق هذه الرؤية. شكراً لكم، وأنا جاهز لأسئلتكم.`;
             } catch (e) { console.warn('Internal fallback pitch_script failed', e); return undefined; }
         }
         return undefined;
@@ -275,83 +284,26 @@ export class AIConnector {
      */
     async generatePitchScript(studyData, financialResults) {
         const projectInfo = { ...(studyData?.projectInfo || {}), indicators: financialResults?.indicators };
-        return this.query('pitch_script', 'pitch_script', { projectInfo, context: { indicators: financialResults?.indicators } });
+        const payload = { projectInfo, context: { indicators: financialResults?.indicators } };
+        const result = await this.query('pitch_script', 'pitch_script', payload);
+        const text = typeof result === 'string' ? result : (typeof result?.content === 'string' ? result.content : '');
+        if (text.trim()) return text;
+
+        const fallback = this._runInternalFallback('pitch_script', payload);
+        return typeof fallback === 'string' ? fallback : '';
     }
 
-    /**
-     * Get mathematical optimization suggestions
-     */
-    async optimizeProject(projectData) {
-        try {
-            return await this._postJson('/api/optimize', projectData, { timeoutMs: 20000 });
-        } catch (e) {
-            console.error('Optimization error:', e);
-            return [];
-        }
-    }
-
-    /**
-     * Virtual CFO: Deep Audit
-     */
-    async getFinancialAudit(projectData) {
-        try {
-            return await this._postJson('/api/audit', projectData, { timeoutMs: 20000 });
-        } catch (e) {
-            console.error('Audit error:', e);
-            return { flags: [] };
-        }
-    }
-
-    /**
-     * Ask Internal Brain: "Can I hire more?"
-     */
-    async optimizeStaffing(inputs, financials) {
-        try {
-            return await this._postJson('/api/optimize', {
-                mode: 'staffing',
-                inputs: inputs,
-                financials: financials
-            }, { timeoutMs: 20000 });
-        } catch (e) {
-            return null;
-        }
-    }
-
-    /**
-     * Run Monte Carlo Simulation (Deep Core)
-     */
-    async runSimulation(inputs, financials) {
-        try {
-            return await this._postJson('/api/simulate', {
-                mode: 'monte_carlo',
-                inputs: inputs,
-                financials: financials
-            }, { timeoutMs: 25000 });
-        } catch (e) {
-            return null;
-        }
-    }
-
-    /**
-     * Run Sensitivity Analysis (Deep Core)
-     */
-    async analyzeSensitivity(inputs, financials) {
-        try {
-            return await this._postJson('/api/simulate', {
-                mode: 'sensitivity',
-                inputs: inputs,
-                financials: financials
-            }, { timeoutMs: 25000 });
-        } catch (e) {
-            return null;
-        }
-    }
+    // ملاحظة: أُزيلت خمس دوال ميتة (optimizeProject/getFinancialAudit/optimizeStaffing/
+    // runSimulation/analyzeSensitivity) كانت تستدعي /api/optimize و/api/audit و/api/simulate —
+    // مسارات لا يخدمها ai_server.py (يخدم /api/generate و/market/defaults و/experience/suggest
+    // فقط) ولا أي واجهة تستدعيها، فتفشل 404 دائماً وتوحي بقدرات «Deep Core» غير موجودة.
 
     /**
      * Get Market Analysis (TAM/SAM/SOM)
      * عند useInternalOnly أو فشل الخادم: استخدام InternalAIGenerator
      */
     async getMarketAnalysis(city, sector) {
+        // أرقام السوق تُشتق من المولّد الداخلي الموسوم (لا من نموذج خارجي يختلق أرقاماً بلا مصدر)
         const runInternal = () => {
             try {
                 const state = { projectInfo: { city: city || 'المنطقة', concept: sector || 'النشاط' } };
@@ -412,10 +364,26 @@ export class AIConnector {
             }, { timeoutMs: 20000 });
             const content = result.content || result;
 
+            // ‏{"content": []} من خادم بلا مفتاح API كان يمرّ كنجاح: المصفوفة الفارغة truthy،
+            // فتُعاد وتُخزَّن في الكاش، والمولّد الداخلي لا يعمل لأن لا استثناء — فتبدو كل
+            // أزرار ✨ «ميتة» بصمت تام (تدقيق ٢٠٢٦-٠٧-٠٦). الفارغ ليس ناتجاً.
+            const isEmpty =
+                content == null ||
+                (Array.isArray(content) && content.length === 0) ||
+                (typeof content === 'string' && content.trim() === '') ||
+                (typeof content === 'object' && !Array.isArray(content) && Object.keys(content).length === 0);
+            if (isEmpty) {
+                this._notifyLocalFallback();
+                const r = runInternal();
+                if (r !== undefined) { this._setCache(cacheKey, r); return r; }
+                return null;
+            }
+
             this._setCache(cacheKey, content);
             return content;
         } catch (error) {
             console.error('Internal Brain query error:', error);
+            this._notifyLocalFallback();
             const r = runInternal();
             if (r !== undefined) return r;
             // null = «لا ناتج» — كانت رسالة الخطأ هنا تجتاز فحص typeof string لدى المستدعين
@@ -424,11 +392,32 @@ export class AIConnector {
         }
     }
 
+    /**
+     * إفصاح لمرة واحدة في الجلسة: خادم الذكاء لم يُنتج محتوى والنصوص مولّدة محلياً من
+     * قوالب المنصة — كي لا يظن العميل أن ما يقرؤه ذكاء اصطناعي خادمي وهو قالب داخلي.
+     */
+    _notifyLocalFallback() {
+        if (this._localFallbackNotified) return;
+        this._localFallbackNotified = true;
+        console.warn('AIConnector: خادم الذكاء غير متاح/أعاد محتوى فارغاً — التوليد يتم محلياً من قوالب المنصة.');
+        import('../utils/toast.js')
+            .then(({ toast }) => toast?.info?.('خدمة الذكاء غير متاحة حالياً — النصوص تُولَّد محلياً من قوالب المنصة. راجعها وعدّلها قبل الاعتماد عليها.', 7000))
+            .catch(() => {});
+    }
+
     // Keep table generation for compatibility, but mapped to internal logic
     async generateTableSuggestions(type, projectInfo = {}) {
-        // The backend `_build_table_data` handles this now
         const result = await this.query('', type, { projectInfo });
-        return Array.isArray(result) ? result : [];
+        if (Array.isArray(result) && result.length > 0) return result;
+        // الخادم قد يردّ 200 بمحتوى غير مصفوفة لأنواع لا يدعمها (suggest_risks مثلاً) فلا يُطلق catch
+        // فيبقى الزر «ميتاً». نرجع للمولّد الداخلي الذي يدعم هذه الأنواع — مطابقةً لسلوك التراخيص.
+        try {
+            const internal = this._runInternalFallback(type, { projectInfo });
+            return Array.isArray(internal) ? internal : [];
+        } catch (e) {
+            console.warn('generateTableSuggestions internal fallback failed', e);
+            return [];
+        }
     }
 }
 
@@ -454,8 +443,4 @@ export async function generateTableSuggestions(type, projectInfo) {
 
 export async function generatePitchScript(studyData, financialResults) {
     return aiConnector.generatePitchScript(studyData, financialResults);
-}
-
-export async function optimizeProject(projectData) {
-    return aiConnector.optimizeProject(projectData);
 }

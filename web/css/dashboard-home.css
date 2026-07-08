@@ -1,0 +1,120 @@
+/* ═══════════════════════════════════════════════════════════════
+   dashboard-home.css — تحسينات لوحة البداية (home بعد الدخول)
+   يكمّل نظام dv-* في decision-dashboard.css (مشترك، لا يُعدّل هنا).
+   يقتصر على الفئات الجديدة dvh-* والإضافات غير المتعارضة.
+   كل الألوان/المسافات/الأقطار من توكنات variables.css.
+   RTL: خصائص منطقية فقط (inline)، لا تمرير أفقي.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── بطاقة الدراسة: مؤشّر «افتح» (سهم) يظهر عند hover/focus ──
+   البطاقة أصبحت role="button"/tabindex="0" — نعزّز الإشارة البصرية
+   دون لمس تنسيق .dv-project المشترك. */
+.dvh-project__enter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    inline-size: 26px;
+    block-size: 26px;
+    border-radius: var(--r-pill);
+    color: var(--c-text-muted);
+    background: var(--c-surface-2);
+    opacity: 0;
+    transform: translateX(4px);
+    transition: opacity 0.18s ease, transform 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.dvh-project__enter .ic {
+    inline-size: 15px;
+    block-size: 15px;
+}
+
+.dv-project:hover .dvh-project__enter,
+.dv-project:focus-visible .dvh-project__enter,
+.dv-project:focus-within .dvh-project__enter {
+    opacity: 1;
+    transform: translateX(0);
+    color: var(--c-p-500);
+    background: var(--c-p-subtle);
+}
+
+/* بؤرة واضحة على البطاقة نفسها (لوحة المفاتيح) — البطاقة الآن قابلة للتبويب.
+   نستخدم box-shadow حتى لا نزاحم الحد العلوي الملوّن في hover. */
+.dv-project[tabindex]:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring), var(--shadow-lg);
+    border-top-color: var(--c-p-500);
+}
+
+/* ═══ الحالة الفارغة: تعزيز عرض القيمة ═══ */
+
+/* قائمة «ماذا ستحصل عليه» داخل الحالة الفارغة الحقيقية */
+.dvh-empty__benefits {
+    list-style: none;
+    margin: 14px 0 4px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 22px;
+    text-align: start;
+    inline-size: min(100%, 520px);
+}
+
+.dvh-empty__benefits li {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 12px;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-md);
+    background: var(--c-bg-card);
+    color: var(--c-text-main);
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.dvh-empty__benefits .ic {
+    inline-size: 18px;
+    block-size: 18px;
+    flex: none;
+    color: var(--c-p-500);
+}
+
+/* الحالة الفارغة المُصفّاة (بحث/مجلد بلا نتائج): أهدأ من الفارغة الحقيقية */
+.dvh-empty--filtered {
+    border-style: solid;
+    background: var(--c-surface-2);
+}
+
+.dvh-empty--filtered .dv-empty__ic {
+    background: var(--c-surface-3);
+    color: var(--c-text-muted);
+}
+
+/* ═══ استجابة الجوال ═══ */
+@media (max-width: 620px) {
+    .dvh-empty__benefits {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    /* على الجوال: أظهر سهم «افتح» دائماً (لا hover باللمس) */
+    .dvh-project__enter {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ═══ حركة مخفّضة ═══ */
+@media (prefers-reduced-motion: reduce) {
+    .dvh-project__enter {
+        transition: opacity 0.15s ease;
+        transform: none;
+    }
+
+    .dv-project:hover .dvh-project__enter,
+    .dv-project:focus-visible .dvh-project__enter,
+    .dv-project:focus-within .dvh-project__enter {
+        transform: none;
+    }
+}

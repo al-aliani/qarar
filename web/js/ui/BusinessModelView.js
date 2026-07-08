@@ -6,6 +6,7 @@
 import { SECTIONS } from '../core/schema.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
+import { escapeHtml } from '../utils/escape.js';
 
 const BLOCKS = [
     { key: 'valueProposition', label: 'عرض القيمة', icon: '💎', placeholder: 'ما الذي يقدّمه المشروع للعميل؟ ما المشكلة التي يحلها؟' },
@@ -62,7 +63,7 @@ export class BusinessModelView {
                                 data-field="${block.key}"
                                 placeholder="${block.placeholder}"
                                 rows="3"
-                            >${bm[block.key] || ''}</textarea>
+                            >${escapeHtml(bm[block.key])}</textarea>
                         </div>
                     `).join('')}
                 </div>

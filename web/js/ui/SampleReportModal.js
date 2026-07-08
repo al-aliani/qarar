@@ -1,6 +1,7 @@
 /**
  * نافذة "اطلع على عينة تقرير" — توضيح الفرق في الجودة بيننا وبين المنافسين.
  * المهمة 1 من خطة التفوق: عرض عينة تقرير بجانب زر "ابدأ".
+ * الأنماط معرّفة في css/onboarding-polish.css (سبق أن كانت تعتمد أصناف Tailwind غير موجودة).
  */
 import { toast } from '../utils/toast.js';
 
@@ -24,6 +25,8 @@ export class SampleReportModal {
         document.body.style.overflow = 'hidden';
         this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
         document.addEventListener('keydown', this._onEscape);
+        // نقل التركيز إلى النافذة لإتاحة لوحة المفاتيح فوراً
+        this.overlay.querySelector('.btn-close')?.focus();
     }
 
     close() {
@@ -37,33 +40,40 @@ export class SampleReportModal {
 
     render() {
         this.overlay.innerHTML = `
-            <div class="modal-card sample-report-modal animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="sample-report-modal-title" style="max-width: 560px;">
+            <div class="modal-card sample-report-modal animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="sample-report-modal-title">
                 <div class="modal-header">
-                    <h3 id="sample-report-modal-title" class="text-gold">📄 اطلع على عينة تقرير</h3>
-                    <button type="button" class="btn-close sample-report-close" aria-label="إغلاق">×</button>
+                    <h3 id="sample-report-modal-title">
+                        <svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg>
+                        اطلع على عينة تقرير
+                    </h3>
+                    <button type="button" class="btn-close sample-report-close" aria-label="إغلاق النافذة">×</button>
                 </div>
-                <div class="modal-body text-sm" dir="rtl">
-                    <p class="text-muted mb-4">لاحظ الفرق في الجودة — تقريرنا مفصّل وجاهز للتقديم للتمويل.</p>
+                <div class="modal-body" dir="rtl">
+                    <p class="sample-report-lead">لاحظ الفرق في الجودة — تقريرنا مفصّل وجاهز للتقديم للتمويل.</p>
 
-                    <div class="card p-4 mb-4 bg-gold/5 border border-gold/20">
-                        <h4 class="font-bold text-gold mb-2">ما يشمل تقريرنا:</h4>
-                        <ul class="space-y-1 text-muted">
-                            <li>✓ ملخص تنفيذي ووصف المشروع</li>
-                            <li>✓ مؤشرات مالية (NPV، IRR، فترة الاسترداد، نقطة التعادل)</li>
-                            <li>✓ سيناريوهات Base / Best / Worst</li>
-                            <li>✓ تحليل حساسية وتوصية واضحة (ابدأ / راجع / لا تبدأ)</li>
-                            <li>✓ هيكل متوافق مع متطلبات البنك ومنشآت</li>
+                    <div class="sample-report-panel sample-report-panel--gold">
+                        <h4 class="sample-report-panel__title">
+                            <svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg>
+                            ما يشمل تقريرنا
+                        </h4>
+                        <ul class="sample-report-list">
+                            <li>ملخص تنفيذي ووصف المشروع</li>
+                            <li>مؤشرات مالية (NPV، IRR، فترة الاسترداد، نقطة التعادل)</li>
+                            <li>سيناريوهات متعدّدة (متحفّظ / أساسي / متفائل)</li>
+                            <li>تحليل حساسية وتوصية واضحة (ابدأ / راجع / لا تبدأ)</li>
+                            <li>هيكل متوافق مع متطلبات البنك ومنشآت</li>
                         </ul>
                     </div>
 
-                    <div class="p-3 rounded bg-white/5 border border-white/10 mb-4 text-xs">
-                        <strong class="text-muted">مقارنة سريعة:</strong>
-                        <p class="mt-1 text-muted">منصات أخرى قد تخرج ملفاً بسيطاً (صفحة واحدة أو قالب عام). نحن نخرج تقريراً كاملاً بجودة تدعم التقديم للبنك والمسرّعات.</p>
+                    <div class="sample-report-panel sample-report-panel--muted">
+                        <strong class="sample-report-compare__label">مقارنة سريعة</strong>
+                        <p class="sample-report-compare__text">منصات أخرى قد تخرج ملفاً بسيطاً (صفحة واحدة أو قالب عام). نحن نخرج تقريراً كاملاً بجودة تدعم التقديم للبنك والمسرّعات.</p>
                     </div>
 
-                    <div class="flex flex-col sm:flex-row gap-3">
-                        <button type="button" class="btn btn--primary flex-1" id="sampleReportDownloadPdf">
-                            📥 تحميل عينة PDF كاملة
+                    <div class="sample-report-actions">
+                        <button type="button" class="btn btn--primary sample-report-actions__primary" id="sampleReportDownloadPdf">
+                            <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>
+                            تحميل عينة PDF كاملة
                         </button>
                         <button type="button" class="btn btn--ghost" id="sampleReportClose">إغلاق</button>
                     </div>
@@ -78,13 +88,13 @@ export class SampleReportModal {
         this.overlay.querySelector('#sampleReportDownloadPdf')?.addEventListener('click', async () => {
             const btn = this.overlay.querySelector('#sampleReportDownloadPdf');
             if (btn) {
-                const orig = btn.textContent;
+                const orig = btn.innerHTML;
                 btn.textContent = 'جاري التحضير...';
                 btn.disabled = true;
                 try {
                     await this.onDownloadSample?.();
                 } finally {
-                    btn.textContent = orig;
+                    btn.innerHTML = orig;
                     btn.disabled = false;
                 }
             }

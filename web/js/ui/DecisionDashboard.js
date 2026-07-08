@@ -1,3 +1,4 @@
+import { createTooltip } from '../utils/glossary.js';
 /**
  * Decision Dashboard Component
  * The "Boardroom" view for investors to see if the project is ready
@@ -14,6 +15,7 @@ import { generateInvestorLink } from '../utils/shareUtils.js';
 import { exportExcel } from '../../export/excel.js';
 import { animateCounter } from '../utils/ui.js';
 import { runQAChecks } from '../utils/qaChecks.js';
+import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
 import { toast } from '../utils/toast.js';
 
 export class DecisionDashboard {
@@ -33,6 +35,30 @@ export class DecisionDashboard {
 
     async render() {
         const state = this.store.getState();
+
+        // بلا إيرادات لا يصح إصدار حكم «غير مجدي» بأرقام سالبة مضللة —
+        // نعرض حالة «لا بيانات» إرشادية توجّه للخطوات الناقصة (كما في القوائم المالية).
+        if (!(Array.isArray(state.revenue?.streams) && state.revenue.streams.length > 0)) {
+            this.container.innerHTML = `
+                <div class="decision-dashboard animate-entry">
+                    <div class="card glass-card">
+                        <h2 class="card-title">لوحة القرار الاستثماري</h2>
+                        <div class="alert alert--warning">
+                            <p><strong>⚠️ لا توجد بيانات إيرادات. يرجى إضافة مصادر الإيرادات في خطوة "مصادر الإيرادات".</strong></p>
+                            <p class="text-sm mt-2">لا يمكن إصدار توصية (مجدٍ / غير مجدٍ) قبل إدخال الحد الأدنى من البيانات. أكمل:</p>
+                            <ul class="text-sm mt-2" style="list-style: disc; padding-right: 20px;">
+                                <li>مصادر الإيرادات (خطوة "مصادر الإيرادات")</li>
+                                <li>التكاليف الرأسمالية (خطوة "الدراسة الفنية")</li>
+                                <li>التكاليف التشغيلية (خطوات "الموارد البشرية" و"اللوجستية" و"الإدارية")</li>
+                                <li>هيكل التمويل (خطوة "مصادر وهيكلة التمويل")</li>
+                            </ul>
+                            <p class="text-sm mt-2 text-muted">بعد إكمال هذه الخطوات ستُحسب المؤشرات (صافي القيمة الحالية، العائد الداخلي، فترة الاسترداد) وتظهر التوصية هنا.</p>
+                        </div>
+                    </div>
+                </div>`;
+            return;
+        }
+
         let results = null;
         try {
             results = runFullModel(state);
@@ -41,8 +67,18 @@ export class DecisionDashboard {
         }
 
         const evaluation = calculateProjectScore(state, results);
-        const readiness = this.calculateReadiness(state, results);
-        
+        const readiness = this.calculateReadiness(state, results, evaluation);
+
+        // سيناريوهات مشتقة من المحرك فعلياً (لا مضاعفات ثابتة) — لمصداقية أرقام القرار
+        let pessimistic = null, optimistic = null;
+        try { pessimistic = runFullModel(state, { revenueChange: -0.2 }); } catch (e) { console.warn('Pessimistic scenario error', e); }
+        try { optimistic = runFullModel(state, { revenueChange: 0.2 }); } catch (e) { console.warn('Optimistic scenario error', e); }
+
+        // «لماذا هذا القرار» و«الخطوات التالية» — مشتقة من التقييم والجاهزية
+        const decision = this.buildDecisionReasons(state, results, readiness, evaluation);
+        const financingDiagnostics = this.getFinancingDiagnostics(state, results);
+        const decisionExplanation = results?.decisionExplanation || null;
+
         // QA Gate validation (async, but we'll await it)
         let qaResults = { passed: true, hardErrors: [], softWarnings: [], validationErrors: [], validationWarnings: [] };
         try {
@@ -58,105 +94,149 @@ export class DecisionDashboard {
             validationResult = validateStudy(state);
         } catch (_) {}
 
+        // «اجتياز نظيف» = بلا أخطاء حرجة وبلا تحذيرات مهمة وبلا أخطاء بيانات.
+        // كان البانر الأخضر «اجتاز 100/100» يظهر بمجرد غياب الأخطاء الحرجة، فيتزامن مع تحذيرات
+        // حمراء عن عائد داخلي غير واقعي — إشارتان متناقضتان. الآن الأخضر للنظيف فقط.
+        const hasSoftIssues = (qaResults.softWarnings?.length > 0)
+            || (qaResults.validationWarnings?.length > 0)
+            || (!validationResult.valid && (validationResult.errors?.length > 0));
+        const cleanPass = qaResults.passed && qaResults.hardErrors.length === 0 && !hasSoftIssues;
+
         this.container.innerHTML = `
             <div class="decision-dashboard animate-entry">
-                <div class="alert alert--info mb-6" style="font-size: 0.9rem; border-right: 4px solid var(--c-p-500); background: rgba(212, 175, 55, 0.08);">
+                <div class="alert alert--info dd-note">
                     <strong>أفضل الممارسات المحلية:</strong> لا تتخذ قرار الاستقالة أو الاستثمار الكبير قبل إكمال الدراسة.
                 </div>
-                <div class="flex flex-col md:flex-row gap-6 mb-8 items-center bg-gradient-to-r from-gray-900 via-slate-900 to-gray-900 p-8 rounded-3xl shadow-2xl border border-white/10">
-                    
+                ${investmentDataWarningHtml(investmentDataWarning(state, results))}
+                ${this.renderFinancingGate(financingDiagnostics)}
+                <div class="dd-verdict">
+
                     <!-- Score Gauge Container -->
-                    <div class="relative w-48 h-48 flex-shrink-0">
-                         <svg viewBox="0 0 100 100" class="transform -rotate-90 w-full h-full drop-shadow-[0_0_15px_rgba(255,215,0,0.3)]">
+                    <div class="dd-gauge">
+                         <svg viewBox="0 0 100 100" class="dd-gauge__svg" aria-hidden="true">
                             <!-- Background Circle -->
-                            <circle cx="50" cy="50" r="45" stroke="#333" stroke-width="8" fill="none" />
+                            <circle cx="50" cy="50" r="45" class="dd-gauge__track" stroke-width="8" fill="none" />
                             <!-- Progress Circle -->
-                            <circle cx="50" cy="50" r="45" stroke="${this.getScoreColor(evaluation.score)}" stroke-width="8" fill="none" 
-                                stroke-dasharray="283" stroke-dashoffset="${283 - (283 * evaluation.score / 100)}" 
-                                class="transition-all duration-1000 ease-out" />
+                            <circle cx="50" cy="50" r="45" stroke="${this.getScoreColor(evaluation.score)}" stroke-width="8" fill="none"
+                                stroke-dasharray="283" stroke-dashoffset="${283 - (283 * evaluation.score / 100)}"
+                                class="dd-gauge__fill" />
                         </svg>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center text-white">
-                            <span class="text-4xl font-black font-mono tracking-tighter" id="scoreValue">0</span>
-                            <span class="text-xs text-gray-400 uppercase tracking-widest mt-1">النقاط</span>
+                        <div class="dd-gauge__center">
+                            <span class="dd-gauge__num dv-num" id="scoreValue" data-value="${evaluation.score}">${evaluation.score}</span>
+                            <span class="dd-gauge__caption">النقاط</span>
                         </div>
                     </div>
 
-                    <div class="flex-1 text-center md:text-right">
-                        <div class="inline-block px-4 py-1 rounded-full bg-white/10 text-xs font-bold mb-3 border border-white/10">التقييم الشامل</div>
-                        <h2 class="text-3xl md:text-5xl font-bold text-white mb-2 leading-tight">
+                    <div class="dd-verdict__body">
+                        <span class="dd-verdict__eyebrow">التقييم الشامل</span>
+                        <h2 class="dd-verdict__title">
                             ${evaluation.recommendationLabel}
                         </h2>
-                        <p class="text-gray-400 max-w-lg leading-relaxed">
-                            بناءً على تحليل ${evaluation.details.length} معياراً تشمل الجدوى المالية، اكتمال البيانات، وجاهزية السوق.
-                            ${qaResults.hardErrors.length > 0 ? '<br><span class="text-danger text-sm">⚠️ توجد أخطاء حرجة يجب إصلاحها قبل اتخاذ القرار.</span>' : ''}
-                            ${qaResults.passed && qaResults.hardErrors.length === 0 ? '<br><span class="text-success text-sm">✅ الدراسة اجتازت معايير الجودة.</span>' : ''}
+                        <p class="dd-verdict__desc">
+                            بناءً على تحليل ${evaluation.details.length} معايير تشمل الجدوى المالية، اكتمال البيانات، وجاهزية السوق.
+                            ${qaResults.hardErrors.length > 0 ? '<br><span class="dd-verdict__flag dd-verdict__flag--danger">توجد أخطاء حرجة يجب إصلاحها قبل اتخاذ القرار.</span>' : ''}
+                            ${cleanPass ? '<br><span class="dd-verdict__flag dd-verdict__flag--success">الدراسة اجتازت معايير الجودة.</span>' : ''}
+                            ${!cleanPass && qaResults.hardErrors.length === 0 && hasSoftIssues ? '<br><span class="dd-verdict__flag dd-verdict__flag--warning">اجتازت الأخطاء الحرجة، لكن توجد تحذيرات مهمة — راجعها قبل القرار.</span>' : ''}
                         </p>
                     </div>
 
-                     <div class="flex flex-col gap-3 min-w-[200px]">
-                        <button id="btnExecutiveSummary" class="btn btn--primary py-3 px-6 shadow-glow hover:scale-105 transition-all text-lg flex items-center justify-center gap-2" title="يعمل بدون مفتاح API">
-                            <span>📄</span> الملخص التنفيذي
+                     <div class="dd-verdict__actions">
+                        <button id="btnExecutiveSummary" class="btn btn--primary dd-verdict__cta" title="يعمل بدون مفتاح API">
+                            <svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> الملخص التنفيذي
                         </button>
-                         <button id="btnPresentation" class="btn btn--secondary btn--sm flex items-center justify-center gap-2">
-                            <span>📺</span> عرض تقديمي
+                         <button id="btnPresentation" class="btn btn--secondary btn--sm">
+                            <svg class="ic" aria-hidden="true"><use href="#i-slides"/></svg> عرض تقديمي
                         </button>
-                        <button id="btnInvestorLink" class="btn btn--secondary btn--sm flex items-center justify-center gap-2" title="إنشاء رابط للمستثمر (صفحة هبوط للقراءة فقط)">
-                            <span>💎</span> رابط لوحة المستثمر
+                        <button id="btnInvestorLink" class="btn btn--secondary btn--sm" title="إنشاء رابط للمستثمر (صفحة هبوط للقراءة فقط)">
+                            <svg class="ic" aria-hidden="true"><use href="#i-link"/></svg> رابط لوحة المستثمر
                         </button>
-                        <button id="btnRefreshResults" class="btn btn--ghost btn--sm text-muted hover:text-white" title="إعادة حساب النتائج والتقييم">🔄 إعادة حساب</button>
+                        <button id="btnRefreshResults" class="btn btn--ghost btn--sm" title="إعادة حساب النتائج والتقييم">
+                            <svg class="ic" aria-hidden="true"><use href="#i-reset"/></svg> إعادة حساب
+                        </button>
+                        <button id="btnExportBackup" class="btn btn--ghost btn--sm" title="حفظ نسخة احتياطية من دراسة الجدوى كملف (JSON)">
+                            <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> تصدير
+                        </button>
+                        <label for="btnImportBackup" class="btn btn--ghost btn--sm" title="استعادة مشروع من ملف نسخة احتياطية" style="cursor: pointer;">
+                            <svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg> استيراد
+                        </label>
+                        <input type="file" id="btnImportBackup" accept=".json" style="display: none;">
                     </div>
                 </div>
 
+                <!-- لماذا هذا القرار + خطواتك التالية (جوهر مرحلة القرار) -->
+                <div class="card glass-card decision-reasoning mb-6">
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1.5rem;">
+                        <div>
+                            <h4 class="card-title">لماذا هذا القرار؟</h4>
+                            ${decision.desc ? `<p class="text-sm" style="line-height:1.8; margin-bottom:.6rem;">${decision.desc}</p>` : ''}
+                            ${decision.reasons.length ? `
+                                <ul class="decision-reason-list" style="margin:0; padding-inline-start:1.1rem; font-size:.85rem; line-height:1.8;">
+                                    ${decision.reasons.map(r => `<li>${r}</li>`).join('')}
+                                </ul>` : `<p class="text-sm text-success">جميع المعايير المالية والتشغيلية ضمن النطاق المطلوب.</p>`}
+                            ${decision.positives.length ? `<p class="text-sm text-success" style="margin-top:.6rem;">نقاط القوة: ${decision.positives.join('، ')}.</p>` : ''}
+                        </div>
+                        <div>
+                            <h4 class="card-title">خطواتك التالية</h4>
+                            ${decision.nextSteps.length ? `
+                                <ol class="decision-next-steps" style="margin:0; padding-inline-start:1.2rem; font-size:.85rem; line-height:1.9;">
+                                    ${decision.nextSteps.map(s => `<li><strong>${s.step}:</strong> ${s.text}</li>`).join('')}
+                                </ol>` : `<p class="text-sm text-success">لا خطوات عالقة — الدراسة مكتملة الأركان. راجع الملخص التنفيذي وصدّر التقرير.</p>`}
+                        </div>
+                    </div>
+                </div>
+
+                ${this.renderDecisionExplainer(decisionExplanation)}
+
                 <!-- QA Gate Status -->
                 ${qaResults.hardErrors.length > 0 ? `
-                    <div class="card bg-danger/10 border-danger/30 mb-6">
-                        <div class="flex items-center gap-3 mb-3">
-                            <span class="text-2xl">🚫</span>
-                            <h4 class="text-danger font-bold">أخطاء حرجة - الدراسة غير جاهزة</h4>
+                    <div class="card dd-status dd-status--danger">
+                        <div class="dd-status__head">
+                            <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
+                            <h4 class="dd-status__title">أخطاء حرجة - الدراسة غير جاهزة</h4>
                         </div>
-                        <ul class="space-y-2 text-sm">
-                            ${qaResults.hardErrors.map(err => `<li class="text-danger">• ${err.message || err}</li>`).join('')}
+                        <ul class="dd-status__list">
+                            ${qaResults.hardErrors.map(err => `<li>${err.message || err}</li>`).join('')}
                         </ul>
                     </div>
                 ` : ''}
                 ${qaResults.softWarnings.length > 0 ? `
-                    <div class="card bg-warning/10 border-warning/30 mb-6">
-                        <div class="flex items-center gap-3 mb-3">
-                            <span class="text-2xl">⚠️</span>
-                            <h4 class="text-warning font-bold">تحذيرات مهمة</h4>
+                    <div class="card dd-status dd-status--warning">
+                        <div class="dd-status__head">
+                            <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
+                            <h4 class="dd-status__title">تحذيرات مهمة</h4>
                         </div>
-                        <ul class="space-y-2 text-sm">
-                            ${qaResults.softWarnings.map(warn => `<li class="text-warning">• ${warn.message || warn}</li>`).join('')}
+                        <ul class="dd-status__list">
+                            ${qaResults.softWarnings.map(warn => `<li>${warn.message || warn}</li>`).join('')}
                         </ul>
                     </div>
                 ` : ''}
                 ${!validationResult.valid && validationResult.errors?.length ? `
-                    <div class="card bg-warning/10 border-warning/30 mb-6">
-                        <div class="flex items-center gap-3 mb-3">
-                            <span class="text-2xl">📋</span>
-                            <h4 class="text-warning font-bold">أخطاء في صحة البيانات</h4>
+                    <div class="card dd-status dd-status--warning">
+                        <div class="dd-status__head">
+                            <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-doc"/></svg>
+                            <h4 class="dd-status__title">أخطاء في صحة البيانات</h4>
                         </div>
-                        <p class="text-sm text-muted mb-2">قد تؤثر على دقة النتائج المالية. يُفضّل إصلاحها قبل التصدير أو اتخاذ القرار.</p>
-                        <ul class="space-y-1 text-sm">
-                            ${validationResult.errors.slice(0, 5).map(e => `<li class="text-warning">• ${e}</li>`).join('')}
+                        <p class="dd-status__note">قد تؤثر على دقة النتائج المالية. يُفضّل إصلاحها قبل التصدير أو اتخاذ القرار.</p>
+                        <ul class="dd-status__list">
+                            ${validationResult.errors.slice(0, 5).map(e => `<li>${e}</li>`).join('')}
                         </ul>
                     </div>
                 ` : ''}
-                ${qaResults.passed && qaResults.hardErrors.length === 0 ? `
-                    <div class="card bg-success/10 border-success/30 mb-6">
-                        <div class="flex items-center gap-3">
-                            <span class="text-2xl">✅</span>
-                            <h4 class="text-success font-bold">الدراسة اجتازت فحص الجودة (QA Gate)</h4>
+                ${cleanPass ? `
+                    <div class="card dd-status dd-status--success">
+                        <div class="dd-status__head">
+                            <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
+                            <h4 class="dd-status__title">الدراسة اجتازت فحص الجودة (QA Gate)</h4>
                         </div>
                     </div>
                 ` : ''}
                 ${state.projectInfo?.investorProfile === 'conservative' && (readiness.recommendation.status === 'review' || readiness.recommendation.status === 'nogo') ? `
-                    <div class="card bg-warning/10 border-warning/30 mb-6">
-                        <div class="flex items-center gap-3">
-                            <span class="text-2xl">⚖️</span>
+                    <div class="card dd-status dd-status--warning">
+                        <div class="dd-status__head">
+                            <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
                             <div>
-                                <h4 class="text-warning font-bold">ملفك محافظ — تنبيه</h4>
-                                <p class="text-sm text-muted mt-1">مشروعك عالي المخاطر أو يحتاج مراجعة. كملف محافظ قد لا يتوافق معك. راجع أو ابحث عن بديل أقل مخاطرة.</p>
+                                <h4 class="dd-status__title">ملفك محافظ — تنبيه</h4>
+                                <p class="dd-status__note">مشروعك عالي المخاطر أو يحتاج مراجعة. كملف محافظ قد لا يتوافق معك. راجع أو ابحث عن بديل أقل مخاطرة.</p>
                             </div>
                         </div>
                     </div>
@@ -170,17 +250,17 @@ export class DecisionDashboard {
                                 <span>تفاصيل التقييم</span>
                                 <span class="text-xs text-muted font-normal">${evaluation.score}/100 نقطة</span>
                             </h4>
-                            <div class="space-y-3 mt-4">
+                            <div class="dd-scores">
                                 ${evaluation.details.map(item => `
-                                    <div class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-2 h-8 rounded-full ${item.score > 0 ? 'bg-success' : 'bg-danger'}"></div>
+                                    <div class="dd-score ${item.score > 0 ? 'is-positive' : 'is-negative'}">
+                                        <div class="dd-score__id">
+                                            <span class="dd-score__bar" aria-hidden="true"></span>
                                             <div>
-                                                <div class="font-bold text-sm text-gray-200">${item.label}</div>
-                                                <div class="text-xs text-gray-500 uppercase">${item.category}</div>
+                                                <div class="dd-score__label">${item.label}</div>
+                                                <div class="dd-score__cat">${item.category}</div>
                                             </div>
                                         </div>
-                                        <div class="font-mono font-bold ${item.score > 0 ? 'text-success' : 'text-danger'}">
+                                        <div class="dd-score__pts dv-num">
                                             +${item.score}
                                         </div>
                                     </div>
@@ -188,6 +268,7 @@ export class DecisionDashboard {
                             </div>
                         </div>
                     </div>
+                </div><!-- /dashboard-grid (تفاصيل التقييم) — كان غير مُغلق فيبتلع الشبكة التالية وشريط الأفعال -->
 
                 <div class="dashboard-grid">
                     <!-- Left Column: Metrics -->
@@ -199,6 +280,8 @@ export class DecisionDashboard {
                                 ${this.renderKPIItem('معدل العائد الداخلي', results?.indicators?.irr, 'percent')}
                                 ${this.renderKPIItem('فترة الاسترداد', results?.indicators?.paybackPeriod, 'years')}
                                 ${this.renderKPIItem('العائد على الاستثمار', results?.indicators?.roi, 'percent')}
+                                ${this.renderKPIItem('فجوة التمويل', financingDiagnostics.fundingGap, 'fundingGap')}
+                                ${this.renderKPIItem('DSCR السنة الأولى', financingDiagnostics.dscr, 'dscr')}
                             </div>
                         </div>
 
@@ -240,7 +323,7 @@ export class DecisionDashboard {
                             </div>
                             <div class="mt-3">
                                 <button type="button" id="btnStressAskAI" class="btn btn--secondary btn--sm" title="اسأل المستشار الذكي عن هذا السيناريو (ربط اختبار الضغط بـ AI)">
-                                    🤖 اسأل مساعد AI عن هذا السيناريو
+                                    <svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg> اسأل مساعد AI عن هذا السيناريو
                                 </button>
                             </div>
                         </div>
@@ -248,12 +331,12 @@ export class DecisionDashboard {
                         <div class="card glass-card">
                             <h4 class="card-title">جاهزية الأبعاد الأساسية</h4>
                             <div class="readiness-list">
-                                ${this.renderReadinessItem('📊 جاهزية السوق', readiness.dimensions.market)}
-                                ${this.renderReadinessItem('💵 جاهزية التمويل', readiness.dimensions.financing)}
-                                ${this.renderReadinessItem('👥 جاهزية الفريق', readiness.dimensions.team)}
-                                ${this.renderReadinessItem('⚖️ الجاهزية القانونية', readiness.dimensions.legal)}
-                                ${this.renderReadinessItem('📍 جاهزية الموقع', readiness.dimensions.location)}
-                                ${this.renderReadinessItem('⚠️ إدارة المخاطر', readiness.dimensions.risk)}
+                                ${this.renderReadinessItem('جاهزية السوق', readiness.dimensions.market)}
+                                ${this.renderReadinessItem('جاهزية التمويل', readiness.dimensions.financing)}
+                                ${this.renderReadinessItem('جاهزية الفريق', readiness.dimensions.team)}
+                                ${this.renderReadinessItem('الجاهزية القانونية', readiness.dimensions.legal)}
+                                ${this.renderReadinessItem('جاهزية الموقع', readiness.dimensions.location)}
+                                ${this.renderReadinessItem('إدارة المخاطر', readiness.dimensions.risk)}
                             </div>
                         </div>
                     </div>
@@ -273,19 +356,19 @@ export class DecisionDashboard {
                                     </thead>
                                     <tbody>
                                         <tr class="row-pessimistic">
-                                            <td>😟 متشائم (-20%)</td>
-                                            <td>${this.formatCurrency(results?.indicators?.npv * 0.4)}</td>
-                                            <td>${this.formatCurrency(results?.incomeStatement?.[0]?.ebitda * 0.8)}</td>
+                                            <td>متشائم (إيراد −20%)</td>
+                                            <td>${this.formatCurrency((pessimistic ?? results)?.indicators?.npv)}</td>
+                                            <td>${this.formatCurrency((pessimistic ?? results)?.incomeStatement?.[0]?.ebitda)}</td>
                                         </tr>
                                         <tr class="row-base">
-                                            <td>😐 أساسي</td>
+                                            <td>أساسي</td>
                                             <td>${this.formatCurrency(results?.indicators?.npv)}</td>
                                             <td>${this.formatCurrency(results?.incomeStatement?.[0]?.ebitda)}</td>
                                         </tr>
                                         <tr class="row-optimistic">
-                                            <td>😊 متفائل (+20%)</td>
-                                            <td>${this.formatCurrency(results?.indicators?.npv * 1.5)}</td>
-                                            <td>${this.formatCurrency(results?.incomeStatement?.[0]?.ebitda * 1.2)}</td>
+                                            <td>متفائل (إيراد +20%)</td>
+                                            <td>${this.formatCurrency((optimistic ?? results)?.indicators?.npv)}</td>
+                                            <td>${this.formatCurrency((optimistic ?? results)?.incomeStatement?.[0]?.ebitda)}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -295,20 +378,41 @@ export class DecisionDashboard {
                         <div class="card glass-card">
                             <h4 class="card-title">شروط النجاح الحرجة</h4>
                             <ul class="factors-list">
-                                ${readiness.factors.map(f => `<li><span class="bullet">⭐</span> ${f}</li>`).join('')}
+                                ${readiness.factors.map(f => `<li><span class="bullet" aria-hidden="true">✓</span> ${f}</li>`).join('')}
                             </ul>
                         </div>
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="decision-actions mt-6 flex gap-4 justify-center flex-wrap">
-                    <button id="btnSaveStudy" class="btn btn--primary">💾 حفظ الدراسة</button>
-                    <button id="btnExportPDF" class="btn btn--secondary btn-magic">📄 تصدير تقرير بنكي</button>
-                    <button id="btnExportExcel" class="btn btn--success btn-magic" style="background:#10b981;">📊 تصدير إكسل</button>
-                    <button id="btnConsultation" class="btn btn--ghost btn-magic" title="احجز استشارة Zoom مع خبير">📞 احجز استشارة</button>
-                    <button id="btnPitchMode" class="btn btn--accent btn-magic" style="background:#000; color:#fff;">📽️ عرض المستثمر</button>
-                    <button id="btnExportPitch" class="btn btn--ghost btn-magic" title="تحميل Pitch Deck كـ HTML (اطبع كـ PDF)">📥 تصدير Pitch Deck</button>
+                <!-- Action Buttons — هرم واضح: فعل رئيسي + ثانويات + «المزيد» -->
+                <div class="decision-actions dd-actions">
+                    <div class="dd-actions__primary">
+                        <button id="btnSaveStudy" class="btn btn--primary dd-actions__main">
+                            <svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> حفظ الدراسة
+                        </button>
+                        <button id="btnExportPDF" class="btn btn--secondary">
+                            <svg class="ic" aria-hidden="true"><use href="#i-bank"/></svg> تصدير تقرير بنكي
+                        </button>
+                        <button id="btnExportExcel" class="btn btn--secondary">
+                            <svg class="ic" aria-hidden="true"><use href="#i-table"/></svg> تصدير إكسل
+                        </button>
+                    </div>
+                    <details class="dd-more">
+                        <summary class="dd-more__toggle btn btn--ghost btn--sm">
+                            <svg class="ic" aria-hidden="true"><use href="#i-chev-down"/></svg> المزيد
+                        </summary>
+                        <div class="dd-more__menu">
+                            <button id="btnConsultation" class="btn btn--ghost dd-more__item" title="احجز استشارة Zoom مع خبير">
+                                <svg class="ic" aria-hidden="true"><use href="#i-user"/></svg> احجز استشارة
+                            </button>
+                            <button id="btnPitchMode" class="btn btn--ghost dd-more__item">
+                                <svg class="ic" aria-hidden="true"><use href="#i-slides"/></svg> عرض المستثمر
+                            </button>
+                            <button id="btnExportPitch" class="btn btn--ghost dd-more__item" title="تحميل Pitch Deck كـ HTML (اطبع كـ PDF)">
+                                <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> تصدير Pitch Deck
+                            </button>
+                        </div>
+                    </details>
                 </div>
             </div>
         `;
@@ -318,9 +422,12 @@ export class DecisionDashboard {
         // Stress-test sliders: live update NPV and Profit Margin
         this.bindStressTestSliders(state, results);
 
-        // Animate Score
+        // Animate Score — يجب تمرير عنصر DOM فعلي وكائن خيارات {duration}.
+        // كان يُمرَّر نص المعرّف 'scoreValue' + الرقم 1500، فترمي animateCounter (element.getAttribute)
+        // ويبقى العدّاد على القيمة الابتدائية «0» رغم أن الدرجة الحقيقية 100 — تناقض «0 مقابل 100».
         setTimeout(() => {
-            animateCounter('scoreValue', evaluation.score, 1500);
+            const scoreEl = this.container.querySelector('#scoreValue');
+            if (scoreEl) animateCounter(scoreEl, evaluation.score, { duration: 1500 });
         }, 300);
     }
 
@@ -406,11 +513,11 @@ export class DecisionDashboard {
                 if (!modal) {
                     modal = document.createElement('div');
                     modal.id = 'execSummaryModal';
-                    modal.className = 'fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in';
+                    modal.className = 'dd-modal';
                     modal.innerHTML = `
-                        <div class="bg-gray-900 rounded-2xl w-full max-w-5xl relative shadow-2xl border border-white/10 min-h-[80vh]">
-                            <button class="absolute top-4 left-4 z-10 btn btn--secondary btn--sm btn-close-modal">✕ إغلاق</button>
-                            <div id="execSummaryContent" class="p-6 h-full overflow-y-auto max-h-[90vh]"></div>
+                        <div class="dd-modal__panel">
+                            <button class="dd-modal__close btn btn--secondary btn--sm btn-close-modal">✕ إغلاق</button>
+                            <div id="execSummaryContent" class="dd-modal__content"></div>
                         </div>
                     `;
                     document.body.appendChild(modal);
@@ -487,6 +594,64 @@ export class DecisionDashboard {
             this._eventListeners.push({ element: btnRefresh, event: 'click', handler });
         }
 
+        // تصدير نسخة احتياطية (JSON Backup)
+        const btnExportBackup = this.container.querySelector('#btnExportBackup');
+        if (btnExportBackup) {
+            const handler = async () => {
+                const state = this.store.getState();
+                const id = state.projectInfo?.id;
+                if (!id) {
+                    toast.error('الرجاء حفظ الدراسة أولاً قبل تصديرها.');
+                    return;
+                }
+                const result = await ProjectManager.exportProjectBackup(id);
+                if (result.success) {
+                    const blob = new Blob([result.json], { type: 'application/json;charset=utf-8' });
+                    downloadBlob(blob, result.filename);
+                    toast.success('تم تصدير النسخة الاحتياطية بنجاح.');
+                } else {
+                    toast.error(result.error || 'حدث خطأ أثناء تصدير الدراسة.');
+                }
+            };
+            btnExportBackup.addEventListener('click', handler);
+            this._eventListeners.push({ element: btnExportBackup, event: 'click', handler });
+        }
+
+        // استيراد نسخة احتياطية (JSON Backup)
+        const btnImportBackup = this.container.querySelector('#btnImportBackup');
+        if (btnImportBackup) {
+            const handler = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const content = event.target.result;
+                    const result = await ProjectManager.importProjectBackup(content);
+                    if (result.success) {
+                        toast.success('تم استيراد المشروع بنجاح. سيتم فتح المشروع الآن.');
+                        // We need to load the imported project into the store
+                        const loaded = await ProjectManager.loadProject(result.id);
+                        if (loaded?.data) {
+                            // Update store and rerender
+                            Object.entries(loaded.data).forEach(([key, value]) => {
+                                this.store.update(key, value, true); // true for silent
+                            });
+                            this.store.notify(); // trigger UI updates
+                            this.render();
+                        }
+                    } else {
+                        toast.error(result.error || 'فشل استيراد المشروع.');
+                    }
+                };
+                reader.readAsText(file);
+                // Reset value so the same file can be selected again
+                e.target.value = '';
+            };
+            btnImportBackup.addEventListener('change', handler);
+            this._eventListeners.push({ element: btnImportBackup, event: 'change', handler });
+        }
+
         // احجز استشارة
         const btnConsultation = this.container.querySelector('#btnConsultation');
         if (btnConsultation) {
@@ -548,8 +713,9 @@ export class DecisionDashboard {
                             e.target.textContent = '✅ تم الحفظ!';
                             try {
                                 const results = runFullModel(state);
-                                const evaluation = this.calculateReadiness(state, results);
-                                const status = evaluation?.recommendation?.status;
+                                const evaluation = calculateProjectScore(state, results);
+                                const readiness = this.calculateReadiness(state, results, evaluation);
+                                const status = readiness?.recommendation?.status;
                                 const { WebhookService } = await import('../services/WebhookService.js');
                                 if (status === 'go') {
                                     WebhookService.triggerEvent('decision.go', { study_id: state.projectInfo?.id, project_name: state.projectInfo?.name });
@@ -623,8 +789,9 @@ export class DecisionDashboard {
         }
     }
 
-    calculateReadiness(state, results) {
-        const kpis = results?.indicators || {}; // Updated to match financialModel output
+    calculateReadiness(state, results, evaluation) {
+        const kpis = results?.indicators || {}; 
+        const payback = kpis.paybackPeriod ?? kpis.payback;
         const thresholds = state.assumptions?.thresholds || {
             minNPV: 0,
             minIRR: 0.15,
@@ -634,59 +801,307 @@ export class DecisionDashboard {
 
         const la = state.projectInfo?.locationAnalysis || {};
         const hasLocation = la.address || (la.coordinates?.lat != null && la.coordinates?.lng != null) || la.selectionFactors;
+        const financingHealth = this.getFinancingDiagnostics(state, results);
+        const hasInvestment = Number(results?.capex?.total || state.financing?.totalInvestment || 0) > 0;
         const dimensions = {
             market: (state.marketSizing?.som?.value > 0) ? 'ready' : 'needs_work',
-            financing: (state.financing?.totalInvestment > 0) ? 'ready' : 'critical',
+            financing: (financingHealth.hasBlockers || financingHealth.fundingGap > 1 || financingHealth.dscrBlocked)
+                ? 'critical'
+                : (hasInvestment ? 'ready' : 'critical'),
             team: (state.hr?.positions?.length > 0) ? 'ready' : 'needs_work',
             legal: (state.legal?.licenses?.length > 0) ? 'ready' : 'needs_work',
             risk: (state.riskAnalysis?.risks?.length > 0) ? 'ready' : 'needs_work',
             location: hasLocation ? 'ready' : 'needs_work'
         };
 
-        // Scoring Logic (Weighted 100%)
-        // 1. Financial Viability (60%)
-        let score = 0;
-        let financialChecks = 0;
-
-        if (kpis.npv > thresholds.minNPV) { score += 20; financialChecks++; }
-        if (kpis.irr >= thresholds.minIRR) { score += 20; financialChecks++; }
-        if (kpis.roi >= thresholds.minROI) { score += 10; financialChecks++; }
-        if (kpis.payback <= thresholds.maxPayback && kpis.payback > 0) { score += 10; financialChecks++; }
-
-        // 2. Operational Readiness (40%)
-        if (dimensions.market === 'ready') score += 10;
-        if (dimensions.financing === 'ready') score += 10;
-        if (dimensions.team === 'ready') score += 10;
-        if (dimensions.legal === 'ready') score += 5;
-        if (dimensions.risk === 'ready') score += 5;
-
-        // Recommendation Logic
-        let recommendation = { status: 'nogo', icon: '❌', label: 'لا تدخل المشروع', desc: 'المخاطر عالية والمؤشرات المالية لا تحقق الحد الأدنى المطلوب.' };
-
-        if (score >= 80) {
-            recommendation = { status: 'go', icon: '✅', label: 'ادخل المشروع بقوة', desc: 'مشروع متميز! جميع المؤشرات المالية والتشغيلية في النطاق الأخضر.' };
-        } else if (score >= 60) {
-            recommendation = { status: 'conditional', icon: '⚠️', label: 'ادخل بشروط', desc: 'المشروع مجدٍ، لكن يحتاج لتحسين بعض الجوانب لرفع درجة الأمان.' };
-        } else if (score >= 40) {
-            recommendation = { status: 'review', icon: '🤔', label: 'يحتاج مراجعة', desc: 'المخاطرة مرتفعة. راجع هيكل التكاليف أو خطة التسويق قبل اتخاذ القرار.' };
+        let recStatus = 'review';
+        if (results?.decision) {
+            recStatus = results.decision === 'GO' ? 'go' : (results.decision === 'NO-GO' ? 'nogo' : 'review');
+        } else if (evaluation?.recommendation) {
+            recStatus = evaluation.recommendation === 'revise' ? 'review' : evaluation.recommendation;
+        }
+        let recommendation;
+        if (recStatus === 'go') {
+            recommendation = { status: 'go', icon: '✅', label: 'ادخل المشروع بقوة', desc: 'المؤشرات المالية والتشغيلية ضمن النطاق المطلوب.' };
+        } else if (recStatus === 'nogo') {
+            recommendation = { status: 'nogo', icon: '❌', label: 'لا تدخل المشروع', desc: 'المخاطر عالية والمؤشرات المالية لا تحقق الحد الأدنى المطلوب.' };
+        } else {
+            recommendation = { status: 'review', icon: '🤔', label: 'يحتاج مراجعة', desc: 'القرار يوصي بمراجعة الدراسة قبل المضي — راجع بنود التكلفة أو الإيراد.' };
         }
 
         const factors = [
             `تحقيق صافي قيمة حالية أعلى من ${this.formatCurrency(thresholds.minNPV)}.`,
             `تجاوز معدل العائد الداخلي نسبة ${(thresholds.minIRR * 100).toFixed(0)}%.`,
-            `استرداد رأس المال خلال أقل من ${thresholds.maxPayback} سنوات.`
+            `استرداد رأس المال خلال أقل من ${thresholds.maxPayback} سنوات.`,
+            financingHealth.loanAmount > 0
+                ? `تحقيق DSCR لا يقل عن ${financingHealth.targetDSCR.toFixed(2)}x عند وجود قرض.`
+                : 'مطابقة مصادر التمويل مع إجمالي الاستثمار المطلوب.'
         ];
 
-        return { dimensions, recommendation, factors, score };
+        return { dimensions, recommendation, factors, score: evaluation?.score || 0 };
+    }
+
+    renderDecisionExplainer(explanation) {
+        const issues = explanation?.issues || [];
+        if (!issues.length) {
+            return `
+                <div class="card dd-status dd-status--success">
+                    <div class="dd-status__head">
+                        <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
+                        <h4 class="dd-status__title">مفسّر القرار: لا يوجد رقم كاسر واضح</h4>
+                    </div>
+                    <p class="dd-status__note">${explanation?.summary || 'الأرقام الرئيسية لا تكسر القرار حالياً، لكن يبقى توثيق الافتراضات ضرورياً.'}</p>
+                </div>
+            `;
+        }
+
+
+        return `
+            <div class="card dd-status ${issues.some(i => i.severity === 'critical') ? 'dd-status--danger' : 'dd-status--warning'}">
+                <div class="dd-status__head">
+                    <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
+                    <div>
+                        <h4 class="dd-status__title">مفسّر القرار: ما الرقم الذي كسر الدراسة؟</h4>
+                        <p class="dd-status__note">${explanation.summary || ''}</p>
+                    </div>
+                </div>
+                <ul class="dd-status__list">
+                    ${issues.slice(0, 5).map(issue => `
+                        <li>
+                            <strong>${issue.title}</strong> ${issue.tooltipKey ? createTooltip(issue.tooltipKey) : ''}: ${issue.explanation}
+                            <br><span class="text-muted">عدّل من خطوة: <strong>${this.pathToStepLabel(issue.path)}</strong> — ${issue.action}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
+    /**
+     * تحويل المسار التقني (revenue.streams، assumptions.thresholds.minIRR...) إلى اسم
+     * الخطوة العربية — المستخدم لا يعرف بنية الحالة الداخلية.
+     */
+    pathToStepLabel(path) {
+        const p = String(path || '');
+        if (!p) return 'غير محدد';
+        const map = [
+            ['assumptions.thresholds', 'الافتراضات المالية (حدود القرار)'],
+            ['assumptions', 'الافتراضات المالية'],
+            ['revenue', 'مصادر الإيرادات'],
+            ['financing', 'مصادر وهيكلة التمويل'],
+            ['technical', 'الدراسة الفنية'],
+            ['hr', 'الموارد البشرية'],
+            ['techResources', 'الموارد التقنية'],
+            ['logistics', 'الموارد اللوجستية'],
+            ['administrative', 'الموارد الإدارية'],
+            ['legal', 'الدراسة القانونية'],
+            ['marketing', 'الدراسة التسويقية'],
+            ['marketSizing', 'تحليل حجم السوق'],
+            ['services', 'تحليل الخدمات'],
+            ['riskAnalysis', 'تحليل المخاطر'],
+            ['scenarios', 'السيناريوهات'],
+            ['projectInfo', 'بيانات المشروع']
+        ];
+        const hit = map.find(([prefix]) => p === prefix || p.startsWith(prefix + '.'));
+        return hit ? hit[1] : p;
+    }
+
+    getFinancingDiagnostics(state, results) {
+        const financing = state?.financing || {};
+        const loan = financing.sources?.bankLoan || {};
+        const loanAmount = Number(loan.amount || results?.loanSchedule?.loanAmount || 0);
+        const targetDSCR = Number.isFinite(Number(financing.targetDSCR)) ? Number(financing.targetDSCR) : 1.5;
+        const fundingGap = Number(results?.financingCheck?.fundingGap ?? 0);
+        const dscr = results?.indicators?.dscr ?? null;
+        const y1Ebitda = Number(results?.incomeStatement?.[0]?.ebitda ?? NaN);
+        const concept = String(state?.projectInfo?.concept || state?.projectInfo?.sector || '');
+        const isSaas = /saas|منصة|تطبيق|برمجي|تقني|موقع دراسة جدوى/i.test(concept);
+        const alerts = [];
+
+        if (fundingGap > 1) {
+            alerts.push({
+                type: 'funding-gap',
+                title: 'فجوة تمويل غير مغطاة',
+                text: `مصادر التمويل أقل من الاستثمار المطلوب بفجوة ${this.formatCurrency(fundingGap)}. أكمل التمويل الذاتي أو خفّض الاستثمار أو أضف مصدر تمويل واضح.`
+            });
+        }
+
+        const dscrBlocked = loanAmount > 0 && (dscr == null || dscr < targetDSCR);
+        if (dscrBlocked) {
+            const dscrText = dscr == null ? 'غير قابل للحساب بسبب EBITDA سالبة/صفرية' : `${Number(dscr).toFixed(2)}x`;
+            alerts.push({
+                type: 'dscr',
+                title: 'تغطية خدمة الدين غير كافية',
+                text: `DSCR السنة الأولى ${dscrText}، والهدف ${targetDSCR.toFixed(2)}x. جرّب تخفيض القرض، زيادة رأس المال الذاتي، تمديد فترة السماح، أو إثبات إيرادات مسبقة.`
+            });
+        }
+
+        if (isSaas && loanAmount > 0 && (!Number.isFinite(y1Ebitda) || y1Ebitda <= 0)) {
+            alerts.push({
+                type: 'saas-bank-readiness',
+                title: 'قراءة البنك تختلف عن قراءة المستثمر',
+                text: 'منصة SaaS قد تكون جذابة لمستثمر إذا ثبت النمو والاحتفاظ، لكنها ليست جاهزة بنكياً عندما تكون EBITDA السنة الأولى سالبة ولا تغطي القرض.'
+            });
+        }
+
+        return {
+            alerts,
+            hasBlockers: alerts.length > 0,
+            fundingGap,
+            dscr,
+            targetDSCR,
+            loanAmount,
+            y1Ebitda,
+            isSaas,
+            dscrBlocked,
+            bankReady: alerts.length === 0
+        };
+    }
+
+    renderFinancingGate(financingDiagnostics) {
+        const d = financingDiagnostics || {};
+        if (!d.hasBlockers && !d.isSaas && Math.abs(Number(d.fundingGap || 0)) <= 1 && !d.loanAmount) return '';
+
+        const statusClass = d.hasBlockers ? 'dd-status--warning' : 'dd-status--success';
+        const title = d.hasBlockers ? 'حواجز التمويل قبل البنك' : 'التمويل متوازن مبدئياً';
+        const bankLabel = d.bankReady ? 'جاهز بنكياً مبدئياً' : 'غير جاهز بنكياً بعد';
+        const investorLabel = d.isSaas
+            ? 'قراءة المستثمر: تعتمد على إثبات النمو، CAC، الاحتفاظ، والعقود المسبقة.'
+            : 'قراءة المستثمر: راجع جودة السوق والمخاطر بجانب المؤشرات المالية.';
+        const gapLabel = d.fundingGap > 1
+            ? `فجوة ${this.formatCurrency(d.fundingGap)}`
+            : d.fundingGap < -1
+                ? `فائض ${this.formatCurrency(Math.abs(d.fundingGap))}`
+                : 'متوازن';
+        const dscrLabel = d.dscr == null ? 'غير قابل للحساب' : `${Number(d.dscr).toFixed(2)}x`;
+
+        return `
+            <div class="card dd-status ${statusClass}">
+                <div class="dd-status__head">
+                    <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
+                    <div>
+                        <h4 class="dd-status__title">${title}</h4>
+                        <p class="dd-status__note">قراءة البنك: <strong>${bankLabel}</strong>. ${investorLabel}</p>
+                    </div>
+                </div>
+                <div class="indicators-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:10px;">
+                    <div class="kpi-mini-card ${d.fundingGap > 1 ? 'negative' : 'positive'}">
+                        <span class="mini-label">فجوة التمويل</span>
+                        <span class="mini-value">${gapLabel}</span>
+                    </div>
+                    <div class="kpi-mini-card ${d.dscrBlocked ? 'negative' : 'positive'}">
+                        <span class="mini-label">DSCR السنة الأولى</span>
+                        <span class="mini-value">${dscrLabel}</span>
+                    </div>
+                    <div class="kpi-mini-card ${d.y1Ebitda < 0 ? 'negative' : 'positive'}">
+                        <span class="mini-label">EBITDA السنة الأولى</span>
+                        <span class="mini-value">${Number.isFinite(d.y1Ebitda) ? this.formatCurrency(d.y1Ebitda) : '--'}</span>
+                    </div>
+                </div>
+                ${d.alerts?.length ? `
+                    <ul class="dd-status__list" style="margin-top:10px;">
+                        ${d.alerts.map(a => `<li><strong>${a.title}:</strong> ${a.text}</li>`).join('')}
+                    </ul>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    /**
+     * يبني تفسير القرار (لماذا) والخطوات التالية العلاجية من التقييم والجاهزية.
+     * كان recommendation.desc محسوباً في calculateReadiness لكنه لا يُعرض في أي مكان —
+     * وهنا نعرضه ونشتق منه بنوداً واضحة وخطوات قابلة للتنفيذ.
+     */
+    buildDecisionReasons(state, results, readiness, evaluation) {
+        const kpis = results?.indicators || {};
+        const payback = kpis.paybackPeriod ?? kpis.payback;
+        const thresholds = state.assumptions?.thresholds || { minNPV: 0, minIRR: 0.15, maxPayback: 3.5, minROI: 0.20 };
+        const reasons = [];
+        const nextSteps = [];
+        const engineReasons = Array.isArray(results?.decisionReasons) ? results.decisionReasons : [];
+
+        engineReasons.forEach(reason => {
+            if (reason && !reasons.includes(reason)) reasons.push(reason);
+            if (/مصادر التمويل|فجوة/.test(reason || '')) {
+                nextSteps.push({ step: 'مصادر وهيكلة التمويل', text: 'طابق مصادر التمويل مع إجمالي الاستثمار أو استخدم زر سدّ الفجوة من التمويل الذاتي.' });
+            }
+            if (/تغطية خدمة الدين|DSCR/.test(reason || '')) {
+                nextSteps.push({ step: 'تفاصيل القرض', text: 'خفّض مبلغ القرض أو زد فترة السماح أو أضف رأس مال ذاتي/إيرادات مسبقة حتى يتحسن DSCR.' });
+            }
+        });
+
+        // الأسباب المالية
+        if (!(kpis.npv > thresholds.minNPV)) {
+            reasons.push(`صافي القيمة الحالية (${this.formatCurrency(kpis.npv)}) دون الحد الأدنى (${this.formatCurrency(thresholds.minNPV)}).`);
+            nextSteps.push({ step: 'التمويل والتكاليف', text: 'راجع هيكل التكاليف أو قلّل الاستثمار المبدئي لرفع صافي القيمة الحالية.' });
+        }
+        if (!(kpis.irr >= thresholds.minIRR)) {
+            reasons.push(`معدل العائد الداخلي أقل من ${(thresholds.minIRR * 100).toFixed(0)}%.`);
+            nextSteps.push({ step: 'الافتراضات المالية', text: 'حسّن هامش الربح أو أعد النظر في التسعير ومعدل النمو.' });
+        }
+        if (!(payback <= thresholds.maxPayback && payback > 0)) {
+            reasons.push(`فترة الاسترداد تتجاوز ${thresholds.maxPayback} سنوات.`);
+        }
+
+        // الأسباب التشغيلية (نقص بيانات الجاهزية)
+        const dimMap = {
+            financing: { step: 'مصادر وهيكلة التمويل', text: 'أكمل بيانات التمويل (إجمالي الاستثمار).' },
+            market: { step: 'الدراسة السوقية', text: 'أكمل تحجيم السوق (SOM) وتحليل الطلب.' },
+            team: { step: 'الموارد البشرية', text: 'أضف المناصب الوظيفية والرواتب.' },
+            legal: { step: 'الدراسة القانونية', text: 'أضف التراخيص المطلوبة وتكلفتها.' },
+            risk: { step: 'تحليل المخاطر', text: 'وثّق سجل المخاطر وخطط التخفيف.' },
+            location: { step: 'الدراسة الفنية', text: 'حدّد الموقع وعوامل اختياره.' }
+        };
+        Object.keys(dimMap).forEach(k => {
+            if (readiness.dimensions?.[k] && readiness.dimensions[k] !== 'ready') {
+                reasons.push(`«${dimMap[k].step}» غير مكتملة.`);
+                nextSteps.push(dimMap[k]);
+            }
+        });
+
+        // نقاط القوة (لماذا القرار جيد) من تفاصيل التقييم الإيجابية
+        const positives = (evaluation?.details || [])
+            .filter(d => d && (d.issue === false || (typeof d.score === 'number' && d.score > 0)))
+            .slice(0, 3)
+            .map(d => d.label)
+            .filter(Boolean);
+
+        // إزالة تكرار الخطوات (قد يتكرر التمويل من المسارين المالي والتشغيلي)
+        const seen = new Set();
+        const uniqueSteps = nextSteps.filter(s => {
+            const key = s.step + '|' + s.text;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
+        return { desc: readiness.recommendation?.desc || '', reasons, nextSteps: uniqueSteps, positives };
     }
 
     renderKPIItem(label, value, type) {
-        let formatted = value || '--';
-        if (type === 'currency' && value) formatted = this.formatCurrency(value);
-        if (type === 'percent' && value) formatted = (value * 100).toFixed(1) + '%';
-        if (type === 'years' && value) formatted = value + ' سنة';
-
-        const status = (type === 'currency' && value < 0) || (type === 'percent' && value < 0.05) ? 'negative' : 'positive';
+        const n = Number(value);
+        let formatted = (value === null || value === undefined || value === '') ? '--' : String(value);
+        let status = 'positive';
+        if (type === 'currency') {
+            formatted = this.formatCurrency(n);
+            status = n < 0 ? 'negative' : 'positive';
+        }
+        if (type === 'fundingGap') {
+            formatted = !Number.isFinite(n) ? '--' : n > 1 ? this.formatCurrency(n) : n < -1 ? `فائض ${this.formatCurrency(Math.abs(n))}` : 'متوازن';
+            status = n > 1 ? 'negative' : 'positive';
+        }
+        if (type === 'dscr') {
+            formatted = Number.isFinite(n) ? `${n.toFixed(2)}x` : 'غير قابل للحساب';
+            status = Number.isFinite(n) && n >= 1.25 ? 'positive' : 'negative';
+        }
+        if (type === 'percent') {
+            formatted = Number.isFinite(n) ? (n * 100).toFixed(1) + '%' : '--';
+            status = n < 0.05 ? 'negative' : 'positive';
+        }
+        if (type === 'years') {
+            formatted = Number.isFinite(n) && n > 0 ? (Math.round(n * 10) / 10) + ' سنة' : 'غير محقق';
+            status = Number.isFinite(n) && n > 0 ? 'positive' : 'negative';
+        }
 
         return `
             <div class="kpi-mini-card ${status}">
@@ -697,11 +1112,13 @@ export class DecisionDashboard {
     }
 
     renderReadinessItem(label, status) {
-        const icons = { ready: '🟢', needs_work: '🟡', critical: '🔴' };
+        // حالة نصية بدل إيموجي ملوّن — أوضح لقارئ الشاشة وأليق بتقرير يُقدَّم للبنك.
+        // اللون يأتي من الصنف status-${status}، فالمعنى لا يعتمد على اللون وحده.
+        const labels = { ready: 'جاهز', needs_work: 'يحتاج عمل', critical: 'حرج' };
         return `
             <div class="readiness-item status-${status}">
                 <span class="readiness-label">${label}</span>
-                <span class="readiness-status-icon">${icons[status]}</span>
+                <span class="readiness-status-icon">${labels[status] || '—'}</span>
             </div>
         `;
     }

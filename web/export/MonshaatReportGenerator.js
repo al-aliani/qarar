@@ -6,6 +6,7 @@
 import { formatCurrency } from '../js/utils/formatters.js';
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { validateStudy } from '../js/utils/validation.js';
+import { SAFE } from './utils.js';
 
 /** أقسام تقرير منشآت (معرّفات قابلة للربط مع reportSectionOrder). */
 const MONSHAAT_SECTION_IDS = [
@@ -191,7 +192,7 @@ export class MonshaatReportGenerator {
                 <div class="monshaat-kpi">
                     <div class="monshaat-kpi-card"><div class="label">صافي القيمة الحالية</div><div class="value ${(ind.npv || 0) > 0 ? 'positive' : 'negative'}">${_fmt(ind.npv || 0)}</div></div>
                     <div class="monshaat-kpi-card"><div class="label">معدل العائد الداخلي</div><div class="value">${((ind.irr || 0) * 100).toFixed(1)}%</div></div>
-                    <div class="monshaat-kpi-card"><div class="label">فترة الاسترداد (سنة)</div><div class="value">${(ind.paybackPeriod ?? ind.payback ?? 0).toFixed(1)}</div></div>
+                    <div class="monshaat-kpi-card"><div class="label">فترة الاسترداد</div><div class="value">${SAFE.payback(ind.paybackPeriod ?? ind.payback)}</div></div>
                     <div class="monshaat-kpi-card"><div class="label">نقطة التعادل (ريال)</div><div class="value">${_fmt(ind.breakEvenPointValue || 0)}</div></div>
                 </div>
                 <table class="monshaat-table">

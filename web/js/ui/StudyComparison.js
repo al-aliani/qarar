@@ -4,6 +4,7 @@
  */
 import { DataService } from '../services/DataService.js';
 import { createTooltip } from '../utils/glossary.js';
+import { stepIndexById } from '../core/wizardSteps.js';
 
 export class StudyComparison {
     constructor(containerId, store, onNavigate) {
@@ -165,8 +166,9 @@ export class StudyComparison {
         }
 
         this.container.querySelector('#btnAddIdeaForComparison')?.addEventListener('click', () => {
-            if (typeof this.onNavigate === 'function') {
-                this.onNavigate(1); // projectAlternatives step
+            const idx = stepIndexById('projectAlternatives');
+            if (typeof this.onNavigate === 'function' && idx >= 0) {
+                this.onNavigate(idx);
             }
         });
     }

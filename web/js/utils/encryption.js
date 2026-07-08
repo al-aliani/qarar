@@ -13,16 +13,21 @@ class EncryptionService {
     }
 
     /**
-     * Generate or retrieve encryption key
-     * Uses a deterministic key derived from user's session (if available)
-     * Falls back to a device-specific key stored in sessionStorage
+     * توليد/جلب مفتاح التشفير.
+     * يُخزَّن المفتاح في localStorage بنفس دوام النص المشفّر (localStorage أيضاً) —
+     * كان سابقاً في sessionStorage فيُمسح بإغلاق التبويب بينما يبقى النص المشفّر،
+     * فيتعذّر فك التشفير ويسقط النظام صامتاً إلى نص مشفّر «كأنه صريح» = تلف بيانات.
+     *
+     * تنبيه أمني: مفتاحٌ مُخزَّن على العميل بجوار البيانات = تعتيم (obfuscation) يمنع
+     * القراءة العابرة، لا سرية حقيقية ضد مَن يملك وصولاً للجهاز. السرية الفعلية تتطلب
+     * اشتقاق المفتاح من جلسة المستخدم بعد الدخول + فرضاً على الخادم (انظر supabase/policies.sql).
      */
     async getKey() {
         if (this._cryptoKey) return this._cryptoKey;
 
         try {
-            // Try to get existing key from sessionStorage
-            const keyData = sessionStorage.getItem('_enc_key');
+            // جلب المفتاح الموجود من localStorage (بنفس دوام النص المشفّر)
+            const keyData = localStorage.getItem('_enc_key');
             if (keyData) {
                 const keyBuffer = Uint8Array.from(JSON.parse(keyData));
                 this._cryptoKey = await crypto.subtle.importKey(
@@ -45,9 +50,9 @@ class EncryptionService {
                 ['encrypt', 'decrypt']
             );
 
-            // Export and store in sessionStorage (cleared on tab close)
+            // تصدير وتخزين في localStorage (يبقى مع النص المشفّر — لا يُمسح بإغلاق التبويب)
             const exported = await crypto.subtle.exportKey('raw', key);
-            sessionStorage.setItem('_enc_key', JSON.stringify(Array.from(new Uint8Array(exported))));
+            localStorage.setItem('_enc_key', JSON.stringify(Array.from(new Uint8Array(exported))));
 
             this._cryptoKey = key;
             return key;

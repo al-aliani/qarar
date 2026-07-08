@@ -1095,10 +1095,13 @@ export const TABLE_SCHEMAS = {
     revenueStreams: {
         title: 'مصادر الإيرادات',
         aiPrompt: 'suggest_revenue',
+        // ملاحظة: عمود «تكلفة متغيرة %» يُخزَّن ككسر (0–1) ويقرأه المحرك (revenue.js). إبقاؤه ظاهراً يمنع
+        // اقتطاع 30% صامتاً بلا علم المستخدم — أدخل تكلفتك الفعلية (استشارات ≈ 0٪، تجزئة أعلى).
         columns: [
             { key: 'service', label: 'الخدمة', type: 'text' },
             { key: 'customersPerMonth', label: 'العملاء/شهر', type: 'number' },
             { key: 'avgPrice', label: 'متوسط السعر', type: 'number' },
+            { key: 'variableCostRate', label: 'تكلفة متغيرة %', type: 'number', default: 0.30 },
             { key: 'growthRate', label: 'نمو سنوي %', type: 'number', default: 0.07 },
             { key: 'year1', label: 'السنة 1', type: 'computed', formula: r => (r.customersPerMonth || 0) * 12 * (r.avgPrice || 0) }
         ],

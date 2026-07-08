@@ -17,7 +17,7 @@
   /* لون النص فوق الأساسي (أزرار/شارات) — يتبدّل مع الثيم لضمان القراءة */
   --c-p-contrast: #ffffff;
 
-  /* النحاسي: داكن بما يكفي ليُقرأ نصاً على الفاتح (كان #d4af37 بتباين ~1.9 غير مقروء) */
+  /* النحاسي: داكن بما يكفي ليُقرأ نصاً على الفاتح (الذهبي القديم كان بتباين ~1.9 غير مقروء) */
   --c-gold-500: #8a5f1c;
   --c-gold-subtle: rgba(176, 125, 44, 0.16);
   /* درجة زخرفية أفتح للخلفيات والتدرجات فقط — ليست للنصوص */
@@ -40,6 +40,15 @@
   --c-success: #157f5f;
   --c-danger: #c2382e;
   --c-danger-subtle: rgba(194, 56, 46, 0.1);
+  /* لون التحذير — كان مستخدماً في components (.bg-warning/.text-warning) بلا تعريف */
+  --c-warning: #b45309;
+  --c-warning-subtle: rgba(180, 83, 9, 0.14);
+
+  /* سطوح شفافة تعمل على الفاتح والداكن — بديل rgba(255,255,255,.0x) الموروثة */
+  --c-surface-2: rgba(28, 36, 32, 0.04);
+  --c-surface-3: rgba(28, 36, 32, 0.08);
+  /* حد نحاسي رقيق للتمييز */
+  --c-gold-border: rgba(176, 125, 44, 0.35);
 
   --font-ui: 'IBM Plex Sans Arabic', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -54,10 +63,14 @@
   --r-sm: 6px;
   --r-md: 10px;
   --r-lg: 16px;
+  --r-xl: 20px;
+  --r-pill: 999px;
 
   /* ظلال ناعمة متعددة الطبقات بميل أخضر خفيف — بدل الأسود الصريح */
   --shadow-sm: 0 1px 2px rgba(20, 33, 28, 0.06), 0 2px 8px -2px rgba(20, 33, 28, 0.08);
   --shadow-lg: 0 4px 12px -2px rgba(20, 33, 28, 0.08), 0 16px 32px -12px rgba(20, 33, 28, 0.18);
+  /* ظل الزر الأساسي بلغة landing: توهج داخلي + ظل أخضر ناعم */
+  --shadow-btn: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 16px 30px -18px rgba(14, 91, 68, 0.85);
   --focus-ring: 0 0 0 3px rgba(14, 91, 68, 0.28);
   --glass-blur: blur(16px);
 }
@@ -86,8 +99,15 @@
   --c-success: #34d399;
   --c-danger: #f87171;
   --c-danger-subtle: rgba(248, 113, 113, 0.12);
+  --c-warning: #fbbf24;
+  --c-warning-subtle: rgba(251, 191, 36, 0.14);
+
+  --c-surface-2: rgba(238, 245, 240, 0.05);
+  --c-surface-3: rgba(238, 245, 240, 0.09);
+  --c-gold-border: rgba(217, 168, 78, 0.35);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 10px -2px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 8px 20px -6px rgba(0, 0, 0, 0.45), 0 24px 48px -16px rgba(0, 0, 0, 0.5);
+  --shadow-btn: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 24px -14px rgba(0, 0, 0, 0.6);
   --focus-ring: 0 0 0 3px rgba(62, 207, 154, 0.35);
 }

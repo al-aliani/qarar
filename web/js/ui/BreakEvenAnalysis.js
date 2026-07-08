@@ -76,7 +76,7 @@ export class BreakEvenAnalysis {
                         </div>
                         <div class="bep-stat">
                             <span class="label">هامش الأمان</span>
-                            <span class="value text-success">${((1 - bepPercentage) * 100).toFixed(1)}%</span>
+                            <span class="value ${bepPercentage <= 1 ? 'text-success' : 'text-danger'}">${((1 - bepPercentage) * 100).toFixed(1)}%</span>
                         </div>
                     </div>
                 </div>
@@ -85,7 +85,7 @@ export class BreakEvenAnalysis {
                     <h3 class="card-title">توزيع التكاليف (سنوياً)</h3>
                     <div class="cost-breakdown">
                         <div class="cost-item">
-                            <span>التكاليف الثابتة (Fixed Costs)</span>
+                            <span>التكاليف الثابتة للتعادل (تشمل الاستهلاك)</span>
                             <span>${this.formatCurrency(fixedCosts)}</span>
                         </div>
                         <div class="cost-item">
@@ -95,7 +95,9 @@ export class BreakEvenAnalysis {
                     </div>
                     <div class="bep-interpretation">
                         <p>💡 يحتاج المشروع لتحقيق مبيعات لا تقل عن <strong>${this.formatCurrency(bepValue)}</strong> سنوياً لتغطية كافة تكاليفه دون ربح أو خسارة.</p>
-                        <p>المشروع في منطقة الأمان بنسبة <strong>${((1 - bepPercentage) * 100).toFixed(0)}%</strong> من إيراداته المستهدفة.</p>
+                        ${bepPercentage <= 1
+                            ? `<p>المشروع في منطقة الأمان بهامش <strong>${((1 - bepPercentage) * 100).toFixed(0)}%</strong> من إيراداته المستهدفة.</p>`
+                            : `<p class="text-danger">⚠️ الإيراد المتوقع <strong>دون نقطة التعادل بنسبة ${((bepPercentage - 1) * 100).toFixed(0)}%</strong> — المشروع يعمل بخسارة في السنة الأولى بهذه الأرقام. ارفع المبيعات أو خفّض الثوابت.</p>`}
                     </div>
                 </div>
             </div>
@@ -116,7 +118,7 @@ export class BreakEvenAnalysis {
                     {
                         label: 'الإيرادات',
                         data: [0, total * 0.25, total * 0.5, total * 0.75, total, total * 1.25],
-                        borderColor: '#d4af37',
+                        borderColor: '#8a5f1c',
                         borderWidth: 3,
                         fill: false
                     },
@@ -133,11 +135,12 @@ export class BreakEvenAnalysis {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: '#fff' } }
+                    // ألوان من متغيّرات السمة بدل '#fff' الثابت (كان نص وسيلة الإيضاح أبيض على خلفية فاتحة = غير مرئي)
+                    legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--c-text-main').trim() || '#1a1a1a' } }
                 },
                 scales: {
-                    x: { ticks: { color: '#8b949e' } },
-                    y: { ticks: { color: '#8b949e' } }
+                    x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--c-text-muted').trim() || '#555' } },
+                    y: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--c-text-muted').trim() || '#555' } }
                 }
             }
         });

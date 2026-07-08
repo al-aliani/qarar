@@ -54,7 +54,8 @@
 .badge {
     display: inline-block;
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: var(--r-pill, 999px);
+    padding-inline: 8px;
     font-size: 0.75rem;
     background-color: var(--c-bg-card);
     border: 1px solid var(--c-border);

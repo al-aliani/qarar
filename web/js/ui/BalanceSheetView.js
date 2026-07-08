@@ -133,8 +133,16 @@ export class BalanceSheetView {
                             </div>
                         </div>
 
+                        ${Math.abs(sheet.fundingGap || 0) > 5 ? `
+                        <div class="bs-group">
+                            <div class="bs-line negative">
+                                <span>${(sheet.fundingGap || 0) > 0 ? '⚠️ فجوة تمويل غير مغطاة (مصادر التمويل أقل من الاستثمار)' : 'فائض تمويل فوق الاستثمار المطلوب'}</span>
+                                <span>${this.formatCurrency(sheet.fundingGap)}</span>
+                            </div>
+                        </div>
+                        ` : ''}
                         <div class="bs-total liabilities-total">
-                            <span>الخصوم + حقوق الملكية</span>
+                            <span>الخصوم + حقوق الملكية${Math.abs(sheet.fundingGap || 0) > 5 ? ' (شاملة فجوة التمويل)' : ''}</span>
                             <span>${this.formatCurrency(sheet.totalLiabilitiesAndEquity)}</span>
                         </div>
                     </div>

@@ -163,8 +163,8 @@ export class PresentationView {
                 items: [
                     { label: 'صافي القيمة الحالية', value: this.formatCurrency(results.indicators?.npv), color: 'text-green-400' },
                     { label: 'معدل العائد الداخلي', value: ((results.indicators?.irr || 0) * 100).toFixed(1) + '%', color: 'text-blue-400' },
-                    { label: 'فترة الاسترداد', value: (results.indicators?.paybackPeriod || 0).toFixed(1) + ' سنة', color: 'text-purple-400' },
-                    { label: 'متوسط هامش الربح', value: ((results.incomeStatement?.[0]?.netMargin || 0) * 100).toFixed(1) + '%', color: 'text-yellow-400' },
+                    { label: 'فترة الاسترداد', value: this.formatPayback(results.indicators?.paybackPeriod ?? results.indicators?.payback), color: 'text-purple-400' },
+                    { label: 'متوسط هامش الربح', value: (((results.indicators?.netMargin ?? (results.incomeStatement?.[0]?.revenue > 0 ? (results.incomeStatement[0].netIncome / results.incomeStatement[0].revenue) : 0)) || 0) * 100).toFixed(1) + '%', color: 'text-yellow-400' },
                 ]
             },
 
@@ -414,5 +414,10 @@ export class PresentationView {
         if (!n) return '0';
         if (n >= 1000000) return (n / 1000000).toFixed(1) + ' مليون';
         return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
+    }
+
+    formatPayback(n) {
+        const value = Number(n);
+        return Number.isFinite(value) && value > 0 ? value.toFixed(1) + ' سنة' : 'غير محقق';
     }
 }

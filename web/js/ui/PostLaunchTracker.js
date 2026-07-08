@@ -4,6 +4,7 @@
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { SECTIONS } from '../core/schema.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class PostLaunchTracker {
     constructor(containerId, store) {
@@ -85,21 +86,31 @@ export class PostLaunchTracker {
         return `
             <tr>
                 <td>شهر ${month.id}</td>
-                <td><input type="number" class="input-actual" data-id="${month.id}" data-field="revenue" value="${month.revenue}"></td>
-                <td><input type="number" class="input-actual" data-id="${month.id}" data-field="opex" value="${month.opex}"></td>
-                <td><input type="text" class="input-actual" data-id="${month.id}" data-field="notes" value="${month.notes || ''}"></td>
+                <td><input type="number" class="input-actual" data-id="${escapeHtml(month.id)}" data-field="revenue" value="${escapeHtml(month.revenue)}"></td>
+                <td><input type="number" class="input-actual" data-id="${escapeHtml(month.id)}" data-field="opex" value="${escapeHtml(month.opex)}"></td>
+                <td><input type="text" class="input-actual" data-id="${escapeHtml(month.id)}" data-field="notes" value="${escapeHtml(month.notes)}"></td>
             </tr>
         `;
     }
 
     renderVarianceSummary(actuals, plannedRev, plannedOpex) {
-        const totalActualRev = actuals.months.reduce((sum, m) => sum + (parseFloat(m.revenue) || 0), 0);
-        const totalPlannedRev = plannedRev * actuals.months.length;
+        // نعدّ الأشهر المُدخلة فقط — الأشهر الفارغة ليست «أداءً صفرياً» (كانت تعطي انحرافاً كاذباً -100%)
+        const hasNum = (v) => v !== '' && v != null && !Number.isNaN(parseFloat(v));
+        const enteredRev = actuals.months.filter(m => hasNum(m.revenue));
+        if (enteredRev.length === 0) {
+            return `<div class="variance-item">
+                <span class="label">انحراف الإيرادات</span>
+                <small>ℹ️ لم تُدخل بيانات فعلية بعد — أدخل إيراد شهر واحد على الأقل لبدء تحليل الانحراف.</small>
+            </div>`;
+        }
+        const totalActualRev = enteredRev.reduce((sum, m) => sum + parseFloat(m.revenue), 0);
+        const totalPlannedRev = plannedRev * enteredRev.length;
         const revVariance = totalActualRev - totalPlannedRev;
         const revVarPercent = totalPlannedRev > 0 ? (revVariance / totalPlannedRev) * 100 : 0;
 
-        const totalActualOpex = actuals.months.reduce((sum, m) => sum + (parseFloat(m.opex) || 0), 0);
-        const totalPlannedOpex = plannedOpex * actuals.months.length;
+        const enteredOpex = actuals.months.filter(m => hasNum(m.opex));
+        const totalActualOpex = enteredOpex.reduce((sum, m) => sum + parseFloat(m.opex), 0);
+        const totalPlannedOpex = plannedOpex * enteredOpex.length;
         const opexVariance = totalActualOpex - totalPlannedOpex;
 
         return `
@@ -135,7 +146,7 @@ export class PostLaunchTracker {
                 const state = this.store.get();
                 const actuals = state[SECTIONS.ACTUALS];
                 const nextId = actuals.months.length + 1;
-                actuals.months.push({ id: nextId, revenue: 0, opex: 0, notes: '' });
+                actuals.months.push({ id: nextId, revenue: '', opex: '', notes: '' }); // فارغ = لم يُدخل بعد (لا صفر يُحسب كأداء)
                 this.store.updatePath(SECTIONS.ACTUALS, 'months', actuals.months);
                 this.render();
             });
@@ -180,7 +191,7 @@ export class PostLaunchTracker {
                     {
                         label: 'الإيراد المخطط (دراسة الجدوى)',
                         data: plannedData,
-                        borderColor: '#d4af37',
+                        borderColor: '#8a5f1c',
                         borderDash: [5, 5],
                         fill: false,
                         tension: 0
@@ -191,11 +202,11 @@ export class PostLaunchTracker {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: '#fff' } }
+                    legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--c-text-main').trim() || '#1a1a1a' } }
                 },
                 scales: {
-                    x: { ticks: { color: '#8b949e' } },
-                    y: { ticks: { color: '#8b949e' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--c-text-muted').trim() || '#555' } },
+                    y: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--c-text-muted').trim() || '#555' }, grid: { color: 'rgba(0,0,0,0.06)' } }
                 }
             }
         });
