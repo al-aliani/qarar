@@ -8,6 +8,7 @@ import { DataService } from '../services/DataService.js';
 import { DynamicTable } from './DynamicTable.js';
 import { TABLE_SCHEMAS } from '../core/schema.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class OrgStructure {
     constructor(containerId, store, onNavigate) {
@@ -137,18 +138,18 @@ export class OrgStructure {
                     <tbody id="departmentsBody">
                         ${depts.map((dept, idx) => `
                             <tr data-idx="${idx}">
-                                <td><input type="text" class="input input--sm dept-field" data-field="name" value="${dept.name || ''}"></td>
-                                <td><input type="text" class="input input--sm dept-field" data-field="head" value="${dept.head || ''}"></td>
-                                <td><input type="text" class="input input--sm dept-field" data-field="responsibilities" value="${dept.responsibilities || ''}"></td>
+                                <td><input type="text" class="input input--sm dept-field" data-field="name" value="${escapeHtml(dept.name || '')}"></td>
+                                <td><input type="text" class="input input--sm dept-field" data-field="head" value="${escapeHtml(dept.head || '')}"></td>
+                                <td><input type="text" class="input input--sm dept-field" data-field="responsibilities" value="${escapeHtml(dept.responsibilities || '')}"></td>
                                 <td>
                                     <select class="input input--sm dept-field" data-field="parentId">
                                         <option value="">لا يوجد</option>
                                         ${depts.filter(d => d.id !== dept.id).map(d => `
-                                            <option value="${d.id}" ${dept.parentId === d.id ? 'selected' : ''}>${d.name}</option>
+                                            <option value="${escapeHtml(d.id)}" ${dept.parentId === d.id ? 'selected' : ''}>${escapeHtml(d.name)}</option>
                                         `).join('')}
                                     </select>
                                 </td>
-                                <td><button class="btn-icon btn-remove-dept" data-idx="${idx}">🗑️</button></td>
+                                <td><button class="btn-icon btn-remove-dept" data-idx="${idx}" aria-label="حذف القسم">🗑️</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -167,8 +168,8 @@ export class OrgStructure {
                 ${children.map(dept => `
                     <div class="org-node">
                         <div class="org-card">
-                            <div class="org-title">${dept.name}</div>
-                            <div class="org-head">${dept.head || '(شاغر)'}</div>
+                            <div class="org-title">${escapeHtml(dept.name)}</div>
+                            <div class="org-head">${dept.head ? escapeHtml(dept.head) : '(شاغر)'}</div>
                         </div>
                         ${this.buildOrgTree(departments, dept.id, level + 1)}
                     </div>
@@ -178,7 +179,6 @@ export class OrgStructure {
     }
 
     renderAdvisoryBoard(advisors) {
-        const esc = (s) => (s || '').toString().replace(/</g, '&lt;').replace(/"/g, '&quot;');
         return `
             <div class="advisory-container">
                 <table class="data-table">
@@ -188,9 +188,9 @@ export class OrgStructure {
                     <tbody id="advisoryBody">
                         ${advisors.map((a, idx) => `
                             <tr data-idx="${idx}">
-                                <td><input type="text" class="input input--sm advisory-field" data-field="name" value="${esc(a.name)}" placeholder="الاسم"></td>
-                                <td><input type="text" class="input input--sm advisory-field" data-field="role" value="${esc(a.role)}" placeholder="مثال: خبير تطوير أعمال"></td>
-                                <td><button class="btn-icon btn-remove-advisory" data-idx="${idx}">🗑️</button></td>
+                                <td><input type="text" class="input input--sm advisory-field" data-field="name" value="${escapeHtml(a.name)}" placeholder="الاسم"></td>
+                                <td><input type="text" class="input input--sm advisory-field" data-field="role" value="${escapeHtml(a.role)}" placeholder="مثال: خبير تطوير أعمال"></td>
+                                <td><button class="btn-icon btn-remove-advisory" data-idx="${idx}" aria-label="حذف عضو الاستشاري">🗑️</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -217,7 +217,7 @@ export class OrgStructure {
                     <tbody id="boardBody">
                         ${board.map((member, idx) => `
                             <tr data-idx="${idx}">
-                                <td><input type="text" class="input input--sm board-field" data-field="name" value="${member.name || ''}"></td>
+                                <td><input type="text" class="input input--sm board-field" data-field="name" value="${escapeHtml(member.name || '')}"></td>
                                 <td>
                                     <select class="input input--sm board-field" data-field="position">
                                         <option value="chairman" ${member.position === 'chairman' ? 'selected' : ''}>رئيس المجلس</option>
@@ -227,8 +227,8 @@ export class OrgStructure {
                                 </td>
                                 <td><input type="number" class="input input--sm board-field" data-field="share" value="${member.share ?? ''}" min="0" max="100" step="0.1" placeholder="%"></td>
                                 <td><input type="checkbox" class="board-field" data-field="independent" ${member.independent ? 'checked' : ''}></td>
-                                <td><input type="text" class="input input--sm board-field" data-field="committees" value="${member.committees || ''}"></td>
-                                <td><button class="btn-icon btn-remove-board" data-idx="${idx}">🗑️</button></td>
+                                <td><input type="text" class="input input--sm board-field" data-field="committees" value="${escapeHtml(member.committees || '')}"></td>
+                                <td><button class="btn-icon btn-remove-board" data-idx="${idx}" aria-label="حذف عضو مجلس الإدارة">🗑️</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -257,8 +257,8 @@ export class OrgStructure {
                 </div>
                 <div class="governance-item">
                     <label for="gov-complianceOfficer">مسؤول الالتزام</label>
-                    <input type="text" id="gov-complianceOfficer" class="input governance-field" data-field="complianceOfficer" 
-                           value="${governance.complianceOfficer || ''}" placeholder="اسم المسؤول">
+                    <input type="text" id="gov-complianceOfficer" class="input governance-field" data-field="complianceOfficer"
+                           value="${escapeHtml(governance.complianceOfficer || '')}" placeholder="اسم المسؤول">
                 </div>
             </div>
         `;
@@ -321,7 +321,7 @@ export class OrgStructure {
                     <div class="input-group">
                         <label for="saud-plan">خطة تحقيق السعودة</label>
                         <textarea id="saud-plan" class="input saudization-field" data-field="plan" rows="2"
-                                  placeholder="كيف ستحقق نسبة السعودة المستهدفة؟">${saudization.plan || ''}</textarea>
+                                  placeholder="كيف ستحقق نسبة السعودة المستهدفة؟">${escapeHtml(saudization.plan || '')}</textarea>
                     </div>
                 </div>
             </div>

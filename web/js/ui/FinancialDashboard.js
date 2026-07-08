@@ -906,8 +906,8 @@ export class FinancialDashboard {
             const verdict = cc.exceeded
                 ? `❌ مستحيلة مادياً — الخطة ${cc.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر وطاقتك ${cc.maxUnitsPerMonth.toLocaleString('ar-SA')}`
                 : pctOfMax > 85
-                    ? `⚠️ ضيّقة — ${pctOfMax}% من الطاقة القصوى منذ السنة الأولى (لا هامش للذروة)`
-                    : `✅ قابلة للتحقيق — ${pctOfMax}% من الطاقة القصوى (${cc.plannedUnitsPerMonth.toLocaleString('ar-SA')} من ${cc.maxUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر)`;
+                    ? `⚠️ ضيّقة — ${pctOfMax.toLocaleString('ar-SA')}% من الطاقة القصوى منذ السنة الأولى (لا هامش للذروة)`
+                    : `✅ قابلة للتحقيق — ${pctOfMax.toLocaleString('ar-SA')}% من الطاقة القصوى (${cc.plannedUnitsPerMonth.toLocaleString('ar-SA')} من ${cc.maxUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر)`;
             rows.push(`<div class="flex-between py-2" style="border-bottom:1px solid var(--c-border);"><span class="text-sm">مصالحة الطاقة (هل المبيعات ممكنة مادياً؟)</span><span class="text-sm ${tone}">${verdict}</span></div>`);
         } else {
             rows.push(`<div class="flex-between py-2" style="border-bottom:1px solid var(--c-border);"><span class="text-sm">مصالحة الطاقة</span><span class="text-sm text-muted">لم يُدخل نموذج طاقة (مقاعد × دورات × أيام) — أضِفه في الدراسة الفنية لإقناع المدقق</span></div>`);

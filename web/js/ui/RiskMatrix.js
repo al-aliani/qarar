@@ -201,7 +201,7 @@ export class RiskMatrix {
                                             <option value="high" ${risk.impact === 'high' ? 'selected' : ''}>🔴 عالي</option>
                                         </select>
                                     </td>
-                                    <td class="text-center"><span class="badge ${getScoreBadge(score)}">${score}</span></td>
+                                    <td class="text-center"><span class="badge ${getScoreBadge(score)}">${score.toLocaleString('ar-SA')}</span></td>
                                     <td><input type="number" min="0" step="1000" class="input input--sm risk-field" data-field="estimatedFinancialImpact" value="${risk.estimatedFinancialImpact != null ? risk.estimatedFinancialImpact : ''}" placeholder="ريال/سنة"></td>
                                     <td>
                                         <select class="input input--sm risk-field" data-field="timeHorizon">
@@ -220,7 +220,7 @@ export class RiskMatrix {
                                     </td>
                                     <td><input type="text" class="input input--sm risk-field" data-field="earlyWarning" value="${escapeHtml(risk.earlyWarning)}" placeholder="مؤشر يُنذر باقتراب الخطر"></td>
                                     <td><input type="text" class="input input--sm risk-field" data-field="owner" value="${escapeHtml(risk.owner)}"></td>
-                                    <td><button class="btn-icon btn-remove-risk" data-idx="${idx}">🗑️</button></td>
+                                    <td><button class="btn-icon btn-remove-risk" data-idx="${idx}" aria-label="حذف الخطر">🗑️</button></td>
                                 </tr>
                             `;
         }).join('')}

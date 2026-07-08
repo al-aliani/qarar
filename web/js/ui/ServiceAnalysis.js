@@ -6,6 +6,7 @@
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { investmentDataWarning, investmentDataWarningHtml, productCatalogWarning } from '../utils/dataQuality.js';
 import { stepIndexById } from '../core/wizardSteps.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class ServiceAnalysis {
     constructor(containerId, store, onNavigate) {
@@ -133,8 +134,8 @@ export class ServiceAnalysis {
                     <div class="flex flex-wrap gap-2">
                         ${items.map((it, i) => `
                             <span class="badge" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--c-bg-app);border-radius:6px;">
-                                ${it.name || 'بدون اسم'} — ${(it.pricePerUnit||0)} ر.س × ${(it.customersPerMonth||0)}/شهر
-                                <button type="button" class="btn-remove-service btn-xs" data-idx="${i}" title="حذف">✕</button>
+                                ${escapeHtml(it.name) || 'بدون اسم'} — ${(it.pricePerUnit||0)} ر.س × ${(it.customersPerMonth||0)}/شهر
+                                <button type="button" class="btn-remove-service btn-xs" data-idx="${i}" title="حذف" aria-label="حذف الخدمة">✕</button>
                             </span>
                         `).join('')}
                     </div>
@@ -448,7 +449,7 @@ export class ServiceAnalysis {
             <div class="service-card ${statusClass}">
                 <div class="service-header">
                     <span class="service-icon">${analysis.icon}</span>
-                    <span class="service-name">${analysis.name}</span>
+                    <span class="service-name">${escapeHtml(analysis.name)}</span>
                     <span class="service-status">${statusText}</span>
                 </div>
                 <div class="service-kpis">
@@ -508,7 +509,7 @@ export class ServiceAnalysis {
                     <tbody>
                         ${analyses.map(a => `
                             <tr class="${a.isViable ? '' : 'row-warning'}">
-                                <td><span class="service-icon-sm">${a.icon}</span> ${a.name}</td>
+                                <td><span class="service-icon-sm">${a.icon}</span> ${escapeHtml(a.name)}</td>
                                 <td class="text-mono">${this.formatCompact(a.revenueYear1)}</td>
                                 <td class="text-mono ${a.netProfitYear1 >= 0 ? 'text-success' : 'text-danger'}">${this.formatCompact(a.netProfitYear1)}</td>
                                 <td class="text-mono ${this.metricClass(a.npv)}">${this.formatCompact(a.npv)}</td>
@@ -537,7 +538,7 @@ export class ServiceAnalysis {
                     <div class="ranking-item ${i === 0 ? 'ranking-top' : ''}">
                         <span class="ranking-position">${i + 1}</span>
                         <span class="ranking-icon">${a.icon}</span>
-                        <span class="ranking-name">${a.name}</span>
+                        <span class="ranking-name">${escapeHtml(a.name)}</span>
                         <span class="ranking-npv ${this.metricClass(rankingScore(a))}">
                             ${Number.isFinite(a.npv) ? 'صافي القيمة الحالية' : 'صافي ربح سنة 1'}: ${this.formatCurrency(rankingScore(a))}
                         </span>

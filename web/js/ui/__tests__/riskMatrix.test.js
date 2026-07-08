@@ -54,8 +54,11 @@ describe('RiskMatrix — تصنيف الدرجة (احتمالية × أثر): �
             expect(dot.closest('.matrix-cell').className).toContain(expectedClass);
 
             // سجل المخاطر: نفس الدرجة الرقمية وصنف الشارة المطابق
+            // تدقيق 2026-07-09 (حزمة 4، اتساق الأرقام): الشارة تُعرض الآن بأرقام هندية
+            // عربية (toLocaleString('ar-SA')) اتساقاً مع بقية أرقام نفس الجدول (الإجمالي
+            // المالي في تذييله)، بعد أن كانت الشارة وحدها تُظهر أرقاماً لاتينية خام.
             const badge = document.querySelector('.risk-register .badge');
-            expect(badge.textContent.trim()).toBe(String(score));
+            expect(badge.textContent.trim()).toBe(score.toLocaleString('ar-SA'));
             const expectedBadgeClass = score >= 9 ? 'badge--danger' : score >= 6 ? 'badge--warning' : score >= 3 ? 'badge--info' : 'badge--success';
             expect(badge.className).toContain(expectedBadgeClass);
         });
@@ -177,8 +180,8 @@ describe('RiskMatrix — تحديث الحقول (updateRisk)', () => {
         probSelect.dispatchEvent(new Event('change', { bubbles: true }));
 
         expect(store.getState().riskAnalysis.risks[0].probability).toBe('high');
-        // بعد إعادة الرسم: الدرجة الجديدة (high×low=3) تظهر في الشارة
-        expect(document.querySelector('.risk-register .badge').textContent.trim()).toBe('3');
+        // بعد إعادة الرسم: الدرجة الجديدة (high×low=3) تظهر في الشارة (أرقام هندية عربية، حزمة 4)
+        expect(document.querySelector('.risk-register .badge').textContent.trim()).toBe((3).toLocaleString('ar-SA'));
     });
 
     it('تغيير الأثر المالي (حقل رقمي) يُخزَّن كرقم لا نص، وقيمة غير صالحة تُصبح صفراً', () => {

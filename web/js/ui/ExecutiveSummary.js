@@ -10,6 +10,7 @@ import { checkDriversAgainstBenchmarks, SECTOR_BENCHMARKS, resolveSectorBenchmar
 import { aiConnector } from '../services/AIConnector.js'; // Updated: use unified AI service
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class ExecutiveSummary {
     constructor(containerId, store, onNavigate) {
@@ -165,11 +166,11 @@ export class ExecutiveSummary {
                 <div class="card analysis-card">
                     <h3 class="card-title">🎯 الفرضية ولماذا سنربح</h3>
                     <div class="overview-grid" style="font-size: 0.95rem;">
-                        ${sh.problem ? `<div class="overview-item full-width"><span class="overview-label">المشكلة (الظروف الأولية)</span><p class="overview-value mt-1">${String(sh.problem).replace(/</g, '&lt;')}</p></div>` : ''}
-                        ${sh.solution ? `<div class="overview-item full-width"><span class="overview-label">الحل (التجربة / المنتج أو الخدمة)</span><p class="overview-value mt-1">${String(sh.solution).replace(/</g, '&lt;')}</p></div>` : ''}
-                        ${sh.insight ? `<div class="overview-item full-width"><span class="overview-label">الاستبصار (لماذا سنربح؟)</span><p class="overview-value mt-1">${String(sh.insight).replace(/</g, '&lt;')}</p></div>` : ''}
-                        ${typesList ? `<div class="overview-item full-width"><span class="overview-label">المزايا غير العادلة</span><p class="overview-value mt-1">${String(typesList).replace(/</g, '&lt;')}</p></div>` : ''}
-                        ${ua.insightText ? `<div class="overview-item full-width"><span class="overview-label">شرح موجز للاستبصار</span><p class="overview-value mt-1">${String(ua.insightText).replace(/</g, '&lt;')}</p></div>` : ''}
+                        ${sh.problem ? `<div class="overview-item full-width"><span class="overview-label">المشكلة (الظروف الأولية)</span><p class="overview-value mt-1">${escapeHtml(sh.problem)}</p></div>` : ''}
+                        ${sh.solution ? `<div class="overview-item full-width"><span class="overview-label">الحل (التجربة / المنتج أو الخدمة)</span><p class="overview-value mt-1">${escapeHtml(sh.solution)}</p></div>` : ''}
+                        ${sh.insight ? `<div class="overview-item full-width"><span class="overview-label">الاستبصار (لماذا سنربح؟)</span><p class="overview-value mt-1">${escapeHtml(sh.insight)}</p></div>` : ''}
+                        ${typesList ? `<div class="overview-item full-width"><span class="overview-label">المزايا غير العادلة</span><p class="overview-value mt-1">${escapeHtml(typesList)}</p></div>` : ''}
+                        ${ua.insightText ? `<div class="overview-item full-width"><span class="overview-label">شرح موجز للاستبصار</span><p class="overview-value mt-1">${escapeHtml(ua.insightText)}</p></div>` : ''}
                     </div>
                 </div>
         `;
@@ -181,11 +182,11 @@ export class ExecutiveSummary {
             <div class="overview-grid">
                 <div class="overview-item">
                     <span class="overview-label">اسم المشروع</span>
-                    <span class="overview-value">${projectInfo.name || '(لم يحدد)'}</span>
+                    <span class="overview-value">${projectInfo.name ? escapeHtml(projectInfo.name) : '(لم يحدد)'}</span>
                 </div>
                 <div class="overview-item">
                     <span class="overview-label">الموقع</span>
-                    <span class="overview-value">${projectInfo.city || ''} - ${projectInfo.district || ''}</span>
+                    <span class="overview-value">${escapeHtml(projectInfo.city || '')} - ${escapeHtml(projectInfo.district || '')}</span>
                 </div>
                 <div class="overview-item full-width">
                     <label for="projectOverview" class="overview-label">وصف المشروع</label>
@@ -196,7 +197,7 @@ export class ExecutiveSummary {
                         </button>
                     </div>
                     <textarea class="input exec-field" data-field="projectOverview" id="projectOverview" rows="4"
-                              placeholder="وصف مختصر للمشروع وأهدافه">${execSummary.projectOverview || projectInfo.description || ''}</textarea>
+                              placeholder="وصف مختصر للمشروع وأهدافه">${escapeHtml(execSummary.projectOverview || projectInfo.description || '')}</textarea>
                 </div>
                 <div class="overview-item full-width">
                     <div class="ai-toolbar flex-between mb-1">
@@ -204,7 +205,7 @@ export class ExecutiveSummary {
                         <button type="button" class="btn-xs btn-magic ai-field-btn" data-target="exec-problemStatement" title="ولّد بالذكاء الاصطناعي">✨ ولّد</button>
                     </div>
                     <textarea id="exec-problemStatement" class="input exec-field" data-field="problemStatement" rows="2"
-                              placeholder="ما المشكلة أو الحاجة التي يلبيها مشروعك؟">${execSummary.problemStatement || ''}</textarea>
+                              placeholder="ما المشكلة أو الحاجة التي يلبيها مشروعك؟">${escapeHtml(execSummary.problemStatement || '')}</textarea>
                 </div>
                 <div class="overview-item full-width">
                     <div class="ai-toolbar flex-between mb-1">
@@ -212,7 +213,7 @@ export class ExecutiveSummary {
                         <button type="button" class="btn-xs btn-magic ai-field-btn" data-target="exec-uniqueValue" title="ولّد بالذكاء الاصطناعي">✨ ولّد</button>
                     </div>
                     <textarea id="exec-uniqueValue" class="input exec-field" data-field="uniqueValueProposition" rows="2"
-                              placeholder="ما الذي يميز مشروعك عن المنافسين؟">${execSummary.uniqueValueProposition || ''}</textarea>
+                              placeholder="ما الذي يميز مشروعك عن المنافسين؟">${escapeHtml(execSummary.uniqueValueProposition || '')}</textarea>
                 </div>
             </div>
         `;
@@ -259,8 +260,8 @@ export class ExecutiveSummary {
             <ul>
                 ${solutions.map(s => `
                     <li>
-                        <strong>التحدي:</strong> ${s.challenge}<br>
-                        <strong>الحل المقترح:</strong> ${s.solution}
+                        <strong>التحدي:</strong> ${escapeHtml(s.challenge)}<br>
+                        <strong>الحل المقترح:</strong> ${escapeHtml(s.solution)}
                     </li>
                 `).join('')}
             </ul>
@@ -286,7 +287,7 @@ export class ExecutiveSummary {
             warnings.push(`فترة الاسترداد ${pb.toFixed(1)} سنة أسرع من المعتاد لهذا القطاع — تحقّق من واقعية المبيعات واكتمال التكاليف.`);
         }
         if (!warnings.length) return '';
-        const items = warnings.slice(0, 4).map(m => `<li>${String(m).replace(/</g, '&lt;')}</li>`).join('');
+        const items = warnings.slice(0, 4).map(m => `<li>${escapeHtml(m)}</li>`).join('');
         return `
             <div class="alert alert--warning" role="alert" style="margin-bottom:1rem;">
                 <strong>🔍 نظرة المدقق — انتبه قبل الاعتماد على النتيجة:</strong>
@@ -319,8 +320,8 @@ export class ExecutiveSummary {
                         <span class="risk-severity ${sev(risk) >= 9 ? 'critical' : 'high'}">
                             ${sev(risk) >= 9 ? '🔴' : '🟡'}
                         </span>
-                        <span class="risk-name">${risk.name || risk.description || 'خطر غير محدد'}</span>
-                        <span class="risk-mitigation">${risk.mitigation || 'لا توجد خطة مواجهة'}</span>
+                        <span class="risk-name">${risk.name ? escapeHtml(risk.name) : (risk.description ? escapeHtml(risk.description) : 'خطر غير محدد')}</span>
+                        <span class="risk-mitigation">${risk.mitigation ? escapeHtml(risk.mitigation) : 'لا توجد خطة مواجهة'}</span>
                     </div>
                 `).join('')}
             </div>

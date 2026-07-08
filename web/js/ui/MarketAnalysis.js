@@ -396,7 +396,7 @@ export class MarketAnalysis {
                                         <option value="tertiary" ${seg.priority === 'tertiary' ? 'selected' : ''}>ثالثي</option>
                                     </select>
                                 </td>
-                                <td><button class="btn-icon btn-remove-segment" data-idx="${idx}">🗑️</button></td>
+                                <td><button class="btn-icon btn-remove-segment" data-idx="${idx}" aria-label="حذف الشريحة السوقية">🗑️</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -433,7 +433,7 @@ export class MarketAnalysis {
                                 <td><input type="text" class="input input--sm competitor-field" data-field="strengths" value="${comp.strengths || ''}"></td>
                                 <td><input type="text" class="input input--sm competitor-field" data-field="weaknesses" value="${comp.weaknesses || ''}"></td>
                                 <td><input type="text" class="input input--sm competitor-field" data-field="advantage" value="${comp.advantage || ''}"></td>
-                                <td><button class="btn-icon btn-remove-competitor" data-idx="${idx}">🗑️</button></td>
+                                <td><button class="btn-icon btn-remove-competitor" data-idx="${idx}" aria-label="حذف المنافس">🗑️</button></td>
                             </tr>
                         `).join('')}
                     </tbody>

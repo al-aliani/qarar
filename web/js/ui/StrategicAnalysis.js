@@ -161,7 +161,7 @@ export class StrategicAnalysis {
                             ${(swot[cat.key] || []).map((item, idx) => `
                                 <div class="swot-item">
                                     <span class="swot-item-text">${escapeHtml(item)}</span>
-                                    <button class="btn-icon btn-remove-swot" data-category="${cat.key}" data-idx="${idx}">×</button>
+                                    <button class="btn-icon btn-remove-swot" data-category="${cat.key}" data-idx="${idx}" aria-label="حذف بند التحليل الرباعي">×</button>
                                 </div>
                             `).join('')}
                         </div>

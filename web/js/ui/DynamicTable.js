@@ -1,5 +1,6 @@
 import { getLabel } from '../core/labels.js';
 import { toast } from '../utils/toast.js';
+import { escapeHtml } from '../utils/escape.js';
 
 /**
  * Dynamic Table Component
@@ -290,7 +291,7 @@ export class DynamicTable {
                 // Magic Wand for empty numbers (متاح في الوضعين السريع والمفصل)
                 let magicBtn = '';
                 if (col.type === 'number' && (!val || val == 0)) {
-                   magicBtn = `<button type="button" class="btn-magic-cell" data-row="${rowIndex}" data-col="${col.key}" title="تقدير تلقائي">🪄</button>`;
+                   magicBtn = `<button type="button" class="btn-magic-cell" data-row="${rowIndex}" data-col="${col.key}" title="تقدير تلقائي" aria-label="تقدير تلقائي للقيمة">🪄</button>`;
                 }
 
                 html += `<td class="${isHidden ? 'hidden col-advanced' : ''} relative">
@@ -299,7 +300,7 @@ export class DynamicTable {
                                class="table-input ${magicBtn ? 'pr-8' : ''}"
                                data-row="${rowIndex}"
                                data-col="${col.key}"
-                               value="${val}"
+                               value="${escapeHtml(val)}"
                                ${stepAttr} ${minAttr} ${maxAttr}>
                         ${isFractionPct ? '<span class="text-muted" aria-hidden="true">٪</span>' : ''}
                         ${magicBtn}
@@ -308,7 +309,7 @@ export class DynamicTable {
             }
         });
 
-        html += `<td><button type="button" class="btn-delete" data-row="${rowIndex}">🗑️</button></td>`;
+        html += `<td><button type="button" class="btn-delete" data-row="${rowIndex}" title="حذف الصف" aria-label="حذف الصف">🗑️</button></td>`;
         html += `</tr>`;
         return html;
     }

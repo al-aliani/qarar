@@ -471,7 +471,7 @@ export class IntroductionView {
                     <select class="input input--sm product-type">
                         ${PRODUCT_TYPES.map(t => `<option value="${t.value}" ${typeVal === t.value ? 'selected' : ''}>${t.label}</option>`).join('')}
                     </select>
-                    <button type="button" class="btn-icon btn-remove-product" data-idx="${i}">🗑️</button>
+                    <button type="button" class="btn-icon btn-remove-product" data-idx="${i}" aria-label="حذف المنتج">🗑️</button>
                 </div>
                 <div class="form-group">
                     <input type="text" class="input product-name" placeholder="اسم المنتج" value="${esc(p.name)}">
@@ -502,7 +502,7 @@ export class IntroductionView {
                         <select class="input input--sm service-type">
                             ${SERVICE_TYPES.map(t => `<option value="${t.value}" ${typeVal === t.value ? 'selected' : ''}>${t.label}</option>`).join('')}
                         </select>
-                        <button type="button" class="btn-icon btn-remove-service" data-idx="${i}">🗑️</button>
+                        <button type="button" class="btn-icon btn-remove-service" data-idx="${i}" aria-label="حذف الخدمة">🗑️</button>
                     </div>
                 </div>
                 <div class="form-group">
@@ -532,7 +532,7 @@ export class IntroductionView {
             <div class="location-alt-card" data-idx="${i}">
                 <div class="flex-between mb-2">
                     <input type="text" class="input input--sm loc-alt-name" placeholder="اسم الموقع" value="${esc(alt.name)}">
-                    <button type="button" class="btn-icon btn-remove-loc-alt" data-idx="${i}">🗑️</button>
+                    <button type="button" class="btn-icon btn-remove-loc-alt" data-idx="${i}" aria-label="حذف الموقع البديل">🗑️</button>
                 </div>
                 <div class="form-group">
                     <input type="text" class="input input--sm loc-alt-address" placeholder="العنوان" value="${esc(alt.address)}">
@@ -553,7 +553,7 @@ export class IntroductionView {
             <div class="customer-value-card" data-idx="${i}">
                 <div class="flex-between mb-2">
                     <input type="text" class="input input--sm customer-type" placeholder="نوع العميل (مثال: صاحب المقهى)" value="${esc(c.customerType)}">
-                    <button type="button" class="btn-icon btn-remove-customer" data-idx="${i}">🗑️</button>
+                    <button type="button" class="btn-icon btn-remove-customer" data-idx="${i}" aria-label="حذف شريحة العملاء">🗑️</button>
                 </div>
                 <div class="form-group">
                     <input type="text" class="input customer-need" placeholder="ماذا يريد العميل؟" value="${esc(c.customerNeed)}">

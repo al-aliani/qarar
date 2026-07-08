@@ -16,6 +16,7 @@ import { CITY_STATS } from '../data/SaudiCityStats.js';
 import { getFieldOptionSpec } from '../core/fieldOptions.js';
 import { getFieldHelp } from '../core/fieldHelpTexts.js';
 import { fieldHelp } from './components/FieldHelp.js';
+import { escapeHtml } from '../utils/escape.js';
 
 /** Smart Fill handlers keyed by TABLE_SCHEMAS.*.smartFill.dataKey. Add new tables here. */
 const SMART_FILL_HANDLERS = {
@@ -143,13 +144,13 @@ export class Wizard {
             </div>
             <div class="wizard-progress" role="status" aria-live="polite">
                 <div class="progress-info">
-                    <span class="progress-step-label">الخطوة <span class="num">${relativeStepIndex + 1}</span> من <span class="num">${totalSteps}</span></span>
-                    <span class="progress-percent">${Math.round(progressPercent)}٪</span>
+                    <span class="progress-step-label">الخطوة <span class="num">${(relativeStepIndex + 1).toLocaleString('ar-SA')}</span> من <span class="num">${totalSteps.toLocaleString('ar-SA')}</span></span>
+                    <span class="progress-percent">${Math.round(progressPercent).toLocaleString('ar-SA')}٪</span>
                 </div>
                 <div class="progress-bar-container">
                     <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
                 </div>
-                <p class="progress-eta">الوقت المتبقي تقريباً <span class="num">${expectedMinutes}</span> دقائق</p>
+                <p class="progress-eta">الوقت المتبقي تقريباً <span class="num">${expectedMinutes.toLocaleString('ar-SA')}</span> دقائق</p>
             </div>
         ` : '';
 
@@ -378,17 +379,19 @@ export class Wizard {
                 const textarea = btn.closest('.input-with-ai')?.querySelector('textarea');
                 if (!key || !textarea) return;
                 if (btn.disabled) return;
-                btn.disabled = true;
-                btn.setAttribute('aria-busy', 'true');
-                const originalTitle = btn.getAttribute('title');
-                btn.setAttribute('title', 'جاري التوليد...');
                 const state = this.store.get();
                 const currentValue = textarea.value || '';
                 // حماية من فقدان النص: إن كان الحقل يحوي كتابة فعلية للمستخدم، نؤكّد قبل الاستبدال.
+                // يجب أن يحدث هذا التحقق قبل أي تغيير في حالة الزر (disabled/aria-busy/title)
+                // وإلا يبقى الزر معطّلاً للأبد إن ضغط المستخدم "إلغاء" (bug: زر عالق).
                 if (currentValue.trim().length > 0 &&
                     !confirm('سيستبدل الاقتراح النصَّ الحالي في هذا الحقل. هل تريد المتابعة؟')) {
                     return;
                 }
+                btn.disabled = true;
+                btn.setAttribute('aria-busy', 'true');
+                const originalTitle = btn.getAttribute('title');
+                btn.setAttribute('title', 'جاري التوليد...');
                 const previousValue = currentValue; // للتراجع عند الفشل
                 try {
                     await generateSuggestionStreaming(key, currentValue, state, {
@@ -547,16 +550,23 @@ export class Wizard {
                 document.getElementById(btnId).addEventListener('click', (e) => {
                     e.target.disabled = true;
                     e.target.textContent = 'جاري البحث…';
-                    const state = this.store.get();
-                    const newData = handler(state);
-                    this.store.updatePath(stepId, this.getRelativePath(tableKey), newData);
-                    if (this.tables[tableKey]) {
-                        this.tables[tableKey].data = newData;
-                        this.tables[tableKey].render();
+                    try {
+                        const state = this.store.get();
+                        const newData = handler(state);
+                        this.store.updatePath(stepId, this.getRelativePath(tableKey), newData);
+                        if (this.tables[tableKey]) {
+                            this.tables[tableKey].data = newData;
+                            this.tables[tableKey].render();
+                        }
+                        e.target.textContent = 'تم الجلب بنجاح';
+                        setTimeout(() => { e.target.textContent = smart.label; }, 2000);
+                    } catch (err) {
+                        console.error('Smart fill handler failed:', err);
+                        toast.error('تعذّر الجلب التلقائي');
+                        e.target.textContent = smart.label;
+                    } finally {
+                        e.target.disabled = false;
                     }
-                    e.target.disabled = false;
-                    e.target.textContent = 'تم الجلب بنجاح';
-                    setTimeout(() => { e.target.textContent = smart.label; }, 2000);
                 });
             }
         }
@@ -802,7 +812,7 @@ export class Wizard {
                 <div class="form-group">
                     <label for="field-${fullKey}">${arabicLabel}${tooltipHtml}</label>
                     <div class="input-with-ai">
-                        <textarea id="field-${fullKey}" data-key="${fullKey}" data-section="${section}" rows="3" class="input input--textarea" placeholder="اكتب أفكارك هنا، أو اضغط على زر 🪄 ليقوم الذكاء الاصطناعي باقتراح نص مناسب لمشروعك...">${displayValue}</textarea>
+                        <textarea id="field-${fullKey}" data-key="${fullKey}" data-section="${section}" rows="3" class="input input--textarea" placeholder="اكتب أفكارك هنا، أو اضغط على زر 🪄 ليقوم الذكاء الاصطناعي باقتراح نص مناسب لمشروعك...">${escapeHtml(displayValue)}</textarea>
                         <button type="button" class="btn-magic-wand" data-key="${fullKey}" title="اقتراح أو إعادة صياغة بالذكاء الاصطناعي" aria-label="اقتراح نص"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4V2m0 20v-2m7-7h-2M4 13H2m18.5-6.5L19 8M6 21l9-9"/><path d="m19 8-3-3-2 2 3 3 2-2z"/></svg></button>
                     </div>
                 </div>
@@ -832,7 +842,7 @@ export class Wizard {
         return `
             <div class="form-group">
                 <label for="field-${fullKey}">${arabicLabel}${tooltipHtml}</label>
-                <input type="${inputType}" id="field-${fullKey}" data-key="${fullKey}" value="${displayValue}" step="any" ${dirAttr} ${phGeneric}>
+                <input type="${inputType}" id="field-${fullKey}" data-key="${fullKey}" value="${escapeHtml(displayValue)}" step="any" ${dirAttr} ${phGeneric}>
                 ${hintHtml}
             </div>
         `;
@@ -903,7 +913,7 @@ export class Wizard {
             return `
                 <div class="form-group">
                     <label for="field-${fullKey}">${labelHtml}${tooltipHtml}</label>
-                    <input type="text" id="field-${fullKey}" data-key="${fullKey}" value="${safeVal}" list="${listId}" class="input input--datalist" placeholder="اختر من القائمة أو اكتب بحرية...">
+                    <input type="text" id="field-${fullKey}" data-key="${fullKey}" value="${escapeHtml(safeVal)}" list="${listId}" class="input input--datalist" placeholder="اختر من القائمة أو اكتب بحرية...">
                     <datalist id="${listId}">
                         ${optsHtml}
                     </datalist>
@@ -917,7 +927,7 @@ export class Wizard {
         return `
             <div class="form-group">
                 <label for="field-${fullKey}">${labelHtml}${tooltipHtml}</label>
-                <input type="text" id="field-${fullKey}" data-key="${fullKey}" value="${safeVal}" class="input">
+                <input type="text" id="field-${fullKey}" data-key="${fullKey}" value="${escapeHtml(safeVal)}" class="input">
                 ${hintHtml}
             </div>
         `;

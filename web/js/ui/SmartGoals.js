@@ -6,6 +6,7 @@
 import { DataService } from '../services/DataService.js';
 import { toast } from '../utils/toast.js';
 import { fieldHelp } from './components/FieldHelp.js';
+import { escapeHtml } from '../utils/escape.js';
 
 // خيارات «قابل للتحقيق» — value معياري، label عربي معروض ومخزّن
 const ACHIEVABLE_CHOICES = [
@@ -140,17 +141,17 @@ export class SmartGoals {
         return `
             <div class="goal-card" data-idx="${idx}">
                 <div class="goal-header">
-                    <span class="goal-title">${goal.specific || 'هدف غير محدد'}</span>
+                    <span class="goal-title">${goal.specific ? escapeHtml(goal.specific) : 'هدف غير محدد'}</span>
                     <span class="goal-status ${status.class}">${status.label}</span>
                 </div>
                 <div class="goal-details">
                     <div class="goal-measure">
                         <span class="label">القياس:</span>
-                        <span>${goal.measurable || '-'}</span>
+                        <span>${goal.measurable ? escapeHtml(goal.measurable) : '-'}</span>
                     </div>
                     <div class="goal-deadline">
                         <span class="label">الموعد:</span>
-                        <span>${goal.timeBound || '-'}</span>
+                        <span>${goal.timeBound ? escapeHtml(goal.timeBound) : '-'}</span>
                     </div>
                 </div>
                 <div class="goal-progress">
