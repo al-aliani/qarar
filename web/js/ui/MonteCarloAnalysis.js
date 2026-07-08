@@ -195,7 +195,9 @@ export class MonteCarloAnalysis {
         const min = Math.min(...npvs);
         const max = Math.max(...npvs);
         const range = max - min;
-        const width = range / bucketCount;
+        // حارس القسمة على صفر: إن تطابقت كل قيم NPV (تقلّب صفري)، width=0 يُنتج فهرس
+        // NaN لكل تكرار فتُهمَل البيانات صامتة (مدرّج فارغ رغم اكتمال المحاكاة).
+        const width = range > 0 ? range / bucketCount : 1;
 
         const buckets = Array(bucketCount).fill(0);
         const labels = Array(bucketCount).fill(0);

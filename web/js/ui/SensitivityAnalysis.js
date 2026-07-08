@@ -90,26 +90,17 @@ export class SensitivityAnalysis {
                             </tr>
                         </thead>
                         <tbody>
+                            ${[
+                                { label: '100% (أساسي)', npv: baseNPV, note: 'المستوى المستهدف' },
+                                { label: '90%', npv: runScenario({ revenueChange: -0.10 }), note: 'يعادل -10% إيرادات' },
+                                { label: '80%', npv: runScenario({ revenueChange: -0.20 }), note: 'يعادل -20% إيرادات' },
+                                { label: '70%', npv: runScenario({ revenueChange: -0.30 }), note: 'يعادل -30% إيرادات' }
+                            ].map(row => `
                             <tr>
-                                <td>100% (أساسي)</td>
-                                <td class="${baseNPV < 0 ? 'text-danger' : 'text-success'}">${this.formatCurrency(baseNPV)}</td>
-                                <td>المستوى المستهدف</td>
-                            </tr>
-                            <tr>
-                                <td>90%</td>
-                                <td class="${runScenario({ revenueChange: -0.10 }) < 0 ? 'text-danger' : 'text-success'}">${this.formatCurrency(runScenario({ revenueChange: -0.10 }))}</td>
-                                <td>يعادل -10% إيرادات</td>
-                            </tr>
-                            <tr>
-                                <td>80%</td>
-                                <td class="${runScenario({ revenueChange: -0.20 }) < 0 ? 'text-danger' : 'text-success'}">${this.formatCurrency(runScenario({ revenueChange: -0.20 }))}</td>
-                                <td>يعادل -20% إيرادات</td>
-                            </tr>
-                            <tr>
-                                <td>70%</td>
-                                <td class="${runScenario({ revenueChange: -0.30 }) < 0 ? 'text-danger' : 'text-success'}">${this.formatCurrency(runScenario({ revenueChange: -0.30 }))}</td>
-                                <td>يعادل -30% إيرادات</td>
-                            </tr>
+                                <td>${row.label}</td>
+                                <td class="${this._npvClass(row.npv)}">${this.formatCurrency(row.npv)}</td>
+                                <td>${row.note}</td>
+                            </tr>`).join('')}
                         </tbody>
                     </table>
                 </div>

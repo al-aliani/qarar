@@ -59,6 +59,9 @@ export class ScenarioAnalysis {
         const optimistic = scenarios.optimistic || { revenueChange: 0.25, costChange: -0.10 };
 
         // Calculate scenario-adjusted results using the REAL engine
+        // يُرجع null عند تعذّر الحساب (لا صفراً ملفَّقاً) — نفس عقد runScenario في
+        // SensitivityAnalysis.js (تدقيق 2026-07-08: كان يُرجع {npv:0,...} عند الفشل
+        // فتُعرض "٠ ر.س." كأنها نتيجة حسابية حقيقية بدل حالة تعذّر محايدة).
         const getResults = (s) => {
             try {
                 // Run full model with scenario parameters
@@ -66,32 +69,37 @@ export class ScenarioAnalysis {
                     revenueChange: s.revenueChange,
                     costChange: s.costChange
                 });
-                return res.indicators || {};
+                const npv = res?.indicators?.npv;
+                return (npv == null || Number.isNaN(npv)) ? null : res.indicators;
             } catch (e) {
                 console.error("Scenario Eval Error", e);
-                return { npv: 0, irr: 0, paybackPeriod: 0 };
+                return null;
             }
         };
 
         const pessResults = getResults(pessimistic);
-        const baseResultsCalc = baseResults?.indicators || { npv: 0, irr: 0, paybackPeriod: 0 }; // Use Base from main run
+        const baseNpv = baseResults?.indicators?.npv;
+        const baseResultsCalc = (baseNpv == null || Number.isNaN(baseNpv)) ? null : baseResults.indicators; // Use Base from main run
         const optResults = getResults(optimistic);
 
         // Alias for template usage (mapping indicators names to what template expects)
         //Template expects: npv, irr, payback. Model returns: npv, irr, paybackPeriod.
-        const mapToView = (r) => ({
-            npv: r.npv || 0,
-            irr: r.irr || 0,
+        const mapToView = (r) => r == null ? { npv: null, irr: null, payback: null } : {
+            npv: r.npv,
+            // احتراس مستقل عن NPV (تدقيق 2026-07-08، تحقّق عدائي): IRR قد يأتي NaN
+            // بمعزل عن NPV صالح من الناحية النظرية — بلا هذا الحارس كانت تظهر "NaN%"
+            // حرفياً في الواجهة، نفس فئة "الرقم الملفَّق" التي يمنعها هذا الإصلاح.
+            irr: (r.irr != null && Number.isFinite(r.irr)) ? r.irr : null,
             payback: (r.paybackPeriod != null && Number.isFinite(r.paybackPeriod)) ? r.paybackPeriod : null
-        });
+        };
         const fmtPayback = (p) => (p != null && p > 0) ? `${p.toFixed(1)} سنة` : 'غير محقق';
 
         const viewPess = mapToView(pessResults);
         const viewBase = mapToView(baseResultsCalc);
         const viewOpt = mapToView(optResults);
 
-        const formatCurrency = (n) => new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
-        const formatPercent = (n) => `${(n * 100).toFixed(1)}%`;
+        const formatCurrency = (n) => n == null ? '--' : new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
+        const formatPercent = (n) => n == null ? '--' : `${(n * 100).toFixed(1)}%`;
 
         return `
             <div class="scenarios-grid">
