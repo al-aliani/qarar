@@ -7,6 +7,8 @@ import { AIWriter } from '../services/AIWriter.js';
 import { generateTableSuggestions } from '../services/AIConnector.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { getTAMSuggestion } from '../services/SaudiDemographicsService.js';
+import { suggest, isUsable } from '../services/DataConnectors.js';
+import '../services/connectors/OverpassConnector.js'; // يسجّل 'market.competitors' ذاتياً عند التحميل
 import { toast } from '../utils/toast.js';
 import { SAUDI_REGIONS } from '../data/SaudiCityStats.js';
 
@@ -720,7 +722,11 @@ export class MarketAnalysis {
             }
         });
 
-        // AI Competitors Handler
+        // AI Competitors Handler — تدقيق 2026-07-08: كانت طبقة DataConnectors/OverpassConnector
+        // (بيانات حية فعلية من OpenStreetMap) مبنية ومختبرة لكن غير مستدعاة إطلاقاً؛ الزر
+        // كان يوهم المستخدم بـ"اكتشاف" بينما المصدر نص AI مولَّد بالكامل بلا صلة بموقع حقيقي.
+        // الآن: نحاول أولاً منافسين حقيقيين من Overpass حول مدينة/إحداثيات المشروع، ونسقط
+        // فقط عند تعذّر ذلك (لا تغطية OSM/لا إحداثيات) إلى توليد AI النصي كما كان.
         this.container.querySelectorAll('.ai-competitors-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 if (this.isGenerating) return;
@@ -733,15 +739,39 @@ export class MarketAnalysis {
                 const projectInfo = state.projectInfo || {};
 
                 try {
-                    const rawResult = await AIWriter.generate('competitors', projectInfo);
-                    const compsData = typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult;
+                    // تدقيق 2026-07-08 (تحقق عدائي): projectInfo.coords غير موجود في المخطط
+                    // إطلاقاً — الإحداثيات الفعلية إن أُدخلت هي locationAnalysis.coordinates.
+                    const coords = projectInfo.locationAnalysis?.coordinates;
+                    const hasRealCoords = coords && Number.isFinite(Number(coords.lat)) && Number.isFinite(Number(coords.lng));
+                    const live = await suggest('market.competitors', {
+                        city: projectInfo.city,
+                        coords: hasRealCoords ? coords : undefined
+                    });
 
-                    if (Array.isArray(compsData)) {
+                    if (isUsable(live) && Array.isArray(live.value?.sample) && live.value.sample.length > 0) {
+                        const current = state.marketing?.competitors || [];
+                        const fromOsm = live.value.sample.map(s => ({
+                            name: s.name, marketShare: 0, strengths: '', weaknesses: '', advantage: ''
+                        }));
                         this.store.update('marketing', {
                             ...state.marketing,
-                            competitors: compsData
+                            competitors: [...current, ...fromOsm]
                         });
+                        toast.success(`عُثر على ${live.value.count} منشأة قريبة فعلياً (OpenStreetMap) — أضف حصة السوق ونقاط القوة/الضعف يدوياً.`);
                         this.render();
+                    } else {
+                        // لا تغطية OSM لهذا الموقع أو لا إحداثيات/مدينة معروفة — احتياط AI نصي كما كان،
+                        // مع إفصاح صريح أن هذه أسماء مولَّدة لا بيانات حية (لا إيهام).
+                        const rawResult = await AIWriter.generate('competitors', projectInfo);
+                        const compsData = typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult;
+                        if (Array.isArray(compsData)) {
+                            this.store.update('marketing', {
+                                ...state.marketing,
+                                competitors: compsData
+                            });
+                            toast.warning('تعذّر العثور على بيانات منافسين حية لموقعك — تم توليد أمثلة نصية بالذكاء الاصطناعي، راجعها وعدّلها.');
+                            this.render();
+                        }
                     }
                 } catch (err) {
                     console.error("AI Comp Error", err);

@@ -37,10 +37,18 @@ export default defineConfig({
             enabled: true,
             reporter: ['text', 'html'],
             reportsDirectory: './coverage',
-            lines: 80,
-            functions: 80,
-            branches: 80,
-            statements: 80,
+            // تدقيق 2026-07-08: كانت lines/functions/branches/statements هنا مباشرة تحت
+            // coverage (بلا مفتاح thresholds) — صياغة Vitest 1.x قديمة لا يقرأها Vitest 2.x،
+            // فتُتجاهل صامتة و"80%" كانت وثيقة زخرفية (التغطية الفعلية ~18-19% وnpm test
+            // ينجح دون أي تحذير). الصياغة الصحيحة thresholds أدناه، بحد ابتدائي واقعي
+            // أسفل القيمة الفعلية الحالية بقليل (حاجز انحدار Ratchet) بدل رقم مطلق غير
+            // قابل للتحقق — يُرفع تدريجياً مع كل حملة اختبارات جديدة، لا يُنزَّل أبداً.
+            thresholds: {
+                lines: 18,
+                functions: 24,
+                branches: 55,
+                statements: 18,
+            },
             exclude: [
                 'node_modules/**',
                 'dist/**',

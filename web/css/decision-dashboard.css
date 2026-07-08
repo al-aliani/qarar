@@ -2671,6 +2671,44 @@
     line-height: 1.65;
 }
 
+/* الوضع الداكن: عكس رموز النص/الخلفية فقط — رموز الأخضر/الذهبي (green/green-deep/
+   green-tint/gold) تبقى كما هي لأنها أزواج تباين مُتحقَّقة أصلاً (نص أبيض على تدرّج
+   أخضر) في كلا الثيمين. كانت هذه الصفحة عمياء تماماً عن data-theme=dark (تدقيق 2026-07-08). */
+[data-theme="dark"] .qh-hero-section,
+[data-theme="dark"] .qh-steps-section,
+[data-theme="dark"] .qh-trust-section {
+    --qh-ink: #eef5f0;
+    --qh-ink-soft: #c3d1c9;
+    --qh-ink-mid: #93a39a;
+    --qh-ink-faint: #6b7a72;
+    --qh-cream-deep: rgba(238, 245, 240, 0.06);
+    --qh-paper: #16261f;
+    --qh-line: rgba(238, 245, 240, 0.14);
+    --qh-shadow: 0 22px 55px -28px rgba(0, 0, 0, 0.55);
+    --qh-shadow-soft: 0 12px 34px -20px rgba(0, 0, 0, 0.45);
+}
+/* عناصر بخلفيات/حدود بيضاء صريحة (لا تستجيب لتبديل الرموز أعلاه) */
+[data-theme="dark"] .qh-card-ribbon,
+[data-theme="dark"] .qh-float {
+    background: var(--qh-paper);
+}
+[data-theme="dark"] .qh-btn-outline {
+    background: rgba(238, 245, 240, 0.06);
+    border-color: var(--qh-line);
+}
+[data-theme="dark"] .qh-btn-outline:hover {
+    background: rgba(238, 245, 240, 0.1);
+}
+[data-theme="dark"] .qh-kicker,
+[data-theme="dark"] .qh-continue,
+[data-theme="dark"] .qh-jstep:hover,
+[data-theme="dark"] .qh-jnode {
+    border-color: var(--qh-line);
+}
+[data-theme="dark"] .qh-jnode {
+    background: linear-gradient(155deg, var(--qh-green-tint), var(--qh-paper));
+}
+
 /* ---------- الهيرو ---------- */
 .qh-hero { display: grid; grid-template-columns: 1.32fr .9fr; gap: 52px; align-items: center; }
 .qh-hero-copy { min-width: 0; }

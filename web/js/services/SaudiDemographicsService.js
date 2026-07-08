@@ -1,52 +1,21 @@
 /**
  * SaudiDemographicsService — اقتراح TAM بناءً على بيانات هيئة الإحصاء
  * عند اختيار المدينة والقطاع: حجم السوق = عدد السكان × نسبة الاستهلاك للقطاع، مع ذكر المصدر.
+ *
+ * تدقيق 2026-07-08: كان هناك نسختان يدويتان من نفس بيانات GASTAT — كائن FALLBACK_DATA
+ * هنا (مكتوب يدوياً) وweb/data/SaudiDemographics.json — واختلفتا فعلياً بنسبة 19-25% لجدة
+ * ومكة المكرمة رغم ادّعاء كلتيهما نفس المصدر. الحل الجذري: استيراد ملف JSON مباشرة
+ * كوحدة (Vite يدعم هذا أصلاً) بدل نسخ يدوي عرضة للانحراف — الآن مصدر واحد فعلي؛
+ * fetch() يبقى كمحاولة أولى لتحديث حي مستقبلي دون إعادة نشر، وfallback الحقيقي هو
+ * نفس ملف JSON المستورد وقت البناء، لا نسخة منفصلة قد تنحرف عنه صامتة.
  */
+import demographicsJson from '../../data/SaudiDemographics.json';
 
 let _cache = null;
 
-// المصادر: أعداد السكان (population) مبنية على تعداد الهيئة العامة للإحصاء 2022.
-// أمّا متوسط دخل الفرد (perCapitaIncomeSAR) فهو تقدير داخلي (ASSUMPTION) — الهيئة لا تنشر
-// دخل الفرد على مستوى المدينة، لذا يُوسم صراحةً كتقدير لا كرقم مصدري رسمي.
-const FALLBACK_DATA = {
-    meta: {
-        populationSource: 'الهيئة العامة للإحصاء (GASTAT) — تعداد 2022',
-        populationUrl: 'https://www.stats.gov.sa',
-        incomeSource: 'تقدير داخلي (ASSUMPTION) — ليس رقماً رسمياً منشوراً',
-        year: 2022
-    },
-    cities: {
-        'الرياض': { population: 7676654, perCapitaIncomeSAR: 98500, region: 'منطقة الرياض' },
-        'جدة': { population: 3751722, perCapitaIncomeSAR: 92000, region: 'منطقة مكة المكرمة' },
-        'مكة المكرمة': { population: 2427924, perCapitaIncomeSAR: 78000, region: 'منطقة مكة المكرمة' },
-        'مكة': { population: 2427924, perCapitaIncomeSAR: 78000, region: 'منطقة مكة المكرمة' },
-        'المدينة المنورة': { population: 1481000, perCapitaIncomeSAR: 82000, region: 'منطقة المدينة المنورة' },
-        'المدينة': { population: 1481000, perCapitaIncomeSAR: 82000, region: 'منطقة المدينة المنورة' },
-        'الدمام': { population: 1208000, perCapitaIncomeSAR: 95000, region: 'المنطقة الشرقية' },
-        'الخبر': { population: 573000, perCapitaIncomeSAR: 102000, region: 'المنطقة الشرقية' },
-        'الطائف': { population: 993000, perCapitaIncomeSAR: 72000, region: 'منطقة مكة المكرمة' },
-        'تبوك': { population: 569797, perCapitaIncomeSAR: 68000, region: 'منطقة تبوك' },
-        'بريدة': { population: 614093, perCapitaIncomeSAR: 75000, region: 'منطقة القصيم' },
-        'خميس مشيط': { population: 512599, perCapitaIncomeSAR: 71000, region: 'منطقة عسير' },
-        'أبها': { population: 366551, perCapitaIncomeSAR: 74000, region: 'منطقة عسير' },
-        'القطيف': { population: 524182, perCapitaIncomeSAR: 88000, region: 'المنطقة الشرقية' },
-        'حائل': { population: 412758, perCapitaIncomeSAR: 70000, region: 'منطقة حائل' },
-        'جازان': { population: 173569, perCapitaIncomeSAR: 65000, region: 'منطقة جازان' },
-        'نجران': { population: 329112, perCapitaIncomeSAR: 66000, region: 'منطقة نجران' },
-        'أخرى': { population: 5000000, perCapitaIncomeSAR: 70000, region: 'مختلف المناطق' }
-    },
-    sectorConsumptionShare: {
-        default: 0.02,
-        مطعم: 0.025, قهوة: 0.015, كافي: 0.015, مشروبات: 0.01,
-        تجزئة: 0.05, بقالة: 0.04, متجر: 0.04, بيع: 0.04,
-        تعليم: 0.03, تدريب: 0.02, صحي: 0.04, عيادة: 0.035,
-        استشار: 0.015, خدمي: 0.02, لوجستي: 0.025, شحن: 0.02, نقل: 0.02,
-        صناع: 0.03, إنتاج: 0.03
-    }
-};
-
 /**
- * تحميل بيانات السعودية الديموغرافية (من JSON أو من الذاكرة المؤقتة)
+ * تحميل بيانات السعودية الديموغرافية (من JSON عبر fetch حي، أو من نفس ملف JSON
+ * المُستورَد وقت البناء كاحتياط — لا نسخة مكتوبة يدوياً بعد الآن)
  */
 export async function loadDemographics() {
     if (_cache) return _cache;
@@ -58,7 +27,7 @@ export async function loadDemographics() {
             return _cache;
         }
     } catch (_) {}
-    _cache = FALLBACK_DATA;
+    _cache = demographicsJson;
     return _cache;
 }
 

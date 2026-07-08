@@ -3,6 +3,7 @@
  * Visualizes risk distribution
  */
 import { MonteCarloEngine } from '../core/MonteCarloEngine.js';
+import { SECTIONS } from '../core/schema.js';
 
 export class MonteCarloAnalysis {
     constructor(containerId, store) {
@@ -11,33 +12,53 @@ export class MonteCarloAnalysis {
     }
 
     render() {
+        // نتائج محفوظة من تشغيل سابق (إن وُجدت) — لا نُشغّل 1000 تكرار تلقائياً عند كل زيارة
+        // للخطوة (كان يجمّد الخيط الرئيسي — تدقيق 2026-07-08)؛ التشغيل بزر صريح فقط الآن.
+        const saved = this.store.getState()[SECTIONS.MONTE_CARLO]?.lastRun || null;
+
         this.container.innerHTML = `
             <div class="monte-carlo-section">
                 <h2 class="section-title">🎲 محاكاة مونت كارلو (تحليل المخاطر)</h2>
-                
+
                 <div class="card">
                     <div class="flex-between mb-4">
                         <div>
                             <p class="text-muted">يقوم هذا التحليل بتشغيل 1000 سيناريو محتمل لقياس احتمالية الربح.</p>
+                            ${saved ? `<p class="text-xs text-muted mt-1">آخر تشغيل: ${new Date(saved.runAt).toLocaleString('ar-SA')} — بذرة ثابتة (نفس المدخلات = نفس النتيجة)</p>` : ''}
                         </div>
                         <button id="btnRunSim" class="btn btn--primary btn-magic">
                             تشغيل المحاكاة 🚀
                         </button>
                     </div>
 
-                    <div id="simResults" class="hidden">
+                    <div id="simResults" class="${saved ? '' : 'hidden'}">
                         <div class="kpi-grid mb-6">
                             <div class="kpi-card">
                                 <span class="kpi-label">احتمالية النجاح (صافي القيمة الحالية > 0)</span>
                                 <span class="kpi-value" id="probSuccess">--</span>
                             </div>
                             <div class="kpi-card">
-                                <span class="kpi-label">متوسط الربح المتوقع</span>
+                                <span class="kpi-label">متوسط صافي القيمة الحالية (NPV)</span>
                                 <span class="kpi-value" id="avgNPV">--</span>
                             </div>
                             <div class="kpi-card">
                                 <span class="kpi-label">درجة المخاطرة</span>
                                 <span class="kpi-value" id="riskRating">--</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-grid mb-6" aria-label="نطاق NPV حسب شدة السيناريو">
+                            <div class="kpi-card">
+                                <span class="kpi-label">متشائم (p10) — 10% احتمال أسوأ من هذا</span>
+                                <span class="kpi-value text-danger" id="npvP10">--</span>
+                            </div>
+                            <div class="kpi-card">
+                                <span class="kpi-label">وسيط (p50)</span>
+                                <span class="kpi-value" id="npvP50">--</span>
+                            </div>
+                            <div class="kpi-card">
+                                <span class="kpi-label">متفائل (p90) — 10% احتمال أفضل من هذا</span>
+                                <span class="kpi-value text-success" id="npvP90">--</span>
                             </div>
                         </div>
 
@@ -52,8 +73,34 @@ export class MonteCarloAnalysis {
 
         this.bindEvents();
 
-        // Auto-run simulation on load
-        requestAnimationFrame(() => this.run());
+        // إن وُجدت نتيجة محفوظة نعرضها فوراً بلا إعادة حساب (رسم المدرّج يحتاج النتائج
+        // الخام، لا نحتفظ بها في الحالة — نعرض المؤشرات فقط ونطلب زر التشغيل للمدرّج)
+        if (saved) this.displaySavedSummary(saved);
+    }
+
+    displaySavedSummary(saved) {
+        const probEl = this.container.querySelector('#probSuccess');
+        const avgEl = this.container.querySelector('#avgNPV');
+        const riskEl = this.container.querySelector('#riskRating');
+        if (!probEl) return;
+        probEl.textContent = (saved.successProbability * 100).toFixed(1) + '%';
+        probEl.style.color = saved.successProbability > 0.7 ? 'var(--c-success)' : (saved.successProbability > 0.4 ? 'var(--c-warning)' : 'var(--c-danger)');
+        avgEl.textContent = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(saved.avgNPV);
+        let risk = 'منخفضة ✅';
+        if (saved.successProbability < 0.8) risk = 'متوسطة ⚠️';
+        if (saved.successProbability < 0.5) risk = 'عالية ⛔';
+        riskEl.textContent = risk;
+        this.fillPercentiles(saved.p10, saved.p50, saved.p90);
+    }
+
+    fillPercentiles(p10, p50, p90) {
+        const fmt = (n) => new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
+        const p10El = this.container.querySelector('#npvP10');
+        const p50El = this.container.querySelector('#npvP50');
+        const p90El = this.container.querySelector('#npvP90');
+        if (p10El && p10 != null) p10El.textContent = fmt(p10);
+        if (p50El && p50 != null) p50El.textContent = fmt(p50);
+        if (p90El && p90 != null) p90El.textContent = fmt(p90);
     }
 
     bindEvents() {
@@ -75,10 +122,25 @@ export class MonteCarloAnalysis {
 
         try {
             const state = this.store.getState();
-            const simulation = MonteCarloEngine.runSimulation(state, 1000, 0.20); // 20% volatility
+            // بذرة ثابتة: نفس بيانات الدراسة تُنتج نفس الاحتمالية والمدرّج في كل تشغيل
+            // (قابلية تدقيق) بدل نتيجة عشوائية مختلفة كل مرة.
+            const simulation = MonteCarloEngine.runSimulation(state, 1000, 0.20);
 
             this.displayResults(simulation);
             resultsDiv.classList.remove('hidden');
+
+            if (simulation && simulation.ok !== false) {
+                this.store.updatePath(SECTIONS.MONTE_CARLO, 'lastRun', {
+                    successProbability: simulation.stats.successProbability,
+                    avgNPV: simulation.stats.avgNPV,
+                    p10: simulation.stats.p10,
+                    p50: simulation.stats.p50,
+                    p90: simulation.stats.p90,
+                    iterations: simulation.iterations ?? 1000,
+                    volatility: 0.20,
+                    runAt: new Date().toISOString(),
+                });
+            }
         } catch (err) {
             console.error(err);
             alert('حدث خطأ أثناء المحاكاة');
@@ -105,7 +167,7 @@ export class MonteCarloAnalysis {
             return;
         }
 
-        const { successProbability, avgNPV } = sim.stats;
+        const { successProbability, avgNPV, p10, p50, p90 } = sim.stats;
 
         probEl.textContent = (successProbability * 100).toFixed(1) + '%';
         probEl.style.color = successProbability > 0.7 ? 'var(--c-success)' : (successProbability > 0.4 ? 'var(--c-warning)' : 'var(--c-danger)');
@@ -117,6 +179,8 @@ export class MonteCarloAnalysis {
         if (successProbability < 0.8) risk = 'متوسطة ⚠️';
         if (successProbability < 0.5) risk = 'عالية ⛔';
         riskEl.textContent = risk;
+
+        this.fillPercentiles(p10, p50, p90);
 
         // Render Histogram
         this.renderHistogram(sim.results);

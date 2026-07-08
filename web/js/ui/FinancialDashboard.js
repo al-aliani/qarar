@@ -82,7 +82,11 @@ export class FinancialDashboard {
             return;
         }
 
-        const { capex, opex, depreciation, incomeStatement, indicators, decision, cashFlow } = this.results;
+        const { capex, opex, depreciation, incomeStatement, indicators, decision, cashFlow, assumptionsApplied } = this.results;
+        // تدقيق 2026-07-08: كانت بطاقتا IRR/ROI تلوّنان بعتبات ثابتة (5%/0%) منفصلة عن
+        // عتبات شارة القرار (15%/20%) — نفس الشاشة تُظهر بطاقة خضراء "إيجابي" بجانب
+        // شارة قرار حمراء REVISE مباشرة. الآن تُقرأ من نفس مصدر العتبات الموحّد.
+        const decisionThresholds = assumptionsApplied?.thresholds || { minIRR: 0.15, minROI: 0.20 };
         const isSimpleView = (studyData.appSettings?.mode || 'advanced') === 'mini';
         const y1 = incomeStatement[0] || {};
         const revY1 = y1.revenue ?? 0;
@@ -188,9 +192,9 @@ export class FinancialDashboard {
             <!-- Key Indicators Grid (مخفى في العرض المبسّط) -->
             <div id="fullKpiGrid" class="indicators-grid ${isSimpleView ? 'hidden' : ''}">
                 ${this.renderKPICard('صافي القيمة الحالية', 'صافي القيمة الحالية', this.formatCurrency(indicators.npv), indicators.npv >= 0 ? 'positive' : 'negative')}
-                ${this.renderKPICard('معدل العائد الداخلي', 'معدل العائد الداخلي', this.formatPercent(indicators.irr), indicators.irr >= 0.05 ? 'positive' : 'negative')}
+                ${this.renderKPICard('معدل العائد الداخلي', 'معدل العائد الداخلي', this.formatPercent(indicators.irr), indicators.irr >= decisionThresholds.minIRR ? 'positive' : 'negative')}
                 ${this.renderKPICard('فترة الاسترداد', 'فترة الاسترداد', (indicators.paybackPeriod != null && Number.isFinite(indicators.paybackPeriod)) ? indicators.paybackPeriod.toFixed(1) + ' سنة' : 'غير قابل للاسترداد خلال فترة الدراسة', 'neutral')}
-                ${this.renderKPICard('العائد على الاستثمار', 'العائد على الاستثمار', this.formatPercent(indicators.roi), indicators.roi > 0 ? 'positive' : 'negative')}
+                ${this.renderKPICard('العائد على الاستثمار', 'العائد على الاستثمار', this.formatPercent(indicators.roi), indicators.roi >= decisionThresholds.minROI ? 'positive' : 'negative')}
             </div>
 
             <!-- لوحة مؤشرات القرار (تعادل، عائد، DSCR) - مدارج -->
@@ -204,7 +208,7 @@ export class FinancialDashboard {
                     </div>
                     <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px;">
                         <div class="kpi-label text-muted">العائد على الاستثمار (ROI)</div>
-                        <div class="kpi-value ${(indicators.roi || 0) > 0 ? 'positive' : 'negative'}">${this.formatPercent(indicators.roi || 0)}</div>
+                        <div class="kpi-value ${(indicators.roi || 0) >= decisionThresholds.minROI ? 'positive' : 'negative'}">${this.formatPercent(indicators.roi || 0)}</div>
                         <p class="text-xs text-muted mt-1">عائد سنوي على إجمالي الاستثمار</p>
                     </div>
                     <div class="kpi-card" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px;">

@@ -693,7 +693,7 @@ export class Wizard {
 
         // طريقة القيمة النهائية: قائمة اختيار بدل نص حر
         if (fullKey === 'terminalValue.method') {
-            const arabicLbl = getLabelSDB(labelKey, getLabel(labelKey));
+            const arabicLbl = getLabelSDB(labelKey, getLabel(fullKey));
             const tvEntry = getFieldHelp('terminalValue');
             return `
                 <div class="form-group">
@@ -708,7 +708,7 @@ export class Wizard {
 
         const displayValue = value === null || value === undefined ? '' : value;
         const checked = value === true ? 'checked' : '';
-        const arabicLabel = getLabelSDB(labelKey, getLabel(labelKey));
+        const arabicLabel = getLabelSDB(labelKey, getLabel(fullKey));
         const auditorHint = getAuditorTooltip(labelKey);
         // أيقونة (؟) تُلحق بكل مواضع رسم الملصق عبر tooltipHtml نفسه — بلا تعديل باقي الفروع
         const tooltipHtml = (auditorHint ? `<span class="tooltip-auditor" title="هذا ما يبحث عنه المدقق المالي: ${auditorHint.replace(/"/g, '&quot;')}" aria-label="تلميح للمدقق المالي"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11.5 12H12v4h.5"/></svg></span>` : '') + helpHtml;

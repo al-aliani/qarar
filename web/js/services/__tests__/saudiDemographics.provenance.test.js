@@ -1,9 +1,21 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getCityData, getTAMSuggestion } from '../SaudiDemographicsService.js';
+import demographicsJson from '../../../data/SaudiDemographics.json';
 
 // نتأكد أن التوليد المحلي (FALLBACK) يُستخدم — لا شبكة
 beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('no network in test'))));
+});
+
+describe('توحيد مصدر السكان (تدقيق 2026-07-08)', () => {
+    it('مسار fallback (بلا شبكة) يعيد بالضبط أرقام web/data/SaudiDemographics.json — لا نسخة يدوية منفصلة', async () => {
+        // كان FALLBACK_DATA المكتوب يدوياً يختلف عن هذا الملف بنسبة 19-25% لجدة ومكة —
+        // الآن كلاهما نفس الاستيراد، فلا يمكن أن ينحرفا بعضهما عن بعض مستقبلاً.
+        const jeddah = await getCityData('جدة');
+        expect(jeddah.population).toBe(demographicsJson.cities['جدة'].population);
+        const makkah = await getCityData('مكة المكرمة');
+        expect(makkah.population).toBe(demographicsJson.cities['مكة المكرمة'].population);
+    });
 });
 
 describe('SaudiDemographicsService — صدق المصدر (provenance)', () => {

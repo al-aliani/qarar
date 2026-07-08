@@ -1,5 +1,5 @@
 
-import { SECTIONS } from './schema.js';
+import { SECTIONS, SAUDI_GOSI_RATE_2026 } from './schema.js';
 import { computeLoanSchedule } from '../../../lib/calc/loanSchedule.js';
 import { generateBalanceSheets } from '../../../lib/calc/balanceSheet.js';
 import { analyzeSaaSMetrics } from './SaaSEngine.js';
@@ -92,20 +92,23 @@ export function calculateStudy(study, overrides) {
     const admin = study[SECTIONS.ADMINISTRATIVE] || {};
     const serviceItems = toArray(services.items);
 
-    // حصة صاحب العمل في التأمينات (GOSI) للسعودي: نظام التأمينات الاجتماعية الجديد (3 يوليو 2024)
-    // يرفع نسبة المشترك الجديد تدريجياً؛ مشروع جديد كل موظفيه «مشتركون جدد» ⇒ ~12.75% في 2026.
-    // قابل للتجاوز عبر assumptions.gosiRate. (المرجع: التأمينات الاجتماعية — النظام الجديد)
-    const SAUDI_GOSI_RATE_2026 = 0.1275;
-    const gosiRate = study.assumptions?.gosiRate || hr.gosiRate || SAUDI_GOSI_RATE_2026;
+    // حصة صاحب العمل في التأمينات (GOSI) للسعودي — ثابت مُصدَّر من schema.js (مصدر وحيد،
+    // كان مكرراً محلياً بقيمة مختلفة 0.1175 هناك رغم تعليق يدّعي التطابق — تدقيق 2026-07-08).
+    // قابل للتجاوز عبر assumptions.gosiRate أو hr.gosiRate — ?? تحترم تجاوزاً صريحاً بـ0
+    // (بخلاف || القديمة التي كانت تتجاهل الصفر الصريح كما لو كان فراغاً).
+    const gosiRate = study.assumptions?.gosiRate ?? hr.gosiRate ?? SAUDI_GOSI_RATE_2026;
     const positions = toArray(hr.positions);
     const totalSalaries = positions.reduce((acc, pos) => {
         return acc + (Number(pos.salary || 0) * Number(pos.count || 1) * Number(pos.months || 12));
     }, 0);
 
-    // GOSI حسب الجنسية — مطابق لصيغة جدول الرواتب في الواجهة (schema positions.annualCost)
+    // GOSI حسب الجنسية — مطابق فعلياً الآن لصيغة جدول الرواتب في الواجهة (schema
+    // positions.annualCost)، وتجاوز المستخدم (gosiRate أعلاه) يسري على صفوف السعوديين
+    // أيضاً لا فقط الصفوف بلا جنسية محددة (كان bug: صفوف "saudi" تتجاهل التجاوز تماماً).
+    // الوافد يبقى ثابتاً 2% (مخاطر مهنية فقط، لا تتأثر بتجاوز نسبة GOSI السعودية).
     const gosiCost = positions.reduce((acc, pos) => {
         const basic = Number(pos.salary || 0) * Number(pos.count || 1) * Number(pos.months || 12);
-        const rate = pos.nationality === 'saudi' ? SAUDI_GOSI_RATE_2026 : (pos.nationality === 'expat' ? 0.02 : gosiRate);
+        const rate = pos.nationality === 'expat' ? 0.02 : gosiRate;
         return acc + basic * rate;
     }, 0);
 
@@ -866,6 +869,11 @@ export function calculateStudy(study, overrides) {
         })
     ];
 
+    // معاينة مبكرة لتحليل السوق (تحتاج incomeStatement فقط، متاح هنا) — تُستخدم في بوابة
+    // القرار أدناه («واقعية السوق»)؛ result.saudiMarket أسفل الدالة يعيد حسابها للتوافق
+    // الخلفي مع بقية الشاشات (حساب رخيص نقي، لا ضرر من التكرار).
+    const marketPreview = analyzeSaudiMarket(study, { incomeStatement });
+
     const result = {
         capex: {
             capitalStructure,
@@ -907,7 +915,10 @@ export function calculateStudy(study, overrides) {
             taxRate,
             foreignOwnershipRate: foreignShare,
             discountRate,
-            inflationRate: inflation
+            inflationRate: inflation,
+            // مصدر وحيد لعتبات القرار المُطبَّقة فعلياً (بعد دمج تجاوزات المستخدم مع
+            // الافتراضات) — الشاشات تقرأ من هنا بدل بناء احتياطياتها الخاصة (تدقيق 2026-07-08).
+            thresholds: resolveDecisionThresholds(study.assumptions?.thresholds, financing)
         },
         // فحص التمويل الموحد — كل الشاشات تقرأ منه (خطوة التمويل، بوابة التصدير، الميزانية)
         financingCheck: {
@@ -966,13 +977,22 @@ export function calculateStudy(study, overrides) {
                     `المبيعات المخططة (${capacityCheck.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر) تتجاوز الطاقة القصوى (${capacityCheck.maxUnitsPerMonth.toLocaleString('ar-SA')}) — خفّض التوقعات أو وسّع الطاقة`
                 );
             }
+            // إيراد يتجاوز حصة السوق القابلة للالتقاط (SOM) بمقدار واضح لا يمكن أن يكون GO
+            // مهما كانت المؤشرات — نفس منطق تجاوز الطاقة أعلاه لكن من زاوية حجم السوق لا
+            // الطاقة التشغيلية (كان تحذيراً تجميلياً فقط لا يغيّر القرار — تدقيق 2026-07-08).
+            if (marketPreview?.warnings?.some(w => w.code === 'REVENUE_EXCEEDS_SOM')) {
+                if (d.decision === 'GO') d.decision = 'REVISE';
+                d.decisionReasons.unshift(
+                    `إيراد السنة الأولى (${Math.round(marketPreview.y1Revenue).toLocaleString('ar-SA')} ريال) يتجاوز حصة السوق القابلة للالتقاط SOM (${marketPreview.som.toLocaleString('ar-SA')} ريال) — راجع توقع العملاء/السعر أو وثّق مصدر SOM أعلى`
+                );
+            }
             if (Number(fundingGap) > 1) {
                 if (d.decision === 'GO') d.decision = 'REVISE';
                 d.decisionReasons.unshift(
                     `مصادر التمويل أقل من الاستثمار المطلوب بفجوة ${Math.round(fundingGap).toLocaleString('ar-SA')} ريال — لا تعتمد القرار قبل رفع رأس المال أو خفض التكاليف الرأسمالية/رأس المال العامل`
                 );
             }
-            const minDscr = Number(financing.targetDSCR ?? 1.25);
+            const minDscr = resolveDecisionThresholds(study.assumptions?.thresholds, financing).targetDSCR;
             if (loanAmount > 0 && (dscrYear1 == null || dscrYear1 < minDscr)) {
                 if (d.decision === 'GO') d.decision = 'REVISE';
                 const dscrText = dscrYear1 == null ? 'غير قابل للحساب بسبب EBITDA سالبة/صفرية' : dscrYear1.toFixed(2);
@@ -1001,17 +1021,35 @@ export function calculateStudy(study, overrides) {
 }
 
 /**
+ * مصدر وحيد لعتبات قرار GO/NO-GO/REVISE المُطبَّقة فعلياً — تدقيق 2026-07-08:
+ * كانت كل شاشة (لوحة القرار، تحليل الجدوى الاستثمارية، لوحة التحكم المالي) تبني
+ * احتياطياتها الخاصة عند غياب إدخال المستخدم (مثال: DSCR 1.5 هناك مقابل 1.25 هنا،
+ * واسترداد 7 سنوات هناك مقابل 3.5 هنا فعلياً) فتُظهر ✓ لمشروع يرفضه هذا القرار
+ * نفسه. أي شاشة تعرض عتبة قرار يجب أن تستورد هذه الدالة (عبر results.assumptionsApplied.thresholds)
+ * بدل كتابة رقم احتياطي محلي خاص بها.
+ * @param {Object} th - study.assumptions.thresholds
+ * @param {Object} [financing] - study.financing (للتوافق مع مسار قديم financing.targetDSCR)
+ */
+export function resolveDecisionThresholds(th, financing) {
+    const t = th || {};
+    const f = financing || {};
+    return {
+        minNPV: t.minNPV != null ? Number(t.minNPV) : 0,
+        minIRR: t.minIRR != null ? Number(t.minIRR) : 0.15,
+        maxPayback: t.maxPayback != null ? Number(t.maxPayback) : 3.5,
+        minROI: t.minROI != null ? Number(t.minROI) : 0.20,
+        targetDSCR: t.targetDSCR != null ? Number(t.targetDSCR) : (f.targetDSCR != null ? Number(f.targetDSCR) : 1.25),
+    };
+}
+
+/**
  * ينتج GO / NO-GO / REVISE بناءً على حدود 01_Assumptions.
  * @param {Object} th - study.assumptions.thresholds
  * @param {Object} k - { npv, irr, paybackPeriod, roi } — paybackPeriod قد يكون null (غير قابل للاسترداد)
  * @returns {{ decision: 'GO'|'NO-GO'|'REVISE', decisionReasons: string[] }}
  */
 function computeDecision(th, k) {
-    const t = th || {};
-    const minNPV = t.minNPV != null ? Number(t.minNPV) : 0;
-    const minIRR = t.minIRR != null ? Number(t.minIRR) : 0.15;
-    const maxPayback = t.maxPayback != null ? Number(t.maxPayback) : 7;
-    const minROI = t.minROI != null ? Number(t.minROI) : 0.20;
+    const { minNPV, minIRR, maxPayback, minROI } = resolveDecisionThresholds(th);
 
     const passNPV = (k.npv ?? 0) > minNPV;
     const passIRR = (k.irr ?? 0) >= minIRR;

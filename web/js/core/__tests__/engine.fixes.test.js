@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { calculateStudy } from '../engine.js';
-import { SECTIONS } from '../schema.js';
+import { SECTIONS, TABLE_SCHEMAS, SAUDI_GOSI_RATE_2026 } from '../schema.js';
 import { computeLoanSchedule } from '../../../../lib/calc/loanSchedule.js';
 
 function makeStudy(overrides = {}) {
@@ -165,6 +165,32 @@ describe('GOSI حسب الجنسية + رسوم الوافدين', () => {
         const expatCost = salaries * 1.02 + (9600 + 2500 + 650);
         // opex.fixedAnnual يشمل +2500 رسوماً حكومية تقديرية للمنشأة (ثابتة في الحالتين)
         expect(saudi.opex.fixedAnnual - expat.opex.fixedAnnual).toBeCloseTo(saudiCost - expatCost, 0);
+    });
+
+    it('تجاوز assumptions.gosiRate يسري فعلياً على صف سعودي (تدقيق 2026-07-08: كان يُتجاهل تماماً)', () => {
+        const positions = [{ position: 'شيف', count: 1, salary: 5000, months: 12, nationality: 'saudi' }];
+        const withDefault = calculateStudy(makeStudy({
+            [SECTIONS.HR]: { positions, healthInsurancePerHead: 0, govtFees: {} }
+        }));
+        const withOverride = calculateStudy(makeStudy({
+            assumptions: { gosiRate: 0.20 },
+            [SECTIONS.HR]: { positions, healthInsurancePerHead: 0, govtFees: {} }
+        }));
+        const salaries = 5000 * 12;
+        // فرق التكلفة بين الافتراضي (12.75%) والتجاوز (20%) يجب أن يظهر فعلياً في opex —
+        // قبل الإصلاح كان الفرق صفراً لأن صفوف "saudi" تتجاهل gosiRate كلياً.
+        const expectedDiff = salaries * (0.20 - SAUDI_GOSI_RATE_2026);
+        expect(withOverride.opex.fixedAnnual - withDefault.opex.fixedAnnual).toBeCloseTo(expectedDiff, 0);
+    });
+
+    it('معاينة الجدول (schema TABLE_SCHEMAS.positions.annualCost) تحسب بنفس ثابت GOSI الذي يستخدمه المحرك فعلياً', () => {
+        const row = { count: 1, salary: 5000, months: 12, nationality: 'saudi' };
+        const previewFormula = TABLE_SCHEMAS.positions.columns.find(c => c.key === 'annualCost').formula;
+        const previewAnnualCost = previewFormula(row);
+        const expectedFromSharedConstant = (row.count * row.salary * row.months) * (1 + SAUDI_GOSI_RATE_2026);
+        // قبل الإصلاح: كانت المعاينة تستخدم 0.1175 محلياً بينما المحرك يستخدم 0.1275 —
+        // رقمان مختلفان لنفس المفهوم. الآن كلاهما يشتق من نفس الثابت المُصدَّر.
+        expect(previewAnnualCost).toBeCloseTo(expectedFromSharedConstant, 0);
     });
 });
 
@@ -427,5 +453,27 @@ describe('بوابة مرونة السيناريو المتشائم: GO هش ي�
         });
         const r = calculateStudy(weak);
         expect(r.decision).not.toBe('GO');
+    });
+});
+
+describe('بوابة تجاوز حصة السوق (SOM): إيراد فوق SOM لا يمكن أن يكون GO', () => {
+    const strongStudy = (marketSizing) => makeStudy({
+        [SECTIONS.TECHNICAL]: { equipment: [{ price: 400000, quantity: 1 }], buildings: [], furniture: [], establishmentCosts: [], capacityUtilization: [] },
+        [SECTIONS.HR]: { positions: [{ position: 'موظف', count: 4, salary: 6000, months: 12, nationality: 'saudi' }] },
+        [SECTIONS.ADMINISTRATIVE]: { administrative: [{ name: 'إيجار', monthly: 15000 }] },
+        [SECTIONS.REVENUE]: { streams: [{ type: 'operating', customersPerMonth: 900, avgPrice: 110, variableCostRate: 0.35, growthRate: 0.03 }] },
+        [SECTIONS.MARKET_SIZING]: marketSizing,
+    });
+
+    it('إيراد أعلى بوضوح من SOM المُدخَل ⇒ REVISE بسبب واضح، حتى لو كانت المؤشرات المالية إيجابية', () => {
+        const r = calculateStudy(strongStudy({ som: { value: 50000 } })); // SOM أصغر بكثير من الإيراد المتوقع
+        expect(r.indicators.npv).toBeGreaterThan(0);
+        expect(r.decision).toBe('REVISE');
+        expect(r.decisionReasons.some(x => x.includes('SOM'))).toBe(true);
+    });
+
+    it('إيراد ضمن SOM كبير كافٍ ⇒ لا يُضاف سبب SOM لتخفيض القرار', () => {
+        const r = calculateStudy(strongStudy({ som: { value: 500000000 } })); // SOM كبير جداً — لا تجاوز
+        expect(r.decisionReasons.some(x => x.includes('SOM'))).toBe(false);
     });
 });

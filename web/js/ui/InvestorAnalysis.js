@@ -28,7 +28,15 @@ export class InvestorAnalysis {
         const payback = ind.paybackPeriod ?? ind.payback ?? 999;
         const roi = ind.roi ?? 0;
         const profitMargin = ind.profitMargin ?? 0;
-        const discountRate = ind.discountRateUsed ?? 0.10;
+        // تدقيق 2026-07-08: ind.discountRateUsed غير موجود إطلاقاً في مخرجات المحرك
+        // فكان يسقط دائماً لـ10% الثابتة متجاهلاً علاوة المخاطر الفعلية (حتى +8%) —
+        // الحقل الصحيح results.assumptionsApplied.discountRate (يشمل العلاوة فعلياً).
+        const discountRate = results?.assumptionsApplied?.discountRate ?? 0.10;
+        // مصدر وحيد لعتبة الاسترداد (كانت 7 ثابتة هنا بينما الفعلية 3.5 في محرك القرار
+        // — تناقض مباشر: ✓ أخضر هنا لمشروع يرفضه القرار الحقيقي REVISE/NO-GO).
+        const maxPayback = results?.assumptionsApplied?.thresholds?.maxPayback ?? 3.5;
+        // نفس المصدر الموحّد لعتبة ROI (كانت 15% ثابتة هنا مختلفة عن minROI=20% الفعلية).
+        const minROI = results?.assumptionsApplied?.thresholds?.minROI ?? 0.20;
         const breakeven = ind.breakEvenUnits ?? ind.breakevenUnitsPerMonth;
 
         const tam = state.marketSizing?.tam?.value ?? 0;
@@ -40,9 +48,9 @@ export class InvestorAnalysis {
         const hasRisks = Array.isArray(risks) && risks.length > 0;
         const hasProjectInfo = !!(state.projectInfo?.name || state.projectInfo?.concept);
 
-        const score = this.calcInvestabilityScore({ npv, irr, payback, roi, profitMargin, hasMarket, hasRisks, hasProjectInfo, discountRate });
-        const checklist = this.buildReadinessChecklist(state, results, { npv, irr, payback, hasMarket, hasRisks, discountRate });
-        const criteria = this.buildInvestorCriteriaTable({ npv, irr, payback, roi, profitMargin, tam, som, discountRate });
+        const score = this.calcInvestabilityScore({ npv, irr, payback, roi, profitMargin, hasMarket, hasRisks, hasProjectInfo, discountRate, maxPayback, minROI });
+        const checklist = this.buildReadinessChecklist(state, results, { npv, irr, payback, hasMarket, hasRisks, discountRate, maxPayback });
+        const criteria = this.buildInvestorCriteriaTable({ npv, irr, payback, roi, profitMargin, tam, som, discountRate, maxPayback, minROI });
 
         this.container.innerHTML = `
             <div class="investor-analysis animate-entry">
@@ -136,7 +144,7 @@ export class InvestorAnalysis {
                 <!-- توصية مبنية على الأرقام -->
                 <div class="card" style="border-right:4px solid var(--c-p-500);">
                     <h3 class="text-gold mb-2">💡 توصية مبنية على أرقامك</h3>
-                    <p>${this.getEvidenceBasedRecommendation(results, { npv, irr, payback, decision: results?.decision }, state)}</p>
+                    <p>${this.getEvidenceBasedRecommendation(results, { npv, irr, payback, maxPayback, decision: results?.decision }, state)}</p>
                 </div>
             </div>
         `;
@@ -147,9 +155,10 @@ export class InvestorAnalysis {
         const gaps = [];
         if (ctx.npv > 0) p += 20; else gaps.push('تحسين NPV (صافي القيمة الحالية)');
         if (ctx.irr > (ctx.discountRate || 0.10)) p += 15; else if (ctx.irr != null) gaps.push('رفع IRR فوق معدل الخصم');
-        // عتبة الاسترداد موحّدة مع maxPayback الافتراضي في محرك القرار (engine.js) — لا رقم مستقل
-        if (ctx.payback < 7 && ctx.payback >= 0) p += 15; else if (ctx.payback >= 0) gaps.push('تقليل فترة الاسترداد');
-        if (ctx.roi > 0.15) p += 10; else if (ctx.roi != null && ctx.roi > 0) gaps.push('تحسين العائد على الاستثمار');
+        // عتبة الاسترداد موحّدة فعلياً مع maxPayback الحقيقي في محرك القرار (engine.js عبر
+        // assumptionsApplied.thresholds) — لا رقم مستقل (كانت 7 ثابتة هنا بينما الفعلية 3.5).
+        if (ctx.payback < ctx.maxPayback && ctx.payback >= 0) p += 15; else if (ctx.payback >= 0) gaps.push('تقليل فترة الاسترداد');
+        if (ctx.roi > (ctx.minROI ?? 0.20)) p += 10; else if (ctx.roi != null && ctx.roi > 0) gaps.push('تحسين العائد على الاستثمار');
         if (ctx.profitMargin > 0.10) p += 10; else gaps.push('تحسين هامش الربح');
         if (ctx.hasMarket) p += 15; else gaps.push('تحديد حجم السوق TAM/SAM/SOM');
         if (ctx.hasRisks) p += 10; else gaps.push('توثيق تحليل المخاطر');
@@ -171,7 +180,7 @@ export class InvestorAnalysis {
             { label: 'نموذج مالي مكتمل (إيرادات وتكاليف)', ok: !!results && typeof rev === 'number' },
             { label: 'صافي القيمة الحالية (NPV) موجب', ok: ctx.npv > 0 },
             { label: 'معدل العائد الداخلي (IRR) فوق معدل الخصم', ok: ctx.irr != null && ctx.irr > (ctx.discountRate ?? 0.10) },
-            { label: 'فترة استرداد معقولة (&lt; 7 سنوات)', ok: ctx.payback >= 0 && ctx.payback < 7 },
+            { label: `فترة استرداد معقولة (&lt; ${ctx.maxPayback} سنوات)`, ok: ctx.payback >= 0 && ctx.payback < ctx.maxPayback },
             { label: 'وجود نقطة تعادل أو خطة لها', ok: results?.indicators?.breakEvenUnits != null || results?.indicators?.breakevenUnitsPerMonth != null || (state.assumptions || {}).projectionYears > 0 },
             { label: 'تحليل منافسين أو سوق', ok: ctx.hasMarket || (state.marketing?.competitors || []).length > 0 },
             { label: 'سجل مخاطر أو تحليل مخاطر', ok: ctx.hasRisks },
@@ -184,8 +193,8 @@ export class InvestorAnalysis {
         return [
             { name: 'NPV', threshold: '> 0', yours: (ctx.npv ?? 0).toLocaleString('ar-SA', { maximumFractionDigits: 0 }), ok: (ctx.npv ?? 0) > 0, note: (ctx.npv ?? 0) > 0 ? 'مقبول' : 'يُفضّل تحسين التدفقات أو تخفيف التكاليف' },
             { name: 'IRR', threshold: `> ${dr}% (معدل الخصم)`, yours: ctx.irr != null ? (ctx.irr * 100).toFixed(1) + '%' : '--', ok: (ctx.irr ?? 0) > (ctx.discountRate ?? 0.1), note: 'المستثمر يفضّل عائداً أعلى من تكلفة رأس المال' },
-            { name: 'فترة الاسترداد', threshold: '< 5–7 سنوات', yours: ctx.payback != null && ctx.payback < 100 ? ctx.payback.toFixed(1) + ' سنة' : '--', ok: ctx.payback >= 0 && ctx.payback < 7, note: 'استرداد أطول يقلل الجاذبية لرأس المال الجريء' },
-            { name: 'العائد على الاستثمار (ROI)', threshold: '> 15%', yours: ctx.roi != null ? (ctx.roi * 100).toFixed(1) + '%' : '--', ok: (ctx.roi ?? 0) > 0.15, note: 'مؤشر على كفاءة استخدام رأس المال' },
+            { name: 'فترة الاسترداد', threshold: `< ${ctx.maxPayback} سنوات`, yours: ctx.payback != null && ctx.payback < 100 ? ctx.payback.toFixed(1) + ' سنة' : '--', ok: ctx.payback >= 0 && ctx.payback < ctx.maxPayback, note: 'استرداد أطول يقلل الجاذبية لرأس المال الجريء' },
+            { name: 'العائد على الاستثمار (ROI)', threshold: `> ${((ctx.minROI ?? 0.20) * 100).toFixed(0)}%`, yours: ctx.roi != null ? (ctx.roi * 100).toFixed(1) + '%' : '--', ok: (ctx.roi ?? 0) > (ctx.minROI ?? 0.20), note: 'مؤشر على كفاءة استخدام رأس المال' },
             { name: 'هامش الربح (تقريبي)', threshold: '> 10%', yours: ctx.profitMargin != null ? (ctx.profitMargin * 100).toFixed(1) + '%' : '--', ok: (ctx.profitMargin ?? 0) > 0.1, note: 'يعكس قوة نموذج الإيرادات والتكاليف' },
             { name: 'حجم السوق (TAM/SOM)', threshold: 'محدّد وواقعي', yours: (ctx.tam > 0 || ctx.som > 0) ? 'مُدخل' : 'غير محدد', ok: ctx.tam > 0 || ctx.som > 0, note: 'المستثمر يقدّر السوق القابل للتحقق' },
         ];
@@ -209,7 +218,7 @@ export class InvestorAnalysis {
             return `مشروعك يظهر جدوى مالية (NPV موجب، حوالي ${npvStr})—<strong>مناسب للتمويل البنكي أو برامج الدعم (كفالة، بنك المنشآت)</strong> إن توفرت الضمانات، أو التمويل الذاتي لتجنّب الديون.`;
         }
 
-        if (npv <= 0 && payback > 7) return 'صافي القيمة الحالية غير إيجابي وفترة الاسترداد طويلة—<strong>يُنصح بمراجعة التكاليف والإيرادات وتحسين الفروض</strong> قبل التوجه لمستثمر. زيادة الأسعار أو خفض التكاليف الثابتة قد تُحسّن النتيجة.';
+        if (npv <= 0 && payback > (ctx.maxPayback ?? 3.5)) return 'صافي القيمة الحالية غير إيجابي وفترة الاسترداد طويلة—<strong>يُنصح بمراجعة التكاليف والإيرادات وتحسين الفروض</strong> قبل التوجه لمستثمر. زيادة الأسعار أو خفض التكاليف الثابتة قد تُحسّن النتيجة.';
         if (npv <= 0) return 'NPV سالب—<strong>اعمل على تحسين التدفقات النقدية أو خفض الاستثمار الأولي والتشغيل</strong> قبل العرض على مستثمر. تحليل نقطة التعادل والحساسية يساعد.';
         return 'بناءً على أرقامك الحالية، ركّز على <strong>تعزيز النموذج المالي وإكمال قائمة الجاهزية</strong> أعلاه لرفع درجة الجاذبية ثم العودة لتحديد المصدر الأنسب (بنك، ملاك، أو ذاتي).';
     }

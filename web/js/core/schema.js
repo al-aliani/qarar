@@ -3,6 +3,13 @@
  * Based on comprehensive feasibility study standards with connected tables
  */
 
+// حصة صاحب العمل في التأمينات الاجتماعية (GOSI) للسعودي — النظام الجديد (3 يوليو 2024)
+// يرفع نسبة المشترك الجديد تدريجياً؛ مشروع جديد كل موظفيه «مشتركون جدد» ⇒ ~12.75% في 2026.
+// تدقيق 2026-07-08: كان هذا الرقم مكرراً بقيمتين متضاربتين (0.1175 هنا و0.1275 في
+// engine.js) رغم تعليق يدّعي التطابق — ثابت واحد مُصدَّر الآن يستورده كل من هذا
+// الملف (كقيمة افتراضية) وengine.js (كحساب فعلي)، بدل نسخة محلية بكل ملف.
+export const SAUDI_GOSI_RATE_2026 = 0.1275;
+
 export const SECTIONS = {
     PROJECT_INFO: 'projectInfo',
     KEY_PEOPLE: 'keyPeople', // المرحلة الأولى: الأشخاص الرئيسون (الفريق المؤسس)
@@ -50,6 +57,9 @@ export const DEFAULT_REPORT_SECTION_ORDER = [
     'marketing',
     'financial_kpis',
     'swot',
+    'pestel',
+    'porter',
+    'tows',
     'capex',
     'income_statement',
     'cash_flow',
@@ -271,7 +281,7 @@ export function createEmptyStudy() {
             positions: [
                 // { position: "مدير العمليات", count: 1, months: 12, salary: 15000, nationality: "saudi", isVariable: false }
             ],
-            gosiRate: 0.1175, // 11.75% (Employer Share: 10% GOSI + 1.75% Unemployment) ?? Standard is usually ~10-12%
+            gosiRate: SAUDI_GOSI_RATE_2026, // ~12.75% في 2026 (النظام الجديد) — قابل للتعديل من المستخدم
             healthInsurancePerHead: 1500, // Average Market Rate
             govtFees: {
                 workCard: 9600, // المقابل المالي السنوي
@@ -466,11 +476,15 @@ export function createEmptyStudy() {
             contingencyRate: 0.10,
             projectionYears: 5,
             revenueGrowthJustification: '', // مبرر نمو/تثبيت/انخفاض المبيعات
+            // تدقيق 2026-07-08: targetDSCR كان غائباً هنا كلياً — كل شاشة كانت تفترض
+            // احتياطياً رقماً محلياً مختلفاً (1.25 في المحرك، 1.5 في لوحة القرار) بلا
+            // أي افتراض مركزي معلن للمستخدم. الآن جزء من نفس حزمة عتبات القرار الموحّدة.
             thresholds: {
                 minNPV: 0,
                 minIRR: 0.15,
                 maxPayback: 3.5,
-                minROI: 0.20
+                minROI: 0.20,
+                targetDSCR: 1.25
             },
             // Transcript 8: Hidden Overheads Contingency
             hiddenOverheadsRate: 5 // نسبة مئوية للطوارئ التشغيلية (5% افتراضي)
@@ -655,13 +669,10 @@ export function createEmptyStudy() {
         // ═══════════════════════════════════════════════════════════
         // 1️⃣9️⃣ القوائم المالية التقديرية (Estimated Financial Statements)
         // ═══════════════════════════════════════════════════════════
-        [SECTIONS.FINANCIAL_STATEMENTS]: [],
         [SECTIONS.ZAKAT_TAX]: {},
-        [SECTIONS.BREAK_EVEN]: {},
-        [SECTIONS.DECISION_DASHBOARD]: {},
-        [SECTIONS.BUSINESS_MODEL]: {},
-        [SECTIONS.MONTE_CARLO]: {},
-        [SECTIONS.VALUATION]: {},
+        // ملاحظة: أُزيلت 6 تعريفات فارغة مكررة كانت هنا (FINANCIAL_STATEMENTS/BREAK_EVEN/
+        // DECISION_DASHBOARD/BUSINESS_MODEL/MONTE_CARLO/VALUATION) — تُدهس بصمت بالتعريفات
+        // الحقيقية أدناه في نفس الكائن الحرفي (تدقيق 2026-07-08)؛ لا أثر وظيفي لحذفها.
 
         [SECTIONS.FINANCIAL_STATEMENTS]: {
             incomeStatement: [], // 5 years
@@ -943,11 +954,12 @@ export const TABLE_SCHEMAS = {
             { key: 'months', label: 'أشهر العمل/سنة', type: 'number', default: 12 },
             {
                 key: 'annualCost', label: 'إجمالي التكلفة (مع التأمينات)', type: 'computed',
-                // Formula updated to include simplified GOSI estimate until full engine integration
-                // Saudi: ~12% employer share, Expat: ~2%
+                // معاينة تقريبية في الجدول قبل حساب المحرك الكامل — تستخدم نفس ثابت GOSI
+                // المُصدَّر (SAUDI_GOSI_RATE_2026) بدل رقم محلي مختلف كان يناقض المحرك فعلياً.
+                // الوافد: 2% مخاطر مهنية فقط (لا يشمل التأمينات التقاعدية).
                 formula: r => {
                     const basic = (r.count || 1) * (r.salary || 0) * (r.months || 12);
-                    const gosiRate = r.nationality === 'saudi' ? 0.1175 : 0.02;
+                    const gosiRate = r.nationality === 'saudi' ? SAUDI_GOSI_RATE_2026 : 0.02;
                     return basic * (1 + gosiRate);
                 }
             },

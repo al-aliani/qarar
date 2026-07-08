@@ -1,4 +1,4 @@
-# E2E + Visual regression + متصفحات متعددة
+# وحدة + E2E + Visual regression + متصفحات متعددة
 name: E2E Tests
 
 on:
@@ -8,6 +8,27 @@ on:
     branches: [main, master]
 
 jobs:
+  # تدقيق 2026-07-08: كانت اختبارات الوحدة (npm test، 226+ اختباراً بما فيها حراس
+  # الانحدار لمونت كارلو والزكاة/الضريبة وتماسك القرار) لا تُشغَّل في أي CI إطلاقاً —
+  # فقط Playwright e2e أدناه. أي انحدار في المحرك المالي كان يمكن أن يُدمَج ويُنشَر
+  # دون أن يوقفه شيء. هذه الوظيفة تفشل البناء عند أي اختبار فاشل أو تغطية تحت العتبة.
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests with coverage thresholds
+        run: npm run test:coverage
+
   e2e:
     runs-on: ubuntu-latest
     steps:
@@ -25,7 +46,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium firefox webkit
 
-      - name: Run E2E (all projects: Chromium, Firefox, WebKit)
+      - name: "Run E2E (all projects: Chromium, Firefox, WebKit)"
         run: npm run test:e2e:all-browsers
         env:
           CI: true

@@ -238,15 +238,12 @@ export const LABELS = {
     coordinates: "الإحداثيات",
     address: "العنوان التفصيلي",
     locationAlternatives: "المواقع البديلة",
-    factor: "المعيار",
+    // factor/productionCapacity/annualCapacity/unitOrMeasure/marketShareLink: كانت مكررة هنا
+    // (تدهس تعريفها الأول أعلاه بصمت — تدقيق 2026-07-08). التعريف الوحيد الآن أعلى الملف.
     rating: "التقييم (من 5)",
     weight: "الوزن النسبي",
     score: "الدرجة",
 
-    productionCapacity: "الطاقة الإنتاجية",
-    annualCapacity: "الطاقة السنوية",
-    unitOrMeasure: "وحدة القياس",
-    marketShareLink: "الربط بالحصة السوقية",
     capacityUtilization: "جدول تدرج الطاقة التشغيلية",
     year: "السنة",
     rate: "نسبة التشغيل",
@@ -372,7 +369,9 @@ export const LABELS = {
     seasonalityProfile: "نمط الموسمية (لتخطيط السيولة)",
     terminalValue: "القيمة النهائية بعد سنوات الدراسة (استرشادية)",
     method: "الطريقة",
-    growthRate: "معدل النمو المستدام",
+    // مفتاح مسار كامل (لا يصطدم بـ growthRate العام في قسم التسويقية أعلاه) — كان يُدهس الأخير
+    // فتظهر «معدل النمو المستدام» فوق حقل نمو السوق العادي (تدقيق 2026-07-08).
+    'terminalValue.growthRate': "معدل النمو المستدام",
     workingCapitalPolicy: "الدورة النقدية الفعلية (اختياري — بديل أدق عن أشهر التغطية)",
     dsoDays: "أيام تحصيل المبيعات الآجلة (DSO)",
     dpoDays: "أيام سداد الموردين (DPO)",
@@ -410,7 +409,7 @@ export const LABELS = {
     operationalRisks: "مخاطر تشغيلية",
     financialRisks: "مخاطر مالية",
     legalRisks: "مخاطر قانونية",
-    mitigation: "خطة المواجهة",
+    // mitigation مكرر (يدهس التعريف أعلاه بصمت — تدقيق 2026-07-08) — التعريف الوحيد الآن أعلى الملف.
     sensitivityAnalysis: "تحليل الحساسية",
     revenueDropScenario: "سيناريو انخفاض الإيرادات",
     costIncreaseScenario: "سيناريو ارتفاع التكاليف",
@@ -486,6 +485,13 @@ function deCamelize(key) {
         .trim();
 }
 
+/**
+ * المطابقة على كامل المسار أولاً ثم الجزء الأخير (نفس نمط getFieldHelp في fieldHelpTexts.js) —
+ * يسمح بتخصيص ملصق حقل معيّن (مثل terminalValue.growthRate) دون أن يصطدم بمفتاح عام مشترك
+ * (growthRate) يُستخدم أيضاً في سياقات أخرى (نمو السوق، نمو مصادر الإيراد...).
+ */
 export function getLabel(key) {
-    return LABELS[key] || deCamelize(key);
+    if (!key) return deCamelize(key);
+    const last = String(key).split('.').pop();
+    return LABELS[key] ?? LABELS[last] ?? deCamelize(last);
 }

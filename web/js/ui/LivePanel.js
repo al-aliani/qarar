@@ -96,12 +96,15 @@ export class LivePanel {
         const valueStr = Number.isFinite(irr)
             ? (irr * 100).toFixed(1) + '%'
             : '--';
+        // تدقيق 2026-07-08: كانت 5% ثابتة هنا (لوحة حية نشطة فعلياً) بينما عتبة القرار
+        // الفعلية minIRR=15% — نفس دراسة تظهر ذهبية هنا وREVISE في لوحة القرار المجاورة.
+        const minIRR = this.lastResults.assumptionsApplied?.thresholds?.minIRR ?? 0.15;
 
         if (el) {
             if (Number.isFinite(irr)) {
                 animateCounter(el, irr, { isPercent: true });
                 el.classList.remove('text-danger', 'text-gold');
-                if (irr >= 0.05) el.classList.add('text-gold');
+                if (irr >= minIRR) el.classList.add('text-gold');
                 else if (irr < 0) el.classList.add('text-danger');
             } else {
                 el.textContent = '--';
@@ -112,7 +115,7 @@ export class LivePanel {
             headerEl.textContent = valueStr;
             headerEl.classList.remove('text-danger', 'text-gold');
             if (Number.isFinite(irr)) {
-                if (irr >= 0.05) headerEl.classList.add('text-gold');
+                if (irr >= minIRR) headerEl.classList.add('text-gold');
                 else if (irr < 0) headerEl.classList.add('text-danger');
             }
         }
@@ -207,8 +210,12 @@ export class LivePanel {
         const el = document.getElementById('qaStatusList');
         if (!el || !this.lastResults) return;
 
-        const { indicators, decision, _meta } = this.lastResults;
+        const { indicators, decision, _meta, assumptionsApplied } = this.lastResults;
         const checks = [];
+        // تدقيق 2026-07-08: كانت 5%/5-سنوات ثوابت هنا منفصلة عن عتبات القرار الفعلية
+        // (minIRR=15%، maxPayback=3.5) — فتُظهر ✅ في اللوحة الحية بينما نفس الدراسة
+        // REVISE في لوحة القرار/تحليل المستثمر المجاورين. الآن نفس المصدر الموحّد.
+        const thresholds = assumptionsApplied?.thresholds || { minIRR: 0.15, maxPayback: 3.5 };
 
         if (_meta?.revenueFromBridge) {
             checks.push({ label: 'مصدر الإيرادات', pass: true, value: 'مشتق من قسم الخدمات ℹ️' });
@@ -225,19 +232,21 @@ export class LivePanel {
 
         // IRR Check
         if (Number.isFinite(indicators.irr)) {
+            const irrPass = indicators.irr >= thresholds.minIRR;
             checks.push({
                 label: 'معدل العائد الداخلي',
-                pass: indicators.irr >= 0.05,
-                value: indicators.irr >= 0.05 ? '> 5% ✅' : '< 5% ⚠️'
+                pass: irrPass,
+                value: irrPass ? `> ${(thresholds.minIRR * 100).toFixed(0)}% ✅` : `< ${(thresholds.minIRR * 100).toFixed(0)}% ⚠️`
             });
         }
 
         // Payback Period Check
         if (Number.isFinite(indicators.paybackPeriod) && indicators.paybackPeriod !== Infinity) {
+            const paybackPass = indicators.paybackPeriod <= thresholds.maxPayback;
             checks.push({
                 label: 'فترة الاسترداد',
-                pass: indicators.paybackPeriod <= 5,
-                value: indicators.paybackPeriod <= 5 ? `${indicators.paybackPeriod.toFixed(1)} سنة ✅` : `${indicators.paybackPeriod.toFixed(1)} سنة ⚠️`
+                pass: paybackPass,
+                value: paybackPass ? `${indicators.paybackPeriod.toFixed(1)} سنة ✅` : `${indicators.paybackPeriod.toFixed(1)} سنة ⚠️`
             });
         }
 

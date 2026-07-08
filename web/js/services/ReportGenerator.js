@@ -23,6 +23,9 @@ const REPORT_SECTION_LABELS = {
     marketing: 'التحليل التسويقي',
     financial_kpis: 'الملخص المالي (المؤشرات المالية)',
     swot: 'التحليل الاستراتيجي (التحليل الرباعي)',
+    pestel: 'تحليل البيئة الكلية (PESTEL)',
+    porter: 'تحليل قوى بورتر الخمس',
+    tows: 'مصفوفة استراتيجيات TOWS',
     capex: 'الاستثمارات الرأسمالية',
     legal: 'الدراسة القانونية والتراخيص',
     income_statement: 'قائمة الدخل',
@@ -800,6 +803,34 @@ export class ReportGenerator {
                         <div class="section-content">${this.renderSWOT(state.strategic?.swot || state.strategicAnalysis?.swot)}</div>
                     </div>`;
                 break;
+            case 'pestel': {
+                const pestel = state.strategic?.pestel;
+                if (!Array.isArray(pestel) || !pestel.some(f => (f.description || '').trim())) return null;
+                html = `<div class="section">
+                        <h3 class="section-title"><span class="section-number">${num}</span>تحليل البيئة الكلية (PESTEL)</h3>
+                        <div class="section-content">${this.renderPESTEL(pestel)}</div>
+                    </div>`;
+                break;
+            }
+            case 'porter': {
+                const porter = state.strategic?.porter;
+                const hasData = porter && Object.values(porter).some(f => (f?.description || '').trim());
+                if (!hasData) return null;
+                html = `<div class="section">
+                        <h3 class="section-title"><span class="section-number">${num}</span>تحليل قوى بورتر الخمس</h3>
+                        <div class="section-content">${this.renderPorter(porter)}</div>
+                    </div>`;
+                break;
+            }
+            case 'tows': {
+                const tows = state.marketing?.towsMatrix;
+                if (!tows || !['so', 'wo', 'st', 'wt'].some(k => (tows[k] || '').trim())) return null;
+                html = `<div class="section">
+                        <h3 class="section-title"><span class="section-number">${num}</span>مصفوفة استراتيجيات TOWS</h3>
+                        <div class="section-content">${this.renderTOWS(tows)}</div>
+                    </div>`;
+                break;
+            }
             case 'capex':
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>الدراسة الفنية (التكاليف الاستثمارية)</h3>
@@ -1379,27 +1410,84 @@ export class ReportGenerator {
                 <div class="swot-box strengths">
                     <h4>نقاط القوة (Strengths)</h4>
                     <ul>
-                        ${(swot.strengths || ['لم يتم تحديد نقاط القوة']).map(s => `<li>${s}</li>`).join('')}
+                        ${(swot.strengths || ['لم يتم تحديد نقاط القوة']).map(s => `<li>${escapeHtml(s)}</li>`).join('')}
                     </ul>
                 </div>
                 <div class="swot-box weaknesses">
                     <h4>نقاط الضعف (Weaknesses)</h4>
                     <ul>
-                        ${(swot.weaknesses || ['لم يتم تحديد نقاط الضعف']).map(s => `<li>${s}</li>`).join('')}
+                        ${(swot.weaknesses || ['لم يتم تحديد نقاط الضعف']).map(s => `<li>${escapeHtml(s)}</li>`).join('')}
                     </ul>
                 </div>
                 <div class="swot-box opportunities">
                     <h4>الفرص (Opportunities)</h4>
                     <ul>
-                        ${(swot.opportunities || ['لم يتم تحديد الفرص']).map(s => `<li>${s}</li>`).join('')}
+                        ${(swot.opportunities || ['لم يتم تحديد الفرص']).map(s => `<li>${escapeHtml(s)}</li>`).join('')}
                     </ul>
                 </div>
                 <div class="swot-box threats">
                     <h4>التهديدات (Threats)</h4>
                     <ul>
-                        ${(swot.threats || ['لم يتم تحديد التهديدات']).map(s => `<li>${s}</li>`).join('')}
+                        ${(swot.threats || ['لم يتم تحديد التهديدات']).map(s => `<li>${escapeHtml(s)}</li>`).join('')}
                     </ul>
                 </div>
+            </div>
+        `;
+    }
+
+    /** تحليل PESTEL — كان يُكتَب في المعالج ولا يصل إطلاقاً إلى التقرير (تدقيق 2026-07-08) */
+    static renderPESTEL(pestel) {
+        const rows = Array.isArray(pestel) ? pestel.filter(f => (f.description || '').trim()) : [];
+        if (!rows.length) {
+            return '<p style="color: #a0aec0; font-style: italic;">لم يُدخَل تحليل PESTEL بعد.</p>';
+        }
+        const impactLabel = { positive: '✅ إيجابي', negative: '❌ سلبي', neutral: '➖ محايد' };
+        return `
+            <table><thead><tr><th>العامل</th><th>الأثر</th><th>الوصف</th></tr></thead><tbody>
+                ${rows.map(f => `<tr><td>${escapeHtml(f.label || f.factor)}</td><td>${impactLabel[f.impact] || escapeHtml(f.impact || '')}</td><td>${escapeHtml(f.description)}</td></tr>`).join('')}
+            </tbody></table>
+        `;
+    }
+
+    /** تحليل بورتر للقوى الخمس — نفس مصير PESTEL: مكتوب ولا يظهر في التقرير */
+    static renderPorter(porter) {
+        if (!porter) {
+            return '<p style="color: #a0aec0; font-style: italic;">لم يُدخَل تحليل بورتر بعد.</p>';
+        }
+        const FORCES = [
+            { key: 'newEntrants', label: 'تهديد الداخلين الجدد' },
+            { key: 'supplierPower', label: 'قوة الموردين' },
+            { key: 'buyerPower', label: 'قوة المشترين' },
+            { key: 'substitutes', label: 'تهديد البدائل' },
+            { key: 'rivalry', label: 'التنافس في الصناعة' },
+        ];
+        const levelLabel = { low: 'منخفضة', medium: 'متوسطة', high: 'عالية' };
+        const rows = FORCES.map(f => ({ ...f, data: porter[f.key] || {} })).filter(f => (f.data.description || '').trim() || f.data.level);
+        if (!rows.length) {
+            return '<p style="color: #a0aec0; font-style: italic;">لم يُدخَل تحليل بورتر بعد.</p>';
+        }
+        return `
+            <table><thead><tr><th>القوة التنافسية</th><th>الشدة</th><th>الوصف</th></tr></thead><tbody>
+                ${rows.map(f => `<tr><td>${f.label}</td><td>${levelLabel[f.data.level] || '—'}</td><td>${escapeHtml(f.data.description)}</td></tr>`).join('')}
+            </tbody></table>
+        `;
+    }
+
+    /** مصفوفة TOWS (الاستراتيجيات المُشتقة من SWOT) — مخزَّنة في marketing.towsMatrix */
+    static renderTOWS(tows) {
+        const QUADRANTS = [
+            { key: 'so', label: 'SO — هجومية (قوة + فرص)' },
+            { key: 'wo', label: 'WO — تطويرية (ضعف + فرص)' },
+            { key: 'st', label: 'ST — دفاعية (قوة + تهديدات)' },
+            { key: 'wt', label: 'WT — انكماشية (ضعف + تهديدات)' },
+        ];
+        const rows = QUADRANTS.filter(q => (tows?.[q.key] || '').trim());
+        if (!rows.length) {
+            return '<p style="color: #a0aec0; font-style: italic;">لم تُشتَق استراتيجيات TOWS بعد.</p>';
+        }
+        return `
+            <div class="swot-table">
+                ${rows.map(q => `<div class="swot-box"><h4>${q.label}</h4><p>${escapeHtml(tows[q.key]).replace(/\n/g, '<br>')}</p></div>`).join('')}
             </div>
         `;
     }

@@ -580,14 +580,18 @@ export class DecisionDashboard {
             this._eventListeners.push({ element: btnExportPitch, event: 'click', handler });
         }
 
-        // إعادة حساب النتائج
+        // إعادة حساب النتائج — innerHTML (لا textContent) كي تبقى أيقونة SVG بعد التفاعل
+        // بدل أن تُستبدل بإيموجي نهائياً (كانت تفقد الأيقونة بعد أول نقرة — تدقيق 2026-07-08)
         const btnRefresh = this.container.querySelector('#btnRefreshResults');
         if (btnRefresh) {
             const handler = () => {
                 btnRefresh.disabled = true;
-                btnRefresh.textContent = '⏳ جاري الحساب...';
+                btnRefresh.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-reset"/></svg> جاري الحساب...';
                 this.render().catch(e => console.error('Refresh error:', e)).finally(() => {
-                    if (btnRefresh.isConnected) { btnRefresh.disabled = false; btnRefresh.textContent = '🔄 إعادة حساب'; }
+                    if (btnRefresh.isConnected) {
+                        btnRefresh.disabled = false;
+                        btnRefresh.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-reset"/></svg> إعادة حساب';
+                    }
                 });
             };
             btnRefresh.addEventListener('click', handler);
@@ -704,13 +708,16 @@ export class DecisionDashboard {
                 }
 
                 if (name) {
-                    e.target.textContent = '⏳ جاري الحفظ...';
-                    e.target.disabled = true;
+                    // btnSave (لا e.target) — نقرة على أيقونة SVG داخل الزر تجعل e.target هو
+                    // <svg> نفسه لا الزر، فيفشل التحديث بصمت. innerHTML يحافظ على الأيقونة
+                    // بدل استبدالها بإيموجي (تدقيق 2026-07-08).
+                    btnSave.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> جاري الحفظ...';
+                    btnSave.disabled = true;
                     try {
                         const state = this.store.getState();
                         const result = await ProjectManager.saveProject(state);
                         if (result.success) {
-                            e.target.textContent = '✅ تم الحفظ!';
+                            btnSave.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> تم الحفظ';
                             try {
                                 const results = runFullModel(state);
                                 const evaluation = calculateProjectScore(state, results);
@@ -724,19 +731,19 @@ export class DecisionDashboard {
                                 }
                             } catch (_) {}
                             setTimeout(() => {
-                                e.target.textContent = '💾 حفظ الدراسة';
-                                e.target.disabled = false;
+                                btnSave.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> حفظ الدراسة';
+                                btnSave.disabled = false;
                             }, 2000);
                         } else {
                             alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'Unknown'));
-                            e.target.textContent = '❌ خطأ';
-                            e.target.disabled = false;
+                            btnSave.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> خطأ — أعد المحاولة';
+                            btnSave.disabled = false;
                         }
                     } catch (err) {
                         console.error(err);
                         alert('فشل الحفظ');
-                        e.target.textContent = '💾 حفظ الدراسة';
-                        e.target.disabled = false;
+                        btnSave.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> حفظ الدراسة';
+                        btnSave.disabled = false;
                     }
                 }
             };
@@ -792,7 +799,10 @@ export class DecisionDashboard {
     calculateReadiness(state, results, evaluation) {
         const kpis = results?.indicators || {}; 
         const payback = kpis.paybackPeriod ?? kpis.payback;
-        const thresholds = state.assumptions?.thresholds || {
+        // تدقيق 2026-07-08: كانت تُقرأ من state.assumptions?.thresholds الخام مع احتياط محلي
+        // مكرر — لا رابط فعلي بمصدر القرار الحقيقي (يطابقه صدفةً حالياً، وقد ينحرف مستقبلاً
+        // عند أي تعديل في resolveDecisionThresholds بمحرك القرار). الآن نفس المصدر الموحّد.
+        const thresholds = results?.assumptionsApplied?.thresholds || {
             minNPV: 0,
             minIRR: 0.15,
             maxPayback: 3.5,
@@ -910,7 +920,12 @@ export class DecisionDashboard {
         const financing = state?.financing || {};
         const loan = financing.sources?.bankLoan || {};
         const loanAmount = Number(loan.amount || results?.loanSchedule?.loanAmount || 0);
-        const targetDSCR = Number.isFinite(Number(financing.targetDSCR)) ? Number(financing.targetDSCR) : 1.5;
+        // تدقيق 2026-07-08: كانت 1.5 هنا احتياطياً مختلفة عن 1.25 الفعلية في محرك القرار
+        // (engine.js) لنفس الحقل — فتُظهر بطاقة "تغطية دين غير كافية" حمراء لمشروع
+        // يجتاز فعلياً بوابة القرار الحقيقية. الآن تُقرأ من نفس المصدر الموحّد.
+        const targetDSCR = Number.isFinite(Number(financing.targetDSCR))
+            ? Number(financing.targetDSCR)
+            : Number(results?.assumptionsApplied?.thresholds?.targetDSCR ?? 1.25);
         const fundingGap = Number(results?.financingCheck?.fundingGap ?? 0);
         const dscr = results?.indicators?.dscr ?? null;
         const y1Ebitda = Number(results?.incomeStatement?.[0]?.ebitda ?? NaN);
@@ -1015,7 +1030,7 @@ export class DecisionDashboard {
     buildDecisionReasons(state, results, readiness, evaluation) {
         const kpis = results?.indicators || {};
         const payback = kpis.paybackPeriod ?? kpis.payback;
-        const thresholds = state.assumptions?.thresholds || { minNPV: 0, minIRR: 0.15, maxPayback: 3.5, minROI: 0.20 };
+        const thresholds = results?.assumptionsApplied?.thresholds || { minNPV: 0, minIRR: 0.15, maxPayback: 3.5, minROI: 0.20 };
         const reasons = [];
         const nextSteps = [];
         const engineReasons = Array.isArray(results?.decisionReasons) ? results.decisionReasons : [];
