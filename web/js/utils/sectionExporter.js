@@ -536,7 +536,7 @@ function handleProjectInfoSection(data) {
     return result.length > 1 ? result : [['معلومات المشروع'], [], ['لا توجد بيانات']];
 }
 
-function handleProjectIntroSection(pi) {
+export function handleProjectIntroSection(pi) {
     const result = [['مقدمة الجدوى الموحدة']];
     const ic = pi.ideaCriteria || {};
     const la = pi.locationAnalysis || {};
@@ -567,8 +567,8 @@ function handleProjectIntroSection(pi) {
                 typeLabel,
                 (p.name || '').toString(),
                 (p.description || '').toString(),
-                (p.uniqueCharacteristics || '').toString(),
-                (p.addedValue || '').toString(),
+                (p.uniqueFeatures || '').toString(),
+                (p.valueAdded || '').toString(),
                 (p.customerBenefit || '').toString()
             ]);
         });

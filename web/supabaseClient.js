@@ -45,6 +45,19 @@ function readConfig() {
   const fromStorageKey = typeof localStorage !== "undefined" ? (localStorage.getItem("SUPABASE_ANON_KEY") || "").trim() : "";
   const anonKey = fromEnvKey || (fromWindowKey && String(fromWindowKey).trim()) || (fromStorageKey || DEFAULT_SUPABASE_ANON_KEY);
 
+  // تدقيق أمني (دفعة 6): القيم الافتراضية أعلاه تشير فعلياً لمشروع الإنتاج الحقيقي
+  // ولا يوجد أي تحذير وقت التشغيل حين تُستخدم (أي حين لا يوجد أي تجاوز بيئي/نافذة/تخزين).
+  // تشغيل محلي دون .env كان يكتب صامتاً في قاعدة بيانات الإنتاج الفعلية دون أي تنبيه.
+  const usingDefaultUrl = !fromEnvUrl && !fromWindowUrl && !fromStorageUrl;
+  const usingDefaultKey = !fromEnvKey && !fromWindowKey && !fromStorageKey;
+  if (usingDefaultUrl || usingDefaultKey) {
+    console.warn(
+      "[Supabase] لا توجد متغيرات بيئة/إعداد محلي (VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY أو window.*/localStorage) — " +
+      "يُستخدم الإعداد الافتراضي المُضمَّن في الكود، وهو يشير إلى مشروع Supabase الحقيقي في الإنتاج. " +
+      "أي حفظ أو تعديل بيانات أثناء التطوير أو الاختبار المحلي سيُكتب فعلياً في قاعدة بيانات الإنتاج."
+    );
+  }
+
   return {
     url: (String(url || "").trim() || DEFAULT_SUPABASE_URL),
     anonKey: (String(anonKey || "").trim() || DEFAULT_SUPABASE_ANON_KEY)

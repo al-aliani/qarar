@@ -3,6 +3,7 @@ import { createTooltip } from '../utils/glossary.js';
  * Decision Dashboard Component
  * The "Boardroom" view for investors to see if the project is ready
  */
+import { SECTIONS } from '../core/schema.js';
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { calculateProjectScore } from '../core/scoring.js';
 import { ReportGenerator } from '../services/ReportGenerator.js';
@@ -337,6 +338,8 @@ export class DecisionDashboard {
                                 ${this.renderReadinessItem('الجاهزية القانونية', readiness.dimensions.legal)}
                                 ${this.renderReadinessItem('جاهزية الموقع', readiness.dimensions.location)}
                                 ${this.renderReadinessItem('إدارة المخاطر', readiness.dimensions.risk)}
+                                ${this.renderReadinessItem('الجاهزية الاستراتيجية', readiness.dimensions.strategic)}
+                                ${this.renderReadinessItem('جاهزية الخدمات/المنتجات', readiness.dimensions.services)}
                             </div>
                         </div>
                     </div>
@@ -813,6 +816,10 @@ export class DecisionDashboard {
         const hasLocation = la.address || (la.coordinates?.lat != null && la.coordinates?.lng != null) || la.selectionFactors;
         const financingHealth = this.getFinancingDiagnostics(state, results);
         const hasInvestment = Number(results?.capex?.total || state.financing?.totalInvestment || 0) > 0;
+        const swot = state[SECTIONS.STRATEGIC]?.swot || {};
+        const hasSwot = [swot.strengths, swot.weaknesses, swot.opportunities, swot.threats]
+            .some(list => Array.isArray(list) && list.length > 0);
+        const hasServices = (state[SECTIONS.SERVICES]?.items?.length > 0) || (state.revenue?.streams?.length > 0);
         const dimensions = {
             market: (state.marketSizing?.som?.value > 0) ? 'ready' : 'needs_work',
             financing: (financingHealth.hasBlockers || financingHealth.fundingGap > 1 || financingHealth.dscrBlocked)
@@ -821,7 +828,9 @@ export class DecisionDashboard {
             team: (state.hr?.positions?.length > 0) ? 'ready' : 'needs_work',
             legal: (state.legal?.licenses?.length > 0) ? 'ready' : 'needs_work',
             risk: (state.riskAnalysis?.risks?.length > 0) ? 'ready' : 'needs_work',
-            location: hasLocation ? 'ready' : 'needs_work'
+            location: hasLocation ? 'ready' : 'needs_work',
+            strategic: hasSwot ? 'ready' : 'needs_work',
+            services: hasServices ? 'ready' : 'needs_work'
         };
 
         let recStatus = 'review';

@@ -116,6 +116,23 @@ export function validateFinancing(fin) {
 }
 
 /**
+ * @param {Array} contracts - keyPeople.partnershipContracts
+ * @returns {{ valid: boolean, errors: string[] }}
+ */
+export function validatePartnershipContracts(contracts) {
+  const err = [];
+  if (!Array.isArray(contracts) || contracts.length === 0) return { valid: true, errors: [] };
+  const total = contracts.reduce((sum, c) => {
+    const share = num(c?.sharePercent, 0);
+    return sum + (Number.isNaN(share) ? 0 : share);
+  }, 0);
+  if (total > 100) {
+    err.push(`مجموع نسب ملكية الشركاء (${total}%) يتجاوز 100%`);
+  }
+  return { valid: err.length === 0, errors: err };
+}
+
+/**
  * @param {object} section - e.g. technical, hr
  * @param {string} sectionName - for error messages
  * @param {Array<string>} amountKeys - keys that must be non‑negative (e.g. price, quantity, salary, monthly)
@@ -159,6 +176,7 @@ export function validateStudy(state) {
   const a = validateAssumptions(state?.assumptions || state?.financial?.assumptions);
   const r = validateRevenueStreams(state?.revenue?.streams || state?.financial?.revenue?.streams || []);
   const f = validateFinancing(state?.financing);
+  const pc = validatePartnershipContracts(state?.keyPeople?.partnershipContracts || state?.partnershipContracts);
 
   // If revenue is empty, also validate services.items when used as revenue source
   const streams = state?.revenue?.streams || state?.financial?.revenue?.streams || [];
@@ -167,7 +185,7 @@ export function validateStudy(state) {
     all.push(...srv.errors);
   }
 
-  all.push(...p.errors, ...a.errors, ...r.errors, ...f.errors);
+  all.push(...p.errors, ...a.errors, ...r.errors, ...f.errors, ...pc.errors);
 
   // Technical: price, quantity, amount
   const tech = validateSectionAmounts(state?.technical, 'الدراسة الفنية', ['price', 'quantity', 'amount']);

@@ -168,7 +168,12 @@ describe('MonteCarloAnalysis — renderHistogram: يستهلك histogram الج�
         expect(buckets).toEqual(counts);
     });
 
-    it('صندوق القيم السالبة أحمر والموجبة أخضر (حسب مركز الصندوق binStart/binEnd)', () => {
+    it('صندوق القيم السالبة أحمر (--c-danger) والموجبة أخضر (--c-success) — مُشتقة من متغيرات الهوية لا rgba ثابتة', () => {
+        // تدقيق (batch6): كانت الألوان rgba(...) ثابتة لا تتبع الثيم ولا تتطابق مع
+        // --c-success/--c-danger المستخدمين لنفس البيانات في شارة "درجة المخاطرة".
+        // renderHistogram تقرأ الآن getComputedStyle(--c-success/--c-danger) وتحوّلها
+        // عبر hexToRgba؛ jsdom لا يحمّل variables.css فعلياً فتُستخدم القيم الاحتياطية
+        // (fallback) المطابقة حرفياً لقيم :root في variables.css.
         const view = new MonteCarloAnalysis('c', fakeStore(healthyStudy()));
         const histogram = makeHistogram([
             [-100000, -50000, 5],
@@ -177,8 +182,11 @@ describe('MonteCarloAnalysis — renderHistogram: يستهلك histogram الج�
         view.renderHistogram(histogram);
 
         const colors = FakeChart.instances[0].config.data.datasets[0].backgroundColor;
-        expect(colors[0]).toContain('248, 113, 113'); // أحمر لصندوق مركزه سالب
-        expect(colors[1]).toContain('74, 222, 128'); // أخضر لصندوق مركزه موجب
+        expect(colors[0]).toBe(MonteCarloAnalysis.hexToRgba('#c2382e', 0.6)); // --c-danger لصندوق مركزه سالب
+        expect(colors[1]).toBe(MonteCarloAnalysis.hexToRgba('#157f5f', 0.6)); // --c-success لصندوق مركزه موجب
+        // لم تعد القيم القديمة الثابتة (غير المرتبطة بالهوية) تظهر إطلاقاً
+        expect(colors[0]).not.toContain('248, 113, 113');
+        expect(colors[1]).not.toContain('74, 222, 128');
     });
 
     it('لا يرمي خطأً لو أُعطي histogram بصندوق واحد فقط (حالة تقلّب صفري من المحرك)', () => {

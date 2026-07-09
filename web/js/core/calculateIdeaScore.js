@@ -60,6 +60,12 @@ export function calculateIdeaScore(state, results = null) {
     breakdown.margin = marginScore;
 
     // 3) حجم السوق (TAM) — وزن 30%
+    // ASSUMPTION (تدقيق 2026-07-09): خلافاً لعتبات الهامش أعلاه (مُشتقة من نطاق
+    // sectorBenchmarks.js الفعلي لكل قطاع)، عتبات TAM أدناه (10م/1م/500ك/100ك/50ك ريال)
+    // أرقام داخلية ثابتة يدوياً — لا يوجد في sectorBenchmarks.js أي حقل خاص بحجم
+    // السوق/TAM يمكن الاشتقاق منه (تحقّق: sectorBenchmarks.js لا يذكر tam/marketSize
+    // إطلاقاً). فهي تقدير تقريبي عام لبوابة تصنيف سريعة فقط، وليست معياراً قطاعياً
+    // موثّقاً — لا تُستخدم كرقم مرجعي دقيق.
     const tamRaw = state.marketSizing?.tam?.value ?? state.marketSizing?.tam ?? 0;
     const tamNum = typeof tamRaw === 'object' ? (tamRaw.value ?? tamRaw) : Number(tamRaw) || 0;
     let tamScore = 0;

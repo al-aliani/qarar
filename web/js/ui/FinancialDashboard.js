@@ -6,6 +6,7 @@
 // (بلا زكاة، خصم 5%) فتعرض NPV/IRR مختلفة عن التقرير المُصدَّر لنفس الدراسة.
 // الآن كل الشاشات والمصدّرات تقرأ من engine.js حصراً.
 import { calculateStudy as runFullModel } from '../core/engine.js';
+import { DEFAULT_SCENARIOS } from '../core/schema.js';
 import { SmartAdvisor } from '../services/SmartAdvisor.js';
 import { aiConnector } from '../services/AIConnector.js';
 import { createTooltip, wrapWithTooltip } from '../utils/glossary.js';
@@ -55,7 +56,7 @@ export class FinancialDashboard {
                 <div class="card glass-card">
                     <h3 class="card-title">لوحة التحكم المالي</h3>
                     <div class="alert alert--warning">
-                        <p><strong>⚠️ لا توجد بيانات إيرادات. يرجى إضافة مصادر الإيرادات في خطوة "مصادر الإيرادات".</strong></p>
+                        <p><strong><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> لا توجد بيانات إيرادات. يرجى إضافة مصادر الإيرادات في خطوة "مصادر الإيرادات".</strong></p>
                         <p class="text-sm mt-2">لعرض المؤشرات المالية (صافي القيمة الحالية، العائد، التعادل) أكمل:</p>
                         <ul class="text-sm mt-2" style="list-style: disc; padding-right: 20px;">
                             <li>مصادر الإيرادات (خطوة "مصادر الإيرادات")</li>
@@ -119,7 +120,7 @@ export class FinancialDashboard {
                 <div class="indicators-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                     <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">
                         <div class="kpi-label text-muted">هل المشروع ربح؟</div>
-                        <div class="kpi-value ${(y1.netIncome ?? 0) >= 0 ? 'text-success' : 'text-danger'}">${(y1.netIncome ?? 0) >= 0 ? 'نعم ✅' : 'لا ❌'}</div>
+                        <div class="kpi-value ${(y1.netIncome ?? 0) >= 0 ? 'text-success' : 'text-danger'}">${(y1.netIncome ?? 0) >= 0 ? 'نعم <svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>' : 'لا <svg class="ic" aria-hidden="true"><use href="#i-x"/></svg>'}</div>
                     </div>
                     <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">
                         <div class="kpi-label text-muted">متى يسترد رأس المال؟</div>
@@ -250,7 +251,7 @@ export class FinancialDashboard {
                 <div class="mt-4 p-3 rounded-lg border border-border bg-card" id="askAboutNumbersPanel" aria-label="اسأل عن رقمك">
                     <h4 class="card-title mb-2 text-sm">اسأل عن رقمك — مساعد مالي AI</h4>
                     <p class="text-xs text-muted mb-2">مثال: «هل مشروعي مجدٍ إذا زاد الإيجار 20%؟» — نُفسّر بناءً على نموذج الحساسية ونقترح إجراء.</p>
-                    <p class="text-xs text-gold mb-2">💡 يمكنك كتابة طلب بلغة عادية، مثل: زد الإيراد 10% أو خفّض التكلفة 5%.</p>
+                    <p class="text-xs text-gold mb-2"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> يمكنك كتابة طلب بلغة عادية، مثل: زد الإيراد 10% أو خفّض التكلفة 5%.</p>
                     <div class="flex gap-2 flex-wrap">
                         <input type="text" id="askAboutNumbersInput" class="input flex-grow" placeholder="اكتب سؤالك عن الأرقام أو السيناريوهات..." style="min-width:200px;" />
                         <button type="button" class="btn btn--sm btn-magic" id="askAboutNumbersBtn">اسأل</button>
@@ -410,26 +411,26 @@ export class FinancialDashboard {
     renderAdvisorInsights(results, inputs) {
         const analysis = SmartAdvisor.analyze(results, inputs);
 
-        if (!analysis.insights.length) return '<p class="text-muted">لا توجد ملاحظات سلبية. أداء المشروع ممتاز! 🚀</p>';
+        if (!analysis.insights.length) return '<p class="text-muted">لا توجد ملاحظات سلبية. أداء المشروع ممتاز! <svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg></p>';
 
         return `
             <div class="insights-list" style="display:flex; flex-direction:column; gap:10px;">
                 ${analysis.insights.map(item => `
                     <div class="insight-item ${item.type}" style="display:flex; gap:10px; padding:10px; border-radius:6px; background:var(--c-surface-2); border-left: 4px solid ${this.getColorForType(item.type)}">
                         <div class="insight-icon">
-                            ${item.type === 'danger' || item.type === 'critical' ? '⚠️' : item.type === 'warning' ? '✋' : '✅'}
+                            ${item.type === 'danger' || item.type === 'critical' ? '<svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg>' : item.type === 'warning' ? '<svg class="ic" aria-hidden="true"><use href="#i-hand-stop"/></svg>' : '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>'}
                         </div>
                         <div class="insight-content">
                             <div class="insight-msg font-bold">${item.message}</div>
-                            <div class="insight-action text-sm text-gold mt-1">💡 الحل المقترح: ${item.action}</div>
+                            <div class="insight-action text-sm text-gold mt-1"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> الحل المقترح: ${item.action}</div>
                         </div>
                     </div>
                 `).join('')}
             </div>
             <div class="ratios-strip mt-4 flex gap-4 text-sm text-muted" style="display:flex; gap:15px; margin-top:10px; font-family:monospace;">
-                <span>📊 COGS: ${(analysis.ratios.cogs * 100).toFixed(1)}%</span> | 
-                <span>👥 Labor: ${(analysis.ratios.labor * 100).toFixed(1)}%</span> | 
-                <span>🏠 Rent: ${(analysis.ratios.rent * 100).toFixed(1)}%</span>
+                <span><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> COGS: ${(analysis.ratios.cogs * 100).toFixed(1)}%</span> |
+                <span><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg> Labor: ${(analysis.ratios.labor * 100).toFixed(1)}%</span> |
+                <span><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg> Rent: ${(analysis.ratios.rent * 100).toFixed(1)}%</span>
             </div>
         `;
     }
@@ -447,7 +448,7 @@ export class FinancialDashboard {
         if (items.length === 0) return '';
         return `
             <div class="card mt-4" id="localizationBreakdown" aria-label="جدول توطين مالي">
-                <h3 class="text-gold mb-2">🇸🇦 توطين مالي (محسوب تلقائياً)</h3>
+                <h3 class="text-gold mb-2"><svg class="ic" aria-hidden="true"><use href="#i-flag-sa"/></svg> توطين مالي (محسوب تلقائياً)</h3>
                 <p class="text-xs text-muted mb-3">التأمينات الاجتماعية (GOSI)، رسوم الإقامة، والتأمين الصحي — مدمجة من جدول الرواتب حسب الجنسية.</p>
                 <table class="summary-table">
                     ${items.map(i => `
@@ -475,7 +476,7 @@ export class FinancialDashboard {
                         <li class="flex gap-3 items-start p-3 rounded-lg" style="background:var(--c-surface-2); border-left: 4px solid ${this.getColorForType(item.type)};">
                             <div class="flex-grow">
                                 <div class="font-medium text-sm">${(item.message || '').toString().replace(/</g, '&lt;')}</div>
-                                <div class="text-xs text-gold mt-1">💡 ${(item.action || '').toString().replace(/</g, '&lt;')}</div>
+                                <div class="text-xs text-gold mt-1"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> ${(item.action || '').toString().replace(/</g, '&lt;')}</div>
                             </div>
                             <button type="button" class="btn btn--sm btn--ghost btn-apply-improvement flex-shrink-0" data-insight-index="${i}" data-action="${(item.action || '').toString().replace(/"/g, '&quot;').replace(/`/g, '&#96;').slice(0, 100)}">تطبيق الاقتراح</button>
                         </li>
@@ -575,7 +576,7 @@ export class FinancialDashboard {
                     const tips = analysis.insights.length
                         ? analysis.insights.slice(0, 2).map(i => `• ${i.message} — ${i.action || '—'}`).join('<br>')
                         : 'لا توجد ملاحظات سلبية. أداء المشروع جيد.';
-                    askAnswer.innerHTML = `<strong>توصيات المستشار:</strong><br>${tips}<br><br><span class="text-gold">💡 لأسئلة مثل «لو زاد الإيجار 20%؟» استخدم <strong>اختبار الضغط</strong> في لوحة القرار (منزلقات تغير الإيرادات/التكاليف) لتحديث النتائج فوراً.</span>`;
+                    askAnswer.innerHTML = `<strong>توصيات المستشار:</strong><br>${tips}<br><br><span class="text-gold"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> لأسئلة مثل «لو زاد الإيجار 20%؟» استخدم <strong>اختبار الضغط</strong> في لوحة القرار (منزلقات تغير الإيرادات/التكاليف) لتحديث النتائج فوراً.</span>`;
                     return;
                 }
                 askAnswer.innerHTML = '<span class="text-muted">جاري التحليل...</span>';
@@ -584,7 +585,7 @@ export class FinancialDashboard {
                 const tips = analysis.insights.length
                     ? analysis.insights.slice(0, 3).map(i => `• ${i.message} — ${i.action || '—'}`).join('<br>')
                     : 'بناءً على النموذج الحالي: المؤشرات ضمن النطاق المقبول.';
-                askAnswer.innerHTML = `<strong>بناءً على سؤالك:</strong><br>${tips}<br><br><span class="text-gold">💡 لاختبار «لو زاد الإيجار 20%؟» أو «لو انخفض الإيراد 10%؟» انتقل إلى <strong>لوحة القرار</strong> واستخدم منزلقات اختبار الضغط لتحديث NPV وهامش الربح فوراً.</span>`;
+                askAnswer.innerHTML = `<strong>بناءً على سؤالك:</strong><br>${tips}<br><br><span class="text-gold"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> لاختبار «لو زاد الإيجار 20%؟» أو «لو انخفض الإيراد 10%؟» انتقل إلى <strong>لوحة القرار</strong> واستخدم منزلقات اختبار الضغط لتحديث NPV وهامش الربح فوراً.</span>`;
             };
             askBtn.addEventListener('click', askHandler);
             this._eventListeners.push({ element: askBtn, event: 'click', askHandler });
@@ -766,7 +767,9 @@ export class FinancialDashboard {
         const studyData = this.store.get ? this.store.get() : this.store.getState();
 
         if (mode === 'scenarios') {
-            const DEF = { base: { revenueChange: 0, costChange: 0 }, optimistic: { revenueChange: 0.15, costChange: -0.05 }, pessimistic: { revenueChange: -0.20, costChange: 0.15 } };
+            // تدقيق 2026-07-09: كانت هذه القيم نسخة محلية مختلفة (0.15/-0.05) عن الثابت
+            // المعتمد في schema.js (0.25/-0.10) — استُبدلت بالثابت المشترك DEFAULT_SCENARIOS.
+            const DEF = DEFAULT_SCENARIOS;
             const params = studyData.scenarios || {};
             const baseP = params.base || DEF.base;
             const optP = params.optimistic || DEF.optimistic;
@@ -904,10 +907,10 @@ export class FinancialDashboard {
             const pctOfMax = Math.round((cc.utilizationOfMax || 0) * 100);
             const tone = cc.exceeded ? 'text-danger' : (pctOfMax > 85 ? 'text-gold' : 'text-success');
             const verdict = cc.exceeded
-                ? `❌ مستحيلة مادياً — الخطة ${cc.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر وطاقتك ${cc.maxUnitsPerMonth.toLocaleString('ar-SA')}`
+                ? `<svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> مستحيلة مادياً — الخطة ${cc.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر وطاقتك ${cc.maxUnitsPerMonth.toLocaleString('ar-SA')}`
                 : pctOfMax > 85
-                    ? `⚠️ ضيّقة — ${pctOfMax.toLocaleString('ar-SA')}% من الطاقة القصوى منذ السنة الأولى (لا هامش للذروة)`
-                    : `✅ قابلة للتحقيق — ${pctOfMax.toLocaleString('ar-SA')}% من الطاقة القصوى (${cc.plannedUnitsPerMonth.toLocaleString('ar-SA')} من ${cc.maxUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر)`;
+                    ? `<svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> ضيّقة — ${pctOfMax.toLocaleString('ar-SA')}% من الطاقة القصوى منذ السنة الأولى (لا هامش للذروة)`
+                    : `<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> قابلة للتحقيق — ${pctOfMax.toLocaleString('ar-SA')}% من الطاقة القصوى (${cc.plannedUnitsPerMonth.toLocaleString('ar-SA')} من ${cc.maxUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر)`;
             rows.push(`<div class="flex-between py-2" style="border-bottom:1px solid var(--c-border);"><span class="text-sm">مصالحة الطاقة (هل المبيعات ممكنة مادياً؟)</span><span class="text-sm ${tone}">${verdict}</span></div>`);
         } else {
             rows.push(`<div class="flex-between py-2" style="border-bottom:1px solid var(--c-border);"><span class="text-sm">مصالحة الطاقة</span><span class="text-sm text-muted">لم يُدخل نموذج طاقة (مقاعد × دورات × أيام) — أضِفه في الدراسة الفنية لإقناع المدقق</span></div>`);

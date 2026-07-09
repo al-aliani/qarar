@@ -28,6 +28,19 @@
   --c-accent-red: #dc2626;
   --c-accent-purple: #7c3aed;
 
+  /* ألوان مراحل الجدول الزمني (Timeline/Gantt) — كانت مكرَّرة حرفياً مرتين داخل
+     timeline.css (شارات .cat-* وحلقات .timeline-chart__node--*)؛ مصدر واحد الآن. */
+  --c-stage-legal-1: #64748b;
+  --c-stage-legal-2: #475569;
+  --c-stage-technical-1: #f59e0b;
+  --c-stage-technical-2: #d97706;
+  --c-stage-hr-1: #10b981;
+  --c-stage-hr-2: #059669;
+  --c-stage-marketing-1: #8b5cf6;
+  --c-stage-marketing-2: #7c3aed;
+  --c-stage-launch-1: #ec4899;
+  --c-stage-launch-2: #db2777;
+
   --grad-gold: linear-gradient(135deg, #b07d2c, #d9a84e);
   --grad-emerald: linear-gradient(135deg, #0a4634, #0e5b44);
   --grad-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));

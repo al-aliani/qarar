@@ -12,9 +12,25 @@ export class SensitivityAnalysis {
 
     render() {
         const state = this.store.getState();
+
+        // ذاكرة تخزين مؤقت لهذه الدورة فقط: تُنشأ من جديد في بداية كل render() كي
+        // لا تُسرّب نتائج قديمة بعد تغيّر البيانات. المفتاح = تمثيل JSON ثابت
+        // لمعاملات السيناريو. نفس المعاملات (مثل revenueChange: -0.10) تتكرر بين
+        // البطاقات الثلاث ومصفوفة التأثير وجدول مستويات التشغيل — بدل إعادة حساب
+        // النموذج المالي الكامل ~22 مرة لكل عرض، نحسب كل تركيبة معاملات مرة واحدة
+        // فقط ونعيد استخدام النتيجة. لا يُغيّر هذا أي رقم أو لون معروض.
+        const scenarioCache = new Map();
+        const runModel = (params) => {
+            const key = JSON.stringify(params || {});
+            if (scenarioCache.has(key)) return scenarioCache.get(key);
+            const res = runFullModel(state, params);
+            scenarioCache.set(key, res);
+            return res;
+        };
+
         let baseResults = null;
         try {
-            baseResults = runFullModel(state);
+            baseResults = runModel(undefined);
         } catch (e) {
             console.error('Financial Model Error:', e);
             this.container.innerHTML = '<div class="alert alert-danger">حدث خطأ في حساب النموذج المالي</div>';
@@ -27,7 +43,7 @@ export class SensitivityAnalysis {
         // يُرجع null عند تعذّر الحساب (لا صفراً ملفَّقاً) — كي يظهر «--» محايداً لا رقماً أخضر زائفاً
         const runScenario = (params) => {
             try {
-                const res = runFullModel(state, params);
+                const res = runModel(params);
                 const npv = res?.indicators?.npv;
                 return (npv == null || Number.isNaN(npv)) ? null : npv;
             } catch (e) {

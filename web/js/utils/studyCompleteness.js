@@ -19,7 +19,7 @@ export function calculateStudyCompleteness(studyData) {
     );
 
     const weights = {
-        // الأساسيات (30%)
+        // الأساسيات (31%) — projectInfo(8)+keyPeople(3)+technical(8)+hr(5)+assumptions(7)=31
         projectInfo: 8,
         keyPeople: 3,
         technical: 8,
@@ -33,7 +33,7 @@ export function calculateStudyCompleteness(studyData) {
         legal: 5,
         revenue: 5,
 
-        // التسويق والاستراتيجية (25%)
+        // التسويق والاستراتيجية (27%) — marketing(9)+marketSizing(8)+strategic(5)+services(5)=27
         marketing: 9,
         marketSizing: 8,
         strategic: 5,

@@ -24,6 +24,23 @@ export class MonteCarloAnalysis {
         return { text: 'عالية ⛔', color: 'var(--c-danger)' };
     }
 
+    /**
+     * تحويل لون CSS variable سداسي (hex) إلى rgba() بشفافية مُحددة — يلزم لأن
+     * Chart.js's backgroundColor للمدرّج التكراري يحتاج سلسلة لون حرفية (canvas)
+     * لا يمكنه قراءة var(--x) مباشرة، فنقرأ القيمة المحسوبة عبر getComputedStyle
+     * (نفس نمط vendor-globals.js/Charts.js) ثم نضيف الشفافية هنا.
+     */
+    static hexToRgba(hex, alpha) {
+        const h = String(hex).replace('#', '').trim();
+        const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+        const int = parseInt(full, 16);
+        if (Number.isNaN(int) || full.length !== 6) return `rgba(0, 0, 0, ${alpha})`;
+        const r = (int >> 16) & 255;
+        const g = (int >> 8) & 255;
+        const b = int & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
     render() {
         // نتائج محفوظة من تشغيل سابق (إن وُجدت) — لا نُشغّل 1000 تكرار تلقائياً عند كل زيارة
         // للخطوة (كان يجمّد الخيط الرئيسي — تدقيق 2026-07-08)؛ التشغيل بزر صريح فقط الآن.
@@ -180,7 +197,7 @@ export class MonteCarloAnalysis {
         // of rendering a fake 0% success / high-risk verdict to the user.
         if (sim && sim.ok === false) {
             probEl.textContent = '—';
-            probEl.style.color = 'var(--c-muted, #888)';
+            probEl.style.color = 'var(--c-text-muted)';
             avgEl.textContent = '—';
             riskEl.textContent = 'تعذّرت المحاكاة — بيانات غير كافية';
             return;
@@ -223,6 +240,13 @@ export class MonteCarloAnalysis {
         const centers = histogram.map(b => (b.binStart + b.binEnd) / 2);
         const labels = centers.map(center => arNum.format(Math.round(center / 1000)) + ' ألف');
 
+        // ألوان الأعمدة تُشتق من متغيرات الهوية (--c-success/--c-danger) بدل قيم rgba
+        // ثابتة كانت لا تتبع الثيم ولا تتطابق مع شارة «درجة المخاطرة» أعلاه لنفس البيانات.
+        const successHex = getComputedStyle(document.documentElement).getPropertyValue('--c-success').trim() || '#157f5f';
+        const dangerHex = getComputedStyle(document.documentElement).getPropertyValue('--c-danger').trim() || '#c2382e';
+        const successColor = MonteCarloAnalysis.hexToRgba(successHex, 0.6);
+        const dangerColor = MonteCarloAnalysis.hexToRgba(dangerHex, 0.6);
+
         // Destroy old chart if exists
         if (this.chart) this.chart.destroy();
 
@@ -233,7 +257,7 @@ export class MonteCarloAnalysis {
                 datasets: [{
                     label: 'تكرار السيناريو',
                     data: buckets,
-                    backgroundColor: centers.map(center => center >= 0 ? 'rgba(74, 222, 128, 0.6)' : 'rgba(248, 113, 113, 0.6)'),
+                    backgroundColor: centers.map(center => center >= 0 ? successColor : dangerColor),
                     borderRadius: 4
                 }]
             },

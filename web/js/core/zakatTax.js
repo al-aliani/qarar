@@ -1,8 +1,13 @@
 /**
- * Zakat and Tax Calculator — النظام السعودي
+ * Zakat and Tax Calculator — النظام السعودي (نسخة مبسّطة قديمة)
  * الزكاة 2.5% على حصة الملكية السعودية/الخليجية،
  * وضريبة الدخل (20%) على حصة الملكية الأجنبية فقط.
- * متسق واحداً بواحد مع engine.js (مصدر الحقيقة) — لا تعدّل هنا دون تعديل المحرك.
+ *
+ * تنبيه: هذه صيغة مبسّطة ومختلفة بنيوياً عن حساب المحرك الفعلي
+ * (calculateZakatAndTax في web/js/core/financial/tax.js) الذي يعتمد
+ * fundingSourcesBase/adjustedProfit/taxDepY — وليست متطابقة معه واحداً بواحد.
+ * تُبقى هنا فقط كاحتياط لبيانات قديمة لا تحمل أرقام المحرك، ولا يجوز
+ * اعتبارها مصدر الحقيقة أو استخدامها كمرجع تحقّق (verification) لمخرجات المحرك.
  */
 
 export function calculateZakatAndTax(netProfit, zakatBase, options = {}) {

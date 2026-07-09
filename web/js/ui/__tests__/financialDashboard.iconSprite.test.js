@@ -5,9 +5,9 @@
  * لوحة التحكم المالي كانت تستخدم إيموجي خام (📌📊💵📈🤖🧠🔍) بينما لوحة القرار
  * (DecisionDashboard.js) اعتمدت أيقونات SVG من مكتبة index.html الموحّدة — تناقض
  * بصري بين شاشتين لنفس المفهوم. الآن تستخدم نفس نمط <svg class="ic"><use href="#i-..."/></svg>.
- * ملاحظة تصميمية: الرموز التعبيرية داخل النصوص الديناميكية (⚠️✅❌✋💡🚀 ونسب
- * COGS/Labor/Rent) بقيت كما هي عمداً — هذه ملصقات حالة داخل نص المستشار الذكي،
- * لا عناوين/أزرار هيكلية، فليست ضمن نطاق هذا الإصلاح.
+ * تحديث دفعة 6 (2026-07-09): الرموز التعبيرية المتبقية داخل النصوص الديناميكية
+ * (⚠️✅❌✋💡🚀📊👥🏠🇸🇦) استُبدلت هي الأخرى بنفس نمط الأيقونات SVG — راجع
+ * batch6.financialDashboardIcons.test.js لتغطية مخصصة لهذه الحالات.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { FinancialDashboard } from '../FinancialDashboard.js';
@@ -59,11 +59,16 @@ describe('FinancialDashboard — عناوين/أزرار توحّدت على أ�
         });
     });
 
-    it('يحافظ على الرموز التعبيرية غير الهيكلية (⚠️/✅/❌) داخل نصوص الحالة الديناميكية دون مساس', () => {
+    it('دفعة 6: يستبدل الرموز التعبيرية الديناميكية (⚠️/✅/❌) بأيقونات SVG (i-check/i-x) بدل الإيموجي الخام', () => {
         const dashboard = new FinancialDashboard('c', fakeStore(buildStudy()));
         dashboard.render();
         const html = document.getElementById('c').innerHTML;
-        // بطاقة "هل المشروع ربح؟" تحتوي ✅ أو ❌ حسب صافي الربح — لم تُمس
-        expect(html).toMatch(/نعم ✅|لا ❌/);
+        // بطاقة "هل المشروع ربح؟" تحتوي أيقونة i-check أو i-x حسب صافي الربح، لا رمزاً تعبيرياً خاماً
+        // (لا نُثبّت صيغة إغلاق <use> الذاتي لأن jsdom يطبّعها لصيغة <use ...></use>)
+        expect(html).toMatch(/نعم <svg class="ic"[^>]*><use href="#i-check"|لا <svg class="ic"[^>]*><use href="#i-x"/);
+        // نطاق الفحص محصور ببطاقة العرض المبسّط (مملوكة لهذا الملف) لتفادي التقاط
+        // إيموجي مشروع لمكوّنات أخرى مفوَّضة (ScenarioSwitcher/BenchmarkingView) لا علاقة لها بهذه المهمة.
+        const simpleViewPanel = document.getElementById('simpleViewPanel');
+        expect(simpleViewPanel.innerHTML).not.toMatch(/[⚠️✅❌✋💡🚀📊👥🏠🇸🇦]/u);
     });
 });

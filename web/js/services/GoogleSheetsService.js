@@ -5,6 +5,17 @@
  */
 
 /**
+ * تدقيق أمني/إفصاح (دفعة 6): نص الموافقة/الإفصاح المعروض في واجهة التفعيل
+ * (IntegrationsView) لحظة حفظ رابط Google Sheets — لم يكن هناك أي إفصاح سابقاً.
+ * يوضّح أن الرابط Web App اختاره المستخدم بنفسه، وأن مؤشرات دراسته الفعلية
+ * سترسل إليه تلقائياً عند كل عملية تصدير.
+ */
+export const GSHEETS_CONSENT_TEXT =
+  'عند الحفظ، سيتم إرسال مؤشرات دراستك (الإيرادات، صافي الربح، NPV/IRR، التدفقات النقدية) تلقائياً ' +
+  'إلى Web App الذي أعددته أنت بنفسك في Google Apps Script — نقطة نهاية تتحكم بها أنت وحدك — ' +
+  'عند كل عملية تصدير إلى Google Sheets. تأكد من صحة الرابط وأنه يخصك قبل الحفظ.';
+
+/**
  * تصدير إلى Google Sheets باستخدام Google Apps Script Web App
  * يتطلب إعداد Google Apps Script endpoint منفصل
  */
@@ -65,6 +76,9 @@ export function showGoogleSheetsSetup() {
             <h3 style="margin:0 0 16px 0;">📊 إعداد Google Sheets</h3>
             <p style="font-size:14px;color:var(--c-text-muted);margin-bottom:16px;">
                 لربط المنصة بـ Google Sheets، اتبع الخطوات التالية:
+            </p>
+            <p style="font-size:12px;color:var(--c-text-muted);background:var(--c-bg-app);border-radius:6px;padding:8px;margin-bottom:16px;">
+                ⚠️ ${GSHEETS_CONSENT_TEXT}
             </p>
             <ol style="font-size:13px;color:var(--c-text-muted);margin-bottom:20px;padding-right:20px;">
                 <li>افتح <a href="https://script.google.com" target="_blank">Google Apps Script</a></li>

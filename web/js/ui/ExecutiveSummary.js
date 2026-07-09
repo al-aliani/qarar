@@ -3,7 +3,7 @@
  * Auto-generated summary with key highlights and investment decision
  */
 
-import { calculateStudy as runFullModel } from '../core/engine.js';
+import { calculateStudy as runFullModel, resolveDecisionThresholds } from '../core/engine.js';
 import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
 import { calculateProjectScore } from '../core/scoring.js';
 import { checkDriversAgainstBenchmarks, SECTOR_BENCHMARKS, resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
@@ -336,10 +336,35 @@ export class ExecutiveSummary {
         // التوصية من نفس المصدر الموحّد (calculateProjectScore ← قرار المحرك) كي تطابق لوحة القرار،
         // بدل عتبة score>=70 مستقلة قد تعطي «نفّذ» بينما تعرض اللوحة «مراجعة» لنفس المشروع.
         const evalr = calculateProjectScore(state, results);
+
+        // دفعة 6: كانت الأفعال الموصى بها ثابتة تماماً لكل فئة قرار (GO/CONDITIONAL/NOGO)
+        // بصرف النظر عن نقاط الضعف الفعلية في مؤشرات المشروع — فمشروعان GO بملفين ماليين
+        // مختلفين تماماً (مثال: DSCR مريح مقابل DSCR ملاصق للحد الأدنى، أو استرداد قصير مقابل
+        // استرداد طويل) يحصلان على نفس الأفعال الثلاثة حرفياً. نشتق هنا 1-2 فعل إضافي فعلياً
+        // من مؤشرات هذا المشروع تحديداً (DSCR وفترة الاسترداد) ونضيفها لقائمة كل فئة.
+        const ind = results?.indicators || {};
+        const financing = state?.financing || {};
+        const thresholds = results?.assumptionsApplied?.thresholds
+            || resolveDecisionThresholds(state?.assumptions?.thresholds, financing);
+        const dynamicActions = [];
+
+        const loanAmount = Number(financing?.sources?.bankLoan?.amount ?? results?.loanSchedule?.loanAmount ?? 0);
+        const dscr = ind.dscr;
+        // ليس فقط dscr < الحد — بل أي DSCR "ملاصق" للحد الأدنى (هامش أمان ضعيف) يستحق تنبيهاً،
+        // حتى لو كان القرار العام GO (اجتاز الحد بالكاد ولم يهبط القرار إلى REVISE).
+        if (loanAmount > 0 && Number.isFinite(dscr) && dscr < (thresholds.targetDSCR + 0.2)) {
+            dynamicActions.push('أعد هيكلة التمويل (خفض مبلغ القرض أو رفع رأس المال الذاتي) لتحسين تغطية خدمة الدين (DSCR) وزيادة هامش الأمان');
+        }
+
+        const payback = ind.paybackPeriod ?? ind.payback;
+        if (Number.isFinite(payback) && payback > 0 && payback > thresholds.maxPayback) {
+            dynamicActions.push('فكّر بتنفيذ مرحلي (فرع أو دفعة واحدة أولاً) بدل الإطلاق الكامل لتخفيف أثر طول فترة الاسترداد على التدفق النقدي');
+        }
+
         if (evalr.recommendation === 'go') {
             recommendation = 'go';
             message = 'المشروع مجدي ويُنصح بالمضي قدماً في التنفيذ';
-            actions = ['البدء في إجراءات التأسيس', 'تأمين التمويل', 'بناء الفريق'];
+            actions = ['البدء في إجراءات التأسيس', 'تأمين التمويل', 'بناء الفريق', ...dynamicActions];
         } else if (evalr.recommendation === 'nogo') {
             recommendation = 'nogo';
             message = 'المشروع غير مجدي في شكله الحالي ويحتاج إعادة هيكلة جوهرية';
@@ -347,7 +372,7 @@ export class ExecutiveSummary {
         } else {
             recommendation = 'conditional';
             message = 'المشروع يحتاج معالجة بعض النقاط قبل اتخاذ القرار النهائي';
-            actions = ['معالجة الفجوات المحددة', 'إعادة النظر في التكاليف', 'استشارة خبراء'];
+            actions = ['معالجة الفجوات المحددة', 'إعادة النظر في التكاليف', 'استشارة خبراء', ...dynamicActions];
         }
 
         const bannerClass = recommendation === 'go' ? 'is-go' : recommendation === 'nogo' ? 'is-nogo' : 'is-conditional';

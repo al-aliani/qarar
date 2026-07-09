@@ -36,7 +36,7 @@ export const STEPS = [
   { id: 'operational_sim', label: "محاكاة التشغيل (صفوف الانتظار)", isOperationalSim: true, isAdvancedStep: true },
   { id: SECTIONS.LEGAL, label: "الدراسة القانونية", tables: ['licenses'] },
 
-  // الدراسة المالية (20-26)
+  // الدراسة المالية (20-28) — تشمل الزكاة/الضريبة وتقييم الشركة: مخرجات مالية أساسية (IFC/UNIDO)، لا تخطيط اختياري
   { id: SECTIONS.FINANCING, label: "مصادر وهيكلة التمويل", isFinancing: true },
   { id: 'investor_analysis', label: "تحليل الجدوى الاستثمارية", isInvestorAnalysis: true, isAdvancedStep: true },
   { id: SECTIONS.ASSUMPTIONS, label: "الافتراضات المالية", tables: [] },
@@ -44,18 +44,18 @@ export const STEPS = [
   { id: 'balance_sheet', label: "الميزانية العمومية", isBalanceSheet: true, isAdvancedStep: true },
   { id: SECTIONS.BREAK_EVEN, label: "تحليل نقطة التعادل", isBreakEven: true },
   { id: 'financial_eval', label: "مؤشرات التقييم المالي (نظرة مبكرة)", isExecutiveSummary: true },
+  { id: SECTIONS.ZAKAT_TAX, label: "حساب الزكاة والضريبة", isZakatTax: true, isAdvancedStep: true },
+  { id: SECTIONS.VALUATION, label: "تقييم الشركة", isValuation: true, isAdvancedStep: true },
 
-  // المخاطر (27-31)
+  // المخاطر (29-33)
   { id: SECTIONS.RISK_ANALYSIS, label: "تحليل المخاطر", isRiskMatrix: true },
   { id: 'stress_test', label: "اختبار التحمل", isStressTest: true, isAdvancedStep: true },
   { id: 'sensitivity', label: "تحليل الحساسية", isSensitivity: true, isAdvancedStep: true },
   { id: SECTIONS.SCENARIOS, label: "مستويات السيناريوهات", isScenarios: true, isAdvancedStep: true },
   { id: SECTIONS.MONTE_CARLO, label: "محاكاة مونت كارلو", isMonteCarlo: true, isAdvancedStep: true },
 
-  // التخطيط (32-34)
+  // التخطيط (34)
   { id: SECTIONS.TIMELINE, label: "الجدول الزمني للتنفيذ", isTimeline: true },
-  { id: SECTIONS.ZAKAT_TAX, label: "حساب الزكاة والضريبة", isZakatTax: true, isAdvancedStep: true },
-  { id: SECTIONS.VALUATION, label: "تقييم الشركة", isValuation: true, isAdvancedStep: true },
 
   // الملاحق والمصادر (35)
   { id: SECTIONS.APPENDICES, label: "الملاحق والمصادر والمراجع", tables: ['references', 'reviewers'], isAppendices: true, isAdvancedStep: true },
@@ -74,9 +74,10 @@ export const SIDEBAR_SECTIONS = [
   { id: 'setup', label: 'البداية والتعريف', range: [0, 6] },
   { id: 'marketing', label: 'الدراسة السوقية والاستراتيجية', range: [7, 11] },
   { id: 'technical', label: 'الدراسة الفنية والقانونية', range: [12, 19] },
-  { id: 'financial', label: 'الدراسة المالية والتمويل', range: [20, 26] },
-  { id: 'strategic', label: 'تحليل المخاطر', range: [27, 31] },
-  { id: 'advanced', label: 'التخطيط والتحليلات المتقدمة', range: [32, 34] },
+  // يشمل الزكاة/الضريبة وتقييم الشركة (33-34 سابقاً) — مخرجات مالية أساسية لا تخطيط متقدم اختياري
+  { id: 'financial', label: 'الدراسة المالية والتمويل', range: [20, 28] },
+  { id: 'strategic', label: 'تحليل المخاطر', range: [29, 33] },
+  { id: 'advanced', label: 'التخطيط والتحليلات المتقدمة', range: [34, 34] },
   { id: 'appendices', label: 'الملاحق والمصادر', range: [35, 35] },
   { id: 'results', label: 'النتائج والقرار النهائي', range: [36, 41] },
 ];
@@ -144,6 +145,8 @@ export const STEP_HELP = [
   { why: 'الميزانية العمومية تعرض الأصول والخصوم وحقوق الملكية في نقاط زمنية.', how: 'راجع الأرقام المُولَّدة من النموذج.' },
   { why: 'نقطة التعادل توضح عند أي حجم مبيعات يتساوى الإيراد مع التكلفة.', how: 'راجع الرسم والرقم؛ يساعد في قرارات التسعير والحجم.' },
   { why: 'مؤشرات التقييم (NPV، IRR، فترة الاسترداد) أساس قرار GO/NO-GO.', how: 'راجع اللوحة والتوصية؛ عدّل الافتراضات لرؤية التأثير.' },
+  { why: 'الزكاة والضريبة قد تكونان واجبتين حسب النشاط والبلد.', how: 'أدخل النسب والمبالغ المعفاة إن تنطبق؛ راجع استشارياً.' },
+  { why: 'تقييم الشركة يفيد في المفاوضات مع مستثمر أو بيع.', how: 'راجع الطرق المعروضة (صافي الأصول، DCF إن وُجد).' },
   // المخاطر
   { why: 'تحليل المخاطر يوضح التهديدات ودرجة التأثير وخطط التخفيف.', how: 'أدخل المخاطر واحتمالها وتأثيرها وطريقة المعالجة.' },
   { why: 'اختبار التحمل يوضح ماذا يحدث عند تغيّر الإيراد أو التكلفة.', how: 'حرّك المؤشرات لرؤية تأثير التغيّر على NPV والاسترداد.' },
@@ -152,8 +155,6 @@ export const STEP_HELP = [
   { why: 'محاكاة مونت كارلو تعطي توزيعاً احتمالياً للنتيجة بدلاً من رقم واحد.', how: 'شغّل المحاكاة وراجع الرسم والنسب؛ اختياري للمتقدمين.' },
   // التخطيط
   { why: 'الجدول الزمني يربط المهام بمراحل التنفيذ والتكلفة.', how: 'أدخل المراحل والمهام والتواريخ والتكلفة المرتبطة.' },
-  { why: 'الزكاة والضريبة قد تكونان واجبتين حسب النشاط والبلد.', how: 'أدخل النسب والمبالغ المعفاة إن تنطبق؛ راجع استشارياً.' },
-  { why: 'تقييم الشركة يفيد في المفاوضات مع مستثمر أو بيع.', how: 'راجع الطرق المعروضة (صافي الأصول، DCF إن وُجد).' },
   // الملاحق
   { why: 'الملاحق والمصادر تدعم مصداقية الدراسة وتسهّل المراجعة.', how: 'أضف المراجع وأسماء المراجعين إن وُجدت.' },
   // النتائج والقرار النهائي
@@ -184,8 +185,8 @@ export function stepIndexById(id) {
 // تصدير صريح لاستيراد Wizard.js وغيره (يتجنب مشاكل ESM/HMR)
 export const MAJOR_PHASES = [
   { id: 'phase1', label: 'التقييم والسوق', range: [0, 11] }, // setup & marketing
-  { id: 'phase2', label: 'البناء الفني والمالي', range: [12, 26] }, // technical & financial
-  { id: 'phase3', label: 'المخاطر والقرار', range: [27, 41] }, // strategic, advanced, appendices, results
+  { id: 'phase2', label: 'البناء الفني والمالي', range: [12, 28] }, // technical & financial (incl. الزكاة/التقييم)
+  { id: 'phase3', label: 'المخاطر والقرار', range: [29, 41] }, // strategic, advanced, appendices, results
 ];
 
 export function getMajorPhaseForStep(stepIndex) {

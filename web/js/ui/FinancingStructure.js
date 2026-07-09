@@ -616,6 +616,12 @@ export class FinancingStructure {
                     <span class="wacc-label">تكلفة رأس المال المرجح</span>
                     <span class="wacc-value">${(wacc * 100).toFixed(2)}%</span>
                 </div>
+                <div class="wacc-disclosure alert alert--warning mt-3" style="font-size: 0.85rem;">
+                    ⚠️ هذا الرقم إعلامي لمرجعك الشخصي فقط، ولا يُغذّي تلقائياً معدل الخصم الفعلي المستخدم لحساب
+                    صافي القيمة الحالية (NPV) والعائد الداخلي (IRR) في هذه الدراسة — ذلك المعدل يُضبط بشكل منفصل
+                    ضمن افتراضات الدراسة/الإعدادات المالية. إن رغبت في اعتماد هذا الرقم، انسخه يدوياً إلى حقل
+                    «معدل الخصم» هناك.
+                </div>
             </div>
         `;
     }

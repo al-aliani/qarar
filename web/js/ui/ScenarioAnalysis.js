@@ -4,6 +4,7 @@
  */
 
 import { calculateStudy as runFullModel } from '../core/engine.js';
+import { DEFAULT_SCENARIOS } from '../core/schema.js';
 
 export class ScenarioAnalysis {
     constructor(containerId, store, onNavigate) {
@@ -58,9 +59,9 @@ export class ScenarioAnalysis {
     }
 
     renderScenarioComparison(scenarios, baseResults) {
-        const pessimistic = scenarios.pessimistic || { revenueChange: -0.20, costChange: 0.15 };
-        const base = scenarios.base || { revenueChange: 0, costChange: 0 };
-        const optimistic = scenarios.optimistic || { revenueChange: 0.25, costChange: -0.10 };
+        const pessimistic = scenarios.pessimistic || DEFAULT_SCENARIOS.pessimistic;
+        const base = scenarios.base || DEFAULT_SCENARIOS.base;
+        const optimistic = scenarios.optimistic || DEFAULT_SCENARIOS.optimistic;
 
         // Calculate scenario-adjusted results using the REAL engine
         // يُرجع null عند تعذّر الحساب (لا صفراً ملفَّقاً) — نفس عقد runScenario في

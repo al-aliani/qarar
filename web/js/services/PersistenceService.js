@@ -274,6 +274,26 @@ export class PersistenceService {
         const { supabase } = await getSupabaseClient();
         if (!supabase) throw new Error("Supabase client not available");
 
+        // تدقيق أمني (دفعة 6): حارس خفيف قبل الرفع السحابي — دفاع بالعمق إلى جانب RLS
+        // (لا بديل عنها، بل طبقة إضافية). كانت data تُرفع كما هي بعد _sanitize فقط
+        // (بلا فحص حجم أو شكل)، فحمولة مشوَّهة (ليست كائناً عادياً) أو ضخمة بشكل غير
+        // طبيعي (خلل عميل أو تلاعب) تُكتب مباشرة في عمود JSONB دون أي حد أعلى.
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+            throw new Error("بيانات الدراسة غير صالحة للحفظ السحابي: يجب أن تكون كائناً (object)");
+        }
+        const MAX_CLOUD_PAYLOAD_CHARS = 5 * 1024 * 1024; // 5MB نصي — أكبر بكثير من أي دراسة حقيقية
+        let serialized;
+        try {
+            serialized = JSON.stringify(data);
+        } catch (e) {
+            throw new Error(`تعذر تجهيز بيانات الدراسة للحفظ السحابي: ${e?.message || e}`);
+        }
+        if (!serialized || serialized.length > MAX_CLOUD_PAYLOAD_CHARS) {
+            throw new Error(
+                `حجم بيانات الدراسة (${serialized ? serialized.length : 0} حرف) يتجاوز الحد الأقصى المسموح به للحفظ السحابي (${MAX_CLOUD_PAYLOAD_CHARS} حرف)`
+            );
+        }
+
         // كتابة واحدة إلى جدول studies الكنسي (user_id + data) — المخطط الموحّد.
         // data كاملة الدراسة تُخزَّن في عمود data (JSONB). لا نكتب status لتفادي
         // مخالفة قيد CHECK إن حملت projectInfo.status قيمة خارج المسموح.

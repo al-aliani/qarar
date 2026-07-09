@@ -78,6 +78,13 @@ export class OperationalSim {
 
                 <div class="alert mt-4 hidden" id="simAlert"></div>
 
+                <p class="text-xs text-muted mt-2" id="simAdvisoryNote">
+                    <strong>ملاحظة:</strong> هذه محاكاة استرشادية (نظرية الطوابير) لأوقات الانتظار والازدحام
+                    فقط، لاستكشاف الأثر التقريبي لعدد نقاط الخدمة — <strong>لا تُحدّث تلقائياً</strong> خطة
+                    التوظيف الفعلية أو الرواتب في قسم «الموارد البشرية» بالدراسة. إن قررت تغيير عدد
+                    الموظفين بناءً على النتيجة هنا، حدِّثه يدوياً هناك.
+                </p>
+
                 <!-- Navigation -->
                 <div class="wizard-nav margin-top-lg">
                     <button class="btn btn--secondary btn-prev-step">السابق</button>
@@ -160,7 +167,7 @@ export class OperationalSim {
 
             if (avgWaitTime > 5) {
                 const optimal = this.findOptimalStaffing(params.arrivalRate, params.serviceTime, 5);
-                this.showAlert('warning', `وقت الانتظار مرتفع (${Math.round(avgWaitTime)} د). للحفاظ على أقل من 5 دقائق، نقترح تعيين <strong>${optimal}</strong> موظفين. <button class="btn-xs btn--text underline" id="btnApplyOptim">تطبيق الاقتراح</button>`);
+                this.showAlert('warning', `وقت الانتظار مرتفع (${Math.round(avgWaitTime)} د). للحفاظ على أقل من 5 دقائق، نقترح تعيين <strong>${optimal}</strong> موظفين في نقاط الخدمة هنا (محاكاة استرشادية — لا تُطبَّق تلقائياً على خطة التوظيف الفعلية). <button class="btn-xs btn--text underline" id="btnApplyOptim">جرّب هذا الرقم هنا</button>`);
 
                 // Bind apply button
                 setTimeout(() => {

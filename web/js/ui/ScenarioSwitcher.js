@@ -5,6 +5,7 @@
  */
 
 import { calculateStudy as runFullModel } from '../core/engine.js';
+import { DEFAULT_SCENARIOS } from '../core/schema.js';
 
 export class ScenarioSwitcher {
     constructor(containerId, store) {
@@ -23,11 +24,9 @@ export class ScenarioSwitcher {
 
         const params = state.scenarios || {};
         // قيم افتراضية عند غياب state.scenarios (مشاريع قديمة) — PlanGuru: Base/Best/Worst في جدول واحد
-        const DEF = {
-            base: { revenueChange: 0, costChange: 0 },
-            optimistic: { revenueChange: 0.15, costChange: -0.05 },
-            pessimistic: { revenueChange: -0.20, costChange: 0.15 }
-        };
+        // تدقيق 2026-07-09: كانت هذه القيم نسخة محلية مختلفة (0.15/-0.05) عن الثابت
+        // المعتمد في schema.js (0.25/-0.10) — استُبدلت بالثابت المشترك DEFAULT_SCENARIOS.
+        const DEF = DEFAULT_SCENARIOS;
         const opt = params.optimistic || DEF.optimistic;
         const pess = params.pessimistic || DEF.pessimistic;
         const baseResults = runFullModel(state, params.base || DEF.base);

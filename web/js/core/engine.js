@@ -462,6 +462,10 @@ export function calculateStudy(study, overrides) {
     // فجوة التمويل الصريحة: موجبة = مصادر أقل من الاستثمار (يجب سدها)، سالبة = فائض
     const fundingGap = totalInvestment - (paidCapital + loanAmount);
     let retainedEarningsStart = 0; // الأرباح المحتجزة في بداية كل سنة
+    // تراكم الإهلاك الدفتري الفعلي (غير خطي: يتوقف الجزء القابل للإحلال/التأسيس عند
+    // استنفاد عمره) لبداية كل سنة — يُستخدم في صافي الأصول الثابتة للوعاء الزكوي
+    // بدل التقريب الخطي annualDepreciation×yearIndex الذي كان يفترض إهلاكاً ثابتاً للأبد.
+    let cumulativeDepreciationPriorYears = 0;
 
     for (let i = 1; i <= years; i++) {
         const yearIndex = i - 1;
@@ -554,7 +558,11 @@ export function calculateStudy(study, overrides) {
         const loanBalanceStart = loanScheduleData
             ? (i === 1 ? loanAmount : (loanScheduleData.annualSummary.find(s => s.year === i - 1)?.endingBalance ?? 0))
             : 0;
-        const netFixedStart = Math.max(0, totalCapex - annualDepreciation * yearIndex);
+        // تصحيح (دفعة ٦): تراكم الإهلاك الفعلي غير الخطي (permanentAnnualDep + replaceableDepAtYear
+        // + establishmentAmortAtYear لكل سنة سابقة) بدل annualDepreciation الخطي — كان يفترض
+        // استمرار إهلاك الأصول القابلة للإحلال/التأسيس للأبد فيُحرّف صافي الأصول الثابتة (وبالتالي
+        // الوعاء الزكوي بطريقة مصادر الأموال) في السنوات التي يُستنفد فيها عمر أي بند منها.
+        const netFixedStart = Math.max(0, totalCapex - cumulativeDepreciationPriorYears);
         const taxDepY = taxDepByYear[yearIndex] || 0;
         
         const { zakatBase, zakat, tax, adjustedProfit } = calculateZakatAndTax({
@@ -571,6 +579,7 @@ export function calculateStudy(study, overrides) {
         });
         const netIncome = ebt - zakat - tax;
         retainedEarningsStart += netIncome; // ترحيل لبداية السنة التالية
+        cumulativeDepreciationPriorYears += depreciation; // نفس الترحيل: تراكم الإهلاك الفعلي لبداية السنة التالية
 
         // التدفق النقدي
         const operatingCF = netIncome + depreciation;
@@ -790,6 +799,9 @@ export function calculateStudy(study, overrides) {
                 incomeStatements: incomeStatement,
                 workingCapital,
                 openingInventory,
+                // الدورة النقدية الفعلية (DSO/DIO/DPO) — تُمرَّر كي تُظهر الميزانية ذمم عملاء
+                // حقيقية بدل صفر ثابت («Simplified») حتى مع سياسة تحصيل آجل صريحة (تدقيق دفعة 6).
+                cashCycle,
                 // مساهمة المالك المُدخلة (وليس رقماً مشتقاً) + الفجوة صراحةً كي تُعرض
                 // «فجوة تمويل غير مغطاة» بدل رأس مال مدفوع مختلَق يوازن الميزانية صمتاً
                 equityAmount: paidCapital,
@@ -1159,46 +1171,6 @@ function computeDecision(th, k) {
     }
 
     return { decision, decisionReasons: reasons };
-}
-
-/**
- * Runner for Sensitivity Analysis (legacy — بعض الشاشات القديمة تستدعيه)
- */
-export function calculateSensitivityScenarios(study) {
-    const run = (revMult, costMult, label) => {
-        const dStudy = JSON.parse(JSON.stringify(study));
-
-        if (dStudy[SECTIONS.REVENUE]) {
-            (dStudy[SECTIONS.REVENUE].streams || []).forEach(s => s.avgPrice = (s.avgPrice || 0) * revMult);
-        }
-        if (dStudy[SECTIONS.SERVICES]) {
-            (dStudy[SECTIONS.SERVICES].items || []).forEach(s => s.pricePerUnit = (s.pricePerUnit || 0) * revMult);
-        }
-        if (dStudy[SECTIONS.HR]) {
-            (dStudy[SECTIONS.HR].positions || []).forEach(p => p.salary = (p.salary || 0) * costMult);
-        }
-        if (dStudy[SECTIONS.LOGISTICS]) (dStudy[SECTIONS.LOGISTICS].logistics || []).forEach(i => i.monthly = (i.monthly || 0) * costMult);
-        if (dStudy[SECTIONS.ADMINISTRATIVE]) (dStudy[SECTIONS.ADMINISTRATIVE].administrative || []).forEach(i => i.monthly = (i.monthly || 0) * costMult);
-        if (dStudy[SECTIONS.SERVICES]) {
-            (dStudy[SECTIONS.SERVICES].items || []).forEach(s => s.variableCostPerUnit = (s.variableCostPerUnit || 0) * costMult);
-        }
-
-        const res = calculateStudy(dStudy);
-        return {
-            scenario: label,
-            npv: res.indicators.npv,
-            irr: res.indicators.irr,
-            payback: res.indicators.paybackPeriod,
-            roi: res.indicators.roi
-        };
-    };
-
-    return [
-        run(1.10, 1.0, 'زيادة الإيرادات 10%'),
-        run(0.90, 1.0, 'انخفاض الإيرادات 10%'),
-        run(1.0, 1.10, 'زيادة التكاليف 10%'),
-        run(1.0, 0.90, 'انخفاض التكاليف 10%'),
-    ];
 }
 
 // Helpers

@@ -14,6 +14,17 @@ export const WEBHOOK_EVENTS = [
   'decision.nogo',
 ];
 
+/**
+ * تدقيق أمني/إفصاح (دفعة 6): نص الموافقة/الإفصاح المعروض في واجهة التفعيل
+ * (IntegrationsView) لحظة إضافة الرابط — يوضّح أن الرابط نقطة نهاية اختارها
+ * المستخدم بنفسه، وأن بيانات دراسته الفعلية سترسل إليها تلقائياً عند وقوع الأحداث.
+ */
+export const WEBHOOK_CONSENT_TEXT =
+  'عند الإضافة، سيتم إرسال بيانات دراستك (اسم المشروع، المؤشرات المالية، القرار الاستثماري) تلقائياً ' +
+  'إلى هذا الرابط الذي أدخلته أنت بنفسه — أي نقطة نهاية تتحكم بها أنت وحدك ونحن لا نطّلع على ما يصلها — ' +
+  'عند وقوع أي من الأحداث التالية: study.created، study.saved، report.exported، decision.go، decision.nogo. ' +
+  'تأكد أنه رابط تثق به قبل الحفظ.';
+
 function loadFromStorage() {
   try {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;

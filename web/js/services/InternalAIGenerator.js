@@ -252,12 +252,26 @@ export function generateSWOT(state) {
     if (streams.length <= 1) weaknesses.push('الاعتماد على مصدر إيراد واحد يزيد حساسية المشروع لتقلب الطلب');
     if (weaknesses.length < 3) weaknesses.push('محدودية الموارد المالية والتشغيلية في البداية مقارنة بالمنافسين الراسخين');
 
+    // فرص مبنية على مدخلات الدراسة الفعلية قدر الإمكان (كانت 4 عبارات شبه ثابتة —
+    // فقط الأولى تُقحم فيها concept/city — على عكس weaknesses/threats المبنيتين ديناميكياً).
     const opportunities = [
         `نمو الطلب المحلي على ${concept} في ${city}`,
-        'دعم برامج رؤية 2030 للمشاريع الصغيرة والمتوسطة',
-        'فرص التوسع الرقمي والتوصيل',
-        'إمكانية الشراكات مع جهات مكملة'
+        'دعم برامج رؤية 2030 للمشاريع الصغيرة والمتوسطة'
     ];
+    const ms = state?.marketSizing || {};
+    const tamVal = Number(ms?.tam?.value || 0);
+    const somVal = Number(ms?.som?.value || 0);
+    if (tamVal > 0 && (somVal <= 0 || tamVal >= somVal * 5)) {
+        opportunities.push(`حجم السوق الكلي (TAM) يقدَّر بنحو ${tamVal.toLocaleString('ar-SA')} ريال، وهو كبير مقارنة بالحصة المستهدفة، ما يفتح مجالاً واسعاً للنمو والتوسع`);
+    } else {
+        opportunities.push('فرص التوسع الرقمي والتوصيل');
+    }
+    const marketingComps = state?.marketing?.competitors || [];
+    if (marketingComps.length > 0 && marketingComps.length <= 2) {
+        opportunities.push(`سوق محدود التشبع بالمنافسين حالياً (${marketingComps.length} منافس مرصود فقط)، ما يتيح فرصة اكتساب حصة سوقية أسرع`);
+    } else {
+        opportunities.push('إمكانية الشراكات مع جهات مكملة');
+    }
 
     const threats = [
         'منافسة محلية ودولية',
@@ -410,6 +424,12 @@ export function generateFieldSuggestion(fieldName, currentValue, state) {
         'economy-trends': `الاتجاهات تشير إلى نمو الطلب على ${concept} في المملكة، مع دعم برامج الرؤية للقطاع الخاص والاستثمار المحلي.`
     };
 
+    if (!Object.prototype.hasOwnProperty.call(templates, key)) {
+        // تدقيق أمني/جودة (دفعة 6): كان يسقط صامتاً لقالب الوصف العام لأي مفتاح غير
+        // مطابق — يمر ذلك دون أن يلاحظه مطوّر يضيف حقلاً جديداً، فيظهر نص تعبئة عام
+        // في الإنتاج بدل نص مخصص فعلي للحقل.
+        console.warn(`[InternalAIGenerator] generateFieldSuggestion: لا يوجد قالب مطابق للحقل "${key}" — يُستخدم القالب العام الافتراضي (description). أضف قالباً مخصصاً لهذا الحقل.`);
+    }
     return templates[key] || templates.description;
 }
 
@@ -459,8 +479,8 @@ export function generateIntroSuggestions(state) {
             type: 'final',
             name: 'القهوة السعودية',
             description: 'منتج يُستخرج من شجرة البن على شكل حبيبات تتدرج ألوانها من الأخضر إلى الأصفر إلى البني الفاتح أو الغامق. يُحمّص حسب المعيار حتى يكون جاهزاً للاستخدام.',
-            uniqueCharacteristics: 'مذاق مميز يعتمد على نوع البن وطريقة التحميص ودرجة المرارة المطلوبة.',
-            addedValue: 'الطعم المر المميز للقهوة العربية نتيجة لنوع البن وطريقة التحميص. يهدف للوصول لدرجة المرارة التي يرغب بها العميل.',
+            uniqueFeatures: 'مذاق مميز يعتمد على نوع البن وطريقة التحميص ودرجة المرارة المطلوبة.',
+            valueAdded: 'الطعم المر المميز للقهوة العربية نتيجة لنوع البن وطريقة التحميص. يهدف للوصول لدرجة المرارة التي يرغب بها العميل.',
             customerBenefit: 'جودة عالية وبسعر مناسب.'
         }];
         introServices = [
@@ -472,7 +492,7 @@ export function generateIntroSuggestions(state) {
             { customerType: 'الأسر المنتجة (مستهلك غير مباشر)', customerNeed: 'شراء قهوة لتحويلها لمنتج نهائي', valueWeProvide: 'مواد أولية بجودة تسمح بإنتاج قيمة مضافة' }
         ];
     } else {
-        products = [{ type: 'final', name: concept, description: `منتج أو خدمة ${concept} بمواصفات تلبي احتياجات السوق المستهدف.`, uniqueCharacteristics: '', addedValue: '', customerBenefit: '' }];
+        products = [{ type: 'final', name: concept, description: `منتج أو خدمة ${concept} بمواصفات تلبي احتياجات السوق المستهدف.`, uniqueFeatures: '', valueAdded: '', customerBenefit: '' }];
         introServices = [{ name: 'التوزيع أو التوصيل', type: 'supportive', description: `خدمة وصول ${concept} للعميل.` }];
         customerValues = [
             { customerType: 'العميل المستهدف', customerNeed: 'تلبية احتياج محدد', valueWeProvide: `قيمة متميزة في ${concept}` }
@@ -977,6 +997,7 @@ export function generateLicenses(state) {
     if (isFandB) {
         base.push({ name: 'رخصة هيئة الغذاء والدواء', quantity: 1, price: 1000, notes: 'للمنشآت الغذائية' });
         base.push({ name: 'شهادة صحية للعاملين', quantity: 1, price: 400, notes: 'لكل عامل بمناولة الطعام — وزارة الصحة' });
+        base.push({ name: 'تصريح شفاط المطبخ (التهوية)', quantity: 1, price: 1200, notes: 'اشتراط شبه إلزامي لمطابخ المطاعم — البلدية / الدفاع المدني' });
     }
     if (isRetail) base.push({ name: 'رخصة نشاط تجاري', quantity: 1, price: 2500, notes: 'حسب البند' });
     if (isHealth) {

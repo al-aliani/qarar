@@ -65,7 +65,7 @@
 }
 
 .gantt-row:hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--c-surface-2);
 }
 
 .gantt-row .gantt-label-col {
@@ -114,23 +114,23 @@
 
 /* Categories Colors */
 .cat-legal {
-    background: linear-gradient(135deg, #64748b, #475569);
+    background: linear-gradient(135deg, var(--c-stage-legal-1), var(--c-stage-legal-2));
 }
 
 .cat-technical {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
+    background: linear-gradient(135deg, var(--c-stage-technical-1), var(--c-stage-technical-2));
 }
 
 .cat-hr {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, var(--c-stage-hr-1), var(--c-stage-hr-2));
 }
 
 .cat-marketing {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    background: linear-gradient(135deg, var(--c-stage-marketing-1), var(--c-stage-marketing-2));
 }
 
 .cat-launch {
-    background: linear-gradient(135deg, #ec4899, #db2777);
+    background: linear-gradient(135deg, var(--c-stage-launch-1), var(--c-stage-launch-2));
 }
 
 .bar-text {
@@ -258,11 +258,11 @@
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.timeline-chart__node--legal .timeline-chart__dot { background: linear-gradient(135deg, #64748b, #475569); }
-.timeline-chart__node--technical .timeline-chart__dot { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.timeline-chart__node--hr .timeline-chart__dot { background: linear-gradient(135deg, #10b981, #059669); }
-.timeline-chart__node--marketing .timeline-chart__dot { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
-.timeline-chart__node--launch .timeline-chart__dot { background: linear-gradient(135deg, #ec4899, #db2777); }
+.timeline-chart__node--legal .timeline-chart__dot { background: linear-gradient(135deg, var(--c-stage-legal-1), var(--c-stage-legal-2)); }
+.timeline-chart__node--technical .timeline-chart__dot { background: linear-gradient(135deg, var(--c-stage-technical-1), var(--c-stage-technical-2)); }
+.timeline-chart__node--hr .timeline-chart__dot { background: linear-gradient(135deg, var(--c-stage-hr-1), var(--c-stage-hr-2)); }
+.timeline-chart__node--marketing .timeline-chart__dot { background: linear-gradient(135deg, var(--c-stage-marketing-1), var(--c-stage-marketing-2)); }
+.timeline-chart__node--launch .timeline-chart__dot { background: linear-gradient(135deg, var(--c-stage-launch-1), var(--c-stage-launch-2)); }
 
 .timeline-chart__label {
     position: absolute;

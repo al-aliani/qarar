@@ -10,6 +10,18 @@
 // الملف (كقيمة افتراضية) وengine.js (كحساب فعلي)، بدل نسخة محلية بكل ملف.
 export const SAUDI_GOSI_RATE_2026 = 0.1275;
 
+// تدقيق 2026-07-09: كانت نسب سيناريو "متفائل/متشائم" الافتراضية (تُستخدم متى لم
+// يُعدِّلها المستخدم بعد) معرَّفة بقيم متضاربة في ملفات مختلفة تقرأ نفس الحقل
+// state.scenarios.optimistic (schema.js: 0.25/-0.10، ScenarioSwitcher.js وFinancialDashboard.js:
+// 0.15/-0.05) — فيرى المستخدم أرقام NPV مختلفة لنفس السيناريو غير المُعدَّل حسب
+// الشاشة التي يفتحها. ثابت واحد مُصدَّر هنا (مصدر الحقيقة: createEmptyStudy أدناه)
+// تستورده كل الشاشات بدل نسخ محلية.
+export const DEFAULT_SCENARIOS = {
+    pessimistic: { revenueChange: -0.20, costChange: 0.15 },
+    base: { revenueChange: 0, costChange: 0 },
+    optimistic: { revenueChange: 0.25, costChange: -0.10 }
+};
+
 export const SECTIONS = {
     PROJECT_INFO: 'projectInfo',
     KEY_PEOPLE: 'keyPeople', // المرحلة الأولى: الأشخاص الرئيسون (الفريق المؤسس)
@@ -580,9 +592,9 @@ export function createEmptyStudy() {
             // ASSUMPTION (تدقيق 2026-07-08، ملاحظة منخفضة #59): نسب متشائم/متفائل هنا
             // ثوابت تقديرية عامة بلا مصدر خارجي منشور — قابلة للتعديل الكامل من
             // المستخدم في خطوة "تحليل السيناريوهات"، وليست أرقاماً معتمدة رسمياً.
-            pessimistic: { revenueChange: -0.20, costChange: 0.15, description: 'سيناريو متشائم' },
-            base: { revenueChange: 0, costChange: 0, description: 'السيناريو الأساسي' },
-            optimistic: { revenueChange: 0.25, costChange: -0.10, description: 'سيناريو متفائل' },
+            pessimistic: { ...DEFAULT_SCENARIOS.pessimistic, description: 'سيناريو متشائم' },
+            base: { ...DEFAULT_SCENARIOS.base, description: 'السيناريو الأساسي' },
+            optimistic: { ...DEFAULT_SCENARIOS.optimistic, description: 'سيناريو متفائل' },
             sensitivity: {
                 variables: ['revenue', 'costs', 'price', 'volume'],
                 selectedVariable: 'revenue',
@@ -684,13 +696,14 @@ export function createEmptyStudy() {
         // DECISION_DASHBOARD/BUSINESS_MODEL/MONTE_CARLO/VALUATION) — تُدهس بصمت بالتعريفات
         // الحقيقية أدناه في نفس الكائن الحرفي (تدقيق 2026-07-08)؛ لا أثر وظيفي لحذفها.
 
-        [SECTIONS.FINANCIAL_STATEMENTS]: {
-            incomeStatement: [], // 5 years
-            cashFlow: [],       // Cash in / Cash out
-            balanceSheet: [],   // Assets, Liabilities, Equity
-            taxRate: 0.20, // ضريبة دخل حصة الأجانب فقط (انظر assumptions.foreignOwnershipRate)
-            zakatRate: 0.025
-        },
+        // تدقيق 2026-07-09 (دفعة 6): هذا القسم كود ميت فعلياً برغم بقاء SECTIONS.FINANCIAL_STATEMENTS
+        // نفسه حياً (خطوة معالج حقيقية + تُقرأ في sectionExporter.js/qaChecks.js) — لا شيء يقرأ
+        // أو يكتب incomeStatement/cashFlow/balanceSheet/taxRate/zakatRate هنا تحديداً؛ قوائم الدخل/
+        // التدفقات/الميزانية الفعلية تُحسب حياً من المحرك (engine.js)، وtaxRate/zakatRate الحقيقيان
+        // مصدرهما assumptions.taxRate ومعدل ثابت منفصل في engine.js، لا هذا الكائن. لم تُحذف
+        // الحقول لتفادي كسر schema.guard.test.js (يتحقق أن كل SECTIONS له قيمة افتراضية معرَّفة)
+        // — تُبقى فارغة/توثيقية بوضوح بدل الإيحاء بأنها تُقرأ فعلياً في مكان ما.
+        [SECTIONS.FINANCIAL_STATEMENTS]: {},
 
         // ═══════════════════════════════════════════════════════════
         // 2️⃣0️⃣ تحليل نقطة التعادل (Break-even Analysis)
@@ -1008,6 +1021,7 @@ export const TABLE_SCHEMAS = {
             { key: 'quantity', label: 'العدد', type: 'number', default: 1 },
             { key: 'price', label: 'القيمة', type: 'number' },
             { key: 'total', label: 'الإجمالي', type: 'computed', formula: r => (r.quantity || 1) * (r.price || 0) },
+            { key: 'depreciationRate', label: '% استهلاك', type: 'number', default: 0.25 },
             { key: 'notes', label: 'ملاحظات', type: 'text' }
         ],
         showTotal: true,

@@ -46,15 +46,15 @@ export class BreakEvenAnalysis {
             return;
         }
 
-        // Calculate break-even using contribution margin
-        const fixedCosts = (year1.fixedCosts || 0) + (year1.depreciation || 0);
+        // نقطة التعادل: مصدر واحد فقط — إندكاتور المحرك (indicators.breakEvenPointValue).
+        // كانت هذه الشاشة تعيد حسابها محلياً من fixedCosts/contributionMarginRatio، فتُنتج
+        // رقماً قد يختلف عن رقم المحرك ولوحة القرار (نفس علة «ثلاث قيم مختلفة» الموثقة في
+        // engine.js عند تعريف breakEvenValue — تدقيق دفعة 6).
+        const bepValue = results.indicators?.breakEvenPointValue || 0;
         const totalRevenue = year1.revenue || 0;
-        const variableCosts = year1.variableCosts || 0;
-        const contributionMargin = totalRevenue - variableCosts;
-        const contributionMarginRatio = totalRevenue > 0 ? (contributionMargin / totalRevenue) : 0;
-        
-        // Break-even revenue = Fixed Costs / Contribution Margin Ratio
-        const bepValue = contributionMarginRatio > 0 ? (fixedCosts / contributionMarginRatio) : fixedCosts;
+        // عرض توزيع التكاليف فقط (لا يُستخدم لإعادة اشتقاق نقطة التعادل) — بنفس تعريف
+        // المحرك (ثوابت السنة الأولى + الإهلاك) كي يتّسق مع رقم bepValue أعلاه.
+        const fixedCosts = (year1.fixedCosts || 0) + (year1.depreciation || 0);
         const bepPercentage = totalRevenue > 0 ? (bepValue / totalRevenue) : 0;
 
         this.container.innerHTML = `

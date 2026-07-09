@@ -175,7 +175,7 @@ describe('FinancialDashboard — نسبة الطاقة القصوى بالأرق
         const results = {
             capacityCheck: {
                 exceeded: false,
-                utilizationOfMax: 0.6, // ⇒ pctOfMax = 60 ⇒ الفرع "✅ قابلة للتحقيق" (<=85)
+                utilizationOfMax: 0.6, // ⇒ pctOfMax = 60 ⇒ الفرع "قابلة للتحقيق" (أيقونة i-check) (<=85)
                 plannedUnitsPerMonth: 300,
                 maxUnitsPerMonth: 500
             },
@@ -185,7 +185,10 @@ describe('FinancialDashboard — نسبة الطاقة القصوى بالأرق
 
         const html = dashboard.renderAuditorPanel(results);
 
-        expect(html).toContain('✅ قابلة للتحقيق');
+        // دفعة 6: استُبدل الرمز التعبيري الخام (✅) بأيقونة SVG من المكتبة المشتركة
+        expect(html).toContain('href="#i-check"');
+        expect(html).toContain('قابلة للتحقيق');
+        expect(html).not.toMatch(/[✅❌⚠️]/u);
         // النسبة المئوية نفسها يجب أن تكون بالأرقام الهندية العربية (٦٠%) لا اللاتينية (60%)
         expect(html).toMatch(/[٠-٩]+% من الطاقة القصوى/);
         expect(html).not.toMatch(/[0-9]+% من الطاقة القصوى/);

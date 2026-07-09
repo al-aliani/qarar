@@ -4,8 +4,8 @@
  */
 
 import { getSupabaseClient } from '../../supabaseClient.js';
-import { showGoogleSheetsSetup } from '../services/GoogleSheetsService.js';
-import { WebhookService, WEBHOOK_EVENTS } from '../services/WebhookService.js';
+import { showGoogleSheetsSetup, GSHEETS_CONSENT_TEXT } from '../services/GoogleSheetsService.js';
+import { WebhookService, WEBHOOK_EVENTS, WEBHOOK_CONSENT_TEXT } from '../services/WebhookService.js';
 import { isCaptchaConfigured } from '../utils/captcha.js';
 import { toast } from '../utils/toast.js';
 
@@ -71,6 +71,7 @@ export class IntegrationsView {
             <label class="block text-xs font-medium mb-1">Web App URL (من Google Apps Script)</label>
             <input type="url" id="inpGSheetsUrl" class="form-input text-sm w-full" placeholder="https://script.google.com/macros/s/.../exec" value="${(gsheetsUrl || '').replace(/"/g, '&quot;')}">
           </div>
+          <p class="text-xs text-muted mb-3" style="background: var(--c-bg-app); border-radius: 6px; padding: 8px;">⚠️ ${GSHEETS_CONSENT_TEXT}</p>
           <div class="flex gap-2">
             <button type="button" id="btnSaveGSheets" class="btn btn--primary text-sm">حفظ</button>
             <button type="button" id="btnOpenGSheetsHelp" class="btn btn--ghost text-sm">كيف أعدّ Google Sheets؟</button>
@@ -120,6 +121,7 @@ export class IntegrationsView {
             <label class="block text-xs font-medium mb-1">رابط Webhook (Zapier / Slack Incoming / إلخ)</label>
             <input type="url" id="inpWebhookUrl" class="form-input text-sm w-full" placeholder="https://hooks.zapier.com/... أو https://hooks.slack.com/...">
           </div>
+          <p class="text-xs text-muted mb-3" style="background: var(--c-bg-app); border-radius: 6px; padding: 8px;">⚠️ ${WEBHOOK_CONSENT_TEXT}</p>
           <button type="button" id="btnAddWebhook" class="btn btn--primary text-sm mb-4">إضافة</button>
           <div id="webhooksListContainer" class="space-y-2">
             ${webhooksList.length === 0 ? '<p class="text-xs text-muted">لا توجد روابط. أضف رابطاً ثم استخدمه في Zapier أو Slack.</p>' : webhooksList.map(wh => `
@@ -130,7 +132,7 @@ export class IntegrationsView {
               </div>
             `).join('')}
           </div>
-          <p class="text-xs text-muted mt-3">الأحداث المُرسلة: study.created، study.saved، report.exported، decision.go، decision.nogo</p>
+          <p class="text-xs text-muted mt-3">الأحداث المُرسلة: study.created، study.saved، report.exported، decision.go، decision.nogo — إلى الرابط الذي أضفته أنت أعلاه (نقطة نهاية مُهيَّأة من قِبلك أنت وحدك).</p>
         </div>
 
         <h3 class="text-sm font-bold mt-6 mb-3" style="color: var(--c-text-muted);">🟠 أولوية متوسطة (مخطط)</h3>
