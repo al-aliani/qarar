@@ -36,11 +36,17 @@ export function explainDecisionBreakers(study = {}, results = {}) {
     const maxPayback = num(thresholds.maxPayback ?? 7);
     const minROI = num(thresholds.minROI ?? 0.20);
     const fundingGap = num(results.financingCheck?.fundingGap);
+    // مرآة لعتبة مادية الفجوة في engine.js (تدقيق ٢٠٢٦-٠٧-٠٩) — بلا هذا، تُصعَّد أي فجوة
+    // تقريب عادية بين خطوة التمويل والاستثمار المُعاد حسابه لاحقاً إلى «حرجة» هنا أيضاً.
+    const fundingGapThreshold = num(
+        results.financingCheck?.fundingGapMaterialityThreshold
+        ?? Math.max(1000, num(results.financingCheck?.totalInvestment) * 0.01)
+    );
     const loanAmount = num(financing.sources?.bankLoan?.amount || results.loanSchedule?.loanAmount);
     const targetDSCR = num(financing.targetDSCR ?? 1.25);
     const dscr = indicators.dscr;
 
-    if (fundingGap > 1) {
+    if (fundingGap > fundingGapThreshold) {
         pushIssue(issues, {
             severity: 'critical',
             metric: 'fundingGap',

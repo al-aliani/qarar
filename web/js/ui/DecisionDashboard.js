@@ -281,7 +281,7 @@ export class DecisionDashboard {
                                 ${this.renderKPIItem('معدل العائد الداخلي', results?.indicators?.irr, 'percent')}
                                 ${this.renderKPIItem('فترة الاسترداد', results?.indicators?.paybackPeriod, 'years')}
                                 ${this.renderKPIItem('العائد على الاستثمار', results?.indicators?.roi, 'percent')}
-                                ${this.renderKPIItem('فجوة التمويل', financingDiagnostics.fundingGap, 'fundingGap')}
+                                ${this.renderKPIItem('فجوة التمويل', financingDiagnostics.fundingGap, 'fundingGap', financingDiagnostics.fundingGapThreshold)}
                                 ${this.renderKPIItem('DSCR السنة الأولى', financingDiagnostics.dscr, 'dscr')}
                             </div>
                         </div>
@@ -822,7 +822,7 @@ export class DecisionDashboard {
         const hasServices = (state[SECTIONS.SERVICES]?.items?.length > 0) || (state.revenue?.streams?.length > 0);
         const dimensions = {
             market: (state.marketSizing?.som?.value > 0) ? 'ready' : 'needs_work',
-            financing: (financingHealth.hasBlockers || financingHealth.fundingGap > 1 || financingHealth.dscrBlocked)
+            financing: (financingHealth.hasBlockers || financingHealth.fundingGap > financingHealth.fundingGapThreshold || financingHealth.dscrBlocked)
                 ? 'critical'
                 : (hasInvestment ? 'ready' : 'critical'),
             team: (state.hr?.positions?.length > 0) ? 'ready' : 'needs_work',
@@ -938,13 +938,19 @@ export class DecisionDashboard {
             ? Number(financing.targetDSCR)
             : Number(results?.assumptionsApplied?.thresholds?.targetDSCR ?? 1.25);
         const fundingGap = Number(results?.financingCheck?.fundingGap ?? 0);
+        // مرآة لعتبة مادية الفجوة في engine.js (تدقيق ٢٠٢٦-٠٧-٠٩) — بلا هذا، انحراف تقريب
+        // عادي بين خطوة التمويل والاستثمار المُعاد حسابه لاحقاً يُظهر بطاقة «حرجة» زائفة هنا.
+        const fundingGapThreshold = Number(
+            results?.financingCheck?.fundingGapMaterialityThreshold
+            ?? Math.max(1000, Number(results?.financingCheck?.totalInvestment ?? 0) * 0.01)
+        );
         const dscr = results?.indicators?.dscr ?? null;
         const y1Ebitda = Number(results?.incomeStatement?.[0]?.ebitda ?? NaN);
         const concept = String(state?.projectInfo?.concept || state?.projectInfo?.sector || '');
         const isSaas = /saas|منصة|تطبيق|برمجي|تقني|موقع دراسة جدوى/i.test(concept);
         const alerts = [];
 
-        if (fundingGap > 1) {
+        if (fundingGap > fundingGapThreshold) {
             alerts.push({
                 type: 'funding-gap',
                 title: 'فجوة تمويل غير مغطاة',
@@ -974,6 +980,7 @@ export class DecisionDashboard {
             alerts,
             hasBlockers: alerts.length > 0,
             fundingGap,
+            fundingGapThreshold,
             dscr,
             targetDSCR,
             loanAmount,
@@ -986,7 +993,8 @@ export class DecisionDashboard {
 
     renderFinancingGate(financingDiagnostics) {
         const d = financingDiagnostics || {};
-        if (!d.hasBlockers && !d.isSaas && Math.abs(Number(d.fundingGap || 0)) <= 1 && !d.loanAmount) return '';
+        const gapThreshold = d.fundingGapThreshold ?? 1;
+        if (!d.hasBlockers && !d.isSaas && Math.abs(Number(d.fundingGap || 0)) <= gapThreshold && !d.loanAmount) return '';
 
         const statusClass = d.hasBlockers ? 'dd-status--warning' : 'dd-status--success';
         const title = d.hasBlockers ? 'حواجز التمويل قبل البنك' : 'التمويل متوازن مبدئياً';
@@ -994,9 +1002,9 @@ export class DecisionDashboard {
         const investorLabel = d.isSaas
             ? 'قراءة المستثمر: تعتمد على إثبات النمو، CAC، الاحتفاظ، والعقود المسبقة.'
             : 'قراءة المستثمر: راجع جودة السوق والمخاطر بجانب المؤشرات المالية.';
-        const gapLabel = d.fundingGap > 1
+        const gapLabel = d.fundingGap > gapThreshold
             ? `فجوة ${this.formatCurrency(d.fundingGap)}`
-            : d.fundingGap < -1
+            : d.fundingGap < -gapThreshold
                 ? `فائض ${this.formatCurrency(Math.abs(d.fundingGap))}`
                 : 'متوازن';
         const dscrLabel = d.dscr == null ? 'غير قابل للحساب' : `${Number(d.dscr).toFixed(2)}x`;
@@ -1011,7 +1019,7 @@ export class DecisionDashboard {
                     </div>
                 </div>
                 <div class="indicators-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:10px;">
-                    <div class="kpi-mini-card ${d.fundingGap > 1 ? 'negative' : 'positive'}">
+                    <div class="kpi-mini-card ${d.fundingGap > gapThreshold ? 'negative' : 'positive'}">
                         <span class="mini-label">فجوة التمويل</span>
                         <span class="mini-value">${gapLabel}</span>
                     </div>
@@ -1104,7 +1112,7 @@ export class DecisionDashboard {
         return { desc: readiness.recommendation?.desc || '', reasons, nextSteps: uniqueSteps, positives };
     }
 
-    renderKPIItem(label, value, type) {
+    renderKPIItem(label, value, type, threshold = 1) {
         const n = Number(value);
         let formatted = (value === null || value === undefined || value === '') ? '--' : String(value);
         let status = 'positive';
@@ -1113,8 +1121,8 @@ export class DecisionDashboard {
             status = n < 0 ? 'negative' : 'positive';
         }
         if (type === 'fundingGap') {
-            formatted = !Number.isFinite(n) ? '--' : n > 1 ? this.formatCurrency(n) : n < -1 ? `فائض ${this.formatCurrency(Math.abs(n))}` : 'متوازن';
-            status = n > 1 ? 'negative' : 'positive';
+            formatted = !Number.isFinite(n) ? '--' : n > threshold ? this.formatCurrency(n) : n < -threshold ? `فائض ${this.formatCurrency(Math.abs(n))}` : 'متوازن';
+            status = n > threshold ? 'negative' : 'positive';
         }
         if (type === 'dscr') {
             formatted = Number.isFinite(n) ? `${n.toFixed(2)}x` : 'غير قابل للحساب';

@@ -821,11 +821,8 @@ export function createEmptyStudy() {
         // 2️⃣5️⃣ مراقبة الأداء بعد التشغيل (Post-Launch Tracker)
         // ═══════════════════════════════════════════════════════════
         [SECTIONS.ACTUALS]: {
-            months: [
-                { id: 1, revenue: 0, opex: 0, notes: '' },
-                { id: 2, revenue: 0, opex: 0, notes: '' },
-                { id: 3, revenue: 0, opex: 0, notes: '' }
-            ]
+            // فارغة عمداً: شهر بلا بيانات فعلية يجب أن يُعامَل كـ"لم يُدخل بعد" لا كأداء صفري (انظر PostLaunchTracker.hasNum)
+            months: []
         },
 
         // ترتيب أقسام التقرير (بناء التقرير — السحب والإفلات)

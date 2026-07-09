@@ -19,14 +19,19 @@ import { fieldHelp } from './components/FieldHelp.js';
 import { escapeHtml } from '../utils/escape.js';
 
 /** Smart Fill handlers keyed by TABLE_SCHEMAS.*.smartFill.dataKey. Add new tables here. */
-const SMART_FILL_HANDLERS = {
+export const SMART_FILL_HANDLERS = {
     staffing: (state) => {
         const size = state.projectInfo?.areaSize || state.technical?.area || 100;
         const type = state.projectInfo?.concept || state.projectInfo?.activity || 'cafe';
         const suggestions = DataService.recommendStaffing(size, type);
+        // تدقيق 2026-07-09 (اختبار عميل حي: دراسة مقهى): كان هذا التحويل يُسقط
+        // nationality الذي يُرجعه DataService.recommendStaffing بالفعل — فتُحسب GOSI
+        // دائماً بمعدل الوافد (2%) حتى لموظفين سعوديين، ولوحة نطاقات/التوطين تعرض
+        // 0% بصمت رغم توطين فعلي مرتفع (تناقض مباشر مع جدول الرواتب نفسه).
         return suggestions.map(s => ({
             id: Date.now() + Math.random(),
             position: s.position,
+            nationality: s.nationality || 'expat',
             count: s.count,
             salary: s.salary,
             months: 12,
@@ -309,6 +314,11 @@ export class Wizard {
 
         if (showNav) {
             // أسهم SVG بدل الرموز النصية — الاتجاهات صحيحة في RTL (السابق يميناً، التالي يساراً)
+            // في آخر خطوة: لا وعد بإجراء «قادم» غير موجود — رسالة حالة صادقة بدل «إنهاء الدراسة»
+            // (تدقيق 2026-07-09: كانت التسمية توحي بأن الضغط على «التالي» سيُنهي شيئاً، بينما
+            // معالج النقر لا يفعل شيئاً إطلاقاً عند آخر خطوة — راجع bindNavigationEvents أدناه).
+            const navCaption = isLastStep ? 'الحالة' : 'الخطوة التالية';
+            const navLabel = isLastStep ? 'اكتملت خطوات الدراسة' : this.steps[navLocalIdx + 1]?.label;
             html += `
                 <div class="wizard-nav">
                     <button type="button" class="btn btn--secondary" id="btnPrevStep" ${isFirstStep ? 'disabled' : ''}>
@@ -318,8 +328,8 @@ export class Wizard {
                     <div class="nav-actions">
                         <button type="button" class="btn btn--ghost btn-sm" id="btnExportSection" title="تصدير هذا القسم">تصدير إكسل</button>
                         <div class="nav-indicator">
-                            <span class="nav-indicator__caption">الخطوة التالية</span>
-                            <span class="nav-indicator__label">${isLastStep ? 'إنهاء الدراسة' : this.steps[navLocalIdx + 1]?.label}</span>
+                            <span class="nav-indicator__caption">${navCaption}</span>
+                            <span class="nav-indicator__label">${navLabel}</span>
                         </div>
                     </div>
                     <button type="button" class="btn btn--primary" id="btnNextStep" ${isLastStep ? 'disabled' : ''}>
@@ -503,7 +513,11 @@ export class Wizard {
             nav.remove();
         }
 
-        const nextStepLabel = isLastStep ? 'إنهاء الدراسة' : this.steps[localIdx + 1]?.label;
+        // في آخر خطوة: لا وعد بإجراء «قادم» غير موجود — رسالة حالة صادقة بدل «إنهاء الدراسة»
+        // (تدقيق 2026-07-09: نفس الإصلاح المطابق تماماً لكتلة renderStep أعلاه — كلا الموضعين
+        // يشتركان في نفس شرط isLastStep ويجب أن يتطابقا حرفياً).
+        const navCaption = isLastStep ? 'الحالة' : 'الخطوة التالية';
+        const nextStepLabel = isLastStep ? 'اكتملت خطوات الدراسة' : this.steps[localIdx + 1]?.label;
         const navHtml = `
             <div class="wizard-nav">
                 <button type="button" class="btn btn--secondary" id="btnPrevStep" ${isFirstStep ? 'disabled' : ''}>
@@ -513,7 +527,7 @@ export class Wizard {
                 <div class="nav-actions">
                     <button type="button" class="btn btn--ghost btn-sm" id="btnExportSection" title="تصدير هذا القسم">تصدير إكسل</button>
                     <div class="nav-indicator">
-                        <span class="nav-indicator__caption">الخطوة التالية</span>
+                        <span class="nav-indicator__caption">${navCaption}</span>
                         <span class="nav-indicator__label">${nextStepLabel}</span>
                     </div>
                 </div>

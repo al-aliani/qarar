@@ -417,10 +417,16 @@ export class FinancingStructure {
             const results = runFullModel(state);
             const dscr = results?.indicators?.dscr ?? null;
             const fundingGap = Number(results?.financingCheck?.fundingGap ?? 0);
+            // مرآة لعتبة مادية الفجوة في engine.js (تدقيق ٢٠٢٦-٠٧-٠٩) — بلا هذا، أي انحراف
+            // تقريب عادي بين خطوة التمويل والاستثمار المُعاد حسابه لاحقاً يُظهر تحذيراً حرجاً هنا.
+            const fundingGapThreshold = Number(
+                results?.financingCheck?.fundingGapMaterialityThreshold
+                ?? Math.max(1000, Number(results?.financingCheck?.totalInvestment ?? 0) * 0.01)
+            );
             const y1Ebitda = Number(results?.incomeStatement?.[0]?.ebitda ?? NaN);
             const alerts = [];
 
-            if (fundingGap > 1) {
+            if (fundingGap > fundingGapThreshold) {
                 alerts.push(`توجد فجوة تمويل ${this.formatCurrency(fundingGap)} قبل احتساب جاهزية القرض.`);
             }
             if (dscr == null) {
@@ -432,7 +438,7 @@ export class FinancingStructure {
                 alerts.push('EBITDA السنة الأولى سالب أو صفري؛ هذا مناسب أحياناً لمستثمر تقني لكنه ضعيف للبنك دون إثبات اشتراكات مبكرة أو ضمانات أقوى.');
             }
 
-            return { loanAmount, targetDSCR, dscr, fundingGap, y1Ebitda, alerts };
+            return { loanAmount, targetDSCR, dscr, fundingGap, fundingGapThreshold, y1Ebitda, alerts };
         } catch (err) {
             return {
                 loanAmount,
@@ -452,7 +458,7 @@ export class FinancingStructure {
         const hasAlerts = d.alerts.length > 0;
         const dscrText = d.dscr == null ? 'غير محسوب' : `${Number(d.dscr).toFixed(2)}x`;
         const gapText = Number.isFinite(d.fundingGap)
-            ? (Math.abs(d.fundingGap) <= 1 ? 'متوازن' : this.formatCurrency(d.fundingGap))
+            ? (Math.abs(d.fundingGap) <= (d.fundingGapThreshold ?? 1) ? 'متوازن' : this.formatCurrency(d.fundingGap))
             : 'غير محسوبة';
         const ebitdaText = Number.isFinite(d.y1Ebitda) ? this.formatCurrency(d.y1Ebitda) : 'غير متاح';
         const title = hasAlerts

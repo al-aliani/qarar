@@ -99,6 +99,12 @@ export class BalanceSheetView {
                                 <span>القسط الحالي من القرض</span>
                                 <span>${this.formatCurrency(sheet.liabilities.current.currentPortionOfDebt)}</span>
                             </div>
+                            ${(sheet.liabilities.current.cashShortfall || 0) > 0 ? `
+                            <div class="bs-line negative">
+                                <span>⚠️ عجز سيولة تراكمي (تمويل قصير أجل ضمني مطلوب)</span>
+                                <span>${this.formatCurrency(sheet.liabilities.current.cashShortfall)}</span>
+                            </div>
+                            ` : ''}
                             <div class="bs-subtotal">
                                 <span>إجمالي الخصوم المتداولة</span>
                                 <span>${this.formatCurrency(sheet.liabilities.current.total)}</span>

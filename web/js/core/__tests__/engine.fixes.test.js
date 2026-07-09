@@ -264,6 +264,33 @@ describe('حراس قرار التمويل', () => {
         expect(r.decisionReasons.some(reason => reason.includes('مصادر التمويل'))).toBe(true);
     });
 
+    it('فجوة تمويل صغيرة ضمن حد المادية (انحراف تقريب بين خطوة التمويل وإعادة الحساب) لا تمنع GO (تدقيق ٢٠٢٦-٠٧-٠٩)', () => {
+        const buildStudy = (equityAmount) => makeStudy({
+            [SECTIONS.TECHNICAL]: {
+                equipment: [{ price: 900000, quantity: 1 }],
+                buildings: [], furniture: [], establishmentCosts: [], capacityUtilization: []
+            },
+            [SECTIONS.REVENUE]: {
+                streams: [{ type: 'operating', customersPerMonth: 2500, avgPrice: 150, variableCostRate: 0.20, growthRate: 0.15 }]
+            },
+            [SECTIONS.FINANCING]: { sources: equityAmount == null ? {} : { equity: { amount: equityAmount } } }
+        });
+
+        // تشغيل استكشافي لمعرفة إجمالي الاستثمار الفعلي (يعتمد على رأس المال العامل المشتق)
+        const probe = calculateStudy(buildStudy(null));
+        const totalInvestment = probe.financingCheck.totalInvestment;
+        const smallGap = 500; // أقل بكثير من الحد الأدنى (1000) ومن 1% من ~900,000+
+
+        const r = calculateStudy(buildStudy(totalInvestment - smallGap));
+
+        expect(r.financingCheck.fundingGap).toBeCloseTo(smallGap, 0);
+        expect(r.financingCheck.fundingGapMaterialityThreshold).toBeGreaterThan(smallGap);
+        // لا يُدرَج «مصادر التمويل أقل من الاستثمار» ضمن أسباب القرار — فجوة تقريب لا فجوة حقيقية.
+        // (لا نؤكد decision === 'GO' هنا: هذا السيناريو المتعمَّد شديد الربحية يصطدم بسقف
+        // المعقولية المنفصل في engine.js — IRR/هامش/استرداد غير واقعي — وهو حارس آخر لا علاقة له بهذا الإصلاح.)
+        expect(r.decisionReasons.some(reason => reason.includes('مصادر التمويل'))).toBe(false);
+    });
+
     it('يخفض القرار عند وجود قرض لا تغطيه EBITDA السنة الأولى حسب DSCR المستهدف', () => {
         const r = calculateStudy(makeStudy({
             [SECTIONS.REVENUE]: {

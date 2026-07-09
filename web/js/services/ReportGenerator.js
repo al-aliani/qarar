@@ -66,6 +66,12 @@ export class ReportGenerator {
         const loanAmount = Number(loan.amount || results?.loanSchedule?.loanAmount || 0);
         const targetDSCR = Number.isFinite(Number(financing.targetDSCR)) ? Number(financing.targetDSCR) : 1.25;
         const fundingGap = Number(results?.financingCheck?.fundingGap ?? 0);
+        // مرآة لعتبة مادية الفجوة في engine.js (تدقيق ٢٠٢٦-٠٧-٠٩) — بلا هذا، انحراف تقريب
+        // عادي بين خطوة التمويل والاستثمار المُعاد حسابه لاحقاً يُظهر تحذيراً حرجاً في التقرير.
+        const fundingGapThreshold = Number(
+            results?.financingCheck?.fundingGapMaterialityThreshold
+            ?? Math.max(1000, Number(results?.financingCheck?.totalInvestment ?? 0) * 0.01)
+        );
         const dscr = results?.indicators?.dscr ?? null;
         const y1Ebitda = Number(results?.incomeStatement?.[0]?.ebitda ?? NaN);
         const concept = String(state?.projectInfo?.concept || state?.projectInfo?.sector || '');
@@ -73,7 +79,7 @@ export class ReportGenerator {
         const dscrBlocked = loanAmount > 0 && (dscr == null || dscr < targetDSCR);
         const alerts = [];
 
-        if (fundingGap > 1) {
+        if (fundingGap > fundingGapThreshold) {
             alerts.push({ title: 'فجوة تمويل غير مغطاة', text: 'مصادر التمويل أقل من إجمالي الاستثمار المطلوب.' });
         }
         if (dscrBlocked) {
@@ -86,6 +92,7 @@ export class ReportGenerator {
         return {
             alerts,
             fundingGap,
+            fundingGapThreshold,
             dscr,
             y1Ebitda,
             loanAmount,
@@ -97,10 +104,11 @@ export class ReportGenerator {
     }
 
     static renderFinancingDiagnostics(d, fmt) {
-        if (!d || (!d.alerts?.length && !d.isSaas && Math.abs(Number(d.fundingGap || 0)) <= 1 && !d.loanAmount)) return '';
-        const gapText = d.fundingGap > 1
+        const gapThreshold = d?.fundingGapThreshold ?? 1;
+        if (!d || (!d.alerts?.length && !d.isSaas && Math.abs(Number(d.fundingGap || 0)) <= gapThreshold && !d.loanAmount)) return '';
+        const gapText = d.fundingGap > gapThreshold
             ? fmt(d.fundingGap)
-            : d.fundingGap < -1
+            : d.fundingGap < -gapThreshold
                 ? 'فائض ' + fmt(Math.abs(d.fundingGap))
                 : 'متوازن';
         const dscrText = d.dscr == null ? 'غير قابل للحساب' : Number(d.dscr).toFixed(2) + 'x';
@@ -110,7 +118,7 @@ export class ReportGenerator {
             <div style="border:1px solid ${d.bankReady ? '#38a169' : '#f59e0b'}; background:${d.bankReady ? '#f0fff4' : '#fffbeb'}; border-radius:6px; padding:12px 14px; margin:14px 0;">
                 <h4 style="margin:0 0 8px; color:${d.bankReady ? '#276749' : '#92400e'};">${title}</h4>
                 <table style="margin:8px 0;"><thead><tr><th>المؤشر</th><th>القيمة</th><th>القراءة</th></tr></thead><tbody>
-                    <tr><td>فجوة التمويل</td><td>${gapText}</td><td>${d.fundingGap > 1 ? 'غير مغطاة' : 'مقبولة'}</td></tr>
+                    <tr><td>فجوة التمويل</td><td>${gapText}</td><td>${d.fundingGap > gapThreshold ? 'غير مغطاة' : 'مقبولة'}</td></tr>
                     <tr><td>DSCR السنة الأولى</td><td>${dscrText}</td><td>${d.dscrBlocked ? 'دون الحد المستهدف ' + d.targetDSCR.toFixed(2) + 'x' : 'مقبول مبدئياً'}</td></tr>
                     <tr><td>EBITDA السنة الأولى</td><td>${y1Text}</td><td>${d.y1Ebitda < 0 ? 'سالب؛ يحتاج تمويل/سماح أطول' : 'موجب'}</td></tr>
                 </tbody></table>
@@ -636,7 +644,7 @@ export class ReportGenerator {
                 if (results.capacityCheck && !results.capacityCheck.exceeded) {
                     exFootnotes.push(`مصالحة الطاقة: المبيعات المخططة (${results.capacityCheck.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر) تعادل ${Math.round((results.capacityCheck.utilizationOfMax || 0) * 100)}% من الطاقة القصوى الفعلية (${results.capacityCheck.maxUnitsPerMonth.toLocaleString('ar-SA')}) — قابلة للتحقيق مادياً.`);
                 }
-                if (financingDiagnostics.fundingGap > 1) {
+                if (financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1)) {
                     exFootnotes.push(`حاجز تمويلي: توجد فجوة تمويل قدرها ${fmt(financingDiagnostics.fundingGap)} يجب تغطيتها قبل اعتماد الدراسة.`);
                 }
                 if (financingDiagnostics.dscrBlocked) {
@@ -786,14 +794,14 @@ export class ReportGenerator {
                                 <div class="kpi-card"><div class="kpi-label">فترة الاسترداد</div><div class="kpi-value">${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">نقطة التعادل</div><div class="kpi-value">${results.indicators?.breakEvenPointValue != null ? formatCurrency(results.indicators.breakEvenPointValue) : (results.indicators?.breakevenUnitsPerMonth != null ? Math.round(results.indicators.breakevenUnitsPerMonth) + ' وحدة/شهر' : '—')}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">نسبة تغطية خدمة الدين (DSCR)</div><div class="kpi-value">${results.indicators?.dscr != null ? (results.indicators.dscr.toFixed(2) + 'x') : '—'}</div></div>
-                                <div class="kpi-card"><div class="kpi-label">فجوة التمويل</div><div class="kpi-value ${financingDiagnostics.fundingGap > 1 ? 'negative' : 'positive'}">${financingDiagnostics.fundingGap > 1 ? fmt(financingDiagnostics.fundingGap) : financingDiagnostics.fundingGap < -1 ? 'فائض ' + fmt(Math.abs(financingDiagnostics.fundingGap)) : 'متوازن'}</div></div>
+                                <div class="kpi-card"><div class="kpi-label">فجوة التمويل</div><div class="kpi-value ${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? 'negative' : 'positive'}">${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? fmt(financingDiagnostics.fundingGap) : financingDiagnostics.fundingGap < -(financingDiagnostics.fundingGapThreshold ?? 1) ? 'فائض ' + fmt(Math.abs(financingDiagnostics.fundingGap)) : 'متوازن'}</div></div>
                             </div>
                             ${this.renderFinancingDiagnostics(financingDiagnostics, fmt)}
                             <table><thead><tr><th>المؤشر المالي</th><th>القيمة</th><th>التقييم</th></tr></thead><tbody>
                                 <tr><td>صافي القيمة الحالية</td><td>${formatCurrency(results.indicators?.npv || 0)}</td><td class="${(results.indicators?.npv || 0) > 0 ? 'status-positive' : 'status-negative'}">${(results.indicators?.npv || 0) > 0 ? '✓ موجب' : '✗ سالب'}</td></tr>
                                 <tr><td>معدل العائد الداخلي</td><td>${((results.indicators?.irr || 0) * 100).toFixed(2)}%</td><td>${(results.indicators?.irr || 0) > 0.15 ? '✓ مرتفع' : 'متوسط'}</td></tr>
                                 <tr><td>فترة الاسترداد</td><td>${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</td><td>${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; if (!Number.isFinite(p) || p <= 0) return 'غير محقق'; return p < 3 ? 'سريع' : 'طويل نسبياً'; })()}</td></tr>
-                                <tr><td>فجوة التمويل</td><td>${financingDiagnostics.fundingGap > 1 ? fmt(financingDiagnostics.fundingGap) : financingDiagnostics.fundingGap < -1 ? 'فائض ' + fmt(Math.abs(financingDiagnostics.fundingGap)) : 'متوازن'}</td><td class="${financingDiagnostics.fundingGap > 1 ? 'status-negative' : 'status-positive'}">${financingDiagnostics.fundingGap > 1 ? 'يجب سدها قبل الاعتماد' : 'مقبولة'}</td></tr>
+                                <tr><td>فجوة التمويل</td><td>${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? fmt(financingDiagnostics.fundingGap) : financingDiagnostics.fundingGap < -(financingDiagnostics.fundingGapThreshold ?? 1) ? 'فائض ' + fmt(Math.abs(financingDiagnostics.fundingGap)) : 'متوازن'}</td><td class="${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? 'status-negative' : 'status-positive'}">${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? 'يجب سدها قبل الاعتماد' : 'مقبولة'}</td></tr>
                                 <tr><td>DSCR السنة الأولى</td><td>${financingDiagnostics.dscr == null ? 'غير قابل للحساب' : financingDiagnostics.dscr.toFixed(2) + 'x'}</td><td class="${financingDiagnostics.dscrBlocked ? 'status-negative' : 'status-positive'}">${financingDiagnostics.dscrBlocked ? 'دون الحد البنكي المستهدف' : 'مقبول مبدئياً'}</td></tr>
                             </tbody></table>
                         </div>

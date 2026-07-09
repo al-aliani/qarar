@@ -461,6 +461,14 @@ export function calculateStudy(study, overrides) {
     const paidCapital = enteredEquityLike > 0 ? enteredEquityLike : equityOutlay;
     // فجوة التمويل الصريحة: موجبة = مصادر أقل من الاستثمار (يجب سدها)، سالبة = فائض
     const fundingGap = totalInvestment - (paidCapital + loanAmount);
+    // حد مادية الفجوة (تدقيق ٢٠٢٦-٠٧-٠٩): مصادر التمويل تُدخَل في خطوة سابقة من المعالج
+    // على أساس إجمالي استثمار محسوب في تلك اللحظة، بينما totalInvestment أعلاه يُعاد حسابه
+    // حياً من كل بند CAPEX/رأس مال عامل — أي تعديل لاحق في خطوات تالية (تسويق، تشغيل...)
+    // يُحرّك totalInvestment قليلاً فتظهر «فجوة» زائفة رغم أن المستخدم موّل المشروع بالكامل
+    // فعلياً وقت إدخاله. كانت > 1 ريال تُصعّد أي انحراف تقريب عادي (لوحظ فعلياً ٩٤٥ ريالاً
+    // من ٣٩٠٬٩٥٧ = ٠٫٢٤٪) إلى REVISE حرجة رغم مؤشرات مالية مثالية. الحد: 1% من الاستثمار
+    // الإجمالي (بحد أدنى 1000 ريال) يُفرّق فجوة حقيقية تستحق REVISE عن انحراف تسلسل الخطوات.
+    const fundingGapMaterialityThreshold = Math.max(1000, totalInvestment * 0.01);
     let retainedEarningsStart = 0; // الأرباح المحتجزة في بداية كل سنة
     // تراكم الإهلاك الدفتري الفعلي (غير خطي: يتوقف الجزء القابل للإحلال/التأسيس عند
     // استنفاد عمره) لبداية كل سنة — يُستخدم في صافي الأصول الثابتة للوعاء الزكوي
@@ -965,7 +973,8 @@ export function calculateStudy(study, overrides) {
             paidCapital,
             equityOutlay,
             totalFundingSources: paidCapital + loanAmount,
-            fundingGap
+            fundingGap,
+            fundingGapMaterialityThreshold
         },
         indicators: {
             npv,
@@ -1024,7 +1033,7 @@ export function calculateStudy(study, overrides) {
                     `إيراد السنة الأولى (${Math.round(marketPreview.y1Revenue).toLocaleString('ar-SA')} ريال) يتجاوز حصة السوق القابلة للالتقاط SOM (${marketPreview.som.toLocaleString('ar-SA')} ريال) — راجع توقع العملاء/السعر أو وثّق مصدر SOM أعلى`
                 );
             }
-            if (Number(fundingGap) > 1) {
+            if (Number(fundingGap) > fundingGapMaterialityThreshold) {
                 if (d.decision === 'GO') d.decision = 'REVISE';
                 d.decisionReasons.unshift(
                     `مصادر التمويل أقل من الاستثمار المطلوب بفجوة ${Math.round(fundingGap).toLocaleString('ar-SA')} ريال — لا تعتمد القرار قبل رفع رأس المال أو خفض التكاليف الرأسمالية/رأس المال العامل`

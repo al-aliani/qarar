@@ -763,7 +763,19 @@ export function generateProducts(state) {
     const p = state?.projectInfo || {};
     const concept = shortActivity(p, 'النشاط');
     const sector = or(p.sector, concept);
+    // تدقيق 2026-07-09: مقهى مختص كان يُصنَّف ضمن "isFandB" العام فيقترح "الأطباق
+    // الرئيسية" كمنتج أول — يناقض عدم وجود شيف/مطبخ في generatePositions لنفس
+    // النشاط (isCafe هناك). isCafe هنا يجب أن يُختبر قبل isFandB لنفس السبب.
+    const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|كافتيريا|قهوة|بن|وجبات|مأكولات|مشروبات|فود|طعام|حلويات|مخبوزات/i.test(sector);
+
+    if (isCafe) {
+        return [
+            { type: 'final', name: 'المشروبات المختصة (ساخنة وباردة)', description: 'قهوة مختصة ومشروبات ساخنة وباردة (اسبريسو، فلتر، مشروبات موسمية) تُحضّر بمعايير احترافية.', uniqueFeatures: 'حبوب بن منتقاة وطرق تحضير متخصصة تمنح مذاقاً مختلفاً عن المقاهي التقليدية.', valueAdded: 'تجربة قهوة مختصة تبرر متوسط فاتورة أعلى من الكافيهات العادية.', customerBenefit: 'مشروب عالي الجودة بخبرة تحضير احترافية وثبات في الطعم.' },
+            { type: 'semi', name: 'المخبوزات والحلويات الخفيفة', description: 'كرواسان وكيك وحلويات خفيفة تُورَّد جاهزة أو شبه جاهزة وتُقدَّم طازجة دون الحاجة لمطبخ كامل.', uniqueFeatures: 'تشكيلة تدور دورياً وتقديم بصري جذاب.', valueAdded: 'يرفع متوسط قيمة الفاتورة بهامش مرتفع دون استثمار في مطبخ طهي كامل.', customerBenefit: 'خيار تحلية طازج يرافق المشروب.' },
+            { type: 'final', name: 'حبوب بن للبيع (Retail)', description: 'أكياس حبوب بن محمصة تُباع للاستهلاك المنزلي بعلامة المقهى.', uniqueFeatures: 'تحميص مميز أو منتقى من محمصة موثوقة يصعب إيجاده في السوبرماركت.', valueAdded: 'مصدر إيراد إضافي بهامش مرتفع ويعزز ولاء العميل للعلامة.', customerBenefit: 'إعادة تجربة المقهى في المنزل.' }
+        ];
+    }
 
     if (isFandB) {
         return [
@@ -788,7 +800,16 @@ export function generateIntroServices(state) {
     const p = state?.projectInfo || {};
     const concept = shortActivity(p, 'النشاط');
     const sector = or(p.sector, concept);
+    const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|كافتيريا|قهوة|بن|وجبات|مأكولات|مشروبات|فود|طعام|حلويات|مخبوزات/i.test(sector);
+
+    if (isCafe) {
+        return [
+            { type: 'essential', name: 'الخدمة داخل المقهى (الجلسة)', description: 'استقبال العملاء وتقديم المشروبات داخل صالة المقهى ببيئة مناسبة للجلوس والعمل.' },
+            { type: 'supporting', name: 'الطلب السفري والتوصيل', description: 'طلبات السفري (Takeaway) والتوصيل عبر التطبيقات لتوسيع نطاق الوصول.' },
+            { type: 'secondary', name: 'بيع حبوب البن وأدوات التحضير', description: 'بيع حبوب البن المحمّصة وأدوات التحضير المنزلي كمصدر إيراد مكمّل.' }
+        ];
+    }
 
     if (isFandB) {
         return [
@@ -813,7 +834,16 @@ export function generateCustomerValues(state) {
     const p = state?.projectInfo || {};
     const concept = shortActivity(p, 'النشاط');
     const sector = or(p.sector, concept);
+    const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|كافتيريا|قهوة|بن|وجبات|مأكولات|مشروبات|فود|طعام|حلويات|مخبوزات/i.test(sector);
+
+    if (isCafe) {
+        return [
+            { customerType: 'الموظفون ورجال الأعمال', customerNeed: 'مشروب قهوة عالي الجودة وسريع خلال ساعات العمل', valueWeProvide: 'قهوة مختصة وخدمة سريعة وطلب سفري يعتمد عليه يومياً' },
+            { customerType: 'الباحثون عن مكان للعمل أو الدراسة', customerNeed: 'أجواء هادئة مناسبة للجلوس لفترة طويلة', valueWeProvide: 'بيئة مريحة وإنترنت وجلسات تناسب العمل والدراسة' },
+            { customerType: 'عشّاق القهوة المختصة', customerNeed: 'تجربة قهوة مختلفة عن السلاسل التجارية', valueWeProvide: 'حبوب منتقاة وطرق تحضير احترافية وتشكيلة متجددة' }
+        ];
+    }
 
     if (isFandB) {
         return [
@@ -1042,8 +1072,14 @@ export function generateLogistics(state) {
     // تدقيق 2026-07-08 (ملاحظة عالية #38): variablePercent يُخزَّن ككسر (0–1) مثل
     // variableCostRate تماماً (الآن مسجَّل في DynamicTable.isFractionPercentColumn) —
     // كانت هذه القيم مكتوبة كنسبة مئوية خام (30، 50، 60...) فتُقرأ 3000%/5000% وتُدمّر الدراسة.
+    //
+    // تدقيق 2026-07-09 (اختبار عميل حي: دراسة مقهى — نتيجة NPV سالبة كاشفة): كان بند
+    // "إيجار الموقع" هنا يُزدوَج مع بند "إيجار المحل (الصالة/المطبخ)" الافتراضي في جدول
+    // الموارد الإدارية (schema.js، أُضيف في تدقيق سابق لأن إيجار المحل لم يكن له حقل
+    // مستقل) — فيُحتسب إيجار واحد فعلياً كبندين منفصلين في التكاليف الثابتة، ما يضخّم
+    // المصروفات ويحوّل مشاريع رابحة فعلياً إلى NPV سالب زوراً. الإيجار الآن مصدر واحد
+    // (إدارية) فقط؛ حُذف من هنا لكل القطاعات (بما فيها الصحي الذي كان له بند مشابه).
     const base = [
-        { name: 'إيجار الموقع', monthly: 8000, variablePercent: 0, notes: 'قدر حسب المتر والموقع' },
         { name: 'كهرباء ومياه', monthly: 1500, variablePercent: 0.30, notes: '' },
         { name: 'نقل وتوزيع', monthly: 1200, variablePercent: 0.50, notes: isFandB || isRetail ? 'توصيل وتوريد' : '' }
     ];
@@ -1058,7 +1094,6 @@ export function generateLogistics(state) {
         base.push({ name: 'تخزين مواد خام', monthly: 2000, variablePercent: 0.30, notes: '' });
     }
     if (isHealth) {
-        base.push({ name: 'إيجار عيادة/مقر', monthly: 15000, variablePercent: 0, notes: '' });
         base.push({ name: 'جمع ونقل نفايات طبية', monthly: 800, variablePercent: 0, notes: 'جهة مرخصة' });
     }
     return base;
@@ -1215,6 +1250,23 @@ export function generatePositions(state) {
 }
 
 /**
+ * سقالة الأشخاص الرئيسين (الفريق المؤسس) — schema.js يعلن aiPrompt: 'suggest_key_people' لكن
+ * لا يوجد أي معالج له في AIConnector.js فيرجع "اقتراح بنود" بلا أثر بصمت (تدقيق 2026-07-09،
+ * اختبار عميل حي: دراسة مقهى). لا يمكن اختلاق اسم أو خبرة شخص حقيقي — الحقل name يبقى فارغاً
+ * عمداً ليملأه المستخدم، والحقول الأخرى نص إرشادي بين قوسين يوضّح المطلوب توثيقه فقط.
+ * @param {object} state - { projectInfo, hr }
+ * @returns {Array<{ name, role, experience, qualifications }>}
+ */
+export function generateKeyPeople(state) {
+    const positions = state?.hr?.positions || [];
+    const managerPos = positions.find(x => /مدير|مديرة/i.test(x?.position || ''));
+    const role = managerPos ? managerPos.position : 'المؤسس / المدير العام';
+    return [
+        { name: '', role, experience: '[اذكر سنوات خبرتك الفعلية في هذا النشاط أو نشاط مشابه]', qualifications: '[اذكر مؤهلاتك أو شهاداتك ذات الصلة، إن وُجدت]' }
+    ];
+}
+
+/**
  * مباني وإنشاءات مقترحة (داخلي، بدون API)
  * @param {object} state - { projectInfo }
  * @returns {Array<{ name, quantity, price, depreciationRate, notes }>}
@@ -1318,6 +1370,10 @@ export function generateEstablishmentCosts(state) {
 export function generateBuildings(state) {
     const p = state?.projectInfo || {};
     const sector = or(p.sector, p.concept, 'النشاط');
+    // تدقيق 2026-07-09: مقهى مختص لا يملك مطبخاً تجارياً كاملاً (لا شيف في
+    // generatePositions لنفس النشاط) — يجب ألا يُحمَّل بند "مطبخ تجاري وتهوية"
+    // 120,000 ريال المخصص لمطاعم الطهي الكامل؛ يكفيه بار تحضير مشروبات أخف تكلفة.
+    const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|فود|طعام/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر/i.test(sector);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
@@ -1329,7 +1385,8 @@ export function generateBuildings(state) {
         { name: 'تعديلات وتشطيب الموقع', quantity: 1, price: 80000, depreciationRate: 0.05, notes: 'ديكور، كهرباء، صرف' },
         { name: 'أعمال السباكة والكهرباء', quantity: 1, price: 25000, depreciationRate: 0.05, notes: '' }
     ];
-    if (isFandB) base.push({ name: 'مطبخ تجاري وتهوية', quantity: 1, price: 120000, depreciationRate: 0.05, notes: 'شفاطات، أوانٍ' });
+    if (isCafe) base.push({ name: 'بار تحضير المشروبات وتهوية خفيفة', quantity: 1, price: 45000, depreciationRate: 0.05, notes: 'كاونتر، تمديدات صرف ومياه لماكينة القهوة، تهوية بخار خفيفة' });
+    else if (isFandB) base.push({ name: 'مطبخ تجاري وتهوية', quantity: 1, price: 120000, depreciationRate: 0.05, notes: 'شفاطات، أوانٍ' });
     if (isRetail) base.push({ name: 'رفوف وعرض بضاعة', quantity: 1, price: 35000, depreciationRate: 0.10, notes: '' });
     if (isHealth) {
         base.push({ name: 'تجهيز عيادة (غرف كشف، انتظار، تعقيم)', quantity: 1, price: 180000, depreciationRate: 0.05, notes: '' });
@@ -1358,6 +1415,7 @@ export function generateBuildings(state) {
 export function generateEquipment(state) {
     const p = state?.projectInfo || {};
     const sector = or(p.sector, p.concept, 'النشاط');
+    const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|فود|طعام/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر/i.test(sector);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
@@ -1365,6 +1423,15 @@ export function generateEquipment(state) {
     const isLogistics = /لوجستي|شحن|نقل|تخزين|توزيع/i.test(sector);
     const isIndustrial = /صناع|مصنع|إنتاج|تصنيع/i.test(sector);
 
+    if (isCafe) {
+        return [
+            { name: 'ماكينة اسبريسو احترافية', quantity: 1, price: 35000, depreciationRate: 0.15, notes: '' },
+            { name: 'مطاحن قهوة (اسبريسو وفلتر)', quantity: 2, price: 6000, depreciationRate: 0.15, notes: '' },
+            { name: 'ثلاجات وعرض بارد', quantity: 2, price: 16000, depreciationRate: 0.15, notes: '' },
+            { name: 'خلاط مشروبات باردة (بلندر)', quantity: 2, price: 3000, depreciationRate: 0.15, notes: '' },
+            { name: 'نقاط بيع (POS)', quantity: 2, price: 4000, depreciationRate: 0.20, notes: '' }
+        ];
+    }
     if (isFandB) {
         return [
             { name: 'فرن ومعدات طهي', quantity: 1, price: 45000, depreciationRate: 0.15, notes: '' },
@@ -1506,6 +1573,10 @@ export function generateRevenueStreams(state) {
     const p = state?.projectInfo || {};
     const concept = shortActivity(p, 'الخدمة');
     const sector = or(p.sector, concept);
+    // تدقيق 2026-07-09: مقهى مختص كان يُصنَّف ضمن isFandB العام بمتوسط فاتورة
+    // مطعم كامل (45 ريال) — يضاعف الإيراد المتوقع تقريباً مقارنة بمتوسط فاتورة
+    // مقهى واقعي (مشروب + إضافة خفيفة)، ما يُفسد NPV/IRR مباشرة.
+    const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|قهوة|فود|طعام/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر/i.test(sector);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
@@ -1513,6 +1584,12 @@ export function generateRevenueStreams(state) {
     const isLogistics = /لوجستي|شحن|نقل|تخزين|توزيع/i.test(sector);
     const isIndustrial = /صناع|مصنع|إنتاج|تصنيع/i.test(sector);
 
+    if (isCafe) {
+        return [
+            { service: 'مبيعات المشروبات والمخبوزات (داخل المقهى)', customersPerMonth: 3000, avgPrice: 20, growthRate: 0.08 },
+            { service: 'الطلب السفري والتوصيل', customersPerMonth: 400, avgPrice: 28, growthRate: 0.12 }
+        ];
+    }
     if (isFandB) {
         return [
             { service: 'مبيعات المأكولات والمشروبات', customersPerMonth: 1200, avgPrice: 45, growthRate: 0.07 },
@@ -1607,6 +1684,7 @@ export const InternalAIGenerator = {
     generateCampaigns,
     generateRevenueStreams,
     generatePositions,
+    generateKeyPeople,
     generateBuildings,
     generateEquipment,
     generateFurniture,

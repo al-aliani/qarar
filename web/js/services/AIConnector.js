@@ -153,6 +153,7 @@ export class AIConnector {
         if (type === 'suggest_campaigns') { try { return InternalAIGenerator.generateCampaigns(state); } catch (e) { console.warn('Internal fallback suggest_campaigns failed', e); return undefined; } }
         if (type === 'suggest_revenue') { try { return InternalAIGenerator.generateRevenueStreams(state); } catch (e) { console.warn('Internal fallback suggest_revenue failed', e); return undefined; } }
         if (type === 'suggest_staff') { try { return InternalAIGenerator.generatePositions(state); } catch (e) { console.warn('Internal fallback suggest_staff failed', e); return undefined; } }
+        if (type === 'suggest_key_people') { try { return InternalAIGenerator.generateKeyPeople(state); } catch (e) { console.warn('Internal fallback suggest_key_people failed', e); return undefined; } }
         if (type === 'suggest_products') { try { return InternalAIGenerator.generateProducts(state); } catch (e) { console.warn('Internal fallback suggest_products failed', e); return undefined; } }
         if (type === 'suggest_intro_services') { try { return InternalAIGenerator.generateIntroServices(state); } catch (e) { console.warn('Internal fallback suggest_intro_services failed', e); return undefined; } }
         if (type === 'suggest_customer_values') { try { return InternalAIGenerator.generateCustomerValues(state); } catch (e) { console.warn('Internal fallback suggest_customer_values failed', e); return undefined; } }
