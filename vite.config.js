@@ -36,7 +36,15 @@ export default defineConfig({
         // إطلاقاً عبر npm test رغم وجودها ونجاحها لو شُغِّلت يدوياً. أُضيف مسار صريح
         // خارج الجذر (../lib) بدل نقل الاختبارات (يفصلها عن شجرة المصدر lib/calc
         // التي تختبرها ويكسر مسارات الاستيراد النسبية ../index.js).
-        include: ['**/*.{test,spec}.{js,mjs,cjs,ts}', '../lib/**/*.{test,spec}.{js,mjs,cjs,ts}'],
+        // تدقيق 2026-07-09 (أتمتة الدفع): نفس العلة تكررت لـ supabase/functions/_shared —
+        // منطق تحقق Webhook/التسعير الحرج يُختبر عبر Vitest (Web Crypto API قياسية
+        // تعمل في Node كما في Deno دون تعديل) رغم أن الوجهة الفعلية Edge Functions/Deno
+        // غير المتوفر محلياً؛ بلا هذا المسار الإضافي كانت ستُصبح اختبارات يتيمة أخرى.
+        include: [
+            '**/*.{test,spec}.{js,mjs,cjs,ts}',
+            '../lib/**/*.{test,spec}.{js,mjs,cjs,ts}',
+            '../supabase/**/*.{test,spec}.{js,mjs,cjs,ts}'
+        ],
         environment: 'node',
         coverage: {
             provider: 'v8',

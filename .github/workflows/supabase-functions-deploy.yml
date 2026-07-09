@@ -1,0 +1,98 @@
+# تدقيق 2026-07-09 (أتمتة الدفع): نشر Edge Functions (create-checkout/webhook-moyasar/
+# webhook-stripe) + دفع أسرار مزوّدي الدفع إلى Supabase تلقائياً على كل push يمسّ
+# supabase/functions/** — نفس نمط supabase-migrations.yml (تخطٍّ آمن بلا فشل بناء
+# إن غابت الأسرار، تحذير واضح بدل صمت).
+#
+# أسرار يجب إضافتها في: Settings → Secrets and variables → Actions → New repository secret
+#
+# مطلوبة لأي نشر (نفس أسرار الترحيلات — إن كانت مضبوطة أصلاً لن تحتاج تكرارها):
+#   - SUPABASE_ACCESS_TOKEN، SUPABASE_PROJECT_REF، SUPABASE_DB_PASSWORD
+#
+# مطلوبة لعمل الدفع فعلياً (تُدفع كأسرار Supabase عبر `supabase secrets set` —
+# لا تُكتب هنا مباشرة، فقط تُشار إليها من GitHub Secrets):
+#   - SUPABASE_URL، SUPABASE_ANON_KEY، SUPABASE_SERVICE_ROLE_KEY (Project Settings → API)
+#   - APP_ORIGIN (رابط الموقع الفعلي، مثال: https://qarar.app)
+#   - MOYASAR_SECRET_KEY، MOYASAR_WEBHOOK_SECRET (لوحة تحكم Moyasar → API Keys / Webhooks)
+#   - STRIPE_SECRET_KEY، STRIPE_WEBHOOK_SECRET (لوحة تحكم Stripe → Developers → API keys / Webhooks)
+#
+# كل سرّ غائب يُتخطّى بتحذير واضح بدل إيقاف النشر بالكامل — يمكن تفعيل مزوّد واحد
+# أولاً (مثلاً Moyasar فقط) وإضافة الآخر لاحقاً بلا أي تعديل كود.
+
+name: Supabase Edge Functions Deploy
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'supabase/functions/**'
+  workflow_dispatch: {}
+
+jobs:
+  deploy-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Supabase link secrets are configured
+        id: check_link_secrets
+        run: |
+          if [ -n "${{ secrets.SUPABASE_ACCESS_TOKEN }}" ] && [ -n "${{ secrets.SUPABASE_PROJECT_REF }}" ] && [ -n "${{ secrets.SUPABASE_DB_PASSWORD }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::أسرار ربط Supabase (SUPABASE_ACCESS_TOKEN/SUPABASE_PROJECT_REF/SUPABASE_DB_PASSWORD) غير مضبوطة — تخطّي نشر Edge Functions بالكامل."
+          fi
+
+      - name: Link Supabase project
+        if: steps.check_link_secrets.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: npx supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" -p "${{ secrets.SUPABASE_DB_PASSWORD }}"
+
+      - name: "Deploy create-checkout (يتطلب JWT مستخدم حقيقي — تحقق مزدوج: منصة Supabase + تحقق داخلي إضافي في الدالة)"
+        if: steps.check_link_secrets.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: npx supabase functions deploy create-checkout
+
+      # --no-verify-jwt هنا (لا في create-checkout أعلاه): منصة Supabase تتحقق
+      # افتراضياً من JWT قبل تشغيل أي دالة — يمنع webhook-moyasar/webhook-stripe من
+      # العمل إطلاقاً لو تُرك الافتراضي، لأن مزوّدي الدفع خدمتان خارجيتان لا ترسلان
+      # أي JWT مستخدم. التحقق الحقيقي لهذين المسارين هو توقيع/سرّ الـwebhook نفسه
+      # (webhookVerify.ts) — طبقة حماية مستقلة تماماً عن Supabase JWT.
+      - name: "Deploy webhook-moyasar / webhook-stripe (بلا تحقق JWT منصّة — التحقق عبر توقيع المزوّد نفسه)"
+        if: steps.check_link_secrets.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          npx supabase functions deploy webhook-moyasar --no-verify-jwt
+          npx supabase functions deploy webhook-stripe --no-verify-jwt
+
+      - name: Push payment provider secrets to Supabase (skips any missing one safely)
+        if: steps.check_link_secrets.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set +e
+          declare -A SECRET_VALUES=(
+            [SUPABASE_URL]="${{ secrets.SUPABASE_URL }}"
+            [SUPABASE_ANON_KEY]="${{ secrets.SUPABASE_ANON_KEY }}"
+            [SUPABASE_SERVICE_ROLE_KEY]="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+            [APP_ORIGIN]="${{ secrets.APP_ORIGIN }}"
+            [MOYASAR_SECRET_KEY]="${{ secrets.MOYASAR_SECRET_KEY }}"
+            [MOYASAR_WEBHOOK_SECRET]="${{ secrets.MOYASAR_WEBHOOK_SECRET }}"
+            [STRIPE_SECRET_KEY]="${{ secrets.STRIPE_SECRET_KEY }}"
+            [STRIPE_WEBHOOK_SECRET]="${{ secrets.STRIPE_WEBHOOK_SECRET }}"
+          )
+          MISSING=""
+          for KEY in "${!SECRET_VALUES[@]}"; do
+            VALUE="${SECRET_VALUES[$KEY]}"
+            if [ -n "$VALUE" ]; then
+              npx supabase secrets set "$KEY=$VALUE"
+            else
+              MISSING="$MISSING $KEY"
+            fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::warning::أسرار غائبة لم تُضبَط بعد في Supabase (أضفها في GitHub Secrets لتفعيل الدفع الفعلي):$MISSING"
+          fi

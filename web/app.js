@@ -1404,6 +1404,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         else await showLandingDashboard();
       } else if (route.startsWith('share/')) {
         await renderShareRoute(route.slice(6));
+      } else if (route.startsWith('payment-return')) {
+        // Moyasar/Stripe يُعيدان توجيه المتصفح هنا بعد الدفع (انظر create-checkout
+        // Edge Function: returnUrl يبني هذا الرابط تحديداً بمعامل order=<orderId>).
+        const queryStr = route.includes('?') ? route.slice(route.indexOf('?') + 1) : '';
+        const orderId = new URLSearchParams(queryStr).get('order');
+        const { PaymentReturnView } = await import('./js/ui/PaymentReturnView.js');
+        const view = new PaymentReturnView(wizardContainer, {
+          orderId,
+          onContinue: () => showLandingDashboard(),
+        });
+        await view.render();
       } else if (SUBVIEW_ROUTES[route]) {
         SUBVIEW_ROUTES[route]();
       } else {

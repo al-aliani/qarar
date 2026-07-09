@@ -15,6 +15,7 @@ import { APP_CONFIG, BANK_COMPLIANCE_SENTENCE } from '../config.js';
 import { ConsultationModal } from './ConsultationModal.js';
 import { PaywallModal } from './PaywallModal.js';
 import { generatePitchScript } from '../services/AIConnector.js';
+import { hasActivePayment } from '../services/PaymentService.js';
 
 // تدقيق 2026-07-08 (ملاحظة عالية #39): صيغ التقرير النهائي الاحترافي (قرار المالك:
 // قفلها فعلياً، لا مجرد رسائل تسويقية) — الأدوات الخام/المشاركة (JSON/CSV/Sheets/
@@ -399,11 +400,20 @@ export class ExportMenu {
     async handleExport(type, btn) {
         // بوابة الترقية (Paywall) — تسبق حتى بوابة الجودة: لا داعٍ لتشغيل المحرك
         // إن كانت الصيغة مقفلة أصلاً.
+        // تدقيق 2026-07-09 (أتمتة الدفع): كانت تعرض PaywallModal دائماً بلا أي
+        // تحقق فعلي من حالة الدفع — الآن تتحقق من orders.status='paid' الحقيقية
+        // (محمية بـRLS، لا يمكن للعميل تزييفها) قبل عرض البوابة؛ دراسة دُفعت
+        // فعلاً تتخطى البوابة وتصدّر مباشرة.
         if (PREMIUM_EXPORT_TYPES.has(type)) {
-            this.close();
-            const modal = new PaywallModal('paywallModalOverlay', this.store);
-            modal.open(PREMIUM_EXPORT_TYPES.get(type));
-            return;
+            const state = this.store.getState();
+            const studyId = state.projectInfo?.id || state.id || null;
+            const alreadyPaid = await hasActivePayment(studyId);
+            if (!alreadyPaid) {
+                this.close();
+                const modal = new PaywallModal('paywallModalOverlay', this.store);
+                modal.open(PREMIUM_EXPORT_TYPES.get(type));
+                return;
+            }
         }
 
         const state = this.store.getState();

@@ -5,18 +5,30 @@
  * الاحترافية (PDF/Excel/Word/...) تفتح نافذة الترقية (PaywallModal) فعلياً بدل
  * توليد الملف مباشرة، بينما الأدوات الخام/المشاركة المجانية (JSON/CSV/لوحة
  * المستثمر) تستمر بلا أي حاجز — لا كسر توافق لسلوك موجود.
+ *
+ * تدقيق 2026-07-09 (أتمتة الدفع): hasActivePayment() مُموَّهة صراحة هنا (بدل
+ * تركها تستدعي supabaseClient.js الحقيقي — كانت تصل فعلياً لمشروع Supabase
+ * الإنتاجي الافتراضي أثناء الاختبارات، بطيء وغير حتمي) — راجع أيضاً
+ * paymentGate.test.js أدناه للمسار "مدفوع فعلاً".
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ExportMenu, PREMIUM_EXPORT_TYPES } from '../ExportMenu.js';
 import { createEmptyStudy } from '../../core/schema.js';
+import { ExportMenu, PREMIUM_EXPORT_TYPES } from '../ExportMenu.js';
+
+const hasActivePaymentMock = vi.fn(async () => false);
+vi.mock('../../services/PaymentService.js', () => ({
+    hasActivePayment: (...a) => hasActivePaymentMock(...a),
+    startCheckout: vi.fn(async () => ({ ok: false, error: 'not used in this test' })),
+}));
 
 function fakeStore(state) {
     return { getState: () => state, update: vi.fn(), notify: vi.fn() };
 }
 
 describe('ExportMenu — بوابة الترقية تعترض صيغ التقرير النهائي', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         document.body.innerHTML = `<div id="exportMenuOverlay"></div>`;
+        hasActivePaymentMock.mockReset().mockResolvedValue(false);
     });
 
     it('النقر على صيغة PDF (premium) يفتح PaywallModal ولا يستدعي PDFGenerator.generate إطلاقاً', async () => {
@@ -57,6 +69,27 @@ describe('ExportMenu — بوابة الترقية تعترض صيغ التقر�
         expect(paywallOverlay?.classList.contains('is-open')).not.toBe(true);
     });
 
+});
+
+describe('ExportMenu — دراسة مدفوعة فعلاً تتخطى بوابة الترقية', () => {
+    beforeEach(() => {
+        document.body.innerHTML = `<div id="exportMenuOverlay"></div>`;
+        hasActivePaymentMock.mockReset().mockResolvedValue(true);
+    });
+
+    it('hasActivePayment=true ⇒ لا تُفتح PaywallModal لصيغة premium (excel)', async () => {
+        const study = { ...createEmptyStudy(), projectInfo: { ...createEmptyStudy().projectInfo, id: 'study-paid-1' } };
+        const menu = new ExportMenu('exportMenuOverlay', fakeStore(study));
+        // نمنع فعلياً استكمال منطق التصدير (بوابة الجودة/توليد الملف) — يكفي
+        // إثبات عدم فتح PaywallModal لأن هذا هو سلوك البوابة المطلوب اختباره.
+        vi.spyOn(menu, '_qaGate').mockResolvedValue(false);
+
+        await menu.handleExport('excel', document.createElement('button'));
+
+        expect(hasActivePaymentMock).toHaveBeenCalledWith('study-paid-1');
+        const paywallOverlay = document.getElementById('paywallModalOverlay');
+        expect(paywallOverlay?.classList.contains('is-open')).not.toBe(true);
+    });
 });
 
 describe('ExportMenu — مسمّيات الصيغ المقفلة لا تحوي رموزاً إنجليزية يعيد installArabicUiGuard كتابتها', () => {

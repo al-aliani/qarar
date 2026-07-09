@@ -4,19 +4,34 @@
  * تدقيق 2026-07-08 (ملاحظة عالية #39، قرار المالك): كان الموقع يسوّق ثلاث باقات
  * (249/990/2900 ريال) بلا أي حاجز فعلي يمنع تصدير التقرير النهائي مجاناً — فجوة
  * ثقة مباشرة. هذا يثبّت أن PaywallModal يعرض الباقات الثلاث بأسعارها الحقيقية
- * (من pricing.js، مصدر الحقيقة الوحيد) وروابط واتساب صحيحة لكل باقة، دون أي زر
- * دفع وهمي (القرار: تواصل يدوي لكل الباقات الثلاث، لا بوابة دفع مزيَّفة).
+ * (من pricing.js، مصدر الحقيقة الوحيد) وروابط واتساب صحيحة لكل باقة.
+ *
+ * تدقيق 2026-07-09 (أتمتة الدفع): القرار السابق ("لا بوابة دفع، تواصل يدوي فقط")
+ * حُدِّث صراحة — أُضيف دفع فعلي (Moyasar/Stripe) لكل الباقات الثلاث. الباقة
+ * "ذاتي" (channel:'app') تُقدِّم الدفع المباشر أولاً؛ الباقتان الأخريان
+ * (channel:'whatsapp') تُبقيان واتساب أولاً (تتطلبان تدخلاً بشرياً فعلياً) مع
+ * الدفع المباشر كخيار ثانٍ. هذا الملف يثبّت كلا المسارين معاً.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PaywallModal } from '../PaywallModal.js';
 import { PRICING_PACKAGES, formatPrice } from '../../core/pricing.js';
+
+const startCheckoutMock = vi.fn(async () => ({ ok: true, checkoutUrl: 'https://pay.example.com/xyz' }));
+vi.mock('../../services/PaymentService.js', () => ({
+    startCheckout: (...a) => startCheckoutMock(...a),
+}));
 
 function fakeStore(state = {}) {
     return { getState: () => state };
 }
 
 describe('PaywallModal — عرض الباقات الثلاث بأسعار pricing.js الحقيقية', () => {
-    beforeEach(() => { document.body.innerHTML = ''; });
+    beforeEach(() => {
+        document.body.innerHTML = '';
+        startCheckoutMock.mockClear();
+        delete window.location;
+        window.location = { href: '' };
+    });
 
     it('يعرض بطاقة واحدة لكل باقة من PRICING_PACKAGES بالضبط (لا أكثر ولا أقل)', () => {
         const modal = new PaywallModal('paywallOverlay', fakeStore());
@@ -30,8 +45,8 @@ describe('PaywallModal — عرض الباقات الثلاث بأسعار prici
         });
     });
 
-    it('كل زر ترقية يفتح رابط واتساب (لا زر "ادفع الآن" وهمياً) يحوي اسم الباقة وسعرها واسم المشروع', () => {
-        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { name: 'مطعم الاختبار' } }));
+    it('كل باقة تعرض رابط واتساب صحيحاً (يحوي اسم الباقة وسعرها واسم المشروع) بجانب زرَّي الدفع', () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { name: 'مطعم الاختبار', id: 'study-1' } }));
         modal.open('ملف Excel التفصيلي');
 
         const links = [...document.querySelectorAll('.btn-whatsapp-upgrade')];
@@ -43,8 +58,81 @@ describe('PaywallModal — عرض الباقات الثلاث بأسعار prici
             expect(decoded).toContain('مطعم الاختبار');
             expect(decoded).toContain('ملف Excel التفصيلي');
         });
-        // لا وجود لأي عنصر "زر دفع" (input[type=submit]/data-action=pay) — القرار: لا دفع وهمي
-        expect(document.querySelector('[data-action="pay"]')).toBeNull();
+    });
+
+    it('كل باقة تعرض زرَّي دفع فعليين (Moyasar وStripe)', () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
+        modal.open('تقرير PDF شامل');
+
+        const moyasarButtons = document.querySelectorAll('.btn-pay-now[data-provider="moyasar"]');
+        const stripeButtons = document.querySelectorAll('.btn-pay-now[data-provider="stripe"]');
+        expect(moyasarButtons).toHaveLength(PRICING_PACKAGES.length);
+        expect(stripeButtons).toHaveLength(PRICING_PACKAGES.length);
+    });
+
+    it('باقة "ذاتي" (channel:app) تُقدِّم زرَّي الدفع قبل رابط واتساب في البطاقة نفسها', () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
+        modal.open('تقرير PDF شامل');
+
+        const selfPkg = PRICING_PACKAGES.find(p => p.id === 'self');
+        const card = [...document.querySelectorAll('.paywall-package-card')].find(c => c.textContent.includes(selfPkg.name));
+        const payBtnIndex = card.innerHTML.indexOf('btn-pay-now');
+        const waLinkIndex = card.innerHTML.indexOf('btn-whatsapp-upgrade');
+        expect(payBtnIndex).toBeGreaterThan(-1);
+        expect(waLinkIndex).toBeGreaterThan(-1);
+        expect(payBtnIndex).toBeLessThan(waLinkIndex);
+    });
+
+    it('باقتا "مراجَع بخبير"/"خدمة كاملة" (channel:whatsapp) تُقدِّمان واتساب قبل زرَّي الدفع', () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
+        modal.open('تقرير PDF شامل');
+
+        ['reviewed', 'full'].forEach(id => {
+            const pkg = PRICING_PACKAGES.find(p => p.id === id);
+            const card = [...document.querySelectorAll('.paywall-package-card')].find(c => c.textContent.includes(pkg.name));
+            const payBtnIndex = card.innerHTML.indexOf('btn-pay-now');
+            const waLinkIndex = card.innerHTML.indexOf('btn-whatsapp-upgrade');
+            expect(waLinkIndex).toBeLessThan(payBtnIndex);
+        });
+    });
+
+    it('النقر على زر الدفع المباشر يستدعي startCheckout بالمعطيات الصحيحة ويوجّه المتصفح لرابط الدفع', async () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-42' } }));
+        modal.open('تقرير PDF شامل');
+
+        const btn = document.querySelector('.btn-pay-now[data-package="self"][data-provider="moyasar"]');
+        btn.click();
+        await new Promise(r => setTimeout(r, 0));
+
+        expect(startCheckoutMock).toHaveBeenCalledWith({ tier: 'self', studyId: 'study-42', provider: 'moyasar' });
+        expect(window.location.href).toBe('https://pay.example.com/xyz');
+    });
+
+    it('بلا معرّف دراسة صالح: يعرض خطأً واضحاً ولا يستدعي startCheckout', async () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore({}));
+        modal.open('تقرير PDF شامل');
+
+        const btn = document.querySelector('.btn-pay-now[data-package="self"][data-provider="moyasar"]');
+        btn.click();
+        await new Promise(r => setTimeout(r, 0));
+
+        expect(startCheckoutMock).not.toHaveBeenCalled();
+        const errEl = document.getElementById('paywallPayError');
+        expect(errEl.style.display).toBe('block');
+        expect(errEl.textContent.length).toBeGreaterThan(0);
+    });
+
+    it('فشل startCheckout: يعرض رسالة الخطأ ويُعيد تفعيل الزر', async () => {
+        startCheckoutMock.mockResolvedValueOnce({ ok: false, error: 'مزوّد الدفع غير متاح حالياً' });
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
+        modal.open('تقرير PDF شامل');
+
+        const btn = document.querySelector('.btn-pay-now[data-package="self"][data-provider="moyasar"]');
+        btn.click();
+        await new Promise(r => setTimeout(r, 0));
+
+        expect(document.getElementById('paywallPayError').textContent).toContain('مزوّد الدفع غير متاح حالياً');
+        expect(btn.disabled).toBe(false);
     });
 
     it('اسم الصيغة المطلوبة (formatLabel) يظهر فعلياً في نص الرسالة الرئيسي للنافذة', () => {
