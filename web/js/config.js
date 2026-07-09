@@ -78,13 +78,45 @@ export const TRUST_TAGLINE = 'منصة معيارية لدراسات الجدو�
 export const BANK_COMPLIANCE_SENTENCE = 'هيكل التقرير متوافق مع متطلبات بنك التنمية ومنشآت';
 
 /**
- * رقم واتساب الأعمال لطلب ترقية الباقات الثلاث (نافذة القفل — PaywallModal).
- * تدقيق 2026-07-08 (ملاحظة عالية #39، قرار المالك): لا بوابة دفع فعلية بعد — الترقية
- * عبر تواصل واتساب يدوي للباقات الثلاث كلها (لا فرق بين 249/990/2900 هنا).
- * نفس الشغرة المُعلَنة سابقاً في web/landing.html (متغيّر WHATSAPP_NUMBER هناك) —
- * حدِّث القيمة في كلا المكانين معاً عند توفر الرقم الفعلي.
+ * رقم واتساب الأعمال (دعم فني + طلب ترقية الباقات الثلاث عبر نافذة القفل —
+ * PaywallModal). تدقيق 2026-07-09 (تعديلات ما قبل الإطلاق): كان رقماً ثابتاً
+ * مكرَّراً حرفياً في هذا الملف وweb/landing.html معاً (خطر نسيان تحديث أحدهما) —
+ * صار الآن يُشتقّ من مصدر واحد قابل للتعديل بلا إعادة بناء (web/public/whatsapp-config.js)
+ * أو متغيّر بيئة وقت البناء، بنفس أولوية القراءة المتّبعة في supabaseClient.js:
+ *   1) import.meta.env.VITE_WHATSAPP_NUMBER (وقت البناء)
+ *   2) window.WHATSAPP_NUMBER (يضبطه web/public/whatsapp-config.js وقت التشغيل —
+ *      المكان المركزي المقصود لتعديل الرقم فعلياً بلا إعادة بناء)
+ *   3) localStorage['WHATSAPP_NUMBER'] (تجاوز يدوي محلي، مفيد للاختبار)
+ *   4) شغرة توضيحية + تحذير console — نفس منطق «لا نُخفي أن الإعداد غائب» المتّبع
+ *      لإعداد Supabase الافتراضي.
  */
-export const WHATSAPP_NUMBER = '9665XXXXXXXX';
+const WHATSAPP_PLACEHOLDER = '9665XXXXXXXX';
+
+function envVar(name) {
+    try {
+        return (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[name]) || '';
+    } catch (_) {
+        return '';
+    }
+}
+
+function resolveWhatsAppNumber() {
+    const fromEnv = String(envVar('VITE_WHATSAPP_NUMBER') || '').trim();
+    const fromWindow = typeof window !== 'undefined' ? String(window.WHATSAPP_NUMBER || '').trim() : '';
+    const fromStorage = typeof localStorage !== 'undefined' ? String(localStorage.getItem('WHATSAPP_NUMBER') || '').trim() : '';
+    const resolved = fromEnv || fromWindow || fromStorage;
+
+    if (/^\d{10,15}$/.test(resolved)) return resolved;
+
+    console.warn(
+        '[قرار] رقم واتساب الدعم غير مضبوط بعد — عدّل web/public/whatsapp-config.js ' +
+        '(أو اضبط VITE_WHATSAPP_NUMBER وقت البناء) بالرقم الفعلي. أزرار واتساب تعمل ' +
+        'بوضع احتياطي حالياً (تفتح المنصة بدل فتح محادثة واتساب حقيقية).'
+    );
+    return WHATSAPP_PLACEHOLDER;
+}
+
+export const WHATSAPP_NUMBER = resolveWhatsAppNumber();
 
 /** رابط واتساب برسالة مُعبَّأة مسبقاً؛ يتجاهل الرقم إن كان لا يزال الشغرة (غير مضبوط). */
 export function buildWhatsAppLink(text) {

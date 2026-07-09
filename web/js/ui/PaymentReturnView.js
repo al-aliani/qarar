@@ -10,6 +10,7 @@
  * تزوير أي رابط، فالحالة الحقيقية الوحيدة هي orders.status من القاعدة.
  */
 import { getOrderStatus } from '../services/PaymentService.js';
+import { buildWhatsAppLink } from '../config.js';
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_ATTEMPTS = 10; // ~20 ثانية إجمالاً قبل عرض رسالة "لا يزال قيد المعالجة"
@@ -50,21 +51,25 @@ export class PaymentReturnView {
     _renderState(state, extraMessage = '') {
         if (!this.container) return;
         const messages = {
-            loading: { icon: '⏳', title: 'جاري تأكيد الدفع...', body: 'لحظات فقط بينما نتحقق من نجاح عملية الدفع.', showContinue: false },
-            paid: { icon: '✅', title: 'تم الدفع بنجاح', body: 'تم تفعيل الوصول لتصدير التقرير النهائي لهذه الدراسة.', showContinue: true },
-            failed: { icon: '❌', title: 'لم تكتمل عملية الدفع', body: 'يمكنك المحاولة مرة أخرى، أو التواصل معنا عبر واتساب.', showContinue: true },
-            refunded: { icon: 'ℹ️', title: 'تم استرداد هذا الطلب', body: 'إن كان هذا غير متوقّع، تواصل معنا عبر واتساب.', showContinue: true },
-            still_pending: { icon: '⏳', title: 'الدفع قيد المعالجة', body: 'يستغرق التأكيد وقتاً أطول من المعتاد أحياناً — سنحدّث الحالة تلقائياً عند فتح الدراسة لاحقاً.', showContinue: true },
-            error: { icon: '⚠️', title: 'تعذّر عرض حالة الدفع', body: extraMessage, showContinue: true },
+            loading: { icon: 'i-reset', title: 'جاري تأكيد الدفع...', body: 'لحظات فقط بينما نتحقق من نجاح عملية الدفع.', showContinue: false, showWhatsApp: false },
+            paid: { icon: 'i-check', title: 'تم الدفع بنجاح', body: 'تم تفعيل الوصول لتصدير التقرير النهائي لهذه الدراسة.', showContinue: true, showWhatsApp: false },
+            failed: { icon: 'i-x', title: 'لم تكتمل عملية الدفع', body: 'يمكنك المحاولة مرة أخرى، أو التواصل مع الدعم الفني عبر واتساب.', showContinue: true, showWhatsApp: true, waMessage: 'مرحباً، واجهت مشكلة أثناء إتمام دفع طلب رقم ' + this.orderId + ' في منصة «قرار» ولم يكتمل. أحتاج مساعدة.' },
+            refunded: { icon: 'i-warning', title: 'تم استرداد هذا الطلب', body: 'إن كان هذا غير متوقّع، تواصل مع الدعم الفني عبر واتساب.', showContinue: true, showWhatsApp: true, waMessage: 'مرحباً، ألاحظ أن طلبي رقم ' + this.orderId + ' في منصة «قرار» أصبح "مُسترَداً" وهذا غير متوقَّع مني. هل يمكن المساعدة؟' },
+            still_pending: { icon: 'i-reset', title: 'الدفع قيد المعالجة', body: 'يستغرق التأكيد وقتاً أطول من المعتاد أحياناً — سنحدّث الحالة تلقائياً عند فتح الدراسة لاحقاً. إن استمر الأمر، تواصل مع الدعم الفني.', showContinue: true, showWhatsApp: true, waMessage: 'مرحباً، طلب الدفع رقم ' + this.orderId + ' في منصة «قرار» لا يزال "قيد المعالجة" منذ فترة. هل يمكن التحقق من حالته؟' },
+            error: { icon: 'i-warning', title: 'تعذّر عرض حالة الدفع', body: extraMessage, showContinue: true, showWhatsApp: false },
         };
         const m = messages[state] || messages.error;
+        const waLink = m.showWhatsApp ? buildWhatsAppLink(m.waMessage) : '';
 
         this.container.innerHTML = `
             <div class="payment-return-view" style="max-width:480px;margin:60px auto;text-align:center;padding:24px;">
-                <div style="font-size:2.5rem;margin-bottom:12px;">${m.icon}</div>
+                <div style="font-size:2.5rem;margin-bottom:12px;"><svg class="ic" aria-hidden="true" style="width:2.5rem;height:2.5rem;"><use href="#${m.icon}"/></svg></div>
                 <h2 style="margin-bottom:8px;">${m.title}</h2>
                 <p class="text-muted">${m.body}</p>
-                ${m.showContinue ? `<button type="button" id="btnPaymentReturnContinue" class="btn btn--primary mt-4">متابعة</button>` : ''}
+                <div class="d-flex gap-2 justify-center mt-4" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                    ${m.showWhatsApp ? `<a href="${waLink}" target="_blank" rel="noopener noreferrer" class="btn btn--secondary">تواصل مع الدعم عبر واتساب</a>` : ''}
+                    ${m.showContinue ? `<button type="button" id="btnPaymentReturnContinue" class="btn btn--primary">متابعة</button>` : ''}
+                </div>
             </div>
         `;
 

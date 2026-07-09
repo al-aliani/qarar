@@ -487,6 +487,7 @@
       .foot-links { display: grid; gap: 12px; }
     }
   </style>
+  <script src="/whatsapp-config.js"></script>
 </head>
 <body>
   <div id="progress" aria-hidden="true"></div>
@@ -947,12 +948,15 @@
     document.getElementById('year').textContent = new Date().getFullYear();
 
     /* ============================================================
-       إعداد المالك: ضع رقم واتساب عملك هنا بصيغة دولية بلا +
-       مثال: 9665XXXXXXXX
+       إعداد المالك: الرقم يُقرأ من /whatsapp-config.js (ملف واحد مركزي،
+       عدّله هناك بلا حاجة لإعادة بناء المشروع — راجع تعليقاته). هذا فقط
+       احتياط أخير إن غاب الملف لأي سبب.
        ما دام الرقم غير مضبوط، أزرار «واتساب» تتحوّل تلقائياً
        إلى فتح المنصة (بدل عرض رسالة تقنية للزائر).
        ============================================================ */
-    var WHATSAPP_NUMBER = '9665XXXXXXXX';
+    var WHATSAPP_NUMBER = (window.WHATSAPP_NUMBER && /^\d{10,15}$/.test(window.WHATSAPP_NUMBER))
+      ? window.WHATSAPP_NUMBER
+      : '9665XXXXXXXX';
     var NUMBER_IS_SET = /^\d{11,15}$/.test(WHATSAPP_NUMBER);
 
     (function setupWhatsApp() {

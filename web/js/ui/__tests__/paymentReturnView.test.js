@@ -100,4 +100,39 @@ describe('PaymentReturnView', () => {
         document.getElementById('btnPaymentReturnContinue').click();
         expect(onContinue).toHaveBeenCalledTimes(1);
     });
+
+    it('حالة paid: لا يعرض رابط واتساب (دفع ناجح لا يحتاج دعماً فنياً)', async () => {
+        getOrderStatusMock.mockResolvedValue('paid');
+        const { PaymentReturnView } = await import('../PaymentReturnView.js');
+        const view = new PaymentReturnView('root', { orderId: 'order-1' });
+        await view.render();
+        expect(document.querySelector('a[href^="https://wa.me/"]')).toBeNull();
+    });
+
+    it('حالة failed: يعرض رابط واتساب فعلياً برسالة تذكر رقم الطلب', async () => {
+        getOrderStatusMock.mockResolvedValue('failed');
+        const { PaymentReturnView } = await import('../PaymentReturnView.js');
+        const view = new PaymentReturnView('root', { orderId: 'order-xyz' });
+        await view.render();
+        const waLink = document.querySelector('a[href^="https://wa.me/"]');
+        expect(waLink).not.toBeNull();
+        expect(waLink.getAttribute('target')).toBe('_blank');
+        const decoded = decodeURIComponent(waLink.getAttribute('href').split('text=')[1]);
+        expect(decoded).toContain('order-xyz');
+    });
+
+    it('حالة still_pending: يعرض رابط واتساب أيضاً (انتظار طويل قد يحتاج دعماً)', async () => {
+        vi.useFakeTimers();
+        try {
+            getOrderStatusMock.mockResolvedValue('pending');
+            const { PaymentReturnView } = await import('../PaymentReturnView.js');
+            const view = new PaymentReturnView('root', { orderId: 'order-1' });
+            const renderPromise = view.render();
+            await vi.advanceTimersByTimeAsync(2000 * 10);
+            await renderPromise;
+            expect(document.querySelector('a[href^="https://wa.me/"]')).not.toBeNull();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
 });
