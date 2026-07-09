@@ -198,23 +198,28 @@ export class PreliminaryCheckView {
      * CSS شاملة. الآن يظهر هنا فعلياً — أول خطوة في الرحلة، حيث المنطق (فحص أولي سريع)
      * منطقي فعلاً. نعرض الفرعية الثلاث منفصلة (لا رقماً واحداً مدموجاً) كي لا يُفهم
      * «اكتمال التعبئة» على أنه «جودة الفكرة» (ملاحظة متوسطة منفصلة في نفس التدقيق).
+     *
+     * تدقيق 2026-07-09 (علة #1): score الآن = هامش + TAM حصراً (سقف كل منهما 50،
+     * انظر تعليق الفصل أعلى calculateIdeaScore.js) — اكتمال التعبئة معلوماتية بحتة
+     * ولا تدخل في المجموع، فتُعرض كسطر % منفصل موسوم صراحة بأنها لا تُحتسب.
      */
     _renderIdeaScoreChip() {
         const state = this.store.getState();
         const { score, color, breakdown } = calculateIdeaScore(state);
         if (!score) return '';
         const dot = { green: '🟢', yellow: '🟡', red: '🔴' }[color] || '⚪';
+        const completenessPct = Math.round((breakdown.completeness / 40) * 100);
         return `
             <div class="card mb-3" style="padding:.75rem 1rem;">
                 <div class="flex-between" style="align-items:center;">
                     <strong style="font-size:.92rem;">${dot} نتيجة الفكرة الأولية: ${score}/100</strong>
-                    ${fieldHelp('تقدير سريع من ثلاثة أجزاء: اكتمال تعبئة البيانات، الهامش الربحي المتوقع (إن حُسب)، وحجم السوق TAM المُدخل — ليست حكماً نهائياً على جودة المشروع.', '')}
+                    ${fieldHelp('تقدير سريع من جزأين ماليين فقط: الهامش الربحي المتوقع (إن حُسب) وحجم السوق TAM المُدخل — ليست حكماً نهائياً على جودة المشروع. اكتمال تعبئة البيانات معروض للعلم فقط ولا يدخل في هذا الرقم.', '')}
                 </div>
                 <div class="d-flex gap-3 mt-2 text-xs text-muted">
-                    <span>اكتمال البيانات: ${breakdown.completeness}/40</span>
-                    <span>الهامش الربحي: ${breakdown.margin}/30</span>
-                    <span>حجم السوق (TAM): ${breakdown.tam}/30</span>
+                    <span>الهامش الربحي: ${breakdown.margin}/50</span>
+                    <span>حجم السوق (TAM): ${breakdown.tam}/50</span>
                 </div>
+                <div class="text-xs text-muted mt-1">اكتمال تعبئة البيانات: ${completenessPct}% (معلوماتي — لا يُحتسب ضمن نتيجة الفكرة)</div>
             </div>`;
     }
 

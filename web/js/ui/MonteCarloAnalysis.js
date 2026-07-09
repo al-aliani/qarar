@@ -17,11 +17,19 @@ export class MonteCarloAnalysis {
      * displayResults) بعتبات غير متطابقة (لون ينجح عند >70%، نص يتوسّط عند <80%) —
      * فيظهر رقم أخضر «نجاح» بجانب نص «متوسطة ⚠️» لنفس الاحتمالية في نفس اللحظة.
      * الآن مصدر واحد يضمن أن اللون والنص يعكسان نفس العتبة دائماً.
+     *
+     * تدقيق 2026-07-09 (علة أ): كان النص يحمل إيموجي خام (✅/⚠️/⛔) رغم أن بقية
+     * الشاشات (ReportBuilderView/Timeline/FinancialDashboard) هُجِّرت لأيقونات
+     * SVG-sprite. القيمة تُعرض عبر textContent (لا innerHTML) في مستهلكيها
+     * (displaySavedSummary/displayResults)، فحقن وسم <svg> داخل النص نفسه كان
+     * سيُعرض كنص مهروب حرفياً لا كأيقونة. الحل: النص الآن نظيف بلا إيموجي، وحقل
+     * icon منفصل يحدّد أيقونة SVG-sprite تُعرض بجانب النص عبر عنصر <use> مستقل
+     * في القالب (انظر #riskRatingIcon في render() ومستهلكيه أدناه).
      */
     static getRiskRating(successProbability) {
-        if (successProbability > 0.7) return { text: 'منخفضة ✅', color: 'var(--c-success)' };
-        if (successProbability > 0.4) return { text: 'متوسطة ⚠️', color: 'var(--c-warning)' };
-        return { text: 'عالية ⛔', color: 'var(--c-danger)' };
+        if (successProbability > 0.7) return { text: 'منخفضة', icon: 'i-check', color: 'var(--c-success)' };
+        if (successProbability > 0.4) return { text: 'متوسطة', icon: 'i-warning', color: 'var(--c-warning)' };
+        return { text: 'عالية', icon: 'i-x', color: 'var(--c-danger)' };
     }
 
     /**
@@ -76,7 +84,7 @@ export class MonteCarloAnalysis {
                             </div>
                             <div class="kpi-card">
                                 <span class="kpi-label">درجة المخاطرة</span>
-                                <span class="kpi-value" id="riskRating">--</span>
+                                <span class="kpi-value"><svg class="ic" id="riskRatingIcon" aria-hidden="true" style="display:none;"><use href="#i-check"/></svg> <span id="riskRating">--</span></span>
                             </div>
                         </div>
 
@@ -126,7 +134,26 @@ export class MonteCarloAnalysis {
         probEl.style.color = savedRating.color;
         avgEl.textContent = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(saved.avgNPV);
         riskEl.textContent = savedRating.text;
+        this.setRiskIcon(savedRating.icon);
         this.fillPercentiles(saved.p10, saved.p50, saved.p90);
+    }
+
+    /**
+     * تدقيق 2026-07-09 (علة أ): تُظهر أيقونة SVG-sprite بجانب نص «درجة المخاطرة»
+     * (i-check/i-warning/i-x حسب getRiskRating) بدل الإيموجي الخام السابق داخل
+     * النص نفسه. النص يُعرض عبر textContent (لا innerHTML) في المستهلكَين، لذا
+     * الأيقونة عنصر <svg><use> مستقل في القالب يُحدَّث عبر setAttribute('href', ...).
+     * iconId فارغ (null/undefined) ⇒ إخفاء الأيقونة (حالة «تعذّرت المحاكاة»).
+     */
+    setRiskIcon(iconId) {
+        const icon = this.container.querySelector('#riskRatingIcon');
+        if (!icon) return;
+        if (!iconId) {
+            icon.style.display = 'none';
+            return;
+        }
+        icon.querySelector('use')?.setAttribute('href', '#' + iconId);
+        icon.style.display = '';
     }
 
     fillPercentiles(p10, p50, p90) {
@@ -200,6 +227,7 @@ export class MonteCarloAnalysis {
             probEl.style.color = 'var(--c-text-muted)';
             avgEl.textContent = '—';
             riskEl.textContent = 'تعذّرت المحاكاة — بيانات غير كافية';
+            this.setRiskIcon(null);
             return;
         }
 
@@ -213,6 +241,7 @@ export class MonteCarloAnalysis {
 
         // Risk Rating
         riskEl.textContent = rating.text;
+        this.setRiskIcon(rating.icon);
 
         this.fillPercentiles(p10, p50, p90);
 
@@ -247,6 +276,12 @@ export class MonteCarloAnalysis {
         const successColor = MonteCarloAnalysis.hexToRgba(successHex, 0.6);
         const dangerColor = MonteCarloAnalysis.hexToRgba(dangerHex, 0.6);
 
+        // تدقيق 2026-07-09 (علة ب): خط شبكة المحور y كان rgba(255,255,255,0.05) ثابتاً
+        // (شبه غير مرئي في الوضع الفاتح لأنه أبيض شفيف على خلفية فاتحة). نشتقه الآن من
+        // --c-text-muted (نفس أسلوب hexToRgba أعلاه) بشفافية منخفضة تتبع الثيم فعلياً.
+        const mutedHex = getComputedStyle(document.documentElement).getPropertyValue('--c-text-muted').trim() || '#5b665f';
+        const gridColor = MonteCarloAnalysis.hexToRgba(mutedHex, 0.15);
+
         // Destroy old chart if exists
         if (this.chart) this.chart.destroy();
 
@@ -275,7 +310,7 @@ export class MonteCarloAnalysis {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        grid: { color: 'rgba(255,255,255,0.05)' }
+                        grid: { color: gridColor }
                     },
                     x: {
                         grid: { display: false }

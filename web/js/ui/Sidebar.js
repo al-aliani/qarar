@@ -327,11 +327,28 @@ export class Sidebar {
         const progressHTML = this.progressTracker ? this.progressTracker.renderCompact() : '';
 
         // نتيجة الفكرة (Idea Score) — عداد سرعة ملون في أعلى الـ Sidebar
+        //
+        // تدقيق 2026-07-09 (علة #2): render() يُستدعى مئات المرات في جلسة إدخال
+        // واحدة (اشتراك store.subscribe عبر الرحلة الكاملة ذات الـ44 خطوة، بالإضافة
+        // لاستدعاءات مباشرة كنقر الأقسام القابلة للطي التي تتخطى مؤقت 500ms). وبلا
+        // results جاهزة، calculateIdeaScore يُشغّل calculateStudy() الكاملة داخلياً —
+        // أي إعادة تشغيل المحرك المالي بأكمله على كل ضغطة مفتاح تقريباً (نفس فئة
+        // العلة الموثّقة أعلى LivePanel.js، لكن دون المساس بمعمارية الاشتراك هنا:
+        // فقط سقف تكرار زمني بسيط — لا حذف للحساب، فقط تحديد وتيرته الأقصى).
+        // نعيد استخدام آخر نتيجة محسوبة إن مرّ أقل من 400ms منذ آخر حساب فعلي.
         let ideaScoreHTML = '';
         try {
             const storeInstance = this.store;
             const state = storeInstance?.getState?.() ?? storeInstance?.get?.() ?? {};
-            const idea = calculateIdeaScore(state);
+            const now = Date.now();
+            let idea;
+            if (this._ideaCache && this._ideaCacheAt && (now - this._ideaCacheAt) < 400) {
+                idea = this._ideaCache;
+            } else {
+                idea = calculateIdeaScore(state);
+                this._ideaCache = idea;
+                this._ideaCacheAt = now;
+            }
             const score = Math.min(100, Math.max(0, idea.score));
             const colorClass = idea.color === 'green' ? 'idea-score--green' : idea.color === 'yellow' ? 'idea-score--yellow' : 'idea-score--red';
             // صف رفيع داخل بطاقة الحالة المدمجة (.sidebar-status) — التفاصيل تبقى في title/aria

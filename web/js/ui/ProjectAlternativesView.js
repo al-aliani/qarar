@@ -14,10 +14,15 @@ const RISK_OPTIONS = [
     { value: 'medium', label: 'متوسطة', factor: 1.15 },
     { value: 'high', label: 'عالية', factor: 1.30 }
 ];
-// تدقيق 2026-07-09: عتبة تحذير عامة (ASSUMPTION) لـ"استرداد طويل" — قاعدة تقريبية
-// ثابتة لا تتناسب مع حجم الاستثمار أو طبيعة النشاط (مشروع كبير كالفرنشايز مقابل
-// مقهى صغير تُقارَن بنفس العتبة رغم اختلاف دورة الاسترداد الطبيعية لكل منهما).
-const LONG_PAYBACK_YEARS = 7; // فوقها نحذّر: استرداد طويل جداً لمشروع صغير
+// تدقيق 2026-07-09: عتبة «استرداد طويل» تتدرّج مع حجم الاستثمار (ASSUMPTION) —
+// مشروع صغير (مقهى مثلاً) يُتوقَّع منه استرداد أسرع، بينما مشروع كبير (فرنشايز/سلسلة
+// فروع) يقبل دورة استرداد أطول طبيعياً بحكم حجم رأس المال ومدة الانتشار.
+function longPaybackThreshold(cost) {
+    const c = Number(cost) || 0;
+    if (c < 500000) return 5;
+    if (c < 2000000) return 7;
+    return 9;
+}
 
 // أرقام بفواصل آلاف للقراءة (إدخال نصّي inputmode رقمي) — يمنع خطأ الأصفار
 const fmtNum = (n) => (Number(n) || 0).toLocaleString('en-US');
@@ -39,7 +44,7 @@ export class ProjectAlternativesView {
             if (cost > 0 && ret > 0) {
                 const payback = cost / ret;           // سنوات
                 const roc = ret / cost;               // عائد على التكلفة
-                return { valid: true, payback, roc, adjusted: payback * risk.factor };
+                return { valid: true, payback, roc, adjusted: payback * risk.factor, cost };
             }
             return { valid: false, payback: null, roc: null, adjusted: Infinity, loss: cost > 0 && ret <= 0 };
         });
@@ -71,7 +76,7 @@ export class ProjectAlternativesView {
         const paybackCell = (m) => {
             if (m.loss) return `<span class="pa-flag pa-flag--bad">بلا عائد / خسارة</span>`;
             if (!m.valid) return `<span class="text-muted">—</span>`;
-            const warn = m.payback > LONG_PAYBACK_YEARS ? ` <span class="pa-flag pa-flag--warn">طويل</span>` : '';
+            const warn = m.payback > longPaybackThreshold(m.cost) ? ` <span class="pa-flag pa-flag--warn">طويل</span>` : '';
             return `${m.payback.toFixed(1)} سنة${warn}`;
         };
         const rocCell = (m) => m.valid ? `${(m.roc * 100).toFixed(0)}%` : `<span class="text-muted">—</span>`;
@@ -100,7 +105,7 @@ export class ProjectAlternativesView {
 
                 <div class="card analysis-card mb-4 pa-card">
                     <h3 class="card-title">جدول مقارنة الأفكار (مبدئي)</h3>
-                    <p class="text-xs text-muted mb-2">معامل تعديل المخاطرة (١٠٪/١٥٪/٣٠٪) وعتبة «استرداد طويل» (٧ سنوات) تقديرات داخلية عامة (ASSUMPTION) لترتيب الأفكار مبدئياً فقط — غير مشتقة من صيغة منشورة أو انحراف معياري للطلب، وغير متناسبة مع حجم الاستثمار أو نوع النشاط. عدّلها بحكمك حسب واقع كل فكرة.</p>
+                    <p class="text-xs text-muted mb-2">معامل تعديل المخاطرة (١٠٪/١٥٪/٣٠٪) وعتبة «استرداد طويل» (٥/٧/٩ سنوات حسب حجم التكلفة التقريبية) تقديرات داخلية عامة (ASSUMPTION) لترتيب الأفكار مبدئياً فقط — غير مشتقة من صيغة منشورة أو انحراف معياري للطلب. عدّلها بحكمك حسب واقع كل فكرة.</p>
                     <div class="table-responsive pa-table-wrap">
                         <table class="data-table pa-table" id="alternativesTable">
                             <thead>
@@ -191,7 +196,7 @@ export class ProjectAlternativesView {
             const calc = tr.querySelectorAll('.pa-calc');
             if (calc[0]) calc[0].innerHTML = m.loss ? `<span class="pa-flag pa-flag--bad">بلا عائد / خسارة</span>`
                 : !m.valid ? `<span class="text-muted">—</span>`
-                : `${m.payback.toFixed(1)} سنة${m.payback > LONG_PAYBACK_YEARS ? ' <span class="pa-flag pa-flag--warn">طويل</span>' : ''}`;
+                : `${m.payback.toFixed(1)} سنة${m.payback > longPaybackThreshold(m.cost) ? ' <span class="pa-flag pa-flag--warn">طويل</span>' : ''}`;
             if (calc[1]) calc[1].innerHTML = m.valid ? `${(m.roc * 100).toFixed(0)}%` : `<span class="text-muted">—</span>`;
             tr.classList.toggle('pa-best', i === bestIdx);
             let trophy = tr.querySelector('.pa-trophy');

@@ -6,6 +6,9 @@
  * المستهلك الوحيد (Sidebar.js) مخفي بالكامل. الآن يظهر في خطوة «الدراسة المبدئية»
  * نفسها (حيث الفحص السريع منطقي فعلاً)، بثلاث فروع منفصلة لا رقماً مدموجاً واحداً
  * (يمنع فهم «اكتمال التعبئة» على أنه «جودة الفكرة» — ملاحظة متوسطة منفصلة بنفس التدقيق).
+ *
+ * تحديث 2026-07-09 (علة #1): score الآن = هامش(0-50) + TAM(0-50) حصراً — اكتمال
+ * التعبئة معلوماتية بحتة (% منفصل موسوم صراحة) ولا تدخل في المجموع أو في سقف الفروع.
  */
 import { describe, it, expect } from 'vitest';
 import { PreliminaryCheckView } from '../PreliminaryCheckView.js';
@@ -16,7 +19,7 @@ function fakeStore(state) {
 }
 
 describe('PreliminaryCheckView — إحياء نتيجة الفكرة (لم تعد كوداً ميتاً)', () => {
-    it('يعرض بطاقة "نتيجة الفكرة الأولية" مع الفروع الثلاثة منفصلة عند وجود بيانات كافية', () => {
+    it('يعرض بطاقة "نتيجة الفكرة الأولية" مع فرعي الهامش/TAM (سقف 50 لكل منهما) واكتمال معلوماتي منفصل', () => {
         document.body.innerHTML = `<div id="c"></div>`;
         const state = createEmptyStudy();
         state.marketSizing = { tam: { value: 2_000_000 } };
@@ -28,8 +31,9 @@ describe('PreliminaryCheckView — إحياء نتيجة الفكرة (لم تع
 
         const html = document.getElementById('c').innerHTML;
         expect(html).toContain('نتيجة الفكرة الأولية');
-        expect(html).toMatch(/اكتمال البيانات: \d+\/40/);
-        expect(html).toMatch(/الهامش الربحي: \d+\/30/);
-        expect(html).toMatch(/حجم السوق \(TAM\): \d+\/30/);
+        expect(html).toMatch(/الهامش الربحي: \d+\/50/);
+        expect(html).toMatch(/حجم السوق \(TAM\): \d+\/50/);
+        // اكتمال التعبئة معروض كنسبة % منفصلة، موسومة صراحة بأنها لا تُحتسب ضمن score
+        expect(html).toMatch(/اكتمال تعبئة البيانات: \d+% \(معلوماتي — لا يُحتسب ضمن نتيجة الفكرة\)/);
     });
 });

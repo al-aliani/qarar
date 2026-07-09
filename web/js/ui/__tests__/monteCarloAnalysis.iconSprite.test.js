@@ -7,9 +7,14 @@
  * الآن تستخدم نفس نمط <svg class="ic"><use href="#i-..."/></svg>، بما في ذلك
  * حالتي التحميل (i-reset) والزر الطبيعي (i-bolt) داخل run() — وكلتاهما انتقلتا
  * من .textContent إلى .innerHTML عمداً (سلسلة SVG عبر textContent تُعرض كنص
- * مهروب حرفياً، لا كعنصر أيقونة حقيقي). رموز حالة المخاطرة الديناميكية
- * (✅/⚠️/⛔ داخل displaySavedSummary/displayResults) بقيت كما هي عمداً — خارج
- * نطاق هذا الإصلاح.
+ * مهروب حرفياً، لا كعنصر أيقونة حقيقي).
+ *
+ * تدقيق 2026-07-09 (علة أ): رموز حالة المخاطرة الديناميكية التالية عولجت الآن
+ * أيضاً — النص أصبح نظيفاً بلا إيموجي (getRiskRating يُعيد text/icon منفصلين)،
+ * والأيقونة المكافئة تُعرض عبر عنصر SVG-sprite مستقل (#riskRatingIcon) بجانب
+ * النص، لأن riskEl.textContent (لا innerHTML) هو ما يُحدَّث فعلياً. الرموز
+ * القديمة (✅/⚠️/⛔ داخل displaySavedSummary/displayResults) اختفت من النص —
+ * انظر الاختبار الأخير أدناه للتحقق.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
@@ -109,17 +114,22 @@ describe('MonteCarloAnalysis — عنوان القسم وزر التشغيل ت�
         delete global.Chart;
     });
 
-    it('يحافظ على رموز تصنيف المخاطرة الديناميكية (✅/⚠️/⛔) دون مساس — خارج نطاق هذا الإصلاح', () => {
+    it('تصنيف المخاطرة الديناميكي (نص نظيف + أيقونة SVG-sprite مستقلة بجانبه، لا إيموجي خام)', () => {
         const view = new MonteCarloAnalysis('c', fakeStore({}));
         view.render();
 
         view.displaySavedSummary({ successProbability: 0.9, avgNPV: 1000000, p10: 0, p50: 0, p90: 0 });
-        expect(document.getElementById('riskRating').textContent).toBe('منخفضة ✅');
+        expect(document.getElementById('riskRating').textContent).toBe('منخفضة');
+        expect(document.getElementById('riskRatingIcon').querySelector('use').getAttribute('href')).toBe('#i-check');
 
         view.displaySavedSummary({ successProbability: 0.6, avgNPV: 1000000, p10: 0, p50: 0, p90: 0 });
-        expect(document.getElementById('riskRating').textContent).toBe('متوسطة ⚠️');
+        expect(document.getElementById('riskRating').textContent).toBe('متوسطة');
+        expect(document.getElementById('riskRatingIcon').querySelector('use').getAttribute('href')).toBe('#i-warning');
 
         view.displaySavedSummary({ successProbability: 0.3, avgNPV: 1000000, p10: 0, p50: 0, p90: 0 });
-        expect(document.getElementById('riskRating').textContent).toBe('عالية ⛔');
+        expect(document.getElementById('riskRating').textContent).toBe('عالية');
+        expect(document.getElementById('riskRatingIcon').querySelector('use').getAttribute('href')).toBe('#i-x');
+
+        expect(document.getElementById('riskRating').textContent).not.toMatch(/[✅⚠️⛔]/u);
     });
 });

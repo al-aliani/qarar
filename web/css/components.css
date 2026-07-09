@@ -2734,7 +2734,7 @@ textarea.input {
 /* بناء التقرير — بطاقات قابلة للسحب والإفلات */
 .report-builder { padding: var(--s-4); }
 .report-builder-header { margin-bottom: var(--s-6); }
-.report-builder-title { font-size: 1.5rem; font-weight: 700; margin-bottom: var(--s-2); }
+.page-title, .report-builder-title { font-size: 1.5rem; font-weight: 700; margin-bottom: var(--s-2); }
 .report-builder-desc { color: var(--c-text-muted); font-size: 0.9rem; max-width: 42rem; }
 .report-builder-cards {
     display: flex;

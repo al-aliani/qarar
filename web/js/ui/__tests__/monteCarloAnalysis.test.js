@@ -97,30 +97,39 @@ describe('MonteCarloAnalysis — حدود ألوان/تصنيف المخاطرة
     // 0.8/0.5 لنص "درجة المخاطرة" — نطاق وسيط [0.7, 0.8) كان يُظهر لوناً أخضر
     // (نجاح) مع نص "متوسطة ⚠️" في آنٍ واحد. getRiskRating() الموحَّدة تضمن الآن
     // تطابق اللون والنص دائماً لنفس الاحتمالية (لا مصدرين مستقلين).
+    //
+    // تدقيق 2026-07-09 (علة أ): النص لم يعد يحمل إيموجي خام (✅/⚠️/⛔) — أصبح
+    // نظيفاً، والأيقونة المكافئة (i-check/i-warning/i-x) تُعرض بجانبه عبر عنصر
+    // SVG-sprite مستقل (#riskRatingIcon)، لا مدموجة داخل نص textContent.
     const cases = [
-        { p: 0.75, color: 'var(--c-success)', risk: 'منخفضة ✅' },
-        { p: 0.70, color: 'var(--c-warning)', risk: 'متوسطة ⚠️' },
-        { p: 0.80, color: 'var(--c-success)', risk: 'منخفضة ✅' },
-        { p: 0.40, color: 'var(--c-danger)', risk: 'عالية ⛔' },
-        { p: 0.50, color: 'var(--c-warning)', risk: 'متوسطة ⚠️' },
+        { p: 0.75, color: 'var(--c-success)', risk: 'منخفضة', icon: 'i-check' },
+        { p: 0.70, color: 'var(--c-warning)', risk: 'متوسطة', icon: 'i-warning' },
+        { p: 0.80, color: 'var(--c-success)', risk: 'منخفضة', icon: 'i-check' },
+        { p: 0.40, color: 'var(--c-danger)', risk: 'عالية', icon: 'i-x' },
+        { p: 0.50, color: 'var(--c-warning)', risk: 'متوسطة', icon: 'i-warning' },
     ];
 
-    cases.forEach(({ p, color, risk }) => {
-        it(`p=${p}: اللون=${color} والنص="${risk}" متطابقان (لا تناقض)`, () => {
+    cases.forEach(({ p, color, risk, icon }) => {
+        it(`p=${p}: اللون=${color} والنص="${risk}" وأيقونة ${icon} متطابقان (لا تناقض)`, () => {
             const view = new MonteCarloAnalysis('c', fakeStore(healthyStudy()));
             view.render();
             view.displaySavedSummary({ successProbability: p, avgNPV: 1000000, p10: 0, p50: 0, p90: 0 });
 
             expect(document.getElementById('probSuccess').style.color).toBe(color);
             expect(document.getElementById('riskRating').textContent).toBe(risk);
+            expect(document.getElementById('riskRating').textContent).not.toMatch(/[✅⚠️⛔]/u);
+            const iconEl = document.getElementById('riskRatingIcon');
+            expect(iconEl.style.display).not.toBe('none');
+            expect(iconEl.querySelector('use').getAttribute('href')).toBe('#' + icon);
         });
     });
 
-    it('getRiskRating تُعيد نفس اللون والنص المستخدَمين فعلياً في العرض (مصدر واحد)', () => {
+    it('getRiskRating تُعيد نفس اللون والنص والأيقونة المستخدَمين فعلياً في العرض (مصدر واحد)', () => {
         [0.9, 0.75, 0.7, 0.55, 0.4, 0.1].forEach(p => {
             const rating = MonteCarloAnalysis.getRiskRating(p);
             expect(['var(--c-success)', 'var(--c-warning)', 'var(--c-danger)']).toContain(rating.color);
-            expect(['منخفضة ✅', 'متوسطة ⚠️', 'عالية ⛔']).toContain(rating.text);
+            expect(['منخفضة', 'متوسطة', 'عالية']).toContain(rating.text);
+            expect(['i-check', 'i-warning', 'i-x']).toContain(rating.icon);
         });
     });
 });
@@ -136,6 +145,7 @@ describe('MonteCarloAnalysis — displayResults: بيانات غير كافية 
         expect(document.getElementById('probSuccess').textContent).toBe('—');
         expect(document.getElementById('riskRating').textContent).toContain('تعذّرت المحاكاة');
         expect(document.getElementById('avgNPV').textContent).toBe('—');
+        expect(document.getElementById('riskRatingIcon').style.display).toBe('none');
     });
 });
 

@@ -43,9 +43,9 @@ export class DecisionDashboard {
             this.container.innerHTML = `
                 <div class="decision-dashboard animate-entry">
                     <div class="card glass-card">
-                        <h2 class="card-title">لوحة القرار الاستثماري</h2>
+                        <h2 class="card-title page-title">لوحة القرار الاستثماري</h2>
                         <div class="alert alert--warning">
-                            <p><strong>⚠️ لا توجد بيانات إيرادات. يرجى إضافة مصادر الإيرادات في خطوة "مصادر الإيرادات".</strong></p>
+                            <p><strong><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> لا توجد بيانات إيرادات. يرجى إضافة مصادر الإيرادات في خطوة "مصادر الإيرادات".</strong></p>
                             <p class="text-sm mt-2">لا يمكن إصدار توصية (مجدٍ / غير مجدٍ) قبل إدخال الحد الأدنى من البيانات. أكمل:</p>
                             <ul class="text-sm mt-2" style="list-style: disc; padding-right: 20px;">
                                 <li>مصادر الإيرادات (خطوة "مصادر الإيرادات")</li>
@@ -381,7 +381,7 @@ export class DecisionDashboard {
                         <div class="card glass-card">
                             <h4 class="card-title">شروط النجاح الحرجة</h4>
                             <ul class="factors-list">
-                                ${readiness.factors.map(f => `<li><span class="bullet" aria-hidden="true">✓</span> ${f}</li>`).join('')}
+                                ${readiness.factors.map(f => `<li><span class="bullet" aria-hidden="true"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span> ${f}</li>`).join('')}
                             </ul>
                         </div>
                     </div>
@@ -519,7 +519,7 @@ export class DecisionDashboard {
                     modal.className = 'dd-modal';
                     modal.innerHTML = `
                         <div class="dd-modal__panel">
-                            <button class="dd-modal__close btn btn--secondary btn--sm btn-close-modal">✕ إغلاق</button>
+                            <button class="dd-modal__close btn btn--secondary btn--sm btn-close-modal"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> إغلاق</button>
                             <div id="execSummaryContent" class="dd-modal__content"></div>
                         </div>
                     `;
@@ -841,11 +841,13 @@ export class DecisionDashboard {
         }
         let recommendation;
         if (recStatus === 'go') {
-            recommendation = { status: 'go', icon: '✅', label: 'ادخل المشروع بقوة', desc: 'المؤشرات المالية والتشغيلية ضمن النطاق المطلوب.' };
+            recommendation = { status: 'go', icon: '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>', label: 'ادخل المشروع بقوة', desc: 'المؤشرات المالية والتشغيلية ضمن النطاق المطلوب.' };
         } else if (recStatus === 'nogo') {
-            recommendation = { status: 'nogo', icon: '❌', label: 'لا تدخل المشروع', desc: 'المخاطر عالية والمؤشرات المالية لا تحقق الحد الأدنى المطلوب.' };
+            recommendation = { status: 'nogo', icon: '<svg class="ic" aria-hidden="true"><use href="#i-x"/></svg>', label: 'لا تدخل المشروع', desc: 'المخاطر عالية والمؤشرات المالية لا تحقق الحد الأدنى المطلوب.' };
         } else {
-            recommendation = { status: 'review', icon: '🤔', label: 'يحتاج مراجعة', desc: 'القرار يوصي بمراجعة الدراسة قبل المضي — راجع بنود التكلفة أو الإيراد.' };
+            // «يحتاج مراجعة» — لا رمز SVG مطابق دلالياً لـ🤔 (تفكير/تردد) ضمن المجموعة الحالية
+            // في index.html؛ i-warning أقرب بديل متاح (تنبيه يستدعي انتباهاً) دون إضافة رمز جديد.
+            recommendation = { status: 'review', icon: '<svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg>', label: 'يحتاج مراجعة', desc: 'القرار يوصي بمراجعة الدراسة قبل المضي — راجع بنود التكلفة أو الإيراد.' };
         }
 
         const factors = [

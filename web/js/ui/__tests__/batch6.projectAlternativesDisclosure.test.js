@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  *
  * دفعة 6 — ProjectAlternativesView.js: RISK_OPTIONS (معاملات 1.10/1.15/1.30) و
- * LONG_PAYBACK_YEARS (=7) قيم داخلية تقريبية غير موثّقة المصدر (لا صيغة منشورة
- * ولا انحراف معياري فعلي للطلب، ولا تناسب مع حجم الاستثمار/نوع النشاط).
+ * longPaybackThreshold() (عتبة استرداد طويل تتدرّج 5/7/9 سنوات حسب حجم التكلفة)
+ * قيم داخلية تقريبية غير موثّقة المصدر (لا صيغة منشورة ولا انحراف معياري فعلي للطلب).
  * هذا الاختبار يتحقق من وجود إفصاح واضح (ASSUMPTION) في الواجهة المعروضة،
  * وأيضاً من وجود تعليقات توثيقية فوق الثابتين في الكود المصدر.
  */
@@ -55,9 +55,9 @@ describe('ProjectAlternativesView — إفصاح ASSUMPTION عن معاملات 
         expect(before).toMatch(/صيغة منشورة|انحراف معياري/);
     });
 
-    it('الكود المصدري يوثّق أن LONG_PAYBACK_YEARS قاعدة عامة غير متناسبة مع حجم المشروع', () => {
+    it('الكود المصدري يوثّق أن عتبة longPaybackThreshold تتدرّج مع حجم الاستثمار (ASSUMPTION)', () => {
         const src = fs.readFileSync(SOURCE_PATH, 'utf-8');
-        const idx = src.indexOf('const LONG_PAYBACK_YEARS');
+        const idx = src.indexOf('function longPaybackThreshold');
         expect(idx).toBeGreaterThan(-1);
         const before = src.slice(Math.max(0, idx - 500), idx);
 
