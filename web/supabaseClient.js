@@ -176,13 +176,20 @@ export async function signInWithOAuth(provider) {
 
 /**
  * Reset password for email
+ *
+ * تدقيق 2026-07-09 (توحيد المصادقة): redirectTo كان يشير لمسار '/reset-password' غير
+ * موجود إطلاقاً في المشروع (لا صفحة HTML، لا مسار SPA، لا معالج لحدث PASSWORD_RECOVERY)
+ * — أي أن كل رابط استعادة فعلي يُرسِله Supabase كان يقود لصفحة لا تفعل شيئاً، فيتعذّر
+ * إكمال إعادة التعيين نهائياً بعد إرسال البريد. الجذر (origin) هو نفسه SPA الرئيسي؛
+ * detectSessionInUrl:true (مُفعَّل أعلاه) يلتقط رمز الاستعادة من الرابط تلقائياً ويُطلق
+ * حدث PASSWORD_RECOVERY (معالجته في AuthGuard.js → NewPasswordModal.js).
  */
 export async function resetPassword(email) {
   const { supabase, ok, error } = await getSupabaseClient();
   if (!ok) return { ok: false, error };
 
   const { error: e } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/reset-password'
+    redirectTo: window.location.origin
   });
 
   if (e) return { ok: false, error: e.message };

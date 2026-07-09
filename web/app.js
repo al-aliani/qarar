@@ -7,7 +7,6 @@ import { Wizard } from './js/ui/Wizard.js';
 import { calculateStudy as runFullModel } from './js/core/engine.js';
 // المكونات الثقيلة تُحمّل عند أول زيارة للخطوة (Lazy Loading في navigateTo)
 import { toast } from './js/utils/toast.js';
-import { AuthComponent } from './js/ui/AuthComponent.js';
 import { AutoSave } from './js/utils/autoSave.js';
 import { ProgressTracker } from './js/utils/progressTracker.js';
 import { monitoring } from './js/utils/monitoring.js';
@@ -191,13 +190,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     requireAuth: false, // Set to true to force login
     onAuthChange: ({ event, user, isAuthenticated }) => {
       console.log('[App] Auth state changed:', event, isAuthenticated);
-
-      // Update UI based on auth state
-      const authContainer = document.getElementById('authContainer');
-      if (authContainer) {
-        const authComponent = new AuthComponent('authContainer');
-        authComponent.render();
-      }
 
       // Show notification on login/logout
       if (event === 'SIGNED_IN' && user) {
@@ -1117,11 +1109,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   // ------------------------------------------
 
-  // 2. Initialize Auth Component
-  const authComponent = new AuthComponent('authContainer');
-  authComponent.render();
-  window.addEventListener('feasibility:userProfileUpdated', () => authComponent.render());
-
   // Breadcrumb: الرئيسية → step 0
   const breadcrumbHome = document.querySelector('[data-breadcrumb-home]');
   if (breadcrumbHome) {
@@ -1235,10 +1222,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // صفحة المستخدم (حسابي): عرض في المنطقة الرئيسية عند الطلب
   const wizardContainer = document.getElementById('wizardContainer');
   window.addEventListener('feasibility:showUserProfile', async () => {
+    // تدقيق 2026-07-09 (توحيد المصادقة): الزر الوحيد الذي كان يُطلق هذا الحدث سابقاً
+    // عاش داخل AuthComponent.js الميت (غير قابل للوصول)، فلم يُختبر هذا المسار حياً من
+    // قبل. زر «حسابي» الجديد في DashboardView.js يفتح هذه الصفحة من الرئيسية (لا من
+    // داخل خطوة معالج) — إن استخدمنا savedStepIndex=wizard.currentStepIndex فقط، فزر
+    // «رجوع» كان سيُدخل المستخدم لخطوة معالج عشوائية بدل إعادته للرئيسية فعلياً.
+    const cameFromHome = _currentRoute === 'home';
     const savedStepIndex = wizard.currentStepIndex;
     const { UserProfileView } = await import('./js/ui/UserProfileView.js');
     const userProfileView = new UserProfileView(wizardContainer, {
-      onBack: () => navigateTo(savedStepIndex)
+      onBack: () => cameFromHome ? showLandingDashboard() : navigateTo(savedStepIndex)
     });
     await userProfileView.render();
   });
@@ -1314,6 +1307,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // انتهاء الجلسة تلقائياً بعد 30 دقيقة خمول
+  // تدقيق 2026-07-09 (توحيد المصادقة): كان يستدعي supabase.auth.signOut() مباشرة بدل
+  // signOut() الموحّدة — يتجاوز مسح مسودات feas_project_* الحساسة (ملاحظة عالية #44
+  // الأصلية عولجت لزر الخروج اليدوي فقط، لا لهذا المسار الثاني). signOut() الموحّدة
+  // تُنفّذ location.reload() أيضاً بعد المسح — سلوك صحيح لخروج فعلي، لا فرق عن الزر اليدوي.
   (async () => {
     const { startIdleTimeout } = await import('./js/utils/idleTimeout.js');
     startIdleTimeout({
@@ -1321,9 +1318,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       onIdle: async () => {
         toast.info('انتهت الجلسة بسبب الخمول (30 دقيقة).');
         try {
-          const { getSupabaseClient } = await import('./supabaseClient.js');
-          const { ok, supabase } = await getSupabaseClient();
-          if (ok && supabase) await supabase.auth.signOut();
+          const { signOut } = await import('./supabaseClient.js');
+          await signOut();
         } catch (_) { }
       }
     });

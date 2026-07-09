@@ -4,6 +4,7 @@
  */
 
 import { getSupabaseClient, getAuthUser } from '../../supabaseClient.js';
+import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
 // واجهة مصادقة موحّدة: نستخدم النافذة (AuthModalStub) في كل المسارات بدل شاشة منفصلة.
 
 class AuthGuardClass {
@@ -63,6 +64,16 @@ class AuthGuardClass {
 
     /**
      * الاشتراك في تغييرات المصادقة
+     *
+     * تدقيق 2026-07-09 (توحيد المصادقة): مركز وحيد الآن لتسجيل أحداث الدخول/الخروج في
+     * سجل التدقيق (auditLog) — كانت هذه الاستدعاءات موجودة فقط داخل AuthComponent.js
+     * الميت (حاويته #authContainer مخفية دائماً)، فلم يُسجَّل أي دخول/خروج فعلي في
+     * الإنتاج إطلاقاً رغم وجود الكود. تُغطّي SIGNED_IN كل مسارات الدخول الحية (بريد+كلمة
+     * مرور، OAuth، استعادة كلمة المرور)، وSIGNED_OUT كل مسارات الخروج (يدوي أو خمول).
+     * PASSWORD_RECOVERY: يُطلقه Supabase تلقائياً حين يفتح المستخدم رابط استعادة كلمة
+     * المرور من بريده (detectSessionInUrl مفعَّل في supabaseClient.js) — نعرض نافذة
+     * تعيين كلمة مرور جديدة بدل تركه على صفحة لا تفعل شيئاً (كانت هذه هي العلة الأصلية:
+     * لا معالج لهذا الحدث إطلاقاً، فتنتهي رحلة "نسيت كلمة المرور" لصفحة ميتة).
      */
     async subscribeToAuthChanges(callback) {
         const { supabase } = await getSupabaseClient();
@@ -74,6 +85,16 @@ class AuthGuardClass {
             const previousUser = this.currentUser;
             this.currentUser = session?.user || null;
             this.isAuthenticated = !!this.currentUser;
+
+            if (event === 'SIGNED_IN') {
+                auditLog(ACTIONS.LOGIN, { email: this.currentUser?.email });
+            } else if (event === 'SIGNED_OUT') {
+                auditLog(ACTIONS.LOGOUT, {});
+            } else if (event === 'PASSWORD_RECOVERY') {
+                import('../ui/NewPasswordModal.js').then(({ NewPasswordModal }) => {
+                    new NewPasswordModal().open();
+                });
+            }
 
             // Notify listeners
             this.listeners.forEach(listener => {

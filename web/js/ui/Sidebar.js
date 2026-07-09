@@ -12,7 +12,6 @@ export class Sidebar {
         this.activeStep = 0;
         this.progressTracker = null;
         this.store = store;
-        this.saveStatusUnsubscribe = null;
         this.modeController = new SimpleModeController(store);
 
         this.sections = SIDEBAR_SECTIONS;
@@ -179,7 +178,6 @@ export class Sidebar {
     setProgressTracker(tracker) {
         this.progressTracker = tracker;
         // this.render(); // Avoid double render, allow specific update
-        this.updateAuthWidget(); // Ensure auth is shown
         this.render();
 
         // Subscribe to store changes to update completeness
@@ -193,85 +191,6 @@ export class Sidebar {
                     this.render();
                 }, 500);
             });
-        }
-    }
-
-    // Auth & Persistence Integration
-    async updateAuthWidget() {
-        const authContainer = this.container.querySelector('#authWidget');
-        if (!authContainer) return; // if render hasn't happened yet
-
-        try {
-            const { getAuthUser } = await import('../../supabaseClient.js');
-            const { user } = await getAuthUser();
-
-            if (user) {
-                authContainer.innerHTML = `
-                    <div class="auth-box logged-in">
-                        <div class="auth-avatar"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg></div>
-                        <div class="auth-info">
-                            <span class="auth-email" title="${user.email}">${user.email.split('@')[0]}</span>
-                            <span id="saveStatus" class="auth-status text-success">● محفوظ</span>
-                        </div>
-                        <button id="btnLogout" class="btn-xs btn--text">تسجيل خروج</button>
-                    </div>
-                `;
-
-                authContainer.querySelector('#btnLogout')?.addEventListener('click', async () => {
-                    if (this.store && this.store.flush) await this.store.flush();
-                    const { signOut } = await import('../../supabaseClient.js');
-                    await signOut();
-                });
-
-                // Update save status initially
-                if (this.store && typeof this.store.getLastSaveStatus === 'function') {
-                    const lastStatus = this.store.getLastSaveStatus();
-                    this.updateSaveStatus(lastStatus);
-                }
-            } else {
-                authContainer.innerHTML = `
-                    <div class="auth-box guest">
-                        <div class="auth-info">
-                            <span class="auth-name">مستخدم ضيف</span>
-                            <span id="saveStatus" class="auth-status text-muted">● مسودة محلية</span>
-                        </div>
-                        <button id="btnLogin" class="btn-xs btn--primary">دخول / تسجيل</button>
-                    </div>
-                `;
-
-                authContainer.querySelector('#btnLogin').addEventListener('click', async () => {
-                    const { AuthModal } = await import('./AuthModalStub.js');
-                    const m = new AuthModal('authModalContainer', {
-                        onSuccess: async ({ success }) => {
-                            if (success) {
-                                this.updateAuthWidget();
-                                if (this.store && this.store.flush) await this.store.flush();
-                                window.location.reload();
-                            }
-                        }
-                    });
-                    m.open();
-                });
-            }
-        } catch (e) {
-            console.error('Auth widget error:', e);
-            authContainer.innerHTML = `<div class="text-xs text-danger">خطأ في المصادقة</div>`;
-        }
-    }
-
-    updateSaveStatus(status) {
-        const saveStatusEl = this.container.querySelector('#saveStatus');
-        if (!saveStatusEl) return;
-
-        if (status.location === 'both') {
-            saveStatusEl.textContent = '● محفوظ في السحابة';
-            saveStatusEl.className = 'auth-status text-success';
-        } else if (status.location === 'local') {
-            saveStatusEl.textContent = status.error ? '● خطأ في المزامنة' : '● مسودة محلية';
-            saveStatusEl.className = status.error ? 'auth-status text-warning' : 'auth-status text-muted';
-        } else {
-            saveStatusEl.textContent = '● غير محفوظ';
-            saveStatusEl.className = 'auth-status text-danger';
         }
     }
 
@@ -391,10 +310,8 @@ export class Sidebar {
         }
 
         console.log('[Sidebar] building HTML...');
-        // Auth Widget Placeholder
-        const authHTML = `<div id="authWidget" class="auth-widget-container mb-4"></div>`;
 
-        // تجميع المحتوى: نتيجة الفكرة أولاً ثم Auth ثم الوضع ثم الاكتمال ثم التقدم ثم الدراسات ثم الأقسام
+        // تجميع المحتوى: نتيجة الفكرة أولاً ثم الوضع ثم الاكتمال ثم التقدم ثم الدراسات ثم الأقسام
         const state = (this.store?.getState && this.store.getState()) || (this.store?.get && this.store.get()) || {};
         const mode = state.appSettings?.mode || 'advanced';
         // مبدّل النمط: شريط مقسّم حبّي رفيع — المظهر كله من CSS (.btn-mode-sidebar.active)
@@ -494,21 +411,8 @@ export class Sidebar {
         const statusHTML = (ideaScoreHTML || completenessHTML || progressHTML)
             ? `<div class="sidebar-status">${ideaScoreHTML}${completenessHTML}${progressHTML}</div>`
             : '';
-        this.container.innerHTML = statusHTML + authHTML + modeToggleHTML + studiesSectionHTML + renderedSections;
+        this.container.innerHTML = statusHTML + modeToggleHTML + studiesSectionHTML + renderedSections;
         console.log('[Sidebar] HTML injected');
-
-        // Init Auth Widget content
-        this.updateAuthWidget();
-
-        // Subscribe to save status updates if store is available
-        if (this.store && typeof this.store.subscribeSaveStatus === 'function') {
-            if (this.saveStatusUnsubscribe) {
-                this.saveStatusUnsubscribe(); // Cleanup old subscription
-            }
-            this.saveStatusUnsubscribe = this.store.subscribeSaveStatus((status) => {
-                this.updateSaveStatus(status);
-            });
-        }
 
         // Ensure container is visible
         if (this.container) {

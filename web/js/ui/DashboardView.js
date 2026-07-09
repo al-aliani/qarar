@@ -354,6 +354,7 @@ export class DashboardView {
                             <button type="button" id="dashboardLogin" class="btn btn--sm btn--secondary">${icon('i-user')} تسجيل الدخول</button>
                         ` : `
                             <span class="dv-userchip"><span class="dv-userchip__dot"></span> ${userEmail}</span>
+                            <button type="button" id="btnUserProfile" class="btn btn--sm btn--ghost" title="حسابي">${icon('i-user')} حسابي</button>
                             <button type="button" id="btnLogout" class="btn btn--sm btn--ghost dv-logout">خروج</button>
                         `}
                     </div>
@@ -922,6 +923,13 @@ export class DashboardView {
                 }).open();
             });
         }
+
+        // حسابي (تدقيق 2026-07-09 — توحيد المصادقة): كان هذا الزر موجوداً فقط داخل
+        // AuthComponent.js الميت (حاويته مخفية دائماً)، فصفحة الحساب/إعدادات 2FA
+        // (UserProfileView.js) لم تكن قابلة للوصول إطلاقاً من أي مسار حي.
+        this.container.querySelector('#btnUserProfile')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showUserProfile'));
+        });
 
         // Logout
         this.container.querySelector('#btnLogout')?.addEventListener('click', async () => {

@@ -65,6 +65,16 @@ export class AuthModal {
                         </div>
                         <p id="authForgotMessage" class="text-sm mt-2" style="display:none;"></p>
                     </div>
+                    <div id="authModalMfaPanel" class="mb-3" style="display:none;">
+                        <p class="text-muted text-sm mb-3">حسابك محمي بمصادقة ثنائية. أدخل رمز تطبيق المصادقة (6 أرقام).</p>
+                        <div id="authMfaError" class="text-danger text-sm mb-2" style="display:none;"></div>
+                        <form id="authMfaForm">
+                            <div class="mb-3">
+                                <input type="text" id="authMfaCode" class="input w-full" placeholder="رمز التحقق" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" dir="ltr" style="text-align:center;letter-spacing:4px;font-size:18px;">
+                            </div>
+                            <button type="submit" id="authBtnMfaVerify" class="btn btn--primary w-full">تأكيد</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         `;
@@ -122,6 +132,52 @@ export class AuthModal {
             });
         }
 
+        // تدقيق 2026-07-09 (توحيد المصادقة): تحدي 2FA (AAL) بعد نجاح كلمة المرور — كان
+        // هذا المنطق موجوداً فقط داخل AuthComponent.js الميت (حاويته مخفية دائماً)، أي
+        // أن مستخدماً فعّل 2FA عبر TwoFactorModal لن يُطالَب برمزه إطلاقاً عند الدخول من
+        // هذه النافذة الحية — فتصبح الحماية الثنائية شكلية بلا إنفاذ فعلي. لوحة صغيرة
+        // مضمَّنة (لا prompt() متصفح خام) لتطابق أسلوب باقي هذه النافذة (نفس نمط لوحة
+        // "نسيت كلمة المرور" أدناه).
+        const challengeMfaIfNeeded = async () => {
+            const { mfaGetAAL, mfaListFactors } = await import('../../supabaseClient.js');
+            const aal = await mfaGetAAL();
+            if (!(aal.ok && aal.data && aal.data.nextLevel === 'aal2' && aal.data.nextLevel !== aal.data.currentLevel)) {
+                return { ok: true };
+            }
+            const factorsRes = await mfaListFactors();
+            const totpList = factorsRes.ok && factorsRes.data ? (factorsRes.data.totp || factorsRes.data.factors || []) : [];
+            const factorId = totpList[0]?.id;
+            if (!factorId) return { ok: true };
+
+            return new Promise((resolve) => {
+                form.style.display = 'none';
+                const mfaPanel = this.overlay.querySelector('#authModalMfaPanel');
+                mfaPanel.style.display = 'block';
+                const codeInput = mfaPanel.querySelector('#authMfaCode');
+                const mfaErr = mfaPanel.querySelector('#authMfaError');
+                setTimeout(() => codeInput?.focus(), 30);
+                const submitBtn = mfaPanel.querySelector('#authBtnMfaVerify');
+                const onSubmit = async (e) => {
+                    e.preventDefault();
+                    const code = (codeInput.value || '').trim();
+                    if (code.length < 6) { mfaErr.textContent = 'أدخل الرمز المكوّن من 6 أرقام'; mfaErr.style.display = 'block'; return; }
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'جاري التحقق...';
+                    const { mfaChallengeAndVerify } = await import('../../supabaseClient.js');
+                    const verifyRes = await mfaChallengeAndVerify(factorId, code);
+                    if (verifyRes.ok) {
+                        resolve({ ok: true });
+                    } else {
+                        mfaErr.textContent = verifyRes.error || 'رمز غير صحيح';
+                        mfaErr.style.display = 'block';
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'تأكيد';
+                    }
+                };
+                mfaPanel.querySelector('#authMfaForm').addEventListener('submit', onSubmit);
+            });
+        };
+
         const runAuth = async (isSignUp) => {
             const passEl = this.overlay.querySelector('#authPassword');
             const email = this.overlay.querySelector('#authEmail').value.trim();
@@ -143,6 +199,13 @@ export class AuthModal {
                 const fn = isSignUp ? signUp : signIn;
                 const { ok: authOk, error } = await fn(email, pass);
                 if (authOk) {
+                    if (isSignUp) {
+                        const { log: auditLog, ACTIONS } = await import('../utils/auditLogger.js');
+                        auditLog(ACTIONS.SIGNUP, { email });
+                    } else {
+                        const mfaResult = await challengeMfaIfNeeded();
+                        if (!mfaResult.ok) return;
+                    }
                     this._succeeded = true;
                     if (this.onSuccess) this.onSuccess({ success: true });
                     this.close();
@@ -188,6 +251,8 @@ export class AuthModal {
                 if (!ok) { showErr('Supabase غير مهيأ. لا يمكن الدخول بـ Google.'); return; }
                 const result = await signInWithOAuth('google');
                 if (result.ok && result.data?.url) {
+                    const { log: auditLog, ACTIONS } = await import('../utils/auditLogger.js');
+                    auditLog(ACTIONS.OAUTH, { provider: 'google' });
                     window.location.href = result.data.url;
                     return;
                 }

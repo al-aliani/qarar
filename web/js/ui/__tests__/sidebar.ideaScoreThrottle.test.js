@@ -24,7 +24,9 @@ vi.mock('../../core/calculateIdeaScore.js', () => ({
     calculateIdeaScore: (...args) => calculateIdeaScoreMock(...args)
 }));
 
-// تفادي أي نشاط شبكي حقيقي (Supabase الفعلي) أثناء render() -> updateAuthWidget()
+// تدقيق 2026-07-09 (توحيد المصادقة): كان هذا الموك ضرورياً لتفادي نشاط شبكي حقيقي عبر
+// updateAuthWidget() القديمة (حُذفت — كانت جزءاً من واجهة حساب/خروج ميتة بالكامل داخل
+// #stepperNav المخفي دائماً). أُبقي الموك بلا ضرر احتياطاً لأي استيراد مستقبلي.
 vi.mock('../../../supabaseClient.js', () => ({
     getAuthUser: vi.fn(async () => ({ user: null, ok: false, error: '' })),
     signOut: vi.fn(async () => {})
