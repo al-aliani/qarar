@@ -98,9 +98,16 @@ describe('canonical engine imports', () => {
             ...walk(path.join(root, 'js')).filter(f => f.endsWith('.js')),
             ...walk(path.join(root, 'export')).filter(f => f.endsWith('.js'))
         ].filter(f => !f.includes(`${path.sep}__tests__${path.sep}`));
+        // Batch 5 additions: forbid references to the other 14 dead-code files
+        // deleted alongside financialModel.js. `Dashboard.js` and `pdf.js` use extra
+        // context (word boundaries / path prefix) because bare basenames collide
+        // with unrelated live files (InvestorDashboard.js, DecisionDashboard.js, a
+        // pre-existing removal comment in web/export/index.js). `ExecutiveSummary.js`
+        // is scoped to `components/ExecutiveSummary.js` specifically because the
+        // bare basename collides with the live, unrelated web/js/ui/ExecutiveSummary.js.
         const offenders = files.filter(file => {
             const content = fs.readFileSync(file, 'utf8');
-            return /financialModel\.js|computeRestaurantBase|lib\/calc\/index\.js|lib\\calc\\index\.js/.test(content);
+            return /financialModel\.js|computeRestaurantBase|lib\/calc\/index\.js|lib\\calc\\index\.js|gosi\.js|TemplateSelector\.js|CompetitorScout\.js|\bToast\.js\b|\bforms\.js\b|IdeaScoreGauge\.js|wizard_old\.js|['"/]pdf\.js|generateReport\.js|recommendations\.js|reportSchema\.js|\bDashboard\.js\b|components[\/\\]ExecutiveSummary\.js|FinancialTables\.js/.test(content);
         });
 
         expect(offenders.map(f => path.relative(root, f))).toEqual([]);

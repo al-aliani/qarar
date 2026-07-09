@@ -30,7 +30,13 @@ export default defineConfig({
         include: ['lz-string'],
     },
     test: {
-        include: ['**/*.{test,spec}.{js,mjs,cjs,ts}'],
+        // تدقيق 2026-07-09 (حزمة 5): lib/calc/__tests__/*.test.js (calc.test.js،
+        // verification.test.js) كانا يتيمين تماماً — root:'./web' أعلاه يحصر التقاط
+        // vitest الافتراضي (**/*.test.js) داخل web/ فقط، فلا تُشغَّل هذه الاختبارات
+        // إطلاقاً عبر npm test رغم وجودها ونجاحها لو شُغِّلت يدوياً. أُضيف مسار صريح
+        // خارج الجذر (../lib) بدل نقل الاختبارات (يفصلها عن شجرة المصدر lib/calc
+        // التي تختبرها ويكسر مسارات الاستيراد النسبية ../index.js).
+        include: ['**/*.{test,spec}.{js,mjs,cjs,ts}', '../lib/**/*.{test,spec}.{js,mjs,cjs,ts}'],
         environment: 'node',
         coverage: {
             provider: 'v8',
