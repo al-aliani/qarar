@@ -91,7 +91,9 @@ export class Sidebar {
     _formatStudyDate(iso) {
         if (!iso) return '—';
         try {
-            return new Date(iso).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short', year: 'numeric' });
+            // numberingSystem: 'latn' يفرض أرقاماً لاتينية — بدونه ar-SA يُخرج أرقاماً هندية
+            // شرقية تتعارض مع بقية الأرقام اللاتينية المعروضة في نفس الواجهة.
+            return new Date(iso).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short', year: 'numeric', numberingSystem: 'latn' });
         } catch {
             return iso;
         }

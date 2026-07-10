@@ -64,7 +64,9 @@
   --c-gold-border: rgba(176, 125, 44, 0.35);
 
   --font-ui: 'IBM Plex Sans Arabic', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  /* تدقيق بصري: JetBrains Mono لا يغطي العربية (كلمات/رموز عملة داخل عناصر رقمية
+     مثل .dv-num) — إضافة الخط العربي كبديل تمنع قفز الخط صامتاً منتصف الرقم. */
+  --font-mono: 'JetBrains Mono', 'IBM Plex Sans Arabic', monospace;
 
   --s-1: 0.25rem;
   --s-2: 0.5rem;

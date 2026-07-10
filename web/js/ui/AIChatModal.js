@@ -6,13 +6,13 @@
 import { aiConnector } from '../services/AIConnector.js';
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { SmartAdvisor } from '../services/SmartAdvisor.js';
-import { generateSWOT, generateAdvisorFallback } from '../services/InternalAIGenerator.js';
+import { generateSWOT, generateAdvisorFallback, generateFinancialImprovementAdvice } from '../services/InternalAIGenerator.js';
 import { escapeHtml } from '../utils/escape.js';
 
 const SUGGESTED_PROMPTS = [
     { label: 'ما توصياتك لمشروعي؟', type: 'advisor' },
     { label: 'حلل نقاط القوة والضعف (SWOT)', type: 'swot' },
-    { label: 'كيف أحسن النتائج المالية؟', type: 'advisor' },
+    { label: 'كيف أحسن النتائج المالية؟', type: 'financial_improvement' },
     { label: 'هل مشروعي مجدٍ إذا زاد الإيجار؟ (اختبار الضغط)', type: 'stress' },
     { label: 'ملخص تنفيذي للمشروع', type: 'summary' },
     { label: 'ما هي المخاطر وكيف أواجهها؟', type: 'mitigation' },
@@ -136,7 +136,7 @@ export class AIChatModal {
         this.messages.push({ role: 'system', content, ts: Date.now() });
     }
 
-    async sendUserMessage(text) {
+    async sendUserMessage(text, promptType = null) {
         if (!text?.trim()) return;
 
         this.addMessage('user', text.trim());
@@ -144,7 +144,7 @@ export class AIChatModal {
         this.render();
 
         try {
-            const responseText = await this.getAIResponse(text.trim());
+            const responseText = await this.getAIResponse(text.trim(), promptType);
             
             this.addMessage('assistant', '');
             const msgIndex = this.messages.length - 1;
@@ -171,8 +171,12 @@ export class AIChatModal {
 
     /**
      * تحديد نوع السؤال واستدعاء المولّد المناسب
+     * @param {string} userText
+     * @param {string|null} promptType - نوع الاقتراح إن كان الاستدعاء من زر جاهز (dataset.type)؛
+     *   يُستخدم للتوجيه الحتمي بدل الاعتماد فقط على مطابقة النص الحرة (regex)، والتي تبقى
+     *   السبيل الوحيد عند الكتابة الحرة (promptType = null).
      */
-    async getAIResponse(userText) {
+    async getAIResponse(userText, promptType = null) {
         const state = this.store.getState();
         let results = null;
         try {
@@ -181,8 +185,19 @@ export class AIChatModal {
 
         const text = userText.toLowerCase().trim();
 
-        // خريطة الكلمات المفتاحية → النوع
-        if (/swot|قوة|ضعف|فرص|تهديد|نقاط/i.test(text)) {
+        // توجيه حتمي لسؤال «كيف أحسن النتائج المالية؟» لمولّد مخصص مبني على نسب التكلفة
+        // الفعلية ومعيار القطاع (getCostRatios + sectorBenchmarks) — بدل تفريغ SmartAdvisor
+        // العام الذي كان يُستخدم سابقاً لأي سؤال لا يطابق SWOT/الملخص/المخاطر/اختبار الضغط.
+        if (promptType === 'financial_improvement') {
+            try {
+                return generateFinancialImprovementAdvice(state, results || {});
+            } catch (e) {
+                console.error('generateFinancialImprovementAdvice error', e);
+            }
+        }
+
+        // خريطة الكلمات المفتاحية → النوع (مع توجيه حتمي عبر promptType عند القادم من زر جاهز)
+        if (promptType === 'swot' || /swot|قوة|ضعف|فرص|تهديد|نقاط/i.test(text)) {
             const swot = generateSWOT(state);
             if (swot && typeof swot === 'object') {
                 return `**تحليل SWOT لمشروعك:**\n\n` +
@@ -193,19 +208,19 @@ export class AIChatModal {
             }
         }
 
-        if (/ملخص|تنفيذي|summary/i.test(text)) {
+        if (promptType === 'summary' || /ملخص|تنفيذي|summary/i.test(text)) {
             const summary = await aiConnector.generateExecutiveSummary(state, results || {});
             if (summary == null) return 'تعذر توليد الملخص حالياً — أكمل بيانات المشروع (الاسم، النشاط، الإيرادات) ثم جرّب مرة أخرى.';
             return typeof summary === 'string' ? summary : (summary?.content || JSON.stringify(summary));
         }
 
-        if (/مخاطر|خطر|مواجهة|mitigation/i.test(text)) {
+        if (promptType === 'mitigation' || /مخاطر|خطر|مواجهة|mitigation/i.test(text)) {
             const risks = state?.riskAnalysis?.risks || [];
             const mit = await aiConnector.getRiskMitigation(risks);
             return typeof mit === 'string' ? mit : (Array.isArray(mit) ? mit.map(m => typeof m === 'string' ? m : (m?.action || m?.message || '')).join('\n• ') : String(mit));
         }
 
-        if (/اختبار الضغط|ضغط|صدمة|تغير الإيراد|تغير التكلفة|بعد الصدمة/i.test(text)) {
+        if (promptType === 'stress' || /اختبار الضغط|ضغط|صدمة|تغير الإيراد|تغير التكلفة|بعد الصدمة/i.test(text)) {
             return '**تفسير سيناريو اختبار الضغط:**\n\n' +
                 'بناءً على الأرقام التي ذكرتها: إن كان صافي القيمة الحالية (NPV) لا يزال موجباً فالمشروع يحتمل الصدمة في حدود التغيّر المطبّق. إن أصبح سالباً فالمشروع حساس لهذا السيناريو ويُوصى بمراجعة الافتراضات (تقليل التكاليف الثابتة، تنويع الإيرادات، أو تأمين تمويل احتياطي).\n\n' +
                 '• راجع **نقطة التعادل** و**فترة الاسترداد** — كلما كانت الفترة أقصر كان التحمل أفضل.\n' +
@@ -271,7 +286,10 @@ export class AIChatModal {
 
         this.container.querySelector('.ai-chat-close').addEventListener('click', () => this.close());
         this.container.querySelectorAll('.ai-chat-suggest').forEach(btn => {
-            btn.addEventListener('click', () => this.sendUserMessage(btn.textContent));
+            // نقرأ dataset.type فعلياً للتوجيه الحتمي (بدل الاعتماد فقط على مطابقة نص الزر
+            // بتعابير نمطية داخل getAIResponse، والتي كانت تُغفل أنواعاً كـ«كيف أحسن النتائج
+            // المالية؟» لا تحوي أياً من كلمات SWOT/الملخص/المخاطر/اختبار الضغط المفتاحية).
+            btn.addEventListener('click', () => this.sendUserMessage(btn.textContent, btn.dataset.type || null));
         });
         const input = this.container.querySelector('.ai-chat-input');
         const sendBtn = this.container.querySelector('.ai-chat-send');

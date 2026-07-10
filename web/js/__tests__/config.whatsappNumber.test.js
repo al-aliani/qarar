@@ -73,10 +73,13 @@ describe('config.js — resolveWhatsAppNumber (أولوية المصادر)', ()
         expect(link).toContain('https://wa.me/966501234567?text=');
     });
 
-    it('buildWhatsAppLink بلا رقم مضبوط: رابط بلا رقم (يفتح منتقي جهات اتصال واتساب لا رقماً محدداً)', async () => {
+    it('buildWhatsAppLink بلا رقم مضبوط: يُعيد null (تراجع رشيق) بدل رابط مكسور بلا مستلم', async () => {
+        // تدقيق 2026-07-10: كان يُعيد https://wa.me/?text=... — رابط يفتح واتساب بلا أي
+        // جهة اتصال محددة، يبدو للمستخدم كطلب لم يصل لأحد. المستدعي الآن مسؤول عن
+        // إخفاء/تعطيل زر واتساب حين يُعاد null (انظر PaywallModal.js وPaymentReturnView.js).
         vi.spyOn(console, 'warn').mockImplementation(() => {});
         const { buildWhatsAppLink } = await import('../config.js');
         const link = buildWhatsAppLink('رسالة تجريبية');
-        expect(link).toBe('https://wa.me/?text=%D8%B1%D8%B3%D8%A7%D9%84%D8%A9%20%D8%AA%D8%AC%D8%B1%D9%8A%D8%A8%D9%8A%D8%A9');
+        expect(link).toBeNull();
     });
 });

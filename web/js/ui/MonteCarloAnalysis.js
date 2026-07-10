@@ -4,6 +4,9 @@
  */
 import { MonteCarloEngine } from '../core/MonteCarloEngine.js';
 import { SECTIONS } from '../core/schema.js';
+import { formatNumber, formatFractionAsPercent, formatCurrency } from '../utils/formatters.js';
+
+const MONTE_CARLO_ITERATIONS = 1000;
 
 export class MonteCarloAnalysis {
     constructor(containerId, store) {
@@ -129,10 +132,10 @@ export class MonteCarloAnalysis {
         const avgEl = this.container.querySelector('#avgNPV');
         const riskEl = this.container.querySelector('#riskRating');
         if (!probEl) return;
-        probEl.textContent = (saved.successProbability * 100).toFixed(1) + '%';
+        probEl.textContent = formatFractionAsPercent(saved.successProbability);
         const savedRating = MonteCarloAnalysis.getRiskRating(saved.successProbability);
         probEl.style.color = savedRating.color;
-        avgEl.textContent = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(saved.avgNPV);
+        avgEl.textContent = formatCurrency(saved.avgNPV);
         riskEl.textContent = savedRating.text;
         this.setRiskIcon(savedRating.icon);
         this.fillPercentiles(saved.p10, saved.p50, saved.p90);
@@ -187,7 +190,7 @@ export class MonteCarloAnalysis {
             const state = this.store.getState();
             // بذرة ثابتة: نفس بيانات الدراسة تُنتج نفس الاحتمالية والمدرّج في كل تشغيل
             // (قابلية تدقيق) بدل نتيجة عشوائية مختلفة كل مرة.
-            const simulation = MonteCarloEngine.runSimulation(state, 1000, 0.20);
+            const simulation = MonteCarloEngine.runSimulation(state, MONTE_CARLO_ITERATIONS, 0.20);
 
             this.displayResults(simulation);
             resultsDiv.classList.remove('hidden');
@@ -199,7 +202,7 @@ export class MonteCarloAnalysis {
                     p10: simulation.stats.p10,
                     p50: simulation.stats.p50,
                     p90: simulation.stats.p90,
-                    iterations: simulation.iterations ?? 1000,
+                    iterations: simulation.iterations ?? MONTE_CARLO_ITERATIONS,
                     volatility: 0.20,
                     runAt: new Date().toISOString(),
                 });
@@ -233,11 +236,11 @@ export class MonteCarloAnalysis {
 
         const { successProbability, avgNPV, p10, p50, p90 } = sim.stats;
 
-        probEl.textContent = (successProbability * 100).toFixed(1) + '%';
+        probEl.textContent = formatFractionAsPercent(successProbability);
         const rating = MonteCarloAnalysis.getRiskRating(successProbability);
         probEl.style.color = rating.color;
 
-        avgEl.textContent = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(avgNPV);
+        avgEl.textContent = formatCurrency(avgNPV);
 
         // Risk Rating
         riskEl.textContent = rating.text;
@@ -265,9 +268,8 @@ export class MonteCarloAnalysis {
 
         const buckets = histogram.map(b => b.count);
         // Generate labels (bucket centers) — «ألف» عربية بدل 'k' الإنجليزية في واجهة عربية
-        const arNum = new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 0 });
         const centers = histogram.map(b => (b.binStart + b.binEnd) / 2);
-        const labels = centers.map(center => arNum.format(Math.round(center / 1000)) + ' ألف');
+        const labels = centers.map(center => `${formatNumber(Math.round(center / 1000))} ألف`);
 
         // ألوان الأعمدة تُشتق من متغيرات الهوية (--c-success/--c-danger) بدل قيم rgba
         // ثابتة كانت لا تتبع الثيم ولا تتطابق مع شارة «درجة المخاطرة» أعلاه لنفس البيانات.

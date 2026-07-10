@@ -142,6 +142,11 @@ export class RiskMatrix {
 
         const BADGE_BY_CLASS = { critical: 'badge--danger', high: 'badge--warning', medium: 'badge--info', low: 'badge--success' };
         const getScoreBadge = (score) => BADGE_BY_CLASS[classifyRiskScore(score)];
+        // تدقيق إتاحة (a11y): الشارة كانت تعرض الرقم فقط — مستخدم لا يميّز الألوان
+        // (عمى الألوان) لا يمكنه معرفة أن الدرجة «حرجة» بلا مطابقتها يدوياً بجدول
+        // الأسطورة أدناه. إضافة تسمية نصية صريحة (تطابق نص الأسطورة) بجانب الرقم.
+        const SEVERITY_LABEL = { critical: 'حرج', high: 'عالي', medium: 'متوسط', low: 'منخفض' };
+        const getScoreLabel = (score) => SEVERITY_LABEL[classifyRiskScore(score)];
 
         // إجمالي الأثر المالي السنوي المقدّر (يقبله البنك بدل التصنيف النوعي)
         const totalFinancialImpact = risks.reduce((sum, r) => sum + (Number(r.estimatedFinancialImpact) || 0), 0);
@@ -201,7 +206,7 @@ export class RiskMatrix {
                                             <option value="high" ${risk.impact === 'high' ? 'selected' : ''}>🔴 عالي</option>
                                         </select>
                                     </td>
-                                    <td class="text-center"><span class="badge ${getScoreBadge(score)}">${score.toLocaleString('ar-SA')}</span></td>
+                                    <td class="text-center"><span class="badge ${getScoreBadge(score)}">${getScoreLabel(score)} (${score.toLocaleString('ar-SA')})</span></td>
                                     <td><input type="number" min="0" step="1000" class="input input--sm risk-field" data-field="estimatedFinancialImpact" value="${risk.estimatedFinancialImpact != null ? risk.estimatedFinancialImpact : ''}" placeholder="ريال/سنة"></td>
                                     <td>
                                         <select class="input input--sm risk-field" data-field="timeHorizon">

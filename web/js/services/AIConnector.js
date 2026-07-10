@@ -134,8 +134,13 @@ export class AIConnector {
         if (type === 'suggest_segments' || type === 'segments') { try { return InternalAIGenerator.generateSegments(state); } catch (e) { console.warn('Internal fallback segments failed', e); return undefined; } }
         if (type === 'advisor') {
             try {
-                const ctx = data?.context || {};
-                const out = SmartAdvisor.analyze(ctx, state);
+                // data.results = الكائن المالي الحقيقي (incomeStatement/opex/indicators/...) —
+                // مصدره الآن FinancialDashboard.js صراحة. data.context قد يكون نفس الكائن
+                // (getBusinessAdvice القديمة تمرره هكذا) أو غلاف ملخّص {question, kpis, insights}
+                // (askHandler الجديدة) لا يصلح كمدخل لـ SmartAdvisor.analyze — لذا الأولوية لـ
+                // data.results، والرجوع لـ data.context فقط للتوافق مع المستدعين القدامى.
+                const results = data?.results || data?.context || {};
+                const out = SmartAdvisor.analyze(results, state);
                 if (out?.insights?.length > 0) return 'تحليل المستشار:\n\n' + out.insights.map(i => `• ${i.message}\n  الإجراء: ${i.action || '—'}`).join('\n\n');
                 return InternalAIGenerator.generateAdvisorFallback(state);
             } catch (e) { console.warn('Internal fallback advisor failed', e); return InternalAIGenerator.generateAdvisorFallback(state); }

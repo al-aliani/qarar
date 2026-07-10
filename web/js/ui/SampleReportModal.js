@@ -21,7 +21,14 @@ export class SampleReportModal {
 
     open() {
         this.render();
-        this.overlay.classList.add('is-open');
+        // تدقيق بصري: إضافة is-open في نفس الدورة المتزامنة لإدراج المحتوى (render()) تمنع
+        // المتصفح من رسم حالة "مغلق" فعلياً قبلها، فينعدم أثر transition المعرَّف في CSS.
+        // rAF مزدوج يضمن وجود إطار رسم فعلي بينهما فيظهر التلاشي كما صُمم.
+        // + شبكة أمان setTimeout: تحقّق حي أظهر أن rAF قد لا يُطلَق إطلاقاً في تبويب غير
+        // نشط، فتبقى النافذة عالقة على opacity:0 (مخفية تماماً) بلا هذه الشبكة.
+        const revealSample = () => this.overlay.classList.add('is-open');
+        requestAnimationFrame(() => requestAnimationFrame(revealSample));
+        setTimeout(revealSample, 300);
         document.body.style.overflow = 'hidden';
         this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
         document.addEventListener('keydown', this._onEscape);

@@ -79,6 +79,27 @@ export class DecisionDashboard {
         const decision = this.buildDecisionReasons(state, results, readiness, evaluation);
         const financingDiagnostics = this.getFinancingDiagnostics(state, results);
         const decisionExplanation = results?.decisionExplanation || null;
+        const mcLastRun = state?.monteCarlo?.lastRun;
+        const mcProbability = Number.isFinite(Number(mcLastRun?.successProbability)) ? Number(mcLastRun.successProbability) : null;
+        const year1Revenue = Number(results?.incomeStatement?.[0]?.revenue) || 0;
+        const breakEvenRevenue = Number(results?.indicators?.breakEvenPointValue) || 0;
+        const breakEvenMargin = year1Revenue > 0 ? Math.max(0, 1 - (breakEvenRevenue / year1Revenue)) : null;
+        const minCumulativeCash = Array.isArray(results?.cashFlow) && results.cashFlow.length
+            ? Math.min(...results.cashFlow.map(row => Number(row.cumulative)).filter(Number.isFinite))
+            : null;
+        let npvSafetyMargin = null;
+        if (Number(results?.indicators?.npv) >= 0 && year1Revenue > 0) {
+            let low = -1, high = 0;
+            for (let i = 0; i < 12; i += 1) {
+                const mid = (low + high) / 2;
+                try {
+                    const stressed = runFullModel(state, { revenueChange: mid });
+                    if (Number(stressed?.indicators?.npv) >= 0) high = mid;
+                    else low = mid;
+                } catch (_) { break; }
+            }
+            npvSafetyMargin = Math.max(0, Math.abs(high));
+        }
 
         // QA Gate validation (async, but we'll await it)
         let qaResults = { passed: true, hardErrors: [], softWarnings: [], validationErrors: [], validationWarnings: [] };
@@ -135,6 +156,7 @@ export class DecisionDashboard {
                         </h2>
                         <p class="dd-verdict__desc">
                             بناءً على تحليل ${evaluation.details.length} معايير تشمل الجدوى المالية، اكتمال البيانات، وجاهزية السوق.
+                            ${evaluation.score >= 100 && evaluation.recommendation !== 'go' ? '<br><span class="dd-verdict__flag dd-verdict__flag--warning">الدرجة تقيس اكتمال/جودة المدخلات، أما التوصية فتضيف اختبارات المخاطر والتمويل؛ لذلك قد تكون الدرجة 100/100 مع بقاء القرار «يحتاج مراجعة».</span>' : ''}
                             ${qaResults.hardErrors.length > 0 ? '<br><span class="dd-verdict__flag dd-verdict__flag--danger">توجد أخطاء حرجة يجب إصلاحها قبل اتخاذ القرار.</span>' : ''}
                             ${cleanPass ? '<br><span class="dd-verdict__flag dd-verdict__flag--success">الدراسة اجتازت معايير الجودة.</span>' : ''}
                             ${!cleanPass && qaResults.hardErrors.length === 0 && hasSoftIssues ? '<br><span class="dd-verdict__flag dd-verdict__flag--warning">اجتازت الأخطاء الحرجة، لكن توجد تحذيرات مهمة — راجعها قبل القرار.</span>' : ''}
@@ -283,6 +305,12 @@ export class DecisionDashboard {
                                 ${this.renderKPIItem('العائد على الاستثمار', results?.indicators?.roi, 'percent')}
                                 ${this.renderKPIItem('فجوة التمويل', financingDiagnostics.fundingGap, 'fundingGap', financingDiagnostics.fundingGapThreshold)}
                                 ${this.renderKPIItem('DSCR السنة الأولى', financingDiagnostics.dscr, 'dscr')}
+                            </div>
+                            <div class="kpi-grid-decision dd-risk-kpis" aria-label="مؤشرات هامش الأمان والمخاطر">
+                                ${this.renderKPIItem('احتمالية نجاح مونت كارلو', mcProbability, 'percent')}
+                                ${this.renderKPIItem('هامش الأمان لنقطة التعادل', breakEvenMargin, 'percent')}
+                                ${this.renderKPIItem('أقصى انخفاض بالإيراد قبل NPV السالب', npvSafetyMargin, 'percent')}
+                                ${this.renderKPIItem('أدنى تدفق نقدي تراكمي', minCumulativeCash, 'currency')}
                             </div>
                         </div>
 
@@ -1114,6 +1142,14 @@ export class DecisionDashboard {
 
     renderKPIItem(label, value, type, threshold = 1) {
         const n = Number(value);
+        const explanations = {
+            currency: 'القيمة الحالية بعد خصم التدفقات النقدية وفق معدل الخصم المدخل.',
+            percent: 'النسبة محسوبة من مخرجات النموذج للسنة الأولى أو سيناريو المحاكاة.',
+            years: 'عدد السنوات حتى استرداد الاستثمار وفق التدفق النقدي التراكمي.',
+            dscr: 'قدرة التدفق النقدي التشغيلي على تغطية خدمة الدين.',
+            fundingGap: 'إجمالي الاستثمار المطلوب ناقص مصادر التمويل المدخلة.'
+        };
+        const explanation = explanations[type] || 'مؤشر محسوب من النموذج المالي الحالي.';
         let formatted = (value === null || value === undefined || value === '') ? '--' : String(value);
         let status = 'positive';
         if (type === 'currency') {
@@ -1138,7 +1174,7 @@ export class DecisionDashboard {
         }
 
         return `
-            <div class="kpi-mini-card ${status}">
+                <div class="kpi-mini-card ${status}" title="${explanation}">
                 <span class="mini-label">${label}</span>
                 <span class="mini-value">${formatted}</span>
             </div>
@@ -1162,7 +1198,11 @@ export class DecisionDashboard {
     // والداكن بدل استخدام --c-success/--c-warning/--c-danger المُعرَّفة لكل ثيم.
     getScoreColor(score) {
         if (score >= 80) return 'var(--c-success)';
-        if (score >= 60) return 'var(--c-accent-blue)';
+        // تدقيق بصري: --c-accent-blue كان لوناً رابعاً دخيلاً على تدرّج الحالة الثلاثي
+        // (نجاح/تحذير/خطر) — الوحيد بين الأربعة غير المُعاد تعريفه في [data-theme="dark"]،
+        // فيبقى نفس اللون حرفياً بين الفاتح والداكن ويُقرأ كحيادي لا كإشارة تقييم فعلية.
+        // مزيج حقيقي بين نجاح/تحذير بدل لون accent منفصل — يتبع الثيم تلقائياً في الحالتين.
+        if (score >= 60) return 'color-mix(in srgb, var(--c-success) 55%, var(--c-warning))';
         if (score >= 40) return 'var(--c-warning)';
         return 'var(--c-danger)';
     }

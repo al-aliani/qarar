@@ -14,6 +14,48 @@ import { ScenarioSwitcher } from './ScenarioSwitcher.js';
 import { PresentationView } from './PresentationView.js';
 import { renderBenchmarkingSection } from './BenchmarkingView.js'; // المهمة 4 — هل أرقامي منطقية؟
 
+// «اسأل عن رقمك» — تحويل سؤال حر مثل «لو زاد الإيجار 20%؟» لتغيير فعلي عبر نفس آلية
+// تجاوزات المحرك (overrides) التي تستخدمها منزلقات اختبار الضغط في لوحة القرار
+// (engine.js calculateStudy(study, overrides): revenueChange/opexChange/priceChange/
+// fixedChange...) بدل نص عام لا يقرأ السؤال المكتوب فعلياً.
+const LEVER_INCREASE_RE = /(زد|رفعت?|ارتفعت?|زادت?|زياد[ةه]?)[^\d%]{0,15}(إيجار|ايجار|إيراد|ايراد|مبيعات|تكلفة|سعر|أسعار|اسعار)[^\d%]{0,10}(\d{1,3}(?:\.\d+)?)\s*%/;
+const LEVER_DECREASE_RE = /(خفّض|خفضت?|قلّلت?|قللت?|نقصت?|انخفضت?|تراجعت?)[^\d%]{0,15}(إيجار|ايجار|إيراد|ايراد|مبيعات|تكلفة|سعر|أسعار|اسعار)[^\d%]{0,10}(\d{1,3}(?:\.\d+)?)\s*%/;
+
+function normalizeAlef(s) { return String(s || '').replace(/[إأآ]/g, 'ا'); }
+
+/** يحدد مفتاح تجاوز المحرك (override key) والتسمية المعروضة من كلمة المتغير المطابَقة */
+function detectLever(word) {
+    const w = normalizeAlef(word);
+    if (w.includes('ايجار')) return { key: 'fixedChange', label: 'الإيجار' };
+    if (w.includes('مبيعات')) return { key: 'revenueChange', label: 'المبيعات' };
+    if (w.includes('ايراد')) return { key: 'revenueChange', label: 'الإيراد' };
+    if (w.includes('تكلفة')) return { key: 'opexChange', label: 'التكلفة' };
+    if (w.includes('سعر') || w.includes('اسعار')) return { key: 'priceChange', label: 'السعر' };
+    return null;
+}
+
+/**
+ * يحلّل سؤالاً حراً بحثاً عن نمط «(زد|رفع|ارتفع) <متغير> <رقم>%» أو
+ * «(خفّض|قلل|انخفض) <متغير> <رقم>%» ويعيد مفتاح التجاوز ونسبته الموقّعة، أو null إن لم يُطابق.
+ * @param {string} q
+ * @returns {{leverKey:string, leverLabel:string, pct:number, signedFraction:number, sign:1|-1}|null}
+ */
+export function parseNumberQuestion(q) {
+    if (!q) return null;
+    let m = q.match(LEVER_INCREASE_RE);
+    let sign = 1;
+    if (!m) {
+        m = q.match(LEVER_DECREASE_RE);
+        sign = -1;
+    }
+    if (!m) return null;
+    const pct = parseFloat(m[3]);
+    if (!Number.isFinite(pct) || pct <= 0) return null;
+    const lever = detectLever(m[2]);
+    if (!lever) return null;
+    return { leverKey: lever.key, leverLabel: lever.label, pct, signedFraction: sign * (pct / 100), sign };
+}
+
 export class FinancialDashboard {
     constructor(containerId, store) {
         this.container = document.getElementById(containerId);
@@ -135,10 +177,10 @@ export class FinancialDashboard {
             </div>
 
             <!-- Scenario Switcher Panel -->
-            <div id="scenarioSwitcherContainer"></div>
+            <div id="scenarioSwitcherContainer" class="${isSimpleView ? 'hidden' : ''}"></div>
 
             <!-- لوحة KPI واحدة (Brixx/Fathom) — الإيراد، التكلفة، الصافي، الاسترداد، التعادل، DSCR -->
-            <div class="card glass-card mt-4" id="unifiedKpiPanel" aria-label="لوحة KPI">
+            <div class="card glass-card mt-4 ${isSimpleView ? 'hidden' : ''}" id="unifiedKpiPanel" aria-label="لوحة KPI">
                 <h3 class="card-title mb-3"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> لوحة KPI</h3>
                 <p class="text-xs text-muted mb-3">الإيراد، التكلفة، الصافي، الاسترداد، التعادل، DSCR في بطاقات واحدة.</p>
                 <div class="indicators-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
@@ -152,14 +194,14 @@ export class FinancialDashboard {
             </div>
 
             <!-- التدفق النقدي السنوي (رسم بياني) — Brixx/Fathom -->
-            <div class="card glass-card mt-4" id="cashFlowChartPanel">
+            <div class="card glass-card mt-4 ${isSimpleView ? 'hidden' : ''}" id="cashFlowChartPanel">
                 <h3 class="card-title mb-3"><svg class="ic" aria-hidden="true"><use href="#i-bank"/></svg> التدفق النقدي السنوي</h3>
                 <p class="text-xs text-muted mb-3">عرض التدفق النقدي على الرسم البياني (سنوي).</p>
                 <canvas id="cashFlowChartAnnual" height="180"></canvas>
             </div>
 
             <!-- لوحة توقعات (Section 44–50: Tarken/Baremetrics) — إيراد، تكلفة، صافي 5–7 سنوات + مقارنة سيناريوهات -->
-            <div class="card glass-card mt-4" id="forecastPanel">
+            <div class="card glass-card mt-4 ${isSimpleView ? 'hidden' : ''}" id="forecastPanel">
                 <h3 class="card-title mb-3"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> لوحة توقعات (5–7 سنوات)</h3>
                 <p class="text-xs text-muted mb-3">رسم الإيراد والتكلفة والصافي على مدى فترة الدراسة؛ مع إمكانية مقارنة صافي الربح بين السيناريوهات.</p>
                 <div class="flex flex-wrap gap-2 mb-3">
@@ -170,7 +212,7 @@ export class FinancialDashboard {
             </div>
 
             <!-- لوحة الأداء (LivePlan / Upmetrics) — ربح متوقع، تدفق نقدي، فترة الدراسة 5 أو 7 سنوات -->
-            <div class="card glass-card mt-4" id="performancePanel" aria-label="لوحة الأداء">
+            <div class="card glass-card mt-4 ${isSimpleView ? 'hidden' : ''}" id="performancePanel" aria-label="لوحة الأداء">
                 <h3 class="card-title mb-3"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> لوحة الأداء</h3>
                 <p class="text-xs text-muted mb-3">تحديث فوري عند تغيير المدخلات (الملخص، الإيرادات، التكاليف، التمويل).</p>
                 <div class="flex flex-wrap items-center gap-4 mb-3" style="margin-bottom: 12px;">
@@ -202,7 +244,7 @@ export class FinancialDashboard {
             </div>
 
             <!-- لوحة مؤشرات القرار (تعادل، عائد، DSCR) - مدارج -->
-            <div class="card glass-card mt-4" id="decisionIndicatorsPanel">
+            <div class="card glass-card mt-4 ${isSimpleView ? 'hidden' : ''}" id="decisionIndicatorsPanel">
                 <h3 class="card-title mb-3"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> مؤشرات القرار والجدارة التمويلية</h3>
                 <div class="indicators-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
                     <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">
@@ -249,7 +291,7 @@ export class FinancialDashboard {
                     <!-- AI content goes here -->
                 </div>
                 <div class="mt-4 p-3 rounded-lg border border-border bg-card" id="askAboutNumbersPanel" aria-label="اسأل عن رقمك">
-                    <h4 class="card-title mb-2 text-sm">اسأل عن رقمك — مساعد مالي AI</h4>
+                    <h4 class="card-title mb-2 text-sm">اسأل عن رقمك — مساعد مالي</h4>
                     <p class="text-xs text-muted mb-2">مثال: «هل مشروعي مجدٍ إذا زاد الإيجار 20%؟» — نُفسّر بناءً على نموذج الحساسية ونقترح إجراء.</p>
                     <p class="text-xs text-gold mb-2"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> يمكنك كتابة طلب بلغة عادية، مثل: زد الإيراد 10% أو خفّض التكلفة 5%.</p>
                     <div class="flex gap-2 flex-wrap">
@@ -568,7 +610,7 @@ export class FinancialDashboard {
         const askBtn = this.container.querySelector('#askAboutNumbersBtn');
         const askAnswer = this.container.querySelector('#askAboutNumbersAnswer');
         if (askBtn && askAnswer) {
-            const askHandler = () => {
+            const askHandler = async () => {
                 const q = (askInput && askInput.value || '').trim();
                 askAnswer.classList.remove('hidden');
                 if (!q) {
@@ -579,9 +621,58 @@ export class FinancialDashboard {
                     askAnswer.innerHTML = `<strong>توصيات المستشار:</strong><br>${tips}<br><br><span class="text-gold"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> لأسئلة مثل «لو زاد الإيجار 20%؟» استخدم <strong>اختبار الضغط</strong> في لوحة القرار (منزلقات تغير الإيرادات/التكاليف) لتحديث النتائج فوراً.</span>`;
                     return;
                 }
+
+                // سؤال يطابق نمط «زد/خفّض <متغير> <رقم>%» — نحسب مقارنة حقيقية قبل/بعد عبر نفس
+                // آلية تجاوزات المحرك التي تستخدمها منزلقات اختبار الضغط، بدل نص عام لا يقرأ
+                // السؤال. حساب متزامن بالكامل (بلا await) كي يظهر الرد فوراً عند الضغط.
+                const lever = parseNumberQuestion(q);
+                if (lever && this.results?.incomeStatement?.[0]) {
+                    try {
+                        const stateForLever = this.store.get ? this.store.get() : this.store.getState();
+                        const before = this.results;
+                        const after = runFullModel(stateForLever, { [lever.leverKey]: lever.signedFraction });
+                        if (after?.indicators && after?.incomeStatement?.[0]) {
+                            const beforeNet = before.incomeStatement[0].netIncome ?? 0;
+                            const afterNet = after.incomeStatement[0].netIncome ?? 0;
+                            const afterNPV = after.indicators.npv ?? 0;
+                            const netVerb = afterNet === beforeNet ? 'يبقى دون تغيير عند' : (afterNet > beforeNet ? 'يرتفع من' : 'ينخفض من');
+                            const netClause = afterNet === beforeNet
+                                ? `${netVerb} ${this.formatCurrency(afterNet)}`
+                                : `${netVerb} ${this.formatCurrency(beforeNet)} إلى ${this.formatCurrency(afterNet)}`;
+                            const npvClause = afterNPV >= 0
+                                ? `صافي القيمة الحالية (NPV) يبقى موجباً عند ${this.formatCurrency(afterNPV)}`
+                                : `صافي القيمة الحالية (NPV) يصبح سالباً عند ${this.formatCurrency(afterNPV)}`;
+                            const actionPhrase = lever.sign === 1 ? 'بزيادة' : 'بخفض';
+                            const text = `${actionPhrase} ${lever.leverLabel} ${lever.pct}%: صافي الربح ${netClause}، و${npvClause}.`;
+                            askAnswer.innerHTML = `<strong>إجابة عن سؤالك:</strong><br><span style="white-space:pre-line;">${text}</span><br><br><span class="text-gold"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> لاختبار سيناريوهات أخرى بدقة أكبر، استخدم منزلقات <strong>اختبار الضغط</strong> في لوحة القرار.</span>`;
+                            return;
+                        }
+                    } catch (err) {
+                        console.warn('Lever-based number question failed:', err);
+                    }
+                }
+
                 askAnswer.innerHTML = '<span class="text-muted">جاري التحليل...</span>';
                 const state = this.store.get ? this.store.get() : this.store.getState();
                 const analysis = SmartAdvisor.analyze(this.results || {}, state);
+                try {
+                    const directAnswer = await aiConnector.query(q, 'advisor', {
+                        projectInfo: state.projectInfo || {},
+                        results: this.results,
+                        context: {
+                            question: q,
+                            kpis: this.results?.indicators || {},
+                            insights: analysis.insights || []
+                        }
+                    });
+                    const answerText = typeof directAnswer === 'string' ? directAnswer : directAnswer?.content;
+                    if (answerText) {
+                        askAnswer.innerHTML = `<strong>إجابة عن سؤالك:</strong><br><span style="white-space:pre-line;">${String(answerText).replace(/</g, '&lt;')}</span>`;
+                        return;
+                    }
+                } catch (err) {
+                    console.warn('Direct number question fallback:', err);
+                }
                 const tips = analysis.insights.length
                     ? analysis.insights.slice(0, 3).map(i => `• ${i.message} — ${i.action || '—'}`).join('<br>')
                     : 'بناءً على النموذج الحالي: المؤشرات ضمن النطاق المقبول.';
@@ -693,12 +784,15 @@ export class FinancialDashboard {
 
     renderKPICard(term, label, value, status) {
         const statusClass = status === 'positive' ? 'kpi-positive' : status === 'negative' ? 'kpi-negative' : '';
+        const statusText = status === 'positive' ? 'ضمن النطاق' : status === 'negative' ? 'يحتاج مراجعة' : '';
+        const statusIcon = status === 'positive' ? '✓' : status === 'negative' ? '!' : '';
         const labelWithTooltip = term ? wrapWithTooltip(label, term) : label;
 
         return `
             <div class="kpi-card ${statusClass}">
                 <div class="kpi-label">${labelWithTooltip}</div>
                 <div class="kpi-value">${value}</div>
+                ${statusText ? `<div class="kpi-status" aria-label="${statusText}">${statusIcon} ${statusText}</div>` : ''}
             </div>
         `;
     }

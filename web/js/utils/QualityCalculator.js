@@ -46,11 +46,13 @@ export const QualityCalculator = {
 
         const finalScore = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
 
-        // Determine Badge
-        let badge = 'مبتدئ 🥚';
-        if (finalScore >= 30) badge = 'هاوي 🚀';
-        if (finalScore >= 60) badge = 'رائد أعمال 💼';
-        if (finalScore >= 90) badge = 'خبير جدوى 🏆';
+        // تسمية الشارة تصف اكتمال البيانات المُدخلة فقط — لا تُوحي بكفاءة أو خبرة
+        // صاحب المشروع ولا بسلامة القرار المالي (تدقيق محتوى: كانت "رائد أعمال"/"خبير
+        // جدوى" تُقرأ كحكم على جودة القرار بينما هي فحص وجود حقول فقط).
+        let badge = 'بيانات أساسية';
+        if (finalScore >= 30) badge = 'بيانات متوسطة';
+        if (finalScore >= 60) badge = 'بيانات شبه مكتملة';
+        if (finalScore >= 90) badge = 'بيانات مكتملة';
 
         return {
             score: finalScore,

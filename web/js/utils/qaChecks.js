@@ -49,6 +49,15 @@ export async function runQAChecks(state, results) {
             });
         }
 
+        const assumptions = state?.assumptions || {};
+        if (assumptions.discountRate == null || assumptions.discountRate === '' || assumptions.workingCapitalMonths == null || assumptions.workingCapitalMonths === '') {
+            qaResults.softWarnings.push({
+                code: 'FINANCIAL_ASSUMPTIONS_MISSING',
+                message: 'معدل الخصم وأشهر رأس المال العامل غير مكتملين؛ قد تكون مؤشرات NPV والسيولة مبنية على قيم افتراضية.',
+                path: 'assumptions'
+            });
+        }
+
         // فحوص تماسك صارمة — تمنع خروج دراسة هشّة أو متناقضة تُسيء لسمعة المنصة.
         try {
             const y1 = results?.incomeStatement?.[0] || null;

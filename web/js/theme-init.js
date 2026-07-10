@@ -30,7 +30,7 @@
   var stored = localStorage.getItem('feas_theme') || 'light';
   applyTheme(stored);
   function syncAllThemeIcons(stored) {
-    document.querySelectorAll('#btnThemeToggle, #headerThemeToggle').forEach(function (b) {
+    document.querySelectorAll('#btnThemeToggle, #headerThemeToggle, #dvThemeToggle').forEach(function (b) {
       if (b) syncIcon(b, stored);
     });
   }

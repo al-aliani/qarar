@@ -7,6 +7,7 @@
  */
 
 import { resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
+import { getCostRatios } from '../core/costRatios.js';
 
 const pctText = (v) => (v * 100).toFixed(0) + '%';
 // تدقيق 2026-07-08 (ملاحظة حرجة، خبير السوق): نطاقات sectorBenchmarks.js تقديرية
@@ -48,19 +49,8 @@ export class SmartAdvisor {
             return { ratios: empty.ratios, insights };
         }
 
-        // annualSalaries: من runFullModel غير متوفر، الاستنتاج من inputs.hr
-        const annualSalaries = results.annualSalaries ?? (inputs?.hr?.positions || []).reduce(
-            (a, p) => a + (Number(p.count) || 1) * (Number(p.salary) || 0) * (Number(p.months) || 12), 0
-        );
-
-        // 1. Calculate Ratios
-        const ratios = {
-            cogs: year1.variableCosts / revenue,
-            labor: annualSalaries / revenue,
-            rent: this.extractRent(inputs) / revenue,
-            marketing: ((inputs?.marketing?.monthlyAdBudget ?? 0) * 12) / revenue,
-            profit: year1.netIncome / revenue
-        };
+        // 1. Calculate ratios from the same engine drivers used by the dashboards.
+        const ratios = getCostRatios(results);
 
         const insights = [];
 

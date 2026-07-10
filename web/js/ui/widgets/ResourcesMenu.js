@@ -13,11 +13,11 @@ export class ResourcesMenu {
         container.innerHTML = '';
 
         const button = document.createElement('button');
-        button.className = 'btn btn--ghost btn--sm flex items-center gap-2 text-muted hover:text-gold transition-colors';
+        button.className = 'btn btn--ghost btn--sm';
         button.innerHTML = `
             <span>📚</span>
             <span>مركز المعرفة والموارد</span>
-            <span class="text-xs opacity-50">▼</span>
+            <span class="dv-resources__caret" aria-hidden="true">▼</span>
         `;
 
         button.onclick = (e) => {
@@ -27,25 +27,27 @@ export class ResourcesMenu {
 
         container.appendChild(button);
 
-        // Menu Dropdown
+        // Menu Dropdown — التموضع/الألوان/الحدود الفعلية تأتي بالكامل من محددات المعرّف
+        // #resources-menu-root-dropdown في decision-dashboard.css؛ الفئات هنا مجرد خطاطيف
+        // تبديل حالة (hidden/opacity-0/-translate-y-2) يستخدمها toggleMenu/openMenu/closeMenu.
         const menu = document.createElement('div');
         menu.id = `${this.containerId}-dropdown`;
-        menu.className = 'absolute top-full left-0 mt-2 w-64 bg-gray-900 border border-white/10 rounded-lg shadow-xl z-50 hidden opacity-0 transform -translate-y-2 transition-all duration-200';
+        menu.className = 'hidden opacity-0 -translate-y-2';
         menu.innerHTML = `
-            <div class="p-2 space-y-1">
-                <div class="px-3 py-2 text-xs font-bold text-muted uppercase tracking-wider border-b border-white/5 mb-1">تعلم وإرشاد</div>
-                ${this.renderLink('📖 دليل المبتدئين', 'beginnerGuide')}
-                ${this.renderLink('💡 تقييم الفكرة (Startup)', 'ideaAssessment')}
-                ${this.renderLink('🎓 مركز المعرفة', 'knowledgeCenter')}
-                
-                <div class="px-3 py-2 text-xs font-bold text-muted uppercase tracking-wider border-b border-white/5 mb-1 mt-2">أدوات مساعدة</div>
-                ${this.renderLink('🏦 دليل التمويل', 'financingGuide')}
-                ${this.renderLink('📋 معايير منشآت', 'monshaatCompliance')}
-                ${this.renderLink('🚀 نصائح المسرّعات', 'acceleratorTips')}
-                
-                <div class="px-3 py-2 text-xs font-bold text-muted uppercase tracking-wider border-b border-white/5 mb-1 mt-2">دعم</div>
-                ${this.renderLink('💬 طلب استشارة', 'advisory')}
-                ${this.renderLink('📂 موارد وإرشاد', 'resourcesGuide')}
+            <div class="dv-resources__body">
+                <div class="dv-resources__group-label">تعلم وإرشاد</div>
+                ${this.renderLink('📖', 'دليل المبتدئين', 'beginnerGuide')}
+                ${this.renderLink('💡', 'تقييم الفكرة (Startup)', 'ideaAssessment')}
+                ${this.renderLink('🎓', 'مركز المعرفة', 'knowledgeCenter')}
+
+                <div class="dv-resources__group-label dv-resources__group-label--sp">أدوات مساعدة</div>
+                ${this.renderLink('🏦', 'دليل التمويل', 'financingGuide')}
+                ${this.renderLink('📋', 'معايير منشآت', 'monshaatCompliance')}
+                ${this.renderLink('🚀', 'نصائح المسرّعات', 'acceleratorTips')}
+
+                <div class="dv-resources__group-label dv-resources__group-label--sp">دعم</div>
+                ${this.renderLink('💬', 'طلب استشارة', 'advisory')}
+                ${this.renderLink('📂', 'موارد وإرشاد', 'resourcesGuide')}
             </div>
         `;
 
@@ -60,11 +62,14 @@ export class ResourcesMenu {
         });
     }
 
-    renderLink(text, actionKey) {
+    // إيموجي الأيقونة في <span> منفصل عن نص التسمية — نفس أسلوب إخفاء إيموجي زر الفتح
+    // (decision-dashboard.css:1072) — بدل نص خام "📖 دليل المبتدئين" لا يمكن لـCSS فصله.
+    renderLink(iconChar, label, actionKey) {
         return `
-            <button class="w-full text-right px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white rounded transition-colors flex items-center justify-between group" data-action="${actionKey}">
-                <span>${text}</span>
-                <span class="opacity-0 group-hover:opacity-100 transition-opacity">←</span>
+            <button data-action="${actionKey}">
+                <span class="dv-resources__link-ic" aria-hidden="true">${iconChar}</span>
+                <span class="dv-resources__link-label">${label}</span>
+                <span class="dv-resources__link-arrow" aria-hidden="true">←</span>
             </button>
         `;
     }

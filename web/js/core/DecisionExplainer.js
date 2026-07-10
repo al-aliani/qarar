@@ -136,6 +136,49 @@ export function explainDecisionBreakers(study = {}, results = {}) {
         });
     }
 
+    // هامش أمان نقطة التعادل: نسبة قيمة التعادل إلى إيراد السنة الأولى الفعلي. هامش ضيق
+    // (<15%) يعني أن أي تراجع بسيط في الإيراد يُسقط المشروع تحت التعادل؛ bepRatio > 1
+    // يعني أن التعادل غير قابل للتحقيق أصلاً بافتراضات الإيراد الحالية.
+    const year1Revenue = num(results.incomeStatement?.[0]?.revenue);
+    const breakEvenValue = num(indicators.breakEvenPointValue);
+    if (year1Revenue > 0 && breakEvenValue > 0) {
+        const bepRatio = breakEvenValue / year1Revenue;
+        const bepSafetyMargin = 1 - bepRatio;
+        if (bepSafetyMargin < 0.15) {
+            pushIssue(issues, {
+                severity: bepRatio > 1 ? 'critical' : 'warning',
+                metric: 'breakEvenSafetyMargin',
+                value: bepSafetyMargin,
+                threshold: 0.15,
+                path: 'indicators.breakEvenPointValue',
+                title: 'هامش أمان نقطة التعادل ضعيف',
+                tooltipKey: 'BEP',
+                explanation: bepRatio > 1
+                    ? `نقطة التعادل (${money(breakEvenValue)}) تتجاوز إيراد السنة الأولى المتوقع (${money(year1Revenue)}) — التعادل غير قابل للتحقيق بالافتراضات الحالية.`
+                    : `هامش الأمان قبل الوصول لنقطة التعادل ${pct(bepSafetyMargin)} فقط (نقطة التعادل ${money(breakEvenValue)} مقابل إيراد سنة أولى ${money(year1Revenue)}).`,
+                action: 'ارفع السعر أو حجم المبيعات المتوقع، أو خفّض التكاليف الثابتة لتوسيع هامش الأمان قبل نقطة التعادل.'
+            });
+        }
+    }
+
+    // عجز نقدي تراكمي ممتد: عدد السنوات (بعد سنة الصفر) التي يظل فيها التدفق النقدي
+    // التراكمي سالباً قبل أن يتحول لموجب. سنتان فأكثر تعني حاجة حقيقية لاحتياطي نقدي
+    // أو إعادة جدولة تمويل، ولو كانت مؤشرات NPV/IRR الإجمالية مقبولة.
+    const cashFlowRows = Array.isArray(results.cashFlow) ? results.cashFlow : [];
+    const negativeCumYears = cashFlowRows.filter(cf => cf.year > 0 && num(cf.cumulative) < 0).length;
+    if (negativeCumYears >= 2) {
+        pushIssue(issues, {
+            severity: 'warning',
+            metric: 'negativeCumulativeCashFlow',
+            value: negativeCumYears,
+            threshold: 2,
+            path: 'cashFlow',
+            title: 'تدفق نقدي تراكمي سالب لعدة سنوات',
+            explanation: `التدفق النقدي التراكمي يبقى سالباً لمدة ${negativeCumYears} سنة قبل أن يتحول لموجب — عجز نقدي ممتد يحتاج تمويلاً إضافياً أو احتياطياً كافياً لتغطيته.`,
+            action: 'وفّر احتياطياً نقدياً يغطي فترة العجز، راجع جدول سداد القرض، أو سرّع نمو الإيراد في السنوات الأولى.'
+        });
+    }
+
     if (results.capacityCheck?.exceeded) {
         pushIssue(issues, {
             severity: 'critical',

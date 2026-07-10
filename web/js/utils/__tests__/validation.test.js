@@ -16,7 +16,7 @@ describe('validateStudy', () => {
 
 describe('validateAssumptions', () => {
     it('accepts valid assumptions', () => {
-        const r = validateAssumptions({ taxRate: 0.15, discountRate: 0.1, projectionYears: 5 });
+        const r = validateAssumptions({ taxRate: 0.15, discountRate: 0.1, projectionYears: 5, workingCapitalMonths: 3 });
         expect(r.valid).toBe(true);
     });
     it('rejects invalid tax rate', () => {

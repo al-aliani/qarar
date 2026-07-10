@@ -2,6 +2,7 @@
  * عرض "هل أرقامي منطقية؟" — مقارنة مع معايير القطاع (المهمة 4 — خطة التفوق).
  * مستوحى من جدوى كلاود: عرض Benchmarking يفتقده المستخدم عندهم.
  */
+import { getCostRatios } from '../core/costRatios.js';
 
 /** معايير قطاعية — Food Cost، Labor %، Rent %، Gross Margin، Profit Margin (نطاقات %) */
 const SECTOR_BENCHMARKS = {
@@ -78,7 +79,6 @@ export function renderBenchmarkingSection(results, studyData) {
     const rev = y1.revenue ?? 0;
     const vc = y1.variableCosts ?? 0;
     const gross = y1.grossProfit ?? 0;
-    const fixed = y1.fixedCosts ?? 0;
     const net = y1.netIncome ?? 0;
     const indicators = results.indicators || {};
     const payback = indicators.paybackPeriod ?? indicators.payback ?? null; // runFullModel returns paybackPeriod
@@ -88,30 +88,12 @@ export function renderBenchmarkingSection(results, studyData) {
     const bench = SECTOR_BENCHMARKS[sectorKey] || SECTOR_BENCHMARKS.default;
 
     // استخراج Labor و Rent من opex إن وُجد (aggregateOpex يُرجع fixed/variable arrays)
-    const opex = results.opex || {};
-    let laborAnnual = 0;
-    let rentAnnual = 0;
-    const addFromItem = (item) => {
-        const a = item.annual ?? (item.monthly ?? 0) * 12;
-        const src = (item.source || '').toString();
-        const name = (item.name || '').toString();
-        if (src.includes('بشري') || name.includes('راتب') || name.includes('موظف') || name.includes('شيف') || name.includes('كاشير')) {
-            laborAnnual += a;
-        } else if (name.includes('إيجار')) {
-            rentAnnual += a;
-        }
-    };
-    (opex.fixed || []).forEach(addFromItem);
-    (opex.variable || []).forEach(addFromItem);
-    // fallback: تقدير من fixed إذا لم نجد تفصيلاً
-    if (laborAnnual === 0 && fixed > 0) laborAnnual = fixed * 0.5;
-    if (rentAnnual === 0 && fixed > 0) rentAnnual = fixed * 0.2;
-
     const foodCostPct = rev > 0 ? (vc / rev) * 100 : null;
     const grossMarginPct = rev > 0 ? (gross / rev) * 100 : null;
     const profitMarginPct = rev > 0 ? (net / rev) * 100 : null;
-    const laborPct = rev > 0 ? (laborAnnual / rev) * 100 : null;
-    const rentPct = rev > 0 ? (rentAnnual / rev) * 100 : null;
+    const ratios = getCostRatios(results);
+    const laborPct = rev > 0 ? ratios.labor * 100 : null;
+    const rentPct = rev > 0 ? ratios.rent * 100 : null;
 
     const rows = [];
 

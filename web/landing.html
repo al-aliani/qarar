@@ -3,22 +3,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>قرار | محاكي دراسة الجدوى الذكية</title>
-  <meta name="description" content="منصة قرار: محاكي دراسة جدوى ذكية للأنشطة التجارية في السعودية. ابدأ من الصفر أو من قالب مختص معتمد، وكل رقم مربوط بافتراض تقدر تراجعه بنفسك — تقرير PDF، ملف Excel، وتوصية GO / REVISE / NO-GO." />
+  <title>قرار | منصة دراسة الجدوى الذكية</title>
+  <meta name="description" content="منصة قرار: دراسة جدوى ذكية للمطاعم، المقاهي، والأنشطة التجارية في السعودية. ابدأ من الصفر أو من قالب مختص معتمد، وكل رقم مربوط بافتراض تقدر تراجعه بنفسك — تقرير PDF، ملف Excel، وتوصية GO / REVISE / NO-GO." />
   <meta name="theme-color" content="#0b6b4f" />
-  <meta property="og:title" content="قرار | محاكي دراسة الجدوى الذكية" />
+  <meta property="og:title" content="قرار | منصة دراسة الجدوى الذكية" />
   <meta property="og:description" content="حوّل فكرة مشروعك إلى قرار استثماري قابل للتدقيق: كل رقم مربوط بافتراض ظاهر، وتقرير جاهز للمراجعة مع ممول أو شريك." />
   <meta property="og:type" content="website" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b6b4f'/><text x='50' y='72' font-size='62' text-anchor='middle' fill='%23fff' font-family='sans-serif' font-weight='700'>ق</text></svg>" type="image/svg+xml" />
   <link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts/fonts.css" />
+  <!-- تدقيق بصري: ربط رموز التصميم المشتركة مع لوحة التحكم — يمنع انفراد landing.html
+       بنظام ألوان خاص منفصل يتفرّق عن باقي المنتج دون قصد. الأخضر الأساسي أدناه (--green-700)
+       أصبح alias مباشر لنفس متغيّر لوحة التحكم (--c-p-500) بدل قيمة hex مستقلة. بقية رموز
+       الصفحة (الذهب، الرمادي، نصف الأقطار، الظلال) بقيت خاصة بـlanding عمداً لأنها مضبوطة
+       لسياق مختلف (نص ذهبي على خلفيات داكنة، ظلال أعمق) لا يوجد له مكافئ آمن في variables.css. -->
+  <link rel="stylesheet" href="/css/variables.css" />
   <style>
     :root {
       /* الألوان — الأخضر هو الأساس، الذهب لهجة نادرة */
       --green-900: #062e23;
       --green-800: #084532;
-      --green-700: #0b6b4f;
+      /* alias لنفس أخضر لوحة التحكم (--c-p-500 في variables.css) — كانا قيمتين منفصلتين
+         (#0b6b4f مقابل #0e5b44) لنفس "الأخضر الأساسي"؛ الآن مصدر حقيقة واحد فعلي. */
+      --green-700: var(--c-p-500, #0e5b44);
       --green-600: #108264;
       --green-500: #17a37c;
       --mint-100: #e3f4ec;
@@ -35,11 +43,23 @@
       --line: rgba(16, 32, 26, .12);
       --line-strong: rgba(16, 32, 26, .22);
       --white: #ffffff;
+      /* نص/أيقونة فاتحة فوق خلفية ملوّنة أو داكنة ثابتة (أزرار أساسية، شارات، هيرو، تذييل) —
+         منفصل عمداً عن --white: يبقى فاتحاً في الوضعين الفاتح والداكن لأن الخلفية الملوّنة
+         التي يقف فوقها لا تتغيّر بين الوضعين، بعكس --white الذي يعني "خلفية سطح" ويصبح داكناً
+         في @media (prefers-color-scheme: dark) أدناه. */
+      --on-color-text: #ffffff;
       --danger: #b8332b;
       --ok: #16835f;
+      /* أخضر واتساب — لون علامة خارجية ثابت (لا يتبع هوية أخضر/ذهب landing) لذا مُعرَّف
+         بمتغيرات خاصة به بدل hex مضمّن مباشرة داخل .btn-wa/.wa-fab (كان الاستثناء الوحيد). */
+      --wa-green: #21c063;
+      --wa-green-hover: #29d670;
+      --wa-ink: #05331d;
       /* الطباعة */
       --font: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
-      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      /* تدقيق بصري: JetBrains Mono لا يغطي العربية — كلمات/رموز عملة عربية داخل عناصر
+         Mono (مثل "3.2 سنة" أو "﷼") كانت تنفصل بصرياً لخط نظام مختلف صامتاً منتصف الرقم. */
+      --mono: 'JetBrains Mono', 'IBM Plex Sans Arabic', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       --text-xs: 12.5px;
       --text-sm: 14px;
       --text-base: 15.5px;
@@ -143,18 +163,18 @@
     .final-cta .btn:focus-visible { outline-color: var(--gold); box-shadow: 0 0 0 4px rgba(215,170,74,.28); }
     .btn-primary {
       background: linear-gradient(180deg, var(--green-600), var(--green-700));
-      color: var(--white);
+      color: var(--on-color-text);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 16px 30px -18px rgba(11, 107, 79, .85);
     }
     .btn-primary:hover { background: linear-gradient(180deg, var(--green-500), var(--green-600)); box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 20px 36px -18px rgba(11, 107, 79, .95); }
-    .btn-light { background: var(--white); color: var(--green-800); box-shadow: var(--shadow-sm); }
+    .btn-light { background: var(--on-color-text); color: var(--green-800); box-shadow: var(--shadow-sm); }
     .btn-light:hover { box-shadow: var(--shadow-md); }
-    .btn-ghost { background: rgba(255,255,255,.1); color: var(--white); border-color: rgba(255,255,255,.36); }
+    .btn-ghost { background: rgba(255,255,255,.1); color: var(--on-color-text); border-color: rgba(255,255,255,.36); }
     .btn-ghost:hover { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.55); }
     .btn-outline { background: var(--white); color: var(--ink); border-color: var(--line-strong); }
     .btn-outline:hover { border-color: var(--green-700); color: var(--green-700); box-shadow: var(--shadow-sm); }
-    .btn-wa { background: #21c063; color: #05331d; }
-    .btn-wa:hover { background: #29d670; box-shadow: 0 16px 30px -18px rgba(33,192,99,.9); }
+    .btn-wa { background: var(--wa-green); color: var(--wa-ink); }
+    .btn-wa:hover { background: var(--wa-green-hover); box-shadow: 0 16px 30px -18px rgba(33,192,99,.9); }
     .btn-sm { min-height: 44px; padding: 10px 18px; font-size: var(--text-sm); }
 
     /* شريط تقدّم القراءة */
@@ -170,10 +190,10 @@
     .contact-in { min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .contact-list { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center; }
     .contact-list .dot { color: var(--gold); }
-    .contact-list strong { color: var(--white); font-weight: 700; }
+    .contact-list strong { color: var(--on-color-text); font-weight: 700; }
     .contact-actions { display: flex; gap: 18px; align-items: center; font-weight: 500; }
     .contact-actions a { color: rgba(255,255,255,.92); display: inline-flex; align-items: center; gap: 6px; }
-    .contact-actions a:hover { color: var(--white); }
+    .contact-actions a:hover { color: var(--on-color-text); }
 
     /* الرأس */
     .top {
@@ -190,7 +210,7 @@
       width: 44px; height: 44px; border-radius: var(--r-sm);
       display: grid; place-items: center;
       background: linear-gradient(150deg, var(--green-600), var(--green-800));
-      color: var(--white); font-size: 24px; font-weight: 700;
+      color: var(--on-color-text); font-size: 24px; font-weight: 700;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 0 0 3px rgba(215,170,74,.16);
     }
     .brand small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 500; line-height: 1.25; }
@@ -205,7 +225,7 @@
     .hero {
       position: relative; isolation: isolate; overflow: hidden;
       padding: clamp(84px, 11vw, 128px) 0 clamp(64px, 8vw, 96px);
-      color: var(--white);
+      color: var(--on-color-text);
       background:
         radial-gradient(circle at 82% 12%, rgba(215,170,74,.16), transparent 42%),
         linear-gradient(135deg, var(--green-900) 0%, var(--green-800) 58%, var(--green-700) 100%);
@@ -224,13 +244,15 @@
     .hero .eyebrow { color: #ffeec2; background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.2); }
     .hero h1 { margin: 24px 0 20px; font-size: clamp(36px, 5vw, 62px); max-width: 16ch; letter-spacing: -.012em; }
     .hero h1 .hl { color: var(--gold); position: relative; white-space: nowrap; }
-    .hero h1 .hl::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: .04em; height: 3px; background: linear-gradient(90deg, var(--gold), transparent); border-radius: 3px; }
+    /* تدقيق بصري: .04em كانت مسافة أمان مصمَّمة لنتوءات لاتينية ضحلة، لا لعمق حروف
+       عربية مثل ق/ي (تنزل تحت خط الأساس أعمق بكثير) — دُفع الخط لأسفل ليمر تحتها بوضوح. */
+    .hero h1 .hl::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: -.08em; height: 3px; background: linear-gradient(90deg, var(--gold), transparent); border-radius: 3px; }
     .hero .lede { color: rgba(255,255,255,.86); font-size: clamp(16px, 1.7vw, 19px); max-width: 56ch; line-height: 1.72; }
     .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
     .hero-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 40px; max-width: 760px; }
     .hero-fact { border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.07); border-radius: var(--r); padding: 15px 15px; backdrop-filter: blur(8px); transition: border-color .22s ease, background .22s ease, transform .22s cubic-bezier(.2,.7,.2,1); }
     .hero-fact:hover { border-color: rgba(215,170,74,.5); background: rgba(255,255,255,.1); transform: translateY(-2px); }
-    .hero-fact b { display: block; font-size: 19px; color: var(--white); line-height: 1.15; font-weight: 700; }
+    .hero-fact b { display: block; font-size: 19px; color: var(--on-color-text); line-height: 1.15; font-weight: 700; }
     .hero-fact.is-num b { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
     .hero-fact span { display: block; margin-top: 5px; color: rgba(255,255,255,.72); font-size: 12px; font-weight: 400; }
 
@@ -254,6 +276,9 @@
     .kpi:hover { border-color: rgba(16,130,100,.28); box-shadow: var(--shadow-sm); }
     .kpi span { display: block; color: var(--muted); font-size: 11.5px; font-weight: 500; }
     .kpi b { display: block; margin-top: 6px; color: var(--green-700); font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; font-size: 22px; line-height: 1.15; }
+    /* قيم نصية عربية بحتة (مثل "3.2 سنة") داخل بطاقة Mono — نفس منطق .del-row b.txt */
+    .kpi b.txt { font-family: var(--font); }
+    .kpi-help { display: block; margin-top: 5px; color: var(--muted-2); font-size: 10.5px; font-weight: 400; line-height: 1.45; }
     .mini-chart { display: flex; align-items: end; gap: 8px; height: 84px; margin: 4px 18px 0; padding: 12px 6px 0; border-top: 1px dashed var(--line); }
     .mini-chart span { flex: 1; min-width: 20px; border-radius: 5px 5px 0 0; background: linear-gradient(180deg, var(--green-500), var(--green-800)); height: var(--h); transform-origin: bottom; animation: bar-grow .7s cubic-bezier(.2,.7,.2,1) both; }
     .mini-chart span:nth-child(2) { animation-delay: .08s; }
@@ -266,10 +291,16 @@
 
     /* شريط الإثبات */
     .proof-strip { background: var(--mint-50); border-block: 1px solid var(--line); padding: 22px 0; }
-    .proof-in { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px 26px; color: var(--ink-2); font-size: var(--text-sm); font-weight: 600; }
+    .proof-in { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px 26px; color: var(--ink-2); font-size: var(--text-sm); font-weight: 500; }
     .proof-item { display: inline-flex; align-items: center; gap: 10px; }
     .proof-item .ic { width: 20px; height: 20px; color: var(--green-700); }
     .proof-sep { width: 1px; height: 18px; background: var(--line-strong); }
+
+    /* شريط القطاعات — أمثلة صادقة */
+    .sector-strip { background: var(--white); border-block-end: 1px solid var(--line); padding: 14px 0; }
+    .sector-strip-in { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 10px; }
+    .sector-strip-label { color: var(--muted); font-size: var(--text-xs); font-weight: 500; }
+    .sector-chip { display: inline-flex; align-items: center; color: var(--green-800); background: var(--mint-100); border: 1px solid rgba(16,130,100,.18); border-radius: var(--r-pill); padding: 5px 13px; font-size: var(--text-xs); font-weight: 500; }
 
     /* رؤوس الأقسام */
     .sec-head { max-width: 680px; margin: 0 auto clamp(40px, 5vw, 56px); text-align: center; }
@@ -298,14 +329,14 @@
     /* شريط داكن — التمييز */
     .band { position: relative; color: rgba(255,255,255,.86); background: radial-gradient(circle at 82% 0%, rgba(215,170,74,.07), transparent 46%), var(--green-900); border-block: 1px solid rgba(255,255,255,.07); }
     .band .eyebrow { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); color: #ffeec2; }
-    .band h2 { color: var(--white); }
+    .band h2 { color: var(--on-color-text); }
     .band .sec-head p { color: rgba(255,255,255,.72); }
     .pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
     .pillar { border: 1px solid rgba(255,255,255,.13); border-radius: var(--r); background: rgba(255,255,255,.05); padding: 24px; transition: transform .22s cubic-bezier(.2,.7,.2,1), background .22s ease, border-color .22s ease; }
     .pillar:hover { transform: translateY(-3px); background: rgba(255,255,255,.08); border-color: rgba(215,170,74,.4); }
     .pillar-ic { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: var(--r-sm); background: rgba(255,255,255,.09); color: var(--gold); margin-bottom: 14px; }
     .pillar-ic .ic { width: 23px; height: 23px; }
-    .pillar h3 { color: var(--white); font-size: var(--text-lg); margin-bottom: 8px; }
+    .pillar h3 { color: var(--on-color-text); font-size: var(--text-lg); margin-bottom: 8px; }
     .pillar p { color: rgba(255,255,255,.72); font-size: var(--text-sm); }
 
     /* المخرجات */
@@ -323,29 +354,11 @@
     .del-row b { color: var(--green-800); font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .del-row b.txt { font-family: var(--font); }
 
-    /* المنهجية */
-    .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: start; }
-    .score-card { border: 1px solid var(--line); border-radius: var(--r-lg); background: linear-gradient(180deg, var(--white), var(--mint-50)); box-shadow: var(--shadow-sm); padding: 26px; }
-    .score-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-    .score-top b { font-family: var(--mono); font-weight: 500; font-size: 46px; color: var(--green-700); line-height: 1; }
-    .score-top b small { font-size: 18px; color: var(--muted-2); }
-    .score-bar { height: 10px; border-radius: var(--r-pill); background: var(--mint-100); margin: 16px 0 10px; overflow: hidden; }
-    .score-bar i { display: block; height: 100%; width: var(--w); border-radius: inherit; background: linear-gradient(90deg, var(--green-700), var(--green-500)); transform-origin: inline-start; }
-    .score-card.in .score-bar i { animation: score-fill .9s cubic-bezier(.2,.7,.2,1) both; }
-    @keyframes score-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-    .score-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-    .score-tag { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); font-weight: 500; color: var(--ink-2); background: var(--white); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 6px 12px; }
-    .score-tag::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--green-600); flex: none; }
-    .method-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
-    .method-list li { display: flex; gap: 12px; align-items: flex-start; }
-    .method-list h3 { font-size: var(--text-base); margin-bottom: 4px; }
-    .method-list p { color: var(--muted); font-size: var(--text-sm); }
-
     /* الخطوات */
     .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; counter-reset: step; }
     .step { position: relative; border: 1px solid var(--line); border-radius: var(--r); padding: 26px; background: linear-gradient(180deg, var(--white), var(--mint-50)); transition: transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s ease, border-color .22s ease; }
     .step:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--line-strong); }
-    .step-num { width: 40px; height: 40px; border-radius: var(--r-sm); display: grid; place-items: center; background: linear-gradient(150deg, var(--green-600), var(--green-800)); color: var(--white); font-family: var(--mono); font-weight: 500; margin-bottom: 14px; box-shadow: 0 0 0 3px rgba(215,170,74,.14); }
+    .step-num { width: 40px; height: 40px; border-radius: var(--r-sm); display: grid; place-items: center; background: linear-gradient(150deg, var(--green-600), var(--green-800)); color: var(--on-color-text); font-family: var(--mono); font-weight: 500; margin-bottom: 14px; box-shadow: 0 0 0 3px rgba(215,170,74,.14); }
     .step h3 { margin-bottom: 8px; font-size: var(--text-lg); }
     .step p { color: var(--muted); font-size: var(--text-sm); }
 
@@ -380,7 +393,7 @@
     .price.featured::before { background: linear-gradient(90deg, var(--gold-deep), var(--gold)); opacity: 1; height: 4px; }
     .price.featured:hover { transform: translateY(-14px); box-shadow: 0 0 0 4px rgba(11,107,79,.1), 0 30px 70px -32px rgba(6,46,35,.6); }
     @media (min-width: 981px) { .price.featured { transform: translateY(-10px); } }
-    .price .tag { position: absolute; inset-block-start: -14px; inset-inline: 0; margin-inline: auto; width: max-content; display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: var(--r-pill); background: linear-gradient(180deg, var(--green-600), var(--green-700)); color: var(--white); font-size: 11.5px; font-weight: 700; box-shadow: 0 0 0 4px rgba(215,170,74,.2), var(--shadow-sm); white-space: nowrap; }
+    .price .tag { position: absolute; inset-block-start: -14px; inset-inline: 0; margin-inline: auto; width: max-content; display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: var(--r-pill); background: linear-gradient(180deg, var(--green-600), var(--green-700)); color: var(--on-color-text); font-size: 11.5px; font-weight: 700; box-shadow: 0 0 0 4px rgba(215,170,74,.2), var(--shadow-sm); white-space: nowrap; }
     .price .tag::before { content: "★"; font-size: 11px; color: var(--gold); }
     .price .name { color: var(--green-700); font-weight: 700; font-size: var(--text-base); }
     .price .amount { margin: 12px 0 4px; font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; font-size: 42px; line-height: 1.05; color: var(--ink); letter-spacing: -.02em; }
@@ -410,23 +423,23 @@
     @keyframes faq-open { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
     /* الدعوة الختامية */
-    .final-cta { position: relative; overflow: hidden; color: var(--white); background: radial-gradient(circle at 15% 20%, rgba(215,170,74,.14), transparent 44%), linear-gradient(120deg, var(--green-900), var(--green-700)); }
+    .final-cta { position: relative; overflow: hidden; color: var(--on-color-text); background: radial-gradient(circle at 15% 20%, rgba(215,170,74,.14), transparent 44%), linear-gradient(120deg, var(--green-900), var(--green-700)); }
     .cta-box { max-width: 760px; }
-    .cta-box h2 { font-size: clamp(28px, 3.6vw, 44px); margin-bottom: 16px; color: var(--white); letter-spacing: -.01em; }
+    .cta-box h2 { font-size: clamp(28px, 3.6vw, 44px); margin-bottom: 16px; color: var(--on-color-text); letter-spacing: -.01em; }
     .cta-box p { color: rgba(255,255,255,.86); font-size: var(--text-lg); max-width: 58ch; line-height: 1.72; }
     .cta-box .hero-cta { margin-top: 28px; }
 
     /* التذييل */
     footer { background: radial-gradient(circle at 85% 0%, rgba(215,170,74,.06), transparent 42%), var(--green-900); color: rgba(255,255,255,.7); padding: 48px 0 30px; }
     .foot-in { display: flex; justify-content: space-between; gap: 32px; flex-wrap: wrap; }
-    .foot-brand { display: flex; align-items: center; gap: 11px; color: var(--white); font-weight: 700; font-size: var(--text-xl); }
+    .foot-brand { display: flex; align-items: center; gap: 11px; color: var(--on-color-text); font-weight: 700; font-size: var(--text-xl); }
     .foot-links { display: flex; flex-wrap: wrap; gap: 8px 28px; font-weight: 500; font-size: var(--text-sm); }
     .foot-links a { display: inline-flex; align-items: center; min-height: 40px; padding-block: 2px; transition: color .18s ease; }
-    .foot-links a:hover { color: var(--white); }
+    .foot-links a:hover { color: var(--on-color-text); }
     .foot-copy { margin-top: 28px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.12); font-size: var(--text-xs); line-height: 1.7; }
 
     /* زر واتساب عائم للجوال */
-    .wa-fab { position: fixed; inset-block-end: 18px; inset-inline-end: 18px; z-index: 50; width: 56px; height: 56px; border-radius: 50%; display: none; align-items: center; justify-content: center; background: #21c063; color: #fff; box-shadow: 0 14px 30px -12px rgba(0,0,0,.5); }
+    .wa-fab { position: fixed; inset-block-end: 18px; inset-inline-end: 18px; z-index: 50; width: 56px; height: 56px; border-radius: 50%; display: none; align-items: center; justify-content: center; background: var(--wa-green); color: var(--on-color-text); box-shadow: 0 14px 30px -12px rgba(0,0,0,.5); }
     .wa-fab .ic { width: 28px; height: 28px; stroke: none; fill: currentColor; }
 
     /* كشف لطيف عند الدخول — المحتوى ظاهر افتراضياً، والحركة مجرد تحسين لا تُخفي شيئاً */
@@ -469,7 +482,7 @@
         transition-duration: .001ms !important;
       }
       /* تحييد الحركات المعتمدة على التحويل حتى لا تبقى العناصر مطويّة */
-      .mini-chart span, .score-card.in .score-bar i, .reveal.in,
+      .mini-chart span, .reveal.in,
       .reveal--flip.in, .reveal--spin.in, .reveal--pop.in,
       .reveal--skew-r.in, .reveal--skew-l.in, .reveal--bounce.in { transform: none !important; opacity: 1 !important; }
       .btn:hover, .card:hover, .price:hover, .step:hover,
@@ -479,7 +492,7 @@
     @media (max-width: 980px) {
       .contact-actions { display: none; }
       .links { display: none; }
-      .hero-in, .deliverable-grid, .method-grid { grid-template-columns: 1fr; }
+      .hero-in, .deliverable-grid { grid-template-columns: 1fr; }
       .hero h1 { max-width: 18ch; }
       .hero .hl { white-space: normal; }
       .report-card { max-width: 520px; margin-inline: auto; }
@@ -516,6 +529,22 @@
       .foot-in { display: grid; }
       .foot-links { display: grid; gap: 12px; }
     }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --white: #101814;
+        --ink: #eef5f0;
+        --muted: #b5c7bc;
+        --line: #2a3b32;
+        --line-strong: #466050;
+        --green-50: #14251d;
+        --green-100: #1a3328;
+        --surface: #16221c;
+      }
+      body { background: #0d1511; color: var(--ink); }
+      .site-header, .band, .price, .report-card, .step, .faq-item { background: var(--surface); color: var(--ink); }
+      .site-header { border-color: var(--line); }
+      .btn-outline { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
+    }
   </style>
   <script src="/whatsapp-config.js"></script>
 </head>
@@ -547,7 +576,7 @@
     <div class="wrap top-in">
       <a href="#" class="brand" aria-label="قرار">
         <span class="brand-mark">ق</span>
-        <span>قرار <small>محاكي دراسة الجدوى الذكية</small></span>
+        <span>قرار <small>منصة دراسة الجدوى الذكية</small></span>
       </a>
       <nav class="links" aria-label="التنقل الرئيسي">
         <a href="#why">لماذا قرار</a>
@@ -558,7 +587,7 @@
         <a href="#faq">الأسئلة</a>
       </nav>
       <div class="top-cta">
-        <a href="./index.html" class="btn btn-primary btn-sm">ابدأ دراستك</a>
+        <a href="./index.html?cta=nav" class="btn btn-primary btn-sm">ابدأ دراستك</a>
       </div>
     </div>
   </header>
@@ -577,15 +606,16 @@
       </svg>
       <div class="wrap hero-in">
         <div class="hero-copy">
-          <span class="eyebrow">دراسة جدوى ذكية للأنشطة التجارية في السعودية</span>
+          <span class="eyebrow">دراسة جدوى ذكية للمطاعم والمقاهي والأنشطة التجارية في السعودية</span>
           <h1>قبل أن تصرف أول ريال، اعرف <span class="hl">رقم مشروعك الحقيقي.</span></h1>
           <p class="lede">«قرار» يحوّل فكرة مشروعك إلى دراسة جدوى مالية واضحة وقابلة للتدقيق: كل رقم مربوط بافتراض تستطيع تعديله ومراجعته بنفسك، وتنتهي بتوصية صريحة — أكمِل، عدّل، أو توقّف. لا صندوق أسود، ولا وعود عامة.</p>
           <div class="hero-cta">
-            <a href="./index.html" class="btn btn-light">ابدأ دراستك الآن</a>
+            <a href="./index.html?cta=hero" class="btn btn-light">ابدأ دراستك الآن</a>
+            <a href="#sample" class="btn btn-ghost">شاهد نموذج تقرير أولاً</a>
           </div>
         </div>
 
-        <div class="report-card reveal reveal--spin" aria-label="نموذج توضيحي لمخرجات الدراسة">
+        <div class="report-card reveal" aria-label="نموذج توضيحي لمخرجات الدراسة">
           <div class="report-win"><span class="d"></span><span class="d"></span><span class="d"></span><span>قرار — ملخص القرار</span></div>
           <div class="report-head">
             <div class="report-title">
@@ -595,10 +625,10 @@
             <div class="verdict">REVISE — مجدٍ بعد المراجعة</div>
           </div>
           <div class="kpi-grid">
-            <div class="kpi"><span>صافي القيمة الحالية (NPV)</span><b>+420K ﷼</b></div>
-            <div class="kpi"><span>فترة الاسترداد</span><b>3.2 سنة</b></div>
-            <div class="kpi"><span>العائد الداخلي (IRR)</span><b>28%</b></div>
-            <div class="kpi"><span>تغطية خدمة الدين</span><b>1.6×</b></div>
+            <div class="kpi"><span>صافي القيمة الحالية (NPV)</span><b>+420K ﷼</b><small class="kpi-help">بعد خصم كل التكاليف والاستثمار على مدى سنوات المشروع — ربح صافٍ نظري، وليس رصيداً نقدياً حالياً</small></div>
+            <div class="kpi"><span>فترة الاسترداد</span><b class="txt">3.2 سنة</b></div>
+            <div class="kpi"><span>العائد الداخلي (IRR)</span><b>28%</b><small class="kpi-help">العائد السنوي التقريبي لاستثمارك — قارنه بتكلفة تمويلك لتحكم إن كان جيداً</small></div>
+            <div class="kpi"><span>تغطية خدمة الدين</span><b>1.6×</b><small class="kpi-help">دخلك يغطي قسط القرض 1.6 مرة — البنوك عادة تطلب 1.25× فأعلى</small></div>
           </div>
           <div class="mini-chart" aria-hidden="true">
             <span style="--h:42%"></span>
@@ -622,7 +652,17 @@
         <span class="proof-sep"></span>
         <span class="proof-item"><svg class="ic"><use href="#i-eye"/></svg> كل رقم قابل للتدقيق</span>
         <span class="proof-sep"></span>
-        <span class="proof-item"><svg class="ic"><use href="#i-shield"/></svg> امتثال سعودي مدمج: ضريبة 15٪ · زكاة · تأمينات · مصروفات تشغيل</span>
+        <span class="proof-item"><svg class="ic"><use href="#i-shield"/></svg> امتثال سعودي مدمج: ضريبة 15٪ · زكاة · تأمينات · نطاقات وتوطين · مصروفات تشغيل</span>
+      </div>
+    </div>
+
+    <!-- شريط القطاعات — أمثلة صادقة لا تعميم مطلق -->
+    <div class="sector-strip">
+      <div class="wrap sector-strip-in">
+        <span class="sector-strip-label">دراسات مبنية فعلياً لقطاعك:</span>
+        <span class="sector-chip">مطاعم</span>
+        <span class="sector-chip">مقاهي</span>
+        <span class="sector-chip">وأي نشاط تجاري آخر بنموذج عام قابل للتخصيص</span>
       </div>
     </div>
 
@@ -670,7 +710,7 @@
           <div class="pillar reveal reveal--pop rv-d4">
             <span class="pillar-ic"><svg class="ic"><use href="#i-shield"/></svg></span>
             <h3>محلي</h3>
-            <p>ضريبة القيمة المضافة، الزكاة، التأمينات الاجتماعية، وعمولات التطبيقات محسوبة داخل المحرك.</p>
+            <p>ضريبة القيمة المضافة، الزكاة، التأمينات الاجتماعية، ونسبة التوطين المطلوبة (نطاقات) محسوبة داخل المحرك — إضافة لبنود قطاعك الخاصة مثل عمولات التوصيل للمطاعم.</p>
           </div>
         </div>
       </div>
@@ -700,13 +740,13 @@
             <div class="del-row"><span>إجمالي الاستثمار المبدئي</span><b>950,000 ﷼</b></div>
             <div class="del-row"><span>صافي القيمة الحالية (NPV)</span><b>+420,000 ﷼</b></div>
             <div class="del-row"><span>العائد الداخلي (IRR)</span><b>28%</b></div>
-            <div class="del-row"><span>فترة الاسترداد</span><b>3.2 سنة</b></div>
+            <div class="del-row"><span>فترة الاسترداد</span><b class="txt">3.2 سنة</b></div>
             <div class="del-row"><span>نقطة التعادل الشهرية</span><b>165,000 ﷼</b></div>
             <div class="del-row"><span>أبرز مخاطرة</span><b class="txt">تكلفة العمالة والإيجار</b></div>
             <div class="del-row"><span>التوصية</span><b class="txt">تعديل الإيجار قبل التوقيع</b></div>
           </div>
         </div>
-        <p style="text-align:center;color:var(--muted-2);font-size:var(--text-xs);margin-top:26px">الأرقام أعلاه لمثال افتراضي لبيان شكل المخرجات فقط، وليست وعداً بأداء مشروعك — نتائج دراستك تعتمد على بياناتك أنت.</p>
+        <p style="text-align:center;color:var(--muted-2);font-size:var(--text-xs);margin-top:26px">الأرقام أعلاه لمثال افتراضي لبيان شكل المخرجات فقط، وليست وعداً بأداء مشروعك — نتائج دراستك تعتمد على بياناتك أنت. تذكير بمعنى المؤشرين أعلاه: NPV ربح صافٍ مخصوم على مدى سنوات المشروع لا رصيد نقدي حالي، وIRR عائد سنوي تقريبي يُقارَن بتكلفة التمويل لا رقماً مطلقاً.</p>
       </div>
     </section>
 
@@ -796,19 +836,19 @@
           <p>ابدأ بنفسك، أو دع خبيراً يراجع افتراضاتك، أو سلّمنا البيانات لنبني الدراسة كاملة. الأسعار بالريال السعودي.</p>
         </div>
         <div class="prices">
-          <article class="price reveal reveal--skew-l rv-d1">
+          <article class="price reveal rv-d1">
             <div class="name">ذاتي</div>
             <div class="amount"><span data-price="self">249</span> <small>﷼ / دراسة</small></div>
-            <p class="desc">لمن يريد بناء تقديره بنفسه على المنصة بمؤشرات فورية.</p>
+            <p class="desc">لمن يريد بناء دراسته بنفسه على المنصة بمؤشرات فورية.</p>
             <ul>
               <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>قوالب مختصين عند اعتمادها</li>
               <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>مؤشرات مالية فورية</li>
               <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تصدير PDF وExcel</li>
               <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تعديل حي غير محدود</li>
             </ul>
-            <a href="./index.html" class="btn btn-outline">ابدأ الآن</a>
+            <a href="./index.html?cta=price-self" class="btn btn-outline">ابدأ الآن</a>
           </article>
-          <article class="price featured reveal reveal--pop rv-d2">
+          <article class="price featured reveal rv-d2">
             <div class="tag">موصى بها</div>
             <div class="name">مراجَع بخبير</div>
             <div class="amount"><span data-price="reviewed">990</span> <small>﷼ / دراسة</small></div>
@@ -821,7 +861,7 @@
             </ul>
             <a href="#" class="btn btn-wa" data-wa data-pkg="مراجَع بخبير — 990 ﷼"><svg class="ic" style="stroke:none;fill:currentColor"><use href="#i-wa"/></svg> اطلب عبر واتساب</a>
           </article>
-          <article class="price reveal reveal--skew-r rv-d3">
+          <article class="price reveal rv-d3">
             <div class="name">خدمة كاملة</div>
             <div class="amount"><span data-price="full">2,900</span> <small>﷼ / دراسة</small></div>
             <p class="desc">تسلّمنا البيانات العامة، ونتولّى البناء والمراجعة والشرح.</p>
@@ -870,6 +910,10 @@
             <summary>هل بياناتي محفوظة وآمنة؟ <span class="plus" aria-hidden="true"></span></summary>
             <p>الدراسات تُحفظ محلياً في متصفحك افتراضياً، ولا تُرسل إلى السحابة إلا عند تفعيل ميزات تتطلب ذلك. لا نبيع بياناتك ولا نشاركها. راجع <a href="./privacy.html" style="color:var(--green-700);font-weight:700">سياسة الخصوصية</a> للتفاصيل.</p>
           </details>
+          <details class="reveal reveal--skew-l rv-d7">
+            <summary>ماذا لو لم تُقنعني المراجعة أو الدراسة؟ <span class="plus" aria-hidden="true"></span></summary>
+            <p>نطبّق ضمان استرداد خلال 15 يوماً من تاريخ الدفع على الباقات المدفوعة: إن لم ترضك جودة المراجعة أو الدراسة، تواصل معنا ووضّح السبب، ونرد المبلغ كاملاً. الباقة الذاتية بلا اشتراك أصلاً فلا معنى لاسترداد عليها.</p>
+          </details>
         </div>
       </div>
     </section>
@@ -879,9 +923,9 @@
       <div class="wrap">
         <div class="cta-box reveal reveal--pop">
           <h2>قبل أن توقّع عقد الإيجار، اختبر القرار بالأرقام</h2>
-          <p>أرسل فكرة مشروعك الآن، أو ابدأ تقديرك بنفسك على المنصة، وحوّل الحماس إلى قرار استثماري تستطيع الدفاع عنه. أنت لا تخسر شيئاً بأن تعرف الرقم الحقيقي مبكراً — بل تخسر الكثير إن تجاهلته.</p>
+          <p>أرسل فكرة مشروعك الآن، أو ابدأ دراستك بنفسك على المنصة، وحوّل الحماس إلى قرار استثماري تستطيع الدفاع عنه. أنت لا تخسر شيئاً بأن تعرف الرقم الحقيقي مبكراً — بل تخسر الكثير إن تجاهلته.</p>
           <div class="hero-cta">
-            <a href="./index.html" class="btn btn-light">ابدأ دراستك الآن</a>
+            <a href="./index.html?cta=final" class="btn btn-light">ابدأ دراستك الآن</a>
             <a href="#" class="btn btn-wa" data-wa data-pkg="استفسار / دراسة كاملة"><svg class="ic" style="stroke:none;fill:currentColor"><use href="#i-wa"/></svg> تواصل عبر واتساب</a>
           </div>
         </div>
@@ -903,7 +947,7 @@
           <a href="#faq">الأسئلة</a>
           <a href="./terms.html">الشروط</a>
           <a href="./privacy.html">الخصوصية</a>
-          <a href="./index.html">دخول المنصة</a>
+          <a href="./index.html?cta=footer">دخول المنصة</a>
         </nav>
       </div>
       <div class="foot-copy">
@@ -995,6 +1039,19 @@
     } catch (e) {
       console.warn('[قرار] تعذّر تحميل الأسعار من المصدر الموحّد؛ تُعرض الأرقام الاحتياطية.', e);
     }
+  </script>
+
+  <!-- تتبّع نية الشراء: كل أزرار واتساب (الباقتان المدفوعتان + الدعوة الختامية + الزر
+       العائم للجوال) تُسجَّل قبل الانتقال إلى wa.me مباشرة — كانت غير مُتتبَّعة إطلاقاً رغم
+       أنها أزرار الشراء الفعلية. trackEvent آمنة/خاملة (تتحقق من window.gtag/window.fbq قبل
+       الاستدعاء) فلا خطر عليها بلا تهيئة معرّفات تتبّع. -->
+  <script type="module">
+    import { trackEvent } from './js/utils/analytics.js';
+    document.querySelectorAll('a[data-wa]').forEach(function (a) {
+      a.addEventListener('click', function () {
+        trackEvent('whatsapp_cta_click', { package: a.getAttribute('data-pkg') || 'استفسار عام' });
+      });
+    });
   </script>
 </body>
 </html>

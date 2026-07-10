@@ -1,6 +1,6 @@
 import { getLabel } from '../core/labels.js';
 import { getLabelSDB, getAuditorTooltip, getFieldHint } from '../core/regulatoryLabels.js';
-import { getPhaseForStep, getStepHelp, MAJOR_PHASES, getMajorPhaseForStep } from '../core/wizardSteps.js';
+import { getPhaseForStep, getStepHelp, MAJOR_PHASES, getMajorPhaseForStep, SIDEBAR_SECTIONS } from '../core/wizardSteps.js';
 import { EXPERT_FAQ } from '../config.js';
 import { DynamicTable } from './DynamicTable.js';
 import { DataService } from '../services/DataService.js';
@@ -160,8 +160,54 @@ export class Wizard {
         ` : '';
 
         const phaseLabel = getPhaseForStep(stepIndex);
+        // مجمّعة حسب SIDEBAR_SECTIONS (نفس تصنيف الفئات في DashboardView/journeySections) بدل
+        // قائمة مسطّحة واحدة — تدقيق 2026-07-10: خريطة الأقسام كانت تعرض الـ42 خطوة في شبكة
+        // واحدة بلا تصنيف، بينما الصفحة الرئيسية تجمّعها في <details> فرعية لكل فئة (بداية/
+        // تسويقية/فنية/مالية...). الفهرسة المطلقة (data-wizard-step-index) والتظليل الحالي
+        // والنقر للتنقل لم تتغيّر — فقط شكل العرض تجمّع حسب الفئة.
+        const stepsWithMeta = activeSteps.map((step, idx) => ({ step, idx, absIdx: this.steps.indexOf(step) }));
+        const sectionMapGroupsHTML = SIDEBAR_SECTIONS.map(section => {
+            const groupSteps = stepsWithMeta.filter(({ absIdx }) => absIdx >= section.range[0] && absIdx <= section.range[1]);
+            if (groupSteps.length === 0) return '';
+            const hasCurrent = groupSteps.some(({ idx }) => idx === relativeStepIndex);
+            return `
+                <details class="wizard-section-map__group" data-section-id="${section.id}"${hasCurrent ? ' open' : ''}>
+                    <summary class="wizard-section-map__group-head">
+                        <span class="wizard-section-map__group-title">${section.label}</span>
+                        <span class="wizard-section-map__group-count">${groupSteps.length.toLocaleString('ar-SA')}</span>
+                    </summary>
+                    <div class="wizard-section-map__group-steps">
+                        ${groupSteps.map(({ step, idx, absIdx }) => {
+                            const isCurrent = idx === relativeStepIndex;
+                            // تدقيق 2026-07-10: كان الرمز ✓ يظهر لأي خطوة سابقة بالموقع فقط (مؤشر موضعي)
+                            // دون أي علاقة فعلية بامتلاء بياناتها — يوهم المستخدم بأنها "مكتملة" فعلاً.
+                            // لا توجد إشارة اكتمال رخيصة موثوقة على مستوى الخطوة الفردية (انظر
+                            // studyCompleteness.js: يحسب على مستوى القسم لا الخطوة، ونصف الخطوات لا
+                            // تقابل مفتاح قسم بيانات أصلاً) — فأبقينا المؤشر الموضعي لكن بصراحة:
+                            // "زُرت" لا "✓ مكتملة".
+                            const isVisited = idx < relativeStepIndex;
+                            const title = isCurrent ? 'الخطوة الحالية' : isVisited ? 'زُرت هذه الخطوة' : `الخطوة رقم ${(idx + 1).toLocaleString('ar-SA')}`;
+                            return `
+                                <button type="button" class="wizard-map-step ${isCurrent ? 'is-current' : ''}" data-wizard-step-index="${absIdx}" title="${title}">
+                                    <span aria-hidden="true">${isVisited ? '•' : idx + 1}</span>${step.label || step.id}
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                </details>
+            `;
+        }).join('');
+        const sectionMapHTML = `
+            <details class="wizard-section-map">
+                <summary>خريطة أقسام الدراسة (${totalSteps.toLocaleString('ar-SA')} خطوة)</summary>
+                <div class="wizard-section-map__groups">
+                    ${sectionMapGroupsHTML}
+                </div>
+            </details>
+        `;
         let html = `
             ${progressHTML}
+            ${sectionMapHTML}
             <p class="step-phase" aria-label="المرحلة التعليمية">${phaseLabel}</p>
             <div class="step-content" key="${stepId}">
                 <h2 class="animate-entry" style="margin-bottom: var(--s-3)">${metadata.label}</h2>
@@ -444,6 +490,13 @@ export class Wizard {
         const nextBtn = document.getElementById('btnNextStep');
         const exportBtn = document.getElementById('btnExportSection');
 
+        this.container.querySelectorAll('.wizard-map-step').forEach(button => {
+            button.addEventListener('click', () => {
+                const index = Number(button.dataset.wizardStepIndex);
+                if (Number.isInteger(index) && index >= 0) this.onNavigate(index);
+            });
+        });
+
         if (prevBtn) {
             prevBtn.addEventListener('click', () => {
                 const localIdx = this._localStepIndex();
@@ -517,7 +570,7 @@ export class Wizard {
         // (تدقيق 2026-07-09: نفس الإصلاح المطابق تماماً لكتلة renderStep أعلاه — كلا الموضعين
         // يشتركان في نفس شرط isLastStep ويجب أن يتطابقا حرفياً).
         const navCaption = isLastStep ? 'الحالة' : 'الخطوة التالية';
-        const nextStepLabel = isLastStep ? 'اكتملت خطوات الدراسة' : this.steps[localIdx + 1]?.label;
+        const nextStepLabel = isLastStep ? 'اكتملت خطوات الدراسة' : (this.steps[localIdx + 1]?.label || 'القسم التالي');
         const navHtml = `
             <div class="wizard-nav">
                 <button type="button" class="btn btn--secondary" id="btnPrevStep" ${isFirstStep ? 'disabled' : ''}>
@@ -826,8 +879,8 @@ export class Wizard {
                 <div class="form-group">
                     <label for="field-${fullKey}">${arabicLabel}${tooltipHtml}</label>
                     <div class="input-with-ai">
-                        <textarea id="field-${fullKey}" data-key="${fullKey}" data-section="${section}" rows="3" class="input input--textarea" placeholder="اكتب أفكارك هنا، أو اضغط على زر 🪄 ليقوم الذكاء الاصطناعي باقتراح نص مناسب لمشروعك...">${escapeHtml(displayValue)}</textarea>
-                        <button type="button" class="btn-magic-wand" data-key="${fullKey}" title="اقتراح أو إعادة صياغة بالذكاء الاصطناعي" aria-label="اقتراح نص"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4V2m0 20v-2m7-7h-2M4 13H2m18.5-6.5L19 8M6 21l9-9"/><path d="m19 8-3-3-2 2 3 3 2-2z"/></svg></button>
+                        <textarea id="field-${fullKey}" data-key="${fullKey}" data-section="${section}" rows="3" class="input input--textarea" placeholder="اكتب أفكارك هنا، أو اطلب اقتراحاً جاهزاً مناسباً لمشروعك...">${escapeHtml(displayValue)}</textarea>
+                        <button type="button" class="btn-magic-wand" data-key="${fullKey}" title="اقتراح أو إعادة صياغة" aria-label="اقتراح نص"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4V2m0 20v-2m7-7h-2M4 13H2m18.5-6.5L19 8M6 21l9-9"/><path d="m19 8-3-3-2 2 3 3 2-2z"/></svg></button>
                     </div>
                 </div>
             `;
@@ -955,11 +1008,11 @@ export class Wizard {
 
     updateStore(section, keyPath, type, value, checked) {
         let finalVal = value;
-        if (type === 'number') finalVal = parseFloat(value) || 0;
+        if (type === 'number') finalVal = value === '' ? null : (parseFloat(value) || 0);
         if (type === 'checkbox') finalVal = checked;
 
         // حقول النِسب المعروضة كنسبة مئوية تُخزَّن ككسر (10 → 0.10) — انظر renderField
-        if (type === 'number' && Wizard.isFractionPercentKey(keyPath)) {
+        if (type === 'number' && finalVal != null && Wizard.isFractionPercentKey(keyPath)) {
             finalVal = finalVal / 100;
         }
 

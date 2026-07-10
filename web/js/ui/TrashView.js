@@ -58,12 +58,12 @@ export class TrashView {
                             🗑️
                         </div>
                         <div class="text-xs text-gray-400">
-                            حذف ${new Date(project.deletedAt || project.lastModified).toLocaleDateString('ar-SA')}
+                            حذف ${new Date(project.deletedAt || project.lastModified).toLocaleDateString('ar-SA-u-nu-latn')}
                         </div>
                     </div>
                     
                     <h3 class="font-bold text-lg mb-2 text-gray-800">${project.name}</h3>
-                    <p class="text-xs text-gray-500 mb-4">آخر تعديل: ${new Date(project.lastModified).toLocaleDateString('ar-SA')}</p>
+                    <p class="text-xs text-gray-500 mb-4">آخر تعديل: ${new Date(project.lastModified).toLocaleDateString('ar-SA-u-nu-latn')}</p>
                     
                     <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
                         <button class="btn-restore btn btn-sm btn-outline-primary flex-1 py-1" data-id="${project.id}">

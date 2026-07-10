@@ -1,11 +1,14 @@
+import { stepIndexById } from '../core/wizardSteps.js';
+
 /**
  * Balance Sheet Display Component
  * Shows projected balance sheets with Assets, Liabilities, Equity
  */
 export class BalanceSheetView {
-    constructor(containerId, store) {
+    constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
         this.store = store;
+        this.onNavigate = onNavigate;
         this.selectedYear = 1;
     }
 
@@ -145,6 +148,12 @@ export class BalanceSheetView {
                                 <span>${(sheet.fundingGap || 0) > 0 ? '⚠️ فجوة تمويل غير مغطاة (مصادر التمويل أقل من الاستثمار)' : 'فائض تمويل فوق الاستثمار المطلوب'}</span>
                                 <span>${this.formatCurrency(sheet.fundingGap)}</span>
                             </div>
+                            ${(sheet.fundingGap || 0) > 0 ? `
+                            <div class="bs-funding-gap-hint">
+                                <span>عادة ما يظهر هذا بعد ضبط التمويل إذا عُدِّل بند تكلفة (فني/تشغيلي) لاحقاً — إجمالي الاستثمار يُعاد حسابه حياً بينما تبقى مصادر التمويل عند آخر مبلغ أدخلته. راجع خطوة التمويل وأعد الضغط على «سدّ الفجوة».</span>
+                                <button type="button" class="btn-xs btn--secondary btn-go-financing">إعادة ضبط التمويل ↩</button>
+                            </div>
+                            ` : ''}
                         </div>
                         ` : ''}
                         <div class="bs-total liabilities-total">
@@ -248,6 +257,19 @@ export class BalanceSheetView {
                     display: flex;
                     gap: 4px;
                 }
+                .bs-funding-gap-hint {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    gap: 8px;
+                    margin-top: 4px;
+                    padding: 8px 10px;
+                    font-size: 0.8rem;
+                    color: var(--c-text-muted);
+                    background: rgba(245,158,11,0.08);
+                    border-radius: 6px;
+                    border-right: 3px solid #f59e0b;
+                }
             </style>
         `;
 
@@ -257,6 +279,16 @@ export class BalanceSheetView {
                 this.selectedYear = parseInt(btn.dataset.year);
                 this.render(balanceSheets);
             });
+        });
+
+        // زر «إعادة ضبط التمويل»: يعيد المستخدم لخطوة التمويل ليعيد ضغط «سدّ الفجوة» بعد
+        // أن تغيّر إجمالي الاستثمار (تدقيق ٢٠٢٦-٠٧-١٠) — الفجوة هنا مُعاد حسابها حياً من
+        // نفس محرك التمويل الوحيد (engine.js)، وليست قيمة مخزَّنة وقت الموازنة السابقة؛
+        // الانحراف حقيقي بسبب تعديل بند تكلفة لاحق، فالحل توجيه المستخدم لا "تصحيح" الحساب.
+        this.container.querySelector('.btn-go-financing')?.addEventListener('click', () => {
+            if (!this.onNavigate) return;
+            const idx = stepIndexById('financing');
+            if (idx >= 0) this.onNavigate(idx);
         });
     }
 

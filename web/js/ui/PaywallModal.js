@@ -11,7 +11,7 @@
  * مع إضافة الدفع المباشر كخيار ثانٍ لمن يفضّل الدفع فوراً دون انتظار محادثة.
  */
 import { PRICING_PACKAGES, formatPrice, CURRENCY_SYMBOL } from '../core/pricing.js';
-import { buildWhatsAppLink } from '../config.js';
+import { buildWhatsAppLink, REFUND_POLICY } from '../config.js';
 import { startCheckout } from '../services/PaymentService.js';
 
 const PACKAGE_FEATURES = {
@@ -65,10 +65,13 @@ export class PaywallModal {
             const features = PACKAGE_FEATURES[pkg.id] || [];
             const message = `مرحباً، أرغب بترقية دراسة «${projectName}» لباقة «${pkg.name}» (${formatPrice(pkg.price)} ${CURRENCY_SYMBOL}) للحصول على ${this.formatLabel}.`;
             const waLink = buildWhatsAppLink(message);
-            const waButton = `
-                <a href="${escapeHtml(waLink)}" target="_blank" rel="noopener noreferrer" class="btn btn--secondary btn-block btn-whatsapp-upgrade" data-package="${pkg.id}">
+            // waLink يكون null إن كان رقم واتساب غير مضبوط بعد (web/public/whatsapp-config.js) —
+            // نُخفي الزر بدل عرض رابط مكسور بلا مستلم يبدو كأن لا أحد يرد على طلبات الشراء.
+            const waButton = waLink
+                ? `<a href="${escapeHtml(waLink)}" target="_blank" rel="noopener noreferrer" class="btn btn--secondary btn-block btn-whatsapp-upgrade" data-package="${pkg.id}">
                     📱 تواصل عبر واتساب للترقية
-                </a>`;
+                </a>`
+                : `<p class="text-xs text-muted" style="margin:4px 0;">قناة واتساب غير متاحة حالياً — استخدم الدفع المباشر أدناه.</p>`;
             const payButtons = `
                 <div class="paywall-pay-buttons" style="display:flex;flex-direction:column;gap:6px;">
                     <button type="button" class="btn btn--primary btn-block btn-pay-now" data-package="${pkg.id}" data-provider="moyasar">
@@ -110,6 +113,7 @@ export class PaywallModal {
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <p class="text-xs text-muted text-center w-full">${escapeHtml(REFUND_POLICY.shortTitle)} على الباقات المدفوعة إن لم تُقنعك النتيجة.</p>
                     <p class="text-xs text-muted text-center w-full">الأدوات المجانية (JSON، CSV، لوحة المستثمر للمشاركة) تبقى بلا قيود.</p>
                 </div>
             </div>

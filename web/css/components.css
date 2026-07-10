@@ -247,7 +247,7 @@ select:focus {
 .step-item.is-active {
     background-color: var(--c-p-subtle);
     color: var(--c-p-500);
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .step-icon {
@@ -816,7 +816,7 @@ select:focus {
 }
 
 .service-name {
-    font-weight: 600;
+    font-weight: 500;
     font-size: 1.1rem;
     flex: 1;
 }
@@ -850,7 +850,7 @@ select:focus {
 
 .service-kpi .kpi-value {
     font-size: 0.9rem;
-    font-weight: 600;
+    font-weight: 500;
     font-family: var(--font-mono);
 }
 
@@ -987,7 +987,7 @@ select:focus {
     padding: 4px 8px;
     border-radius: var(--r-pill);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 /* Charts Row */
@@ -1013,14 +1013,14 @@ select:focus {
 /* --- Section Title --- */
 .section-title {
     font-size: 1.5rem;
-    font-weight: 600;
+    font-weight: 500;
     margin-bottom: var(--s-4);
     color: var(--c-text-main);
 }
 
 .card-title {
     font-size: 1.1rem;
-    font-weight: 600;
+    font-weight: 500;
     margin-bottom: var(--s-1);
     color: var(--c-p-500);
 }
@@ -1094,7 +1094,7 @@ textarea.input {
     align-items: center;
     gap: 8px;
     margin-bottom: var(--s-2);
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .pestel-icon {
@@ -1145,7 +1145,7 @@ textarea.input {
 
 .bm-label {
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 500;
     margin: 0;
 }
 
@@ -1199,7 +1199,7 @@ textarea.input {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-weight: 600;
+    font-weight: 500;
     margin-bottom: var(--s-2);
     padding-bottom: var(--s-2);
     border-bottom: 1px solid var(--c-border);
@@ -1305,7 +1305,7 @@ textarea.input {
 }
 
 .porter-force-label {
-    font-weight: 600;
+    font-weight: 500;
     font-size: 0.9rem;
 }
 
@@ -1373,7 +1373,7 @@ textarea.input {
 .circle-label {
     position: absolute;
     top: 10px;
-    font-weight: 600;
+    font-weight: 500;
     font-size: 0.8rem;
     opacity: 0.8;
 }
@@ -1467,7 +1467,7 @@ textarea.input {
     text-orientation: mixed;
     display: flex;
     align-items: center;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--c-text-muted);
 }
 
@@ -1538,7 +1538,7 @@ textarea.input {
     align-items: center;
     justify-content: center;
     font-size: 0.7rem;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
 }
 
@@ -1551,7 +1551,7 @@ textarea.input {
 }
 
 .matrix-x-label {
-    font-weight: 600;
+    font-weight: 500;
     color: var(--c-text-muted);
 }
 
@@ -1625,7 +1625,10 @@ textarea.input {
     padding: 4px 8px;
     border-radius: var(--r-pill);
     font-size: 0.75rem;
-    font-weight: 600;
+    /* تدقيق بصري: كانت 600 — وزن غير محمَّل في fonts.css (400/500/700 فقط فقط)، فيستبدله
+       المتصفح صامتاً بـ700 (Bold) ويتساوى مع العناوين. طُبِّق نفس التصحيح على كل font-weight:600
+       في هذا الملف وlanding.html وdecision-dashboard.css. */
+    font-weight: 500;
 }
 
 /* --- Scenario Analysis --- */
@@ -1672,7 +1675,7 @@ textarea.input {
 }
 
 .scenario-title {
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .scenario-inputs {
@@ -1707,7 +1710,7 @@ textarea.input {
     padding: var(--s-3);
     border-radius: var(--r-md);
     text-align: center;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .verdict-success {
@@ -1784,7 +1787,7 @@ textarea.input {
 
 .result-value {
     font-family: var(--font-mono);
-    font-weight: 600;
+    font-weight: 500;
     font-size: 1.2rem;
 }
 
@@ -1898,7 +1901,7 @@ textarea.input {
     align-items: center;
     gap: 8px;
     margin-bottom: var(--s-2);
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .source-icon {
@@ -1927,7 +1930,7 @@ textarea.input {
 }
 
 .validation-value {
-    font-weight: 600;
+    font-weight: 500;
     font-family: var(--font-mono);
 }
 
@@ -2044,7 +2047,7 @@ textarea.input {
 }
 
 .org-title {
-    font-weight: 600;
+    font-weight: 500;
     font-size: 0.9rem;
 }
 
@@ -2103,7 +2106,7 @@ textarea.input {
     justify-content: center;
     align-items: center;
     color: #fff;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .nitaqat-green {
@@ -2149,7 +2152,7 @@ textarea.input {
 .smart-badge {
     padding: 8px 16px;
     border-radius: var(--r-pill);
-    font-weight: 600;
+    font-weight: 500;
     font-size: 0.85rem;
 }
 
@@ -2236,7 +2239,7 @@ textarea.input {
 }
 
 .goal-title {
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .goal-status {
@@ -2412,7 +2415,7 @@ textarea.input {
 }
 
 .score-status {
-    font-weight: 600;
+    font-weight: 500;
     text-align: center;
 }
 
@@ -2475,7 +2478,7 @@ textarea.input {
 }
 
 .overview-value {
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .highlights-grid {
@@ -2508,7 +2511,7 @@ textarea.input {
 }
 
 .highlight-value {
-    font-weight: 600;
+    font-weight: 500;
     font-family: var(--font-mono);
 }
 
@@ -2658,7 +2661,7 @@ textarea.input {
 }
 .stress-slider-label {
     font-size: 0.875rem;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--c-text-main); /* كان var(--c-text) غير المعرف */
 }
 .stress-slider-wrap {
@@ -2772,7 +2775,7 @@ textarea.input {
     font-size: 1rem;
     user-select: none;
 }
-.report-builder-card-label { font-weight: 600; flex: 1; }
+.report-builder-card-label { font-weight: 500; flex: 1; }
 .report-builder-hint { color: var(--c-text-muted); }
 
 .kpi-mini-card {
@@ -2855,7 +2858,7 @@ textarea.input {
 
 .row-subtotal {
     background: var(--c-surface-2);
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .row-total {
@@ -3050,7 +3053,7 @@ textarea.input {
 }
 
 .bar-text {
-    font-weight: 600;
+    font-weight: 500;
     padding: 0 10px;
 }
 
@@ -3283,7 +3286,7 @@ textarea.input {
 
 .variance-item small {
     margin-top: 5px;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 /* حقل المتابعة الفعلية — كان نصاً أبيض على خلفية شفافة (غير مقروء على الفاتح) */
@@ -3356,7 +3359,7 @@ textarea.input {
 .modal-header h3 {
     margin: 0;
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--c-text-main);
 }
 
@@ -3445,7 +3448,7 @@ textarea.input {
 .export-card .info h4 {
     margin: 0 0 4px 0;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--c-text-main);
 }
 
@@ -3771,4 +3774,23 @@ input[type="number"] {
 .btn-magic-wand:focus-visible {
     outline: 2px solid var(--c-gold-deco);
     outline-offset: 2px;
+}
+.table-container.scrollable-x {
+    position: relative;
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+.table-container.scrollable-x::after {
+    content: '';
+    position: sticky;
+    display: block;
+    inset-inline-end: 0;
+    width: 18px;
+    height: 1px;
+    margin-top: -1px;
+    pointer-events: none;
+    box-shadow: -10px 0 16px 10px color-mix(in srgb, var(--c-surface-1) 80%, transparent);
 }

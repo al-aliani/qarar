@@ -25,6 +25,15 @@ describe('DecisionDashboard.getScoreColor — يتبع متغيرات الثيم
         expect(dd.getScoreColor(59)).toBe('var(--c-warning)');
     });
 
+    // تدقيق بصري: 60-79 كانت تُعيد --c-accent-blue — لون دخيل رابع لا يتبع الثيم
+    // (الوحيد غير المُعاد تعريفه في [data-theme="dark"]) ويُقرأ كحيادي لا كتقييم فعلي.
+    it('يُعيد مزيجاً بين النجاح والتحذير للدرجات 60-79 (لا لوناً دخيلاً رابعاً)', () => {
+        const expected = 'color-mix(in srgb, var(--c-success) 55%, var(--c-warning))';
+        expect(dd.getScoreColor(60)).toBe(expected);
+        expect(dd.getScoreColor(79)).toBe(expected);
+        expect(dd.getScoreColor(60)).not.toBe('var(--c-accent-blue)');
+    });
+
     it('يُعيد var(--c-danger) للدرجات المنخفضة (<40)', () => {
         expect(dd.getScoreColor(0)).toBe('var(--c-danger)');
         expect(dd.getScoreColor(39)).toBe('var(--c-danger)');

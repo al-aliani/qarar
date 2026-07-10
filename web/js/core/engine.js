@@ -16,6 +16,14 @@ function toArray(v) {
     return Array.isArray(v) ? v : [v];
 }
 
+// يطابق بند «إيجار» ضمن الموارد الإدارية (عربي/إنجليزي) — نفس مفردات الكشف التي
+// كانت مستخدمة سابقاً في BenchmarkingView.js/SmartAdvisor.js قبل أن يُستبدل المصدر
+// سهواً بقسم اللوجستيات (تدقيق 2026-07-10).
+const RENT_KEYWORDS_RE = /إيجار|ايجار|rent|lease/i;
+function isRentLineItem(item) {
+    return RENT_KEYWORDS_RE.test((item?.name || '').toString());
+}
+
 // معدل إهلاك/إطفاء/فائدة يحترم الصفر الصريح: «0» قرارُ مستخدمٍ واعٍ (أصل لا يُستهلك،
 // أو قرض بنك تنمية 0% فائدة) وليس غياباً للقيمة. النمط القديم `rate || default` كان
 // يعامل الصفر كفراغ فيفرض الافتراضي. مُصدَّرة (لا محلية داخل calculateStudy) كي
@@ -157,12 +165,24 @@ export function calculateStudy(study, overrides) {
         const vPct = Math.max(0, Math.min(1, Number(item.variablePercent) || 0));
         return acc + (Number(item.monthly || 0) * 12 * vPct);
     }, 0);
-    let annualAdmin = toArray(admin.administrative).reduce((acc, item) => acc + (Number(item.monthly || 0) * 12), 0);
+    const administrativeItemsList = toArray(admin.administrative);
+    let annualAdmin = administrativeItemsList.reduce((acc, item) => acc + (Number(item.monthly || 0) * 12), 0);
     // ملاحظة: أُزيلت إضافة 2,500 ريال «رسوم حكومية» الصامتة — كانت تُحقَن في OPEX دون علم
     // المستخدم أو إفصاح، فيجد فرقاً لا يفسَّر عند مطابقة تكاليفه بقائمة الدخل (نقض لشفافية المعادلات).
     // بديلها الصحيح: بند ظاهر في «الموارد الإدارية» يضيفه المستخدم أو تحذير QA يطلب إدخاله.
     // المواد المستهلكة الشهرية (technical.consumables)
     annualAdmin += toArray(technical.consumables).reduce((acc, item) => acc + (Number(item.monthlyCost ?? item.monthly ?? 0) * 12), 0);
+
+    // تدقيق 2026-07-10: opex.rentAnnual (المستهلَك في costRatios.js/sectorBenchmarks.js/
+    // BenchmarkingView.js لحساب «نسبة الإيجار») كان يُحسب خطأً من annualLogisticsFixed —
+    // قسم اللوجستيات (SECTIONS.LOGISTICS) صفه الافتراضي «التوصيل والنقل» وليس إيجاراً.
+    // بند الإيجار الفعلي («إيجار المحل (الصالة/المطبخ)») يعيش في الموارد الإدارية
+    // (SECTIONS.ADMINISTRATIVE). الآن يُستخرج بمطابقة اسم البند (نفس منطق كان موجوداً
+    // في BenchmarkingView.js/SmartAdvisor.js قبل أن يُحذف بإعادة هيكلة سابقة)، ويُخصم من
+    // annualAdmin كي لا يُحتسب مرتين بين rentAnnual و adminAnnual.
+    const annualAdminRent = administrativeItemsList
+        .filter(isRentLineItem)
+        .reduce((acc, item) => acc + (Number(item.monthly || 0) * 12), 0);
 
     const annualMarketing = toArray(marketing.campaigns)
         .filter(c => c.type === 'operating')
@@ -936,6 +956,9 @@ export function calculateStudy(study, overrides) {
             totalAnnual: totalFixedOpexYear1 + year1VariableCosts,
             // مكونات السنة الأولى — تستهلكها فحوصات معايير «السائقين» القطاعية
             payrollAnnual: annualPayroll,
+            laborAnnual: annualPayroll,
+            rentAnnual: annualAdminRent,
+            adminAnnual: annualAdmin - annualAdminRent,
             rentAdminAnnual: annualLogisticsFixed + annualAdmin,
             marketingAnnual: annualMarketing
         },

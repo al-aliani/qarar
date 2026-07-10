@@ -146,8 +146,8 @@ export function checkDriversAgainstBenchmarks(state, results) {
         },
         {
             code: 'RENT_RATIO',
-            label: 'الإيجار والمصاريف الإدارية إلى المبيعات',
-            actual: (Number(results?.opex?.rentAdminAnnual) || 0) / revenue,
+            label: 'الإيجار إلى المبيعات',
+            actual: (Number(results?.opex?.rentAnnual) || 0) / revenue,
             range: bench.rentToRevenue,
             lowHint: 'أدنى من المعتاد — هل الإيجار كامل مُدخل؟',
             highHint: 'أعلى من المعتاد — الموقع يلتهم الربح'

@@ -36,13 +36,15 @@ export function validateAssumptions(a) {
   if (!a || typeof a !== 'object') return { valid: true, errors: [] };
   const tax = num(a.taxRate, 0.15);
   if (!Number.isNaN(tax) && (tax < 0 || tax > 1)) err.push('نسبة الضريبة يجب أن تكون بين 0 و 100%');
-  const disc = num(a.discountRate, 0.10);
+  const disc = num(a.discountRate, null);
+  if (disc == null || Number.isNaN(disc)) err.push('معدل الخصم مطلوب حتى تكون مؤشرات NPV وIRR قابلة للاعتماد');
   if (!Number.isNaN(disc) && (disc < 0 || disc > 0.5)) err.push('معدل الخصم يجب أن يكون بين 0 و 50%');
   const inf = num(a.inflationRate, 0.02);
   if (!Number.isNaN(inf) && (inf < 0 || inf > 0.2)) err.push('معدل التضخم يقترح أن يكون بين 0 و 20%');
   const years = num(a.projectionYears, num(a.years, 5));
   if (!Number.isNaN(years) && (years < 1 || years > 30)) err.push('سنوات التخطيط يجب أن تكون بين 1 و 30');
   const wc = num(a.workingCapitalMonths, null);
+  if (wc == null || Number.isNaN(wc)) err.push('أشهر رأس المال العامل مطلوبة حتى لا تُخفى مخاطر السيولة');
   if (wc != null && !Number.isNaN(wc) && (wc < 0 || wc > 24)) err.push('أشهر رأس المال العامل يقترح أن تكون بين 0 و 24');
   return { valid: err.length === 0, errors: err };
 }
@@ -67,6 +69,10 @@ export function validateRevenueStreams(streams) {
     const growth = num(s.growthRate, null);
     if (growth != null && !Number.isNaN(growth) && (growth < -0.5 || growth > 1)) {
       err.push(`مصدر الإيراد "${label}": معدل النمو ${Math.round(growth * 100)}% خارج النطاق الواقعي (-50% إلى 100%) — هل قصدت ${Math.round(growth)}%؟ (النسبة تُدخل كنسبة مئوية)`);
+    }
+    const variableCost = num(s.variableCostPerUnit, null);
+    if (variableCost != null && price != null && variableCost > price) {
+      err.push(`مصدر الإيراد "${label}": التكلفة المتغيرة للوحدة أعلى من سعر البيع — راجع الهامش.`);
     }
     const vol = num(s.customersPerMonth, num(s.expectedDailySales, null));
     if (vol != null && !Number.isNaN(vol) && vol < 0) {

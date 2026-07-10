@@ -8,6 +8,17 @@ vi.mock('../../services/PaymentService.js', () => ({
     getOrderStatus: (...a) => getOrderStatusMock(...a),
 }));
 
+// تدقيق 2026-07-10: buildWhatsAppLink صار يُعيد null بلا رقم مضبوط (تراجع رشيق) بدل
+// رابط مكسور. WHATSAPP_NUMBER يُحسَب مرة واحدة عند تحميل config.js، فنُموِّه الدالة
+// مباشرة لاختبار مسار "الرقم مضبوط فعلياً" بمعزل عن توقيت تحميل الوحدات.
+vi.mock('../../config.js', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        buildWhatsAppLink: (text) => `https://wa.me/966501234567?text=${encodeURIComponent(text || '')}`,
+    };
+});
+
 describe('PaymentReturnView', () => {
     beforeEach(() => {
         document.body.innerHTML = '<div id="root"></div>';

@@ -41,7 +41,7 @@ export class StudyComparison {
                             <option value="">-- اختر مشروعاً محفوظاً --</option>
                             ${availableStudies.map(s => `
                                 <option value="${s.id}" ${this.selectedStudyId === s.id ? 'selected' : ''}>
-                                    ${s.name} (${new Date(s.date).toLocaleDateString('ar-SA')})
+                                    ${s.name} (${new Date(s.date).toLocaleDateString('ar-SA-u-nu-latn')})
                                 </option>
                             `).join('')}
                         </select>

@@ -62,7 +62,7 @@ export class TwoFactorModal {
                 <div style="padding:12px;background:var(--c-bg-app);border:1px solid var(--c-border);border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
                     <div>
                         <div style="font-weight:500;">${f.friendly_name || 'تطبيق المصادقة'}</div>
-                        <div style="font-size:12px;color:var(--c-text-muted);">نشط منذ ${new Date(f.created_at).toLocaleDateString('ar-SA')}</div>
+                        <div style="font-size:12px;color:var(--c-text-muted);">نشط منذ ${new Date(f.created_at).toLocaleDateString('ar-SA-u-nu-latn')}</div>
                     </div>
                     <button class="btn btn--ghost btn-sm text-danger" data-factor-id="${f.id}">إلغاء</button>
                 </div>

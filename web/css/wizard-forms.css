@@ -416,3 +416,95 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500)
     color: var(--color-primary-dark);
     border-color: var(--color-primary);
 }
+.wizard-section-map {
+    margin: 0 0 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-surface);
+}
+
+.wizard-section-map summary {
+    cursor: pointer;
+    padding: .65rem .8rem;
+    font-weight: 600;
+}
+
+.wizard-section-map__groups {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    padding: 0 .7rem .7rem;
+    max-height: 420px;
+    overflow: auto;
+}
+
+/* مجموعة فرعية لكل فئة (SIDEBAR_SECTIONS) — يطابق بنية .dv-journey في DashboardView.js
+   (تدقيق 2026-07-10: تجميع خريطة أقسام المعالج حسب الفئة بدل قائمة مسطّحة واحدة). */
+.wizard-section-map__group {
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-surface-hover);
+}
+
+.wizard-section-map__group-head {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .65rem;
+    font-weight: 600;
+    font-size: .9rem;
+}
+
+.wizard-section-map__group-head::-webkit-details-marker {
+    display: none;
+}
+
+.wizard-section-map__group-head::after {
+    content: "⌄";
+    margin-inline-start: auto;
+    color: var(--color-text-muted);
+    transition: transform .15s ease;
+}
+
+.wizard-section-map__group:not([open]) .wizard-section-map__group-head::after {
+    transform: rotate(-90deg);
+}
+
+.wizard-section-map__group-count {
+    min-width: 22px;
+    height: 20px;
+    border-radius: 999px;
+    display: inline-grid;
+    place-items: center;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: .7rem;
+}
+
+.wizard-section-map__group-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: .35rem;
+    padding: 0 .55rem .55rem;
+}
+
+.wizard-map-step {
+    display: flex;
+    gap: .45rem;
+    align-items: center;
+    text-align: start;
+    border: 0;
+    border-radius: 4px;
+    padding: .45rem .55rem;
+    color: var(--color-text);
+    background: transparent;
+    cursor: pointer;
+}
+
+.wizard-map-step:hover,
+.wizard-map-step.is-current {
+    background: var(--color-surface-hover);
+    color: var(--color-primary);
+}

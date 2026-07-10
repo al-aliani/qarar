@@ -59,7 +59,15 @@ export class PaymentReturnView {
             error: { icon: 'i-warning', title: 'تعذّر عرض حالة الدفع', body: extraMessage, showContinue: true, showWhatsApp: false },
         };
         const m = messages[state] || messages.error;
-        const waLink = m.showWhatsApp ? buildWhatsAppLink(m.waMessage) : '';
+        const waLink = m.showWhatsApp ? buildWhatsAppLink(m.waMessage) : null;
+        // waLink يكون null إن كان رقم واتساب غير مضبوط بعد — لا نعرض رابطاً مكسوراً
+        // (href="null") في مسار دعم دفع فاشل تحديداً، أهم لحظة يحتاج فيها العميل تواصلاً
+        // حقيقياً (نفس منطق التراجع الرشيق في PaywallModal.js وDashboardView.js).
+        const waAction = m.showWhatsApp
+            ? (waLink
+                ? `<a href="${waLink}" target="_blank" rel="noopener noreferrer" class="btn btn--secondary">تواصل مع الدعم عبر واتساب</a>`
+                : `<p class="text-xs text-muted" style="margin:4px 0;">قناة واتساب غير متاحة حالياً.</p>`)
+            : '';
 
         this.container.innerHTML = `
             <div class="payment-return-view" style="max-width:480px;margin:60px auto;text-align:center;padding:24px;">
@@ -67,7 +75,7 @@ export class PaymentReturnView {
                 <h2 style="margin-bottom:8px;">${m.title}</h2>
                 <p class="text-muted">${m.body}</p>
                 <div class="d-flex gap-2 justify-center mt-4" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-                    ${m.showWhatsApp ? `<a href="${waLink}" target="_blank" rel="noopener noreferrer" class="btn btn--secondary">تواصل مع الدعم عبر واتساب</a>` : ''}
+                    ${waAction}
                     ${m.showContinue ? `<button type="button" id="btnPaymentReturnContinue" class="btn btn--primary">متابعة</button>` : ''}
                 </div>
             </div>

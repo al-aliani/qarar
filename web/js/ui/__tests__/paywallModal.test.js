@@ -21,6 +21,18 @@ vi.mock('../../services/PaymentService.js', () => ({
     startCheckout: (...a) => startCheckoutMock(...a),
 }));
 
+// تدقيق 2026-07-10: buildWhatsAppLink صار يُعيد null بلا رقم مضبوط (تراجع رشيق) بدل
+// رابط مكسور. WHATSAPP_NUMBER يُحسَب مرة واحدة عند تحميل config.js (قبل أي beforeEach)،
+// فضبط window.WHATSAPP_NUMBER هنا لا يصل بالوقت المناسب — نُموِّه الدالة مباشرة بدلاً
+// من ذلك لاختبار المسار الفعلي (رابط واتساب حقيقي) بمعزل عن توقيت تحميل الوحدات.
+vi.mock('../../config.js', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        buildWhatsAppLink: (text) => `https://wa.me/966501234567?text=${encodeURIComponent(text || '')}`,
+    };
+});
+
 function fakeStore(state = {}) {
     return { getState: () => state };
 }

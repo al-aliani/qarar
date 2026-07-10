@@ -10,6 +10,8 @@ const BLOCK_KEYS = [
 ];
 
 import { getCityStats, getSuggestion } from '../data/SaudiCityStats.js';
+import { getCostRatios } from '../core/costRatios.js';
+import { resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
 
 function or(v, d) { return (v != null && String(v).trim() !== '') ? String(v).trim() : d; }
 
@@ -1005,6 +1007,67 @@ export function generateAdvisorFallback(state) {
 }
 
 /**
+ * توصيات تحسين مالية مبنية على بيانات الدراسة الفعلية (داخلي، بدون API) — تُستخدم لسؤال
+ * «كيف أحسن النتائج المالية؟» في المستشار الذكي العائم. على نمط generateSWOT: تقرأ نسب
+ * التكلفة الحقيقية من getCostRatios (نفس مصدر SmartAdvisor) وتقارنها بمعيار القطاع من
+ * sectorBenchmarks.js، وترتّب أكبر الفجوات أثراً مالياً أولاً بدل قائمة مسطّحة غير مرتبة.
+ * @param {object} state - حالة الدراسة من الـ store
+ * @param {object} results - نتائج المحرك المالي (من engine.js calculateStudy)
+ * @returns {string}
+ */
+export function generateFinancialImprovementAdvice(state, results) {
+    const p = state?.projectInfo || {};
+    const name = or(p.name, 'المشروع');
+    const year1 = results?.incomeStatement?.[0];
+    const revenue = Number(year1?.revenue) || 0;
+
+    if (!year1 || revenue <= 0) {
+        return `لا تتوفر بيانات مالية كافية لتحليل تحسين النتائج المالية لمشروع «${name}» — أكمل بيانات الإيرادات والتكاليف التشغيلية أولاً ثم أعد المحاولة.`;
+    }
+
+    const ratios = getCostRatios(results);
+    const bench = resolveSectorBenchmark(state);
+    const sectorNote = bench.isGeneric ? '' : ` لقطاع «${bench.label}»`;
+    const fmtSar = (n) => new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 0 }).format(Math.round(n)) + ' ريال';
+    const pct = (n) => (n * 100).toFixed(1) + '%';
+
+    const items = [];
+    const addCostGap = (label, ratioVal, range) => {
+        const [, hi] = range;
+        if (ratioVal > hi) {
+            const gap = ratioVal - hi;
+            items.push({ label, ratioVal, hi, gap, sarImpact: gap * revenue, direction: 'high' });
+        }
+    };
+    addCostGap('تكلفة البضاعة/التكلفة المتغيرة', ratios.cogs, bench.variableCostRate);
+    addCostGap('الرواتب والأجور', ratios.labor, bench.laborToRevenue);
+    addCostGap('الإيجار', ratios.rent, bench.rentToRevenue);
+    addCostGap('التسويق', ratios.marketing, bench.marketingToRevenue);
+
+    const [profitLo] = bench.netProfitToRevenue;
+    if (ratios.profit < profitLo) {
+        const gap = profitLo - ratios.profit;
+        items.push({ label: 'هامش الربح الصافي', ratioVal: ratios.profit, lo: profitLo, gap, sarImpact: gap * revenue, direction: 'low' });
+    }
+
+    // الأكبر أثراً مالياً (بالريال) أولاً — لا قائمة غير مرتبة
+    items.sort((a, b) => b.sarImpact - a.sarImpact);
+
+    if (items.length === 0) {
+        return `أداء «${name}» المالي ضمن النطاق الصحي${sectorNote}: تكلفة البضاعة (${pct(ratios.cogs)})، الرواتب (${pct(ratios.labor)})، الإيجار (${pct(ratios.rent)})، والتسويق (${pct(ratios.marketing)}) جميعها ضمن الحدود المتعارف عليها، وهامش الربح الصافي ${pct(ratios.profit)}. لا توجد فجوة كبيرة تستدعي تدخلاً فورياً — استمر بمراقبة الأداء دورياً.`;
+    }
+
+    const lines = items.slice(0, 4).map((it, idx) => {
+        if (it.direction === 'high') {
+            return `${idx + 1}. **${it.label}** تبلغ ${pct(it.ratioVal)} من المبيعات — أعلى من الحد الصحي${sectorNote} (${pct(it.hi)}) بفارق ${pct(it.gap)}. خفضها لحد المعيار يوفّر نحو ${fmtSar(it.sarImpact)} سنوياً.`;
+        }
+        return `${idx + 1}. **${it.label}** ${pct(it.ratioVal)} أقل من الحد المستهدف${sectorNote} (${pct(it.lo)}) بفارق ${pct(it.gap)} — إغلاق هذه الفجوة يضيف نحو ${fmtSar(it.sarImpact)} سنوياً لصافي الربح.`;
+    });
+
+    return `**تحليل تحسين النتائج المالية لمشروع «${name}»**${sectorNote}\n\nأبرز الفجوات مرتبة حسب الأثر المالي التقديري (من الأكبر للأصغر):\n\n${lines.join('\n\n')}\n\nملاحظة: النطاقات القطاعية أعلاه تقديرية (ممارسات محلية متعارف عليها) — راجعها بمصدرك الخاص قبل اتخاذ قرار نهائي.`;
+}
+
+/**
  * تراخيص ورسوم قانونية مقترحة حسب النشاط (داخلي، بدون API)
  * @param {object} state - { projectInfo }
  * @returns {Array<{ name, quantity, price, notes }>}
@@ -1678,6 +1741,7 @@ export const InternalAIGenerator = {
     generateMitigationSuggestions,
     generateMarketEstimates,
     generateAdvisorFallback,
+    generateFinancialImprovementAdvice,
     generateLicenses,
     generateLogistics,
     generateAdministrative,

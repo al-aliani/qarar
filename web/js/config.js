@@ -118,11 +118,16 @@ function resolveWhatsAppNumber() {
 
 export const WHATSAPP_NUMBER = resolveWhatsAppNumber();
 
-/** رابط واتساب برسالة مُعبَّأة مسبقاً؛ يتجاهل الرقم إن كان لا يزال الشغرة (غير مضبوط). */
+/**
+ * رابط واتساب برسالة مُعبَّأة مسبقاً. يُعيد null صراحة إن كان الرقم غير مضبوط بعد،
+ * بدل رابط مكسور بلا مستلم (https://wa.me/?text=...) كان يفتح تطبيق واتساب دون أي
+ * جهة اتصال. المستدعي (مثل PaywallModal.js) مسؤول عن إخفاء/تعطيل زر واتساب حين
+ * يُعاد null، بنفس منطق التراجع الرشيق المتّبع في landing.html.
+ */
 export function buildWhatsAppLink(text) {
     const isConfigured = /^\d{10,15}$/.test(WHATSAPP_NUMBER);
-    const num = isConfigured ? WHATSAPP_NUMBER : '';
-    return `https://wa.me/${num}?text=${encodeURIComponent(text || '')}`;
+    if (!isConfigured) return null;
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text || '')}`;
 }
 
 /**

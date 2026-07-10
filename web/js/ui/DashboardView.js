@@ -2,7 +2,8 @@ import { ProjectManager } from '../services/ProjectManager.js';
 import { createEmptyStudy } from '../core/schema.js';
 import { getAuthUser, signOut } from '../../supabaseClient.js';
 import { toast } from '../utils/toast.js';
-import { PRICING_DISPLAY } from '../config.js';
+import { PRICING_DISPLAY, buildWhatsAppLink } from '../config.js';
+import { PRICING_PACKAGES, formatPrice, CURRENCY_SYMBOL } from '../core/pricing.js';
 import { QualityCalculator } from '../utils/QualityCalculator.js';
 import { escapeHtml } from '../utils/escape.js';
 import { calculateStudyCompleteness } from '../utils/studyCompleteness.js';
@@ -263,7 +264,7 @@ export class DashboardView {
                 note: 'من الدراسة إلى التنفيذ',
                 tools: [
                     { name: 'محاكاة التشغيل', desc: 'طاقة، انتظار، ضغط تشغيلي', icon: 'activity', step: stepIndexBy(s => s.isOperationalSim, 14), engine: true },
-                    { name: 'خطة التوظيف', desc: 'المناصب والرواتب والاحتياج الفعلي', icon: 'users', step: stepIndexBy(s => s.id === 'hr', 9) },
+                    { name: 'خطة التوظيف', desc: 'المناصب والرواتب ونسبة التوطين (نطاقات) المطلوبة لنشاطك', icon: 'users', step: stepIndexBy(s => s.id === 'hr', 9) },
                     { name: 'خطة المشتريات والأصول', desc: 'معدات، أثاث، تقنية، وتجهيزات', icon: 'list', step: stepIndexBy(s => s.id === 'technical', 8) },
                     { name: 'الجدول الزمني للتنفيذ', desc: 'مراحل، تواريخ، ومسؤوليات', icon: 'map', step: stepIndexBy(s => s.isTimeline, 33) },
                     { name: 'أول تسعين يوم بعد الإطلاق', desc: 'متابعة الأداء الفعلي مقابل الخطة', icon: 'activity', step: stepIndexBy(s => s.isPostLaunch, 37), engine: true }
@@ -303,10 +304,20 @@ export class DashboardView {
                 </div>
             </details>
         `).join('');
+        const currentTheme = (() => {
+            try {
+                const stored = localStorage.getItem('feas_theme') || 'light';
+                if (stored === 'auto') return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                return stored === 'dark' ? 'dark' : 'light';
+            } catch (_) { return 'light'; }
+        })();
         const activeHomePanel = ['studies', 'engines', 'support'].includes(this.activeHomePanel)
             ? this.activeHomePanel
             : 'studies';
-        const supportToolsCount = toolkitGroups.reduce((sum, group) => sum + group.tools.length, 0);
+        const allSupportTools = toolkitGroups.flatMap(group => group.tools);
+        const journeyToolsCount = allSupportTools.filter(tool => Number.isFinite(tool.step)).length;
+        const independentToolsCount = allSupportTools.length - journeyToolsCount;
+        const supportToolsCount = allSupportTools.length;
         const homePanelId = (panel) => ({
             studies: 'homePanel-studies',
             engines: 'toolsAndEngines',
@@ -341,6 +352,14 @@ export class DashboardView {
                     <!-- Resource Menu Anchor (ResourcesMenu يملؤها) -->
                     <div id="resources-menu-root" class="dv-resources"></div>
                     <span class="dv-topbar__sp"></span>
+                    <!-- تدقيق محتوى: زر تبديل المظهر (headerThemeToggle/btnThemeToggle) كان بلا أي
+                         وسيلة وصول في وضع اللوحة — حاويتاهما (.app-header وsidebar) مخفيتان بالكامل
+                         في dashboard-mode. زر مكافئ هنا داخل شريط عمل ظاهر دائماً. -->
+                    <button type="button" id="dvThemeToggle" class="btn-icon" aria-label="تبديل المظهر" title="المظهر: داكن / فاتح">
+                        <span data-theme-icon="dark" style="${currentTheme === 'dark' ? '' : 'display:none'}"><svg class="ic" aria-hidden="true"><use href="#i-moon"/></svg></span>
+                        <span data-theme-icon="light" style="${currentTheme === 'light' ? '' : 'display:none'}"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg></span>
+                        <span data-theme-icon="auto" style="display:none"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                    </button>
                     <div class="dv-topbar__auth">
                         ${!this.currentUser ? `
                             <button type="button" id="dashboardLogin" class="btn btn--sm btn--secondary">${icon('i-user')} تسجيل الدخول</button>
@@ -389,6 +408,11 @@ export class DashboardView {
                             <!-- شريط الجودة (أكمل) -->
                             ${await this.renderQualityStrip(filtered)}
 
+                            <!-- تدقيق محتوى: باقتا «مراجَع بخبير»/«خدمة كاملة» لم تكونا مذكورتين
+                                 إطلاقاً في مساحة العمل — الفرصة البيعية الوحيدة كانت مؤجَّلة لحظة
+                                 التصدير النهائية عبر PaywallModal.js فقط. بطاقة تعريفية مبكرة هنا. -->
+                            ${hasProjects ? this.renderExpertCta() : ''}
+
                             <!-- Projects Grid -->
                             ${!hasProjects ? this.renderEmptyState() : `
                                 <div class="dv-projects" id="projectsGrid">
@@ -435,6 +459,9 @@ export class DashboardView {
                             <div class="dv-toolsbar">
                                 <input type="search" id="supportToolsSearch" class="input input--sm dv-toolsbar__search" aria-label="بحث في الأدوات المساندة" placeholder="ابحث في الأدوات المساندة..." />
                                 <span class="dv-toolsbar__hint">استخدمها قبل أو أثناء تعبئة الدراسة</span>
+                            </div>
+                            <div class="dv-tools-count-note" role="status">
+                                ${journeyToolsCount} اختصاراً لخطوات الدراسة، و${independentToolsCount} أداة/مصدر مستقل فعلياً (${supportToolsCount} إجمالاً).
                             </div>
                             <div class="dv-toolkits">
                                 <div class="dv-toolkit-grid">
@@ -517,7 +544,10 @@ export class DashboardView {
         if (document.getElementById('onboardingOverlay')) return;
 
         const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay modal-overlay--nonblocking is-open';
+        // تدقيق بصري: "is-open" كانت تُضاف منذ لحظة الإنشاء نفسها (قبل أي appendChild)،
+        // فلا تحصل حالة "مغلق" (opacity:0) على أي إطار رسم فعلي قبل تطبيق "مفتوح" —
+        // فينعدم أثر transition المعرَّف في CSS ويظهر التلاشي كقفزة جافة. أُضيفت بعد الإدراج بإطارين.
+        overlay.className = 'modal-overlay modal-overlay--nonblocking';
         overlay.id = 'onboardingOverlay';
 
         overlay.innerHTML = `
@@ -552,6 +582,13 @@ export class DashboardView {
         `;
 
         document.body.appendChild(overlay);
+        // rAF مزدوج: يضمن أن المتصفح رسم حالة "مغلق" (بلا is-open) في إطار فعلي أولاً،
+        // فيكون لديه قيمة بداية ينتقل منها عند إضافة is-open في الإطار التالي.
+        // + شبكة أمان setTimeout: rAF قد لا يُطلَق إطلاقاً في تبويب غير نشط/مصغَّر (تحقّق حي)،
+        // فتبقى النافذة عالقة على opacity:0 (مخفية تماماً) بلا شبكة أمان — classList.remove/add آمنة التكرار.
+        const revealOnboarding = () => overlay.classList.add('is-open');
+        requestAnimationFrame(() => requestAnimationFrame(revealOnboarding));
+        setTimeout(revealOnboarding, 300);
         const previousBodyOverflow = document.body.style.overflow;
 
         const closeBtn = overlay.querySelector('.btn-close');
@@ -666,7 +703,9 @@ export class DashboardView {
     // واحدة فقط لحساب نسبة زخرفية. الآن: رسم فوري ببيانات ما هو متاح، وتحميل مؤجَّل
     // لشارة «جودة المسودة» فقط عبر hydrateProjectCompleteness() بعد أول رسم.
     renderProjectCard(project) {
-        const date = new Date(project.lastModified || project.updated_at).toLocaleDateString('ar-SA');
+        // -u-nu-latn: يفرض أرقاماً لاتينية — بدونها ar-SA يُخرج أرقاماً هندية شرقية (١٠/٧/٢٠٢٦)
+        // تتعارض مع باقي الأرقام المعروضة بخط JetBrains Mono اللاتيني في نفس البطاقة (.dv-num).
+        const date = new Date(project.lastModified || project.updated_at).toLocaleDateString('ar-SA-u-nu-latn');
         const isCloud = project.source === 'cloud' || project.source === 'synced';
         const isLocal = project.source === 'local';
         const hasInlineData = !!(project.data && project.data.projectInfo);
@@ -701,6 +740,7 @@ export class DashboardView {
                 </div>
 
                 ${badges ? `<div class="dv-project__badges">${badges}</div>` : ''}
+                ${isLocal && !isCloud ? `<p class="dv-project__local-warning" role="note">هذه المسودة محفوظة على هذا الجهاز فقط. صدّر نسخة احتياطية قبل تغيير الجهاز أو مسح بيانات المتصفح.</p>` : ''}
 
                 ${folders.length ? `
                 <div class="dv-project__folder">
@@ -714,7 +754,7 @@ export class DashboardView {
                     <button class="btn btn--sm btn--secondary dv-project__open btn-open" data-id="${project.id}">فتح</button>
                     <button class="btn btn--sm btn--ghost dv-iconbtn btn-share" data-id="${project.id}" title="عرض المستثمر (مشاركة)">${icon('i-share')}</button>
                     <button class="btn btn--sm btn--ghost dv-iconbtn btn-duplicate" data-id="${project.id}" title="نسخ المشروع">${icon('i-clipboard')}</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn dv-iconbtn--danger btn-delete" data-id="${project.id}" title="حذف">${icon('i-trash')}</button>
+                    <button class="btn btn--sm btn--ghost dv-iconbtn dv-iconbtn--danger btn-delete" data-id="${project.id}" title="نقل لسلة المحذوفات">${icon('i-trash')}</button>
                 </div>
             </div>
         `;
@@ -736,16 +776,17 @@ export class DashboardView {
 
         try {
             const q = QualityCalculator.calculate(latest);
-            const badgeLabel = stripEmoji(q.badge) || 'مبتدئ';
+            const badgeLabel = stripEmoji(q.badge) || 'بيانات أساسية';
             return `
                 <section id="quality-strip" class="dv-section">
                     <div class="dv-quality">
                         <div class="dv-quality__info">
                             <div class="dv-quality__head">
                                 <span class="dv-pill dv-pill--onband">${badgeLabel}</span>
-                                <h3 class="dv-quality__title">جودة دراستك — <span class="dv-quality__name">${escapeHtml(latest.projectInfo.name || '')}</span></h3>
+                                <h3 class="dv-quality__title">اكتمال بيانات الدراسة — <span class="dv-quality__name">${escapeHtml(latest.projectInfo.name || '')}</span></h3>
                             </div>
                             <p class="dv-quality__hint">أكملت <b class="dv-num">${q.score}%</b> من الدراسة. ${q.missing.length > 0 ? 'خطوتك التالية: ' + q.missing[0].label : 'ممتاز! الدراسة مكتملة.'}</p>
+                            <p class="dv-quality__caveat">هذه النسبة تقيس اكتمال البيانات المدخلة فقط، لا سلامة القرار المالي — راجع مؤشرات NPV وIRR ونقطة التعادل لمعرفة ذلك.</p>
                         </div>
                         <div class="dv-quality__cta-wrap">
                             <div class="dv-track dv-track--onband"><div class="dv-track__fill" style="width: ${q.score}%"></div></div>
@@ -755,6 +796,32 @@ export class DashboardView {
                 </section>
             `;
         } catch (e) { console.error(e); return ''; }
+    }
+
+    // بطاقة تعريفية بباقة «مراجَع بخبير» ضمن مساحة العمل نفسها — قبل ذلك لم تكن الباقات
+    // المدفوعة الأعلى هامشاً (تتطلب تدخلاً بشرياً فعلياً) تظهر إلا داخل نافذة القفل
+    // (PaywallModal.js) عند محاولة التصدير، أي في آخر لحظة ممكنة من رحلة المستخدم.
+    renderExpertCta() {
+        try {
+            const pkg = PRICING_PACKAGES.find(p => p.id === 'reviewed');
+            if (!pkg) return '';
+            const waLink = buildWhatsAppLink(`مرحباً، أرغب بمراجعة خبير لدراستي عبر منصة «قرار» (باقة «${pkg.name}» — ${formatPrice(pkg.price)} ${CURRENCY_SYMBOL}).`);
+            // waLink يكون null إن كان رقم واتساب غير مضبوط بعد — لا نعرض رابطاً مكسوراً
+            // (نفس منطق التراجع الرشيق في PaywallModal.js وlanding.html).
+            const ctaAction = waLink
+                ? `<a href="${waLink}" target="_blank" rel="noopener noreferrer" class="btn btn--sm btn--secondary">تواصل عبر واتساب</a>`
+                : `<span class="text-xs text-muted">قناة واتساب غير متاحة حالياً</span>`;
+            return `
+                <div class="dv-expert-cta">
+                    <span class="dv-expert-cta__ic">${icon('i-user')}</span>
+                    <div class="dv-expert-cta__body">
+                        <strong>محتار في افتراضاتك؟ دع خبيراً يراجع دراستك</strong>
+                        <span>${formatPrice(pkg.price)} ${CURRENCY_SYMBOL} — مراجعة مختص وتحليل حساسية موسّع قبل التسليم</span>
+                    </div>
+                    ${ctaAction}
+                </div>
+            `;
+        } catch (e) { console.warn('renderExpertCta failed:', e); return ''; }
     }
 
     bindEvents() {
@@ -768,6 +835,23 @@ export class DashboardView {
                 }).open();
             });
         }
+
+        // تبديل المظهر (تدقيق محتوى: كان زرا #btnThemeToggle/#headerThemeToggle بلا أي
+        // وسيلة وصول في وضع اللوحة لأن حاويتيهما مخفيتان بالكامل بـ dashboard-mode).
+        // زر مكافئ هنا يبدّل نفس مفتاح localStorage['feas_theme'] المستخدم في theme-init.js.
+        this.container.querySelector('#dvThemeToggle')?.addEventListener('click', (e) => {
+            let current = 'light';
+            try { current = localStorage.getItem('feas_theme') || 'light'; } catch (_) { /* تجاهل */ }
+            if (current === 'auto') current = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            try { localStorage.setItem('feas_theme', next); } catch (_) { /* تجاهل */ }
+            document.documentElement.setAttribute('data-theme', next);
+            const btn = e.currentTarget;
+            const darkIc = btn.querySelector('[data-theme-icon="dark"]');
+            const lightIc = btn.querySelector('[data-theme-icon="light"]');
+            if (darkIc) darkIc.style.display = next === 'dark' ? '' : 'none';
+            if (lightIc) lightIc.style.display = next === 'light' ? '' : 'none';
+        });
 
         // حسابي (تدقيق 2026-07-09 — توحيد المصادقة): كان هذا الزر موجوداً فقط داخل
         // AuthComponent.js الميت (حاويته مخفية دائماً)، فصفحة الحساب/إعدادات 2FA
@@ -810,7 +894,17 @@ export class DashboardView {
                 btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
             });
             this.container.querySelectorAll('[data-home-panel]').forEach(section => {
-                section.hidden = section.dataset.homePanel !== panel;
+                const show = section.dataset.homePanel === panel;
+                section.hidden = !show;
+                if (show) {
+                    // تدقيق بصري: تبديل التبويبات كان فورياً بلا أي حركة — تلاشي دخول خفيف فقط.
+                    // شبكة أمان setTimeout: بلا rAF يُطلَق (تبويب غير نشط) يبقى القسم عالقاً على
+                    // opacity:0 (مخفياً تماماً رغم hidden=false) — تحقّق حي كشف هذا الخطر فعلياً.
+                    section.classList.add('is-appearing');
+                    const revealPanel = () => section.classList.remove('is-appearing');
+                    requestAnimationFrame(() => requestAnimationFrame(revealPanel));
+                    setTimeout(revealPanel, 300);
+                }
             });
             if (scroll) {
                 this.container.querySelector('#homeWorkspace')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -866,8 +960,17 @@ export class DashboardView {
         });
 
         // Funding Simulator Toggle
+        // تدقيق بصري: .dv-modal بلا أي transition — تظهر النافذة بقفزة جافة. الآن حالة
+        // "is-entering" (opacity:0) تُضاف أولاً، وتُزال بعد رسم فعلي (rAF مزدوج) فيتلاشى الظهور.
         this.container.querySelectorAll('#btnFundingSim, #btnFundingSimToolkit').forEach(btn => btn.addEventListener('click', () => {
-            this.container.querySelector('#funding-sim-root').classList.remove('hidden');
+            const modal = this.container.querySelector('#funding-sim-root');
+            if (!modal) return;
+            modal.classList.add('is-entering');
+            modal.classList.remove('hidden');
+            // شبكة أمان setTimeout: بلا rAF يُطلَق (تبويب غير نشط) تبقى النافذة على opacity:0 دائماً.
+            const revealModal = () => modal.classList.remove('is-entering');
+            requestAnimationFrame(() => requestAnimationFrame(revealModal));
+            setTimeout(revealModal, 300);
         }));
         this.container.querySelector('#btnCloseFundingSim')?.addEventListener('click', () => {
             this.container.querySelector('#funding-sim-root').classList.add('hidden');
@@ -927,7 +1030,7 @@ export class DashboardView {
             linkTrustCriteriaToolkit: () => this.options.onShowTrustCriteria?.(),
             linkImportCsvToolkit: () => document.getElementById('fileImportCSV')?.click(),
             linkImportCsvSources: () => document.getElementById('fileImportCSV')?.click(),
-            linkPythonConnectorDocs: () => toast.info('موصل Python المخصص: نربطه عبر Backend/Proxy آمن حتى لا تُحفظ مفاتيح API داخل المتصفح.'),
+            linkPythonConnectorDocs: () => toast.info('ربط مصادر بيانات مخصّصة قيد الإعداد — نحفظ مفاتيح الوصول بأمان على خوادمنا بدل تخزينها في متصفحك.'),
             linkTrustCriteriaStats: () => this.options.onShowTrustCriteria?.()
         };
         this.container.addEventListener('click', (e) => {

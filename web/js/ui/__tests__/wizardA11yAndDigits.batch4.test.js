@@ -92,7 +92,9 @@ describe('RiskMatrix — aria-label على زر الحذف + الأرقام ال
         const badge = document.querySelector('.risk-register .badge');
         expect(badge).toBeTruthy();
         const text = badge.textContent.trim();
-        expect(text).toBe((6).toLocaleString('ar-SA')); // "٦"
+        // تدقيق إتاحة (a11y) لاحق: أُضيفت تسمية نصية للخطورة («عالي») بجانب الرقم —
+        // لا تعتمد الشارة على اللون وحده لتمييز الخطورة. الرقم نفسه يبقى هندياً عربياً.
+        expect(text).toBe(`عالي (${(6).toLocaleString('ar-SA')})`); // "عالي (٦)"
         expect(text).toMatch(ARABIC_INDIC);
         expect(text).not.toMatch(/[0-9]/); // لا تسرّب رقم لاتيني بجانب الرقم الهندي
     });

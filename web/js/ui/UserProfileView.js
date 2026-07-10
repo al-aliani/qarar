@@ -31,7 +31,7 @@ export class UserProfileView {
         }
 
         const createdAt = user.created_at
-            ? new Date(user.created_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
+            ? new Date(user.created_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric', numberingSystem: 'latn' })
             : '—';
         const displayName = getDisplayName(user);
         const initial = (displayName !== '—' ? displayName[0] : (user.email || user.phone || '?')[0]).toUpperCase();

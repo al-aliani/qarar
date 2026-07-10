@@ -14,6 +14,8 @@ import { AuthGuard } from './js/middleware/AuthGuard.js';
 import './js/services/connectors/index.js';
 import { initShellController } from './js/app-controller.js';
 import { ModeSelector } from './js/ui/ModeSelector.js';
+import { startFullStudyFromQuick } from './js/core/quickFeasibilityProject.js';
+import { trackEvent } from './js/utils/analytics.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const installArabicUiGuard = () => {
@@ -211,6 +213,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cleanUrl = new URL(window.location.href);
     cleanUrl.searchParams.delete('auth');
     window.history.replaceState({}, '', cleanUrl);
+  }
+
+  // إسناد مصدر الزيارة من صفحة الهبوط (index.html?cta=hero/nav/price-self/final/footer):
+  // يُحفظ في sessionStorage ليُرفق لاحقاً بأول حدث قياس تحويل يُضاف (لا قياس مُفعَّل بعد)
+  // وبطلب إنشاء جلسة الدفع، حتى تُنسب عمليات الدفع الفعلية لعنصر الصفحة الذي قادها.
+  const landingCta = new URLSearchParams(window.location.search).get('cta');
+  if (landingCta) {
+    try { sessionStorage.setItem('landing_cta', landingCta); } catch (_) { /* تجاهل بيئات بلا sessionStorage */ }
+    const cleanCtaUrl = new URL(window.location.href);
+    cleanCtaUrl.searchParams.delete('cta');
+    window.history.replaceState({}, '', cleanCtaUrl);
+    trackEvent('landing_cta_view', { cta: landingCta });
   }
 
   const btnToggleSidebar = document.getElementById('btnToggleSidebar');
@@ -741,38 +755,18 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (breadcrumbBar) breadcrumbBar.style.removeProperty('display');
           showLandingDashboard();
         },
-        onFinish: (quickData) => {
-          if (sidebarEl) sidebarEl.style.removeProperty('display');
-          if (stepperNavEl) stepperNavEl.style.removeProperty('display');
-          if (breadcrumbBar) breadcrumbBar.style.display = 'block';
-          enterWorkspaceMode();
-          const state = store.getState();
-          const projectInfo = state.projectInfo || {};
-          store.update('projectInfo', {
-            ...projectInfo,
-            name: quickData.projectName || projectInfo.name,
-            concept: quickData.sector || projectInfo.concept,
-            city: quickData.city || projectInfo.city
-          });
-          if (quickData.generated) {
-            if (quickData.generated.execSummary) {
-              const es = state.executiveSummary || {};
-              store.update('executiveSummary', { ...es, projectOverview: quickData.generated.execSummary });
-            }
-            if (quickData.generated.market) {
-              const m = state.marketing || {};
-              const ma = m.marketAnalysis || {};
-              store.update('marketing', { ...m, marketAnalysis: { ...ma, summary: quickData.generated.market } });
-            }
-            if (Array.isArray(quickData.generated.competitors) && quickData.generated.competitors.length) {
-              store.update('marketing', { ...(store.getState().marketing || {}), competitors: quickData.generated.competitors });
-            }
-            if (Array.isArray(quickData.generated.risks) && quickData.generated.risks.length) {
-              const ra = state.riskAnalysis || {};
-              store.update('riskAnalysis', { ...ra, risks: quickData.generated.risks });
-            }
+        onFinish: async (quickData) => {
+          try {
+            await startFullStudyFromQuick(store, quickData);
+            if (sidebarEl) sidebarEl.style.removeProperty('display');
+            if (stepperNavEl) stepperNavEl.style.removeProperty('display');
+            if (breadcrumbBar) breadcrumbBar.style.display = 'block';
+            enterWorkspaceMode();
+            await navigateTo(3);
+          } catch (err) {
+            console.error('Failed to start full study from quick feasibility:', err);
+            toast.error('تعذر إنشاء الدراسة الكاملة');
           }
-          navigateTo(3);
         }
       });
       quickWizard.render();
@@ -1009,7 +1003,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (step.isBalanceSheet) {
         if (!components.balanceSheet) {
           const { BalanceSheetView } = await import('./js/ui/BalanceSheetView.js');
-          components.balanceSheet = new BalanceSheetView(containerId, store);
+          components.balanceSheet = new BalanceSheetView(containerId, store, navigateTo);
         }
         const results = runFullModel(store.getState());
         components.balanceSheet.render(results.balanceSheets);

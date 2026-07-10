@@ -142,3 +142,58 @@ describe('DashboardView — تبديل تبويبات مساحة العمل', ()
         expect(enginesPanel.hidden).toBe(false);
     });
 });
+
+// ─────────────────────────────────────────────────────────────
+// إتاحة (a11y): شارات حالة بطاقة المشروع (سحابي/محلي/مشترك) في renderProjectCard
+// كل شارة مُميَّزة بلون (badge--info/warning/success)؛ نتحقق أن كل شارة تحمل معاً
+// صنف اللون وأيقونة ونصاً ظاهرين، فلا يعتمد التمييز بينها على اللون وحده.
+// نفس نمط التحقق في batch6.readinessDimensions.test.js.
+// ─────────────────────────────────────────────────────────────
+describe('DashboardView — شارات حالة المشروع (سحابي/محلي/مشترك) لا تعتمد على اللون فقط (a11y)', () => {
+    beforeEach(() => {
+        document.body.innerHTML = '<div id="dv"></div>';
+        vi.clearAllMocks();
+    });
+
+    it('شارة "سحابي": صنف badge--info + أيقونة ونص "سحابي" ظاهران معاً', async () => {
+        const view = await makeView(null);
+        const project = { id: 'p1', name: 'مشروع سحابي', lastModified: new Date().toISOString(), source: 'cloud' };
+        const html = view.renderProjectCard(project);
+        document.body.innerHTML = `<div id="host">${html}</div>`;
+
+        const badge = document.querySelector('#host .dv-project__badges .badge');
+        expect(badge).toBeTruthy();
+        expect(badge.className).toContain('badge--info');
+        expect(badge.textContent).toContain('سحابي');
+        expect(badge.querySelector('svg')).toBeTruthy();
+    });
+
+    it('شارة "محلي": صنف badge--warning + أيقونة ونص "محلي" ظاهران معاً', async () => {
+        const view = await makeView(null);
+        const project = { id: 'p2', name: 'مشروع محلي', lastModified: new Date().toISOString(), source: 'local' };
+        const html = view.renderProjectCard(project);
+        document.body.innerHTML = `<div id="host">${html}</div>`;
+
+        const badge = document.querySelector('#host .dv-project__badges .badge');
+        expect(badge).toBeTruthy();
+        expect(badge.className).toContain('badge--warning');
+        expect(badge.textContent).toContain('محلي');
+        expect(badge.querySelector('svg')).toBeTruthy();
+    });
+
+    it('شارة "مشترك": صنف badge--success + أيقونة ونص "مشترك" ظاهران معاً حين توجد بيانات فريق مضمّنة', async () => {
+        const view = await makeView(null);
+        const project = {
+            id: 'p3', name: 'مشروع مشترك', lastModified: new Date().toISOString(), source: 'cloud',
+            data: { projectInfo: { name: 'مشروع مشترك', members: [{ name: 'شريك' }] } }
+        };
+        const html = view.renderProjectCard(project);
+        document.body.innerHTML = `<div id="host">${html}</div>`;
+
+        const badges = [...document.querySelectorAll('#host .dv-project__badges .badge')];
+        const sharedBadge = badges.find(b => b.textContent.includes('مشترك'));
+        expect(sharedBadge).toBeTruthy();
+        expect(sharedBadge.className).toContain('badge--success');
+        expect(sharedBadge.querySelector('svg')).toBeTruthy();
+    });
+});

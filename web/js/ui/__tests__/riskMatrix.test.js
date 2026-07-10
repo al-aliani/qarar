@@ -57,8 +57,11 @@ describe('RiskMatrix — تصنيف الدرجة (احتمالية × أثر): �
             // تدقيق 2026-07-09 (حزمة 4، اتساق الأرقام): الشارة تُعرض الآن بأرقام هندية
             // عربية (toLocaleString('ar-SA')) اتساقاً مع بقية أرقام نفس الجدول (الإجمالي
             // المالي في تذييله)، بعد أن كانت الشارة وحدها تُظهر أرقاماً لاتينية خام.
+            // تدقيق إتاحة (a11y): الشارة تحمل الآن تسمية نصية للخطورة (حرج/عالي/متوسط/
+            // منخفض) إلى جانب الرقم — لا اعتماد على اللون وحده (انظر وصف الملف أدناه).
             const badge = document.querySelector('.risk-register .badge');
-            expect(badge.textContent.trim()).toBe(score.toLocaleString('ar-SA'));
+            const severityLabel = { critical: 'حرج', high: 'عالي', medium: 'متوسط', low: 'منخفض' }[expectedClass.replace('risk-', '')];
+            expect(badge.textContent.trim()).toBe(`${severityLabel} (${score.toLocaleString('ar-SA')})`);
             const expectedBadgeClass = score >= 9 ? 'badge--danger' : score >= 6 ? 'badge--warning' : score >= 3 ? 'badge--info' : 'badge--success';
             expect(badge.className).toContain(expectedBadgeClass);
         });
@@ -181,7 +184,8 @@ describe('RiskMatrix — تحديث الحقول (updateRisk)', () => {
 
         expect(store.getState().riskAnalysis.risks[0].probability).toBe('high');
         // بعد إعادة الرسم: الدرجة الجديدة (high×low=3) تظهر في الشارة (أرقام هندية عربية، حزمة 4)
-        expect(document.querySelector('.risk-register .badge').textContent.trim()).toBe((3).toLocaleString('ar-SA'));
+        // + تسمية الخطورة النصية «متوسط» (تصنيف الدرجة 3 هو medium — انظر classifyRiskScore)
+        expect(document.querySelector('.risk-register .badge').textContent.trim()).toBe(`متوسط (${(3).toLocaleString('ar-SA')})`);
     });
 
     it('تغيير الأثر المالي (حقل رقمي) يُخزَّن كرقم لا نص، وقيمة غير صالحة تُصبح صفراً', () => {
@@ -251,5 +255,47 @@ describe('RiskMatrix — إضافة/حقن حزمة المخاطر القطاع�
         view.injectSectorPack();
         expect(store.getState().riskAnalysis.risks).toHaveLength(1);
         expect(store.getState().riskAnalysis.risks[0].name).toBe('خطر المستخدم');
+    });
+});
+
+// ─────────────────────────────────────────────────────────────
+// إتاحة (a11y): شارة درجة الخطر في سجل المخاطر أخطر عنصر لوني في التطبيق —
+// معلومة "سلامة" (خطر حرج) لا يجوز أن تعتمد على اللون وحده. نتحقق أن كل شارة
+// تحمل معاً: (1) صنف CSS اللوني الصحيح و(2) تسمية نصية ظاهرة للخطورة —
+// نفس نمط التحقق في batch6.readinessDimensions.test.js.
+// ─────────────────────────────────────────────────────────────
+describe('RiskMatrix — شارة الدرجة لا تعتمد على اللون فقط (a11y)', () => {
+    beforeEach(() => { document.body.innerHTML = `<div id="c"></div>`; });
+
+    const severityCases = [
+        { probability: 'low', impact: 'low', score: 1, cssClass: 'badge--success', label: 'منخفض' },
+        { probability: 'low', impact: 'medium', score: 3, cssClass: 'badge--info', label: 'متوسط' },
+        { probability: 'medium', impact: 'medium', score: 6, cssClass: 'badge--warning', label: 'عالي' },
+        { probability: 'medium', impact: 'high', score: 10, cssClass: 'badge--danger', label: 'حرج' },
+    ];
+
+    severityCases.forEach(({ probability, impact, score, cssClass, label }) => {
+        it(`درجة الخطر ${score} (${label}) ⇒ صنف "${cssClass}" + تسمية نصية "${label}" معاً`, () => {
+            const store = fakeStore({ riskAnalysis: { risks: [risk({ probability, impact, name: 'خطر a11y' })] } });
+            const view = new RiskMatrix('c', store, () => {});
+            view.render(0);
+
+            const badge = document.querySelector('.risk-register .badge');
+            // (1) الصنف اللوني
+            expect(badge.className).toContain(cssClass);
+            // (2) التسمية النصية الظاهرة — لا يكفي اللون وحده لتمييز الخطورة
+            expect(badge.textContent).toContain(label);
+        });
+    });
+
+    it('تسمية الخطورة النصية في الشارة تطابق تسميات الأسطورة (Legend) أسفل مصفوفة المخاطر', () => {
+        const store = fakeStore({ riskAnalysis: { risks: [risk({ probability: 'medium', impact: 'high', name: 'خطر حرج' })] } });
+        const view = new RiskMatrix('c', store, () => {});
+        view.render(0);
+
+        const legendText = document.querySelector('.risk-legend').textContent;
+        const badge = document.querySelector('.risk-register .badge');
+        expect(badge.textContent).toContain('حرج');
+        expect(legendText).toContain('حرج');
     });
 });
