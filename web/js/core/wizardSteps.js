@@ -30,7 +30,11 @@ export const STEPS = [
   { id: SECTIONS.TECHNICAL, label: "الأصول والتجهيزات", tables: ['establishmentCosts', 'capacityModel', 'capacityUtilization', 'buildings', 'equipment', 'furniture', 'locationAssessment'] },
   { id: 'operational_sim', label: "محاكاة التشغيل", isOperationalSim: true, isAdvancedStep: true },
   { id: SECTIONS.HR, label: "الفريق والرواتب", tables: ['positions', 'advisoryBoard'] },
-  { id: SECTIONS.TECH_RESOURCES, label: "الموارد التقنية", tables: ['techResources'] },
+  // شاشة «المصاريف التشغيلية» المدموجة (2026-07-11): تجمع الأقسام الثلاثة بصرياً عبر
+  // OperatingCostsView. القسم يبقى techResources (المحرّك يقرؤه كما هو)؛ logistics
+  // وadministrative تبقيان خطوتين مستقلتين للوضع الكامل/المتقدم، لكن المسار المبسّط
+  // (INPUT_STEPS) يخفيهما لأنهما تُدخلان داخل هذه الشاشة الواحدة.
+  { id: SECTIONS.TECH_RESOURCES, label: "المصاريف التشغيلية", tables: ['techResources'], isOperatingCosts: true },
   { id: SECTIONS.LOGISTICS, label: "الموارد اللوجستية", tables: ['logistics'] },
   { id: SECTIONS.ADMINISTRATIVE, label: "الموارد الإدارية", tables: ['administrative'] },
   { id: SECTIONS.ORG_STRUCTURE, label: "الهيكل التنظيمي والحوكمة", tables: ['operationalKpis'], isOrgStructure: true },
@@ -210,3 +214,120 @@ export function getMajorPhaseForStep(stepIndex) {
 }
 
 export { getPhaseForStep, getStepHelp };
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   طبقة إعادة الهيكلة (تدقيق تجربة المستخدم 2026-07-11)
+   ───────────────────────────────────────────────────────────────────────────
+   المشكلة: المعالج كان 41 «خطوة» خطّية تخلط الإدخال بالنتائج، ففقد المستخدم
+   إحساس التقدّم (يظن أن أمامه ٢٠ خطوة عمل بينما نصفها «اقرأ نتيجة»).
+
+   الحل — بلا لمس المحرّكات: تبقى STEPS كاملةً (٤١) كسجل مرجعي للمحرّكات والحفظ
+   والتوجيه (تقرأ البيانات بمعرّف القسم — أي حذف يكسر الحسابات). نضيف فوقها
+   «تدفّقاً» لكل خطوة، ونشتق منه قوائم عرض جديدة دون حذف أي شيء:
+     • input      → خطوة إدخال فعلية يملؤها المستخدم (١٦ خطوة = مسار المعالج الجديد)
+     • result     → شاشة مخرجات تُقرأ فقط → تنتقل للوحة النتائج المستقلة
+     • advanced   → أداة اختيارية تُخفى خلف زر «أدوات متقدمة»
+     • postlaunch → ما بعد الإطلاق (ليست جزءاً من دراسة الجدوى أصلاً)
+
+   التفعيل في app.js: مرّر getStreamlinedWizardSteps() كـ steps للمعالج
+   (نفس نمط الأوضاع mini/simple/quick الموجود أصلاً بسطر ~1503)، وابنِ صفحة
+   نتائج من RESULTS_DASHBOARD_TABS تظهر بعد آخر خطوة إدخال.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// تدفّق كل خطوة بمعرّفها (لا بموقعها) — يسمح بإعادة الترتيب دون انزياح التصنيف.
+const STEP_FLOW_ENTRIES = [
+  // ── فكرتك ──
+  ['preliminaryCheck', 'input'],
+  ['projectAlternatives', 'advanced'],        // مقارنة أفكار — قيّمة لكن ليست لكل مستخدم
+  [SECTIONS.PROJECT_INFO, 'input'],
+  ['projectDetails', 'input'],                // المنتجات/الخدمات (هدف دمج مع الإيرادات)
+  [SECTIONS.KEY_PEOPLE, 'input'],
+  ['projectIntro', 'input'],                  // فرضية المشروع (هدف دمج مع الأهداف الذكية)
+  [SECTIONS.SMART_GOALS, 'advanced'],         // سرد يتداخل مع الفرضية → متقدم
+  // ── سوقك ──
+  ['marketSizing', 'advanced'],               // TAM/SAM/SOM → يُدمج ضمن الدراسة السوقية
+  [SECTIONS.MARKETING, 'input'],
+  [SECTIONS.STRATEGIC, 'input'],
+  [SECTIONS.REVENUE, 'input'],
+  [SECTIONS.SERVICES, 'advanced'],            // تحليل خدمات مكرّر مع المنتجات/الإيراد
+  // ── تشغيلك وتكاليفك ──
+  [SECTIONS.TECHNICAL, 'input'],
+  ['operational_sim', 'advanced'],            // محاكاة طوابير نيتشية
+  [SECTIONS.HR, 'input'],
+  [SECTIONS.TECH_RESOURCES, 'input'],         // يمثّل شاشة «المصاريف التشغيلية» المدموجة
+  [SECTIONS.LOGISTICS, 'advanced'],           // يُدمج بصرياً ضمن المصاريف التشغيلية
+  [SECTIONS.ADMINISTRATIVE, 'advanced'],      // يُدمج بصرياً ضمن المصاريف التشغيلية
+  [SECTIONS.ORG_STRUCTURE, 'advanced'],
+  [SECTIONS.LEGAL, 'input'],
+  // ── مالك ──
+  [SECTIONS.TIMELINE, 'input'],
+  [SECTIONS.ASSUMPTIONS, 'input'],
+  [SECTIONS.FINANCING, 'input'],
+  [SECTIONS.FINANCIAL_STATEMENTS, 'result'],
+  ['balance_sheet', 'result'],
+  [SECTIONS.BREAK_EVEN, 'result'],
+  [SECTIONS.ZAKAT_TAX, 'advanced'],           // يحتاج إدخال نِسَب لكن مخرجاته حسابية
+  ['investor_analysis', 'result'],
+  [SECTIONS.VALUATION, 'result'],
+  // ── مخاطرك ──
+  [SECTIONS.RISK_ANALYSIS, 'input'],
+  [SECTIONS.SCENARIOS, 'advanced'],
+  ['sensitivity', 'result'],
+  ['stress_test', 'result'],
+  [SECTIONS.MONTE_CARLO, 'result'],
+  // ── أدلة ونتائج ──
+  [SECTIONS.APPENDICES, 'advanced'],
+  [SECTIONS.BUSINESS_MODEL, 'result'],
+  ['dashboard', 'result'],
+  [SECTIONS.DECISION_DASHBOARD, 'result'],
+  [SECTIONS.EXECUTIVE_SUMMARY, 'result'],
+  ['reportBuilder', 'advanced'],              // أداة ما‑قبل‑تصدير، لا خطوة
+  [SECTIONS.ACTUALS, 'postlaunch'],           // بعد الإطلاق — خارج نطاق الجدوى
+];
+const STEP_FLOW = new Map(STEP_FLOW_ENTRIES);
+
+/** تدفّق الخطوة: input | result | advanced | postlaunch (افتراض آمن: input). */
+export function stepFlow(step) {
+  return STEP_FLOW.get(step?.id) || 'input';
+}
+
+// حارس انحراف: كل خطوة يجب أن تُصنَّف صراحةً (يكشف أي خطوة جديدة غير مصنّفة).
+const _unclassified = STEPS.filter(s => !STEP_FLOW.has(s.id)).map(s => s.id);
+if (_unclassified.length) {
+  console.error(`[wizardSteps] خطوات بلا تصنيف تدفّق: ${_unclassified.join(', ')} — ستُعرض كإدخال افتراضاً.`);
+}
+
+/** مسار المعالج الجديد: خطوات الإدخال فقط (١٦) — هذا ما يراه المستخدم كـ«خطوات». */
+export const INPUT_STEPS = STEPS.filter(s => stepFlow(s) === 'input');
+
+/** شاشات النتائج المفصولة — تُبنى كلوحة مخرجات مستقلة بعد آخر خطوة إدخال. */
+export const RESULTS_DASHBOARD_TABS = STEPS
+  .filter(s => stepFlow(s) === 'result')
+  .map(s => ({ id: s.id, label: s.label, stepIndex: STEPS.indexOf(s) }));
+
+/** أدوات اختيارية تُخفى خلف «أدوات متقدمة» (تبقى متاحة، بلا إثقال المبتدئ). */
+export const ADVANCED_TOOLS = STEPS
+  .filter(s => stepFlow(s) === 'advanced')
+  .map(s => ({ id: s.id, label: s.label, stepIndex: STEPS.indexOf(s) }));
+
+/**
+ * المراحل الخمس لمسار الإدخال — قصة واضحة: فكرة → سوق → تشغيل → مال → مخاطر.
+ * كل مرحلة تسرد معرّفات خطوات الإدخال التابعة لها (بالترتيب المنطقي المقترح).
+ */
+export const INPUT_PHASES = [
+  { id: 'idea',     label: 'فكرتك',            stepIds: ['preliminaryCheck', SECTIONS.PROJECT_INFO, 'projectDetails', SECTIONS.REVENUE, 'projectIntro'] },
+  { id: 'market',   label: 'سوقك',             stepIds: [SECTIONS.MARKETING, SECTIONS.STRATEGIC] },
+  { id: 'ops',      label: 'تشغيلك وتكاليفك',  stepIds: [SECTIONS.TECHNICAL, SECTIONS.HR, SECTIONS.TECH_RESOURCES, SECTIONS.KEY_PEOPLE, SECTIONS.LEGAL] },
+  { id: 'finance',  label: 'مالك',             stepIds: [SECTIONS.ASSUMPTIONS, SECTIONS.FINANCING, SECTIONS.TIMELINE] },
+  { id: 'risk',     label: 'مخاطرك',           stepIds: [SECTIONS.RISK_ANALYSIS] },
+];
+
+/**
+ * يبني قائمة خطوات المعالج المبسّط + خريطة الفهرسة (محلي→مطلق داخل STEPS الكاملة)
+ * — بنفس عقد الأوضاع mini/simple/quick في app.js. مرّر نتيجته كـ options.steps.
+ */
+export function getStreamlinedWizardSteps() {
+  const visibleSteps = INPUT_STEPS;
+  const stepIndexMap = visibleSteps.map(step => STEPS.indexOf(step));
+  return { visibleSteps, stepIndexMap };
+}

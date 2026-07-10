@@ -583,6 +583,42 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500)
 .pc-premium .res-chip { transition: background-color 0.18s, border-color 0.18s, color 0.18s, transform 0.18s; }
 .pc-premium .res-chip:hover { transform: translateY(-1px); }
 
+/* ═══ المصاريف التشغيلية (OperatingCostsView) — أكورديون يجمع ٣ أقسام ═══ */
+.oc-sections { display: flex; flex-direction: column; gap: var(--s-3); }
+.oc-section { padding: 0; overflow: hidden; }
+.oc-section__summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    cursor: pointer;
+    padding: clamp(0.9rem, 2vw, 1.15rem) clamp(1rem, 2.5vw, 1.4rem);
+    list-style: none;
+    transition: background-color 0.15s;
+}
+.oc-section__summary::-webkit-details-marker { display: none; }
+.oc-section__summary:hover { background: var(--c-surface-2); }
+.oc-section__summary::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: clamp(1rem, 2.5vw, 1.4rem);
+    margin-top: 0.4rem;
+    width: 0.55rem; height: 0.55rem;
+    border-inline-end: 2px solid var(--c-text-muted);
+    border-bottom: 2px solid var(--c-text-muted);
+    transform: rotate(45deg);
+    transition: transform 0.2s ease;
+}
+.oc-section[open] .oc-section__summary::after { transform: rotate(-135deg); }
+.oc-section__summary { position: relative; }
+.oc-section__title { font-weight: 700; font-size: 1rem; color: var(--c-text-main); padding-inline-start: 1.4rem; }
+.oc-section__desc { font-size: 0.83rem; color: var(--c-text-muted); padding-inline-start: 1.4rem; }
+.oc-section__body {
+    padding: 0 clamp(1rem, 2.5vw, 1.4rem) clamp(1rem, 2.5vw, 1.4rem);
+    border-top: 1px solid var(--c-border);
+    margin-top: 0.3rem;
+    padding-top: var(--s-3);
+}
+
 /* ═══════════════════════════════════════════════════════════
    بطاقات تحجيم السوق (TAM/SAM/SOM) ومصفوفة TOWS — تحسينات دفعة 3
    ═══════════════════════════════════════════════════════════ */

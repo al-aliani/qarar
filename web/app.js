@@ -986,6 +986,15 @@ document.addEventListener('DOMContentLoaded', async () => {
           components.sensitivityAnalysis = new SensitivityAnalysis(containerId, store, navigateTo);
         }
         components.sensitivityAnalysis.render(index);
+      } else if (step.isOperatingCosts) {
+        // شاشة «المصاريف التشغيلية» المدموجة — تركّب جداول techResources/logistics/
+        // administrative في أكورديون واحد. تعيد استخدام wizard.renderTable فيبقى
+        // الحفظ في الأقسام الأصلية (لا مساس بالمحرّكات). نمرّر wizard كوسيط رابع.
+        if (!components.operatingCosts) {
+          const { OperatingCostsView } = await import('./js/ui/OperatingCostsView.js');
+          components.operatingCosts = new OperatingCostsView(containerId, store, navigateTo, wizard);
+        }
+        components.operatingCosts.render(index);
       } else {
         wizard.renderStep(step.id, step, index);
       }
