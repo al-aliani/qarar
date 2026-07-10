@@ -1,7 +1,7 @@
 import { store } from './js/core/store.js';
 import { TEMPLATES } from './js/core/templates.js';
 import { TABLE_SCHEMAS, createEmptyStudy } from './js/core/schema.js';
-import { STEPS, SECTIONS, SIDEBAR_SECTIONS, stepIndexById } from './js/core/wizardSteps.js';
+import { STEPS, SECTIONS, SIDEBAR_SECTIONS, MAJOR_PHASES, stepIndexById } from './js/core/wizardSteps.js';
 import { Sidebar } from './js/ui/Sidebar.js';
 import { Wizard } from './js/ui/Wizard.js';
 import { calculateStudy as runFullModel } from './js/core/engine.js';
@@ -272,25 +272,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ═══════════════════════════════════════════════════════════════════
 
   const headerStageBar = document.getElementById('headerStageBar');
+
+  // بطاقة حالة ثابتة (بلا تفاعل) تعرض المرحلة الحالية فقط — التنقّل الفعلي
+  // بين كل الخطوات الـ44 مصنّفة صار في خريطة أقسام الدراسة أعلى كل خطوة
+  // (Wizard.js: wizard-section-map)، فلا داعي لتكرار تنقّل مصغّر هنا خلف
+  // قائمة منسدلة (كانت تجربة مربكة، تدقيق 2026-07-10).
   const renderHeaderStageBar = ({ activeStepIndex = 0, progressTracker = null, sections = null } = {}) => {
     if (!headerStageBar) return;
     const isCompleted = (idx) => (progressTracker && typeof progressTracker.isCompleted === 'function')
       ? progressTracker.isCompleted(idx)
       : false;
 
-    const stageSections = Array.isArray(sections) ? sections : (Array.isArray(SIDEBAR_SECTIONS) ? SIDEBAR_SECTIONS : []);
-    headerStageBar.innerHTML = stageSections.map((s) => {
+    const stageSections = Array.isArray(MAJOR_PHASES) ? MAJOR_PHASES : [];
+    const items = stageSections.map((s, i) => {
       const start = s?.range?.[0] ?? 0;
       const end = s?.range?.[1] ?? 0;
       const active = activeStepIndex >= start && activeStepIndex <= end;
-      const complete = start <= end && Array.from({ length: (end - start + 1) }).every((_, i) => isCompleted(start + i));
-      return `
-        <span class="stage-chip ${active ? 'is-active' : ''} ${complete ? 'is-complete' : ''}" title="${s.label}">
-          <span class="stage-chip__dot" aria-hidden="true"></span>
-          <span class="stage-chip__label">${s.label}</span>
-        </span>
-      `;
-    }).join('');
+      const complete = start <= end && Array.from({ length: (end - start + 1) }).every((_, k) => isCompleted(start + k));
+      return { label: s.label, active, complete, order: i + 1 };
+    });
+    const activeItem = items.find((it) => it.active) || items[0];
+    const total = items.length;
+
+    headerStageBar.innerHTML = `
+      <span class="stage-badge">
+        <span class="stage-badge__meta">المرحلة ${activeItem?.order || 1} من ${total}</span>
+        <span class="stage-badge__label">${activeItem?.label || ''}</span>
+      </span>
+    `;
 
     // مؤشّر «أين أنا» على الجوّال — الترويسة العلوية مخفية على الجوّال فيبقى المستخدم بلا معلم
     const mobileStage = document.getElementById('mobileStageIndicator');
@@ -797,8 +806,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       sidebar.setActive(targetIndex);
       wizard.renderStep(step.id, step, targetIndex);
 
+      // كل خطوة قبل الحالية اجتازت بالفعل تحقق Wizard.validateStep عبر زر «التالي»
+      // (وإلا ما كان التنقل ليصل هنا) — فتُعتبر مكتملة بصرف النظر عن heuristic
+      // isStepComplete القائم على شكل البيانات، الذي يفشل مع خطوات العرض/الحساب
+      // التي لا تكتب قسماً خاصاً بها في storeData (كان يُبقي شرائح شريط المراحل
+      // السابقة بلا "is-complete" رغم اجتيازها فعلياً).
+      for (let i = 0; i < targetIndex; i++) progressTracker.markCompleted(i);
+
       // Keep header stage bar in sync with navigation
-      renderHeaderStageBar({ activeStepIndex: targetIndex, progressTracker, sections: sidebar.sections });
+      renderHeaderStageBar({ activeStepIndex: targetIndex, progressTracker });
 
       // Breadcrumbs
       const breadcrumbBar = document.getElementById('breadcrumbBar');
@@ -1054,8 +1070,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         progressTracker.detectCompletion(store.getState(), STEPS);
         renderHeaderStageBar({
           activeStepIndex: (window.sidebarInstance?.activeStep) || 0,
-          progressTracker,
-          sections: window.sidebarInstance?.sections
+          progressTracker
         });
       } catch (e) {
         console.warn('[App] completion detection failed:', e);
@@ -1067,7 +1082,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Store sidebar instance globally for access in enterWorkspaceMode
   window.sidebarInstance = sidebar;
 
-  const wizard = new Wizard('wizardContainer', store, TABLE_SCHEMAS, { steps: STEPS, onNavigate: navigateTo });
+  const wizard = new Wizard('wizardContainer', store, TABLE_SCHEMAS, { steps: STEPS, onNavigate: navigateTo, onGoHome: showLandingDashboard });
   components.wizard = wizard;
 
   sidebar.setProgressTracker(progressTracker);
@@ -1555,7 +1570,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     sidebar.render();
 
     // Update stage bar to reflect the new sections mapping (especially quick mode)
-    renderHeaderStageBar({ activeStepIndex: sidebar.activeStep || 0, progressTracker, sections: sidebar.sections });
+    renderHeaderStageBar({ activeStepIndex: sidebar.activeStep || 0, progressTracker });
   }
 
   // آخر تحديث منذ X دقائق — جدوى كلاود (يُحدَّث عند الحفظ)
@@ -1764,6 +1779,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const headerSaveStudy = document.getElementById('headerSaveStudy');
   if (headerSaveStudy) headerSaveStudy.addEventListener('click', performSaveStudy);
+
+  const headerGoHome = document.getElementById('headerGoHome');
+  if (headerGoHome) headerGoHome.addEventListener('click', () => showLandingDashboard());
 
   // Load Study from JSON
   const btnLoadStudy = document.getElementById('btnLoadStudy');
