@@ -24,7 +24,7 @@ export class RiskMatrix {
 
         this.container.innerHTML = `
             <div class="risk-analysis">
-                <h2 class="section-title">⚠️ تحليل المخاطر</h2>
+                <h2 class="section-title">تحليل المخاطر</h2>
                 <div class="alert alert--info mb-4" style="font-size: 0.85rem;">
                     <strong>مخاطر التقنية:</strong> المشاريع التقنية تحمل مخاطر عالية — تقنية جديدة قد تنسف المشروع (مثال: نوكيا). إذا مشروعك يعتمد على التقنية، أضف خطر «اختراق تقني / تقادم تقني» من نوع تقني.
                 </div>

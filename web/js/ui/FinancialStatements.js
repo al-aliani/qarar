@@ -40,7 +40,7 @@ export class FinancialStatements {
         if (errorMessage) {
             this.container.innerHTML = `
                 <div class="financial-statements">
-                    <h2 class="section-title">📊 القوائم المالية التقديرية</h2>
+                    <h2 class="section-title">القوائم المالية التقديرية</h2>
                     <div class="card analysis-card">
                         <div class="alert alert--warning">
                             <p><strong>⚠️ ${errorMessage}</strong></p>
@@ -67,7 +67,7 @@ export class FinancialStatements {
 
         this.container.innerHTML = `
             <div class="financial-statements">
-                <h2 class="section-title">📊 القوائم المالية التقديرية</h2>
+                <h2 class="section-title">القوائم المالية التقديرية</h2>
                 ${dataWarnHtml}
                 <div class="card analysis-card">
                     <h3 class="card-title">💵 قائمة الدخل التقديرية (5 سنوات)</h3>

@@ -27,7 +27,7 @@ export class StressTest {
         if (!base.ok) {
             this.container.innerHTML = `
                 <div class="stress-test animate-entry">
-                    <h2 class="section-title">⛈️ اختبار التحمل (Stress Test)</h2>
+                    <h2 class="section-title">اختبار التحمل</h2>
                     <div class="alert alert--warning">
                         <p><strong>⚠️ لا تتوفر أرقام كافية لاختبار التحمل.</strong></p>
                         <p class="text-sm mt-2">أكمل الإيرادات والتكاليف (الرواتب والمصاريف التشغيلية) في الخطوات السابقة، ثم عُد لاختبار صمود المشروع أمام الأزمات.</p>
@@ -43,7 +43,7 @@ export class StressTest {
 
         this.container.innerHTML = `
             <div class="stress-test animate-entry">
-                <h2 class="section-title">⛈️ اختبار التحمل (Stress Test)</h2>
+                <h2 class="section-title">اختبار التحمل</h2>
                 <p class="text-muted mb-4">نقيس صمود مشروعك أمام الأزمات المفاجئة بأرقامك الفعلية — كم شهراً يصمد قبل نفاد السيولة إذا هبطت المبيعات و/أو ارتفعت التكاليف.</p>
 
                 <div class="card glass-card mb-4">

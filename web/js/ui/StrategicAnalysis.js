@@ -24,7 +24,7 @@ export class StrategicAnalysis {
 
         this.container.innerHTML = `
             <div class="strategic-analysis">
-                <h2 class="section-title">📊 التحليل الاستراتيجي</h2>
+                <h2 class="section-title">التحليل الاستراتيجي</h2>
                 
                 <!-- PESTEL Analysis -->
                 <div class="card analysis-card">

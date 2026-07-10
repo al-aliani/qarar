@@ -96,7 +96,7 @@ export class FinancialDashboard {
         if (!(Array.isArray(studyData.revenue?.streams) && studyData.revenue.streams.length > 0)) {
             this.container.innerHTML = `
                 <div class="card glass-card">
-                    <h3 class="card-title">لوحة التحكم المالي</h3>
+                    <h2 class="card-title">لوحة المؤشرات المالية</h2>
                     <div class="alert alert--warning">
                         <p><strong><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> لا توجد بيانات إيرادات. يرجى إضافة مصادر الإيرادات في خطوة "مصادر الإيرادات".</strong></p>
                         <p class="text-sm mt-2">لعرض المؤشرات المالية (صافي القيمة الحالية، العائد، التعادل) أكمل:</p>
@@ -119,7 +119,7 @@ export class FinancialDashboard {
         if (!this.results || !this.results.incomeStatement) {
             this.container.innerHTML = `
                 <div class="card glass-card">
-                    <h3 class="card-title">لوحة التحكم المالي</h3>
+                    <h2 class="card-title">لوحة المؤشرات المالية</h2>
                     <p class="text-muted">لا يمكن تشغيل النموذج المالي. أكمل: <strong>التكاليف الرأسمالية</strong>، <strong>مصادر الإيرادات</strong>، و<strong>هيكل التمويل</strong> من القائمة الجانبية.</p>
                 </div>`;
             return;
@@ -144,6 +144,7 @@ export class FinancialDashboard {
         // أبيض ثابتاً بدل var(--c-surface-2) — فتبدو غامقة/متناقضة على أرضية الثيم الفاتح
         // (ورقي دافئ لا رمادي).
         this.container.innerHTML = `
+            <h2 class="section-title">لوحة المؤشرات المالية</h2>
             <!-- Decision Banner: قرار ثلاثي GO / REVISE / NO-GO (لا يُختزل إلى ثنائي) -->
             <div class="decision-banner ${decision === 'GO' ? 'is-go' : (decision === 'REVISE' ? 'is-revise' : 'is-nogo')}">
                 <div class="decision-label">${decision === 'GO' ? 'المشروع مجدٍ' : (decision === 'REVISE' ? 'المشروع يحتاج مراجعة' : 'المشروع غير مجدٍ')}</div>

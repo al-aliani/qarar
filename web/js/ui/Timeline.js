@@ -29,7 +29,7 @@ export class Timeline {
         this.container.innerHTML = `
             <div class="timeline-container animate-entry">
                 <div class="section-header">
-                    <h2 class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-history"/></svg> الجدول الزمني للتنفيذ</h2>
+                    <h2 class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-history"/></svg> خطة التنفيذ</h2>
                     <p class="text-muted">خطة عمل مرحلة التأسيس قبل التشغيل الفعلي. اسحب المراحل لتعديل شهر البدء.</p>
                 </div>
 

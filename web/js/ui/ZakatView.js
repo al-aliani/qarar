@@ -46,7 +46,7 @@ export class ZakatView {
             <div class="zakat-view animate-entry">
                 <div class="header-section mb-6">
                     <h2 class="text-xl font-bold flex items-center gap-2">
-                        🕌 الزكاة والضريبة
+                        الزكاة والضريبة
                     </h2>
                     <p class="text-muted">تقدير الالتزامات الزكوية والضريبية بناءً على هيكل الملكية — الأرقام مطابقة لقائمة الدخل والتقارير المُصدَّرة.</p>
                 </div>

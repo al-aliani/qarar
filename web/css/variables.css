@@ -90,6 +90,23 @@
   --glass-blur: blur(16px);
   /* توهّج علوي خفيف للبطاقات — يكسر التسطح على بطاقة بيضاء بلا لمعة */
   --card-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 40%);
+
+  /* توافق --color-*: بعض المكوّنات (wizard-forms.css، خريطة أقسام الدراسة في
+     Wizard.js، DynamicTable.js) كُتبت بمساحة أسماء --color-* غير موجودة أصلاً
+     بهذا الملف، فكانت تُرسم بلا تنسيق (حدود/خلفيات مفقودة، تدرّج مربَّك) —
+     ألياس هنا بدل تصحيح كل قاعدة CSS على حدة، ويتبع الثيم تلقائياً لأنه
+     يشير لمتغيرات --c-* نفسها التي تتبدّل مع [data-theme="dark"].
+  */
+  --color-surface: var(--c-bg-card);
+  --color-surface-hover: var(--c-surface-2);
+  --color-border: var(--c-border);
+  --color-text: var(--c-text-main);
+  --color-text-muted: var(--c-text-muted);
+  --color-muted: var(--c-text-muted);
+  --color-primary: var(--c-p-500);
+  --color-primary-light: var(--c-p-subtle);
+  --color-primary-dark: var(--c-p-600);
+  --color-success: var(--c-success);
 }
 
 /* الوضع الداكن: أخضر غابي عميق — الحدود محايدة (كانت ذهبية في كل مكان = ضجيج بصري) */

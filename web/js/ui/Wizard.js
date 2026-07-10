@@ -1,13 +1,11 @@
 import { getLabel } from '../core/labels.js';
 import { getLabelSDB, getAuditorTooltip, getFieldHint } from '../core/regulatoryLabels.js';
-import { getPhaseForStep, getStepHelp, MAJOR_PHASES, getMajorPhaseForStep, SIDEBAR_SECTIONS } from '../core/wizardSteps.js';
-import { EXPERT_FAQ } from '../config.js';
+import { getStepHelp } from '../core/wizardSteps.js';
 import { DynamicTable } from './DynamicTable.js';
 import { DataService } from '../services/DataService.js';
 import { generateTableSuggestions } from '../services/AIConnector.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { generateSuggestionStreaming } from '../services/FieldSuggestionService.js';
-import { exportSectionToExcel } from '../utils/sectionExporter.js';
 import { ReviewCharts } from './ReviewCharts.js';
 import { toast } from '../utils/toast.js';
 import { validateAssumptions, validateFinancing } from '../utils/validation.js';
@@ -60,7 +58,7 @@ export const SMART_FILL_HANDLERS = {
 const LONG_TEXT_KEYS = ['identityStatement', 'valueProposition', 'problem', 'solution', 'insight', 'insightText', 'whyUs', 'marketSize', 'competitiveAdvantage', 'locationFactors', 'alternativesComparison', 'finalChoiceReason'];
 
 // حقول خطوة معلومات المشروع الأساسية — الباقي يُطوى تحت «حقول متقدمة» لتخفيف النموذج
-const PROJECT_INFO_BASIC_KEYS = ['name', 'description', 'city', 'region', 'district', 'concept', 'studyType', 'studyRecipientType', 'businessModel', 'franchiseDetails', 'areaSize', 'ownershipType', 'targetCapital', 'selfFundingAmount', 'targetSegment', 'timeline'];
+const PROJECT_INFO_BASIC_KEYS = ['name', 'description', 'city', 'district', 'concept', 'studyType', 'businessModel', 'areaSize', 'targetSegment', 'timeline'];
 
 // هدف حفظ اقتراح العصا السحرية: data-section/data-path الصريحان يسبقان
 // خطوة/مفتاح العرض الحاليين — المفتاح قد يكون مساراً متداخلاً داخل قسم آخر
@@ -106,15 +104,12 @@ export class Wizard {
                     <svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
                     <span>السابق</span>
                 </button>
-                <div class="nav-actions">
-                    <button type="button" class="btn btn--ghost btn-sm" id="btnExportSection" title="تصدير هذا القسم">تصدير إكسل</button>
-                    <div class="nav-indicator">
-                        <span class="nav-indicator__caption">${navCaption}</span>
-                        <span class="nav-indicator__label">${navLabel}</span>
-                    </div>
+                <div class="nav-indicator">
+                    <span class="nav-indicator__caption">${navCaption}</span>
+                    <span class="nav-indicator__label">${navLabel}</span>
                 </div>
-                <button type="button" class="btn btn--primary" id="btnNextStep">
-                    <span>${isLastStep ? 'إنهاء الدراسة' : 'التالي'}</span>
+                <button type="button" class="btn btn--primary" id="btnNextStep" ${isLastStep ? 'disabled' : ''}>
+                    <span>${isLastStep ? 'اكتملت' : 'التالي'}</span>
                     ${isLastStep
                         ? '<svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>'
                         : '<svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>'}
@@ -130,8 +125,8 @@ export class Wizard {
             <div class="wizard-completion">
                 <div class="wizard-completion__icon" aria-hidden="true">🏁</div>
                 <div class="wizard-completion__body">
-                    <h3 class="wizard-completion__title">اكتملت جميع خطوات الدراسة</h3>
-                    <p class="wizard-completion__desc">راجع قرارك النهائي، صدّر دراستك كاملة، أو ارجع للرئيسية لإدارة دراساتك.</p>
+                    <h3 class="wizard-completion__title">اكتملت خطوات الدراسة</h3>
+                    <p class="wizard-completion__desc">اختر ما تريد فعله الآن.</p>
                     <div class="wizard-completion__actions">
                         <button type="button" class="btn btn--secondary" id="btnGoDecisionDashboard">عرض لوحة القرار</button>
                         <button type="button" class="btn btn--secondary" id="btnFinishExport">تصدير الدراسة</button>
@@ -164,60 +159,28 @@ export class Wizard {
         if (!this.container) return;
         this.currentStepIndex = stepIndex;
 
-        // Progress bar HTML + Gamification
         const isQuickMode = localStorage.getItem('study_mode_preference') === 'quick';
-        const activeSteps = isQuickMode ? this.steps.filter(s => !s.isAdvancedStep) : this.steps;
-        const totalSteps = activeSteps.length;
-        
-        let relativeStepIndex = activeSteps.findIndex(s => s.id === stepId);
-        if (relativeStepIndex === -1) relativeStepIndex = 0; // Fallback
-        
-        const phaseLabel = getPhaseForStep(stepIndex);
         let html = `
-            <p class="step-phase" aria-label="المرحلة التعليمية">${phaseLabel}</p>
             <div class="step-content" key="${stepId}">
                 <h2 class="animate-entry" style="margin-bottom: var(--s-3)">${metadata.label}</h2>
                 ${(function () {
                 const help = getStepHelp(stepIndex);
-                const hasFaq = EXPERT_FAQ && EXPERT_FAQ.length > 0;
                 if (!help || !help.why) return '';
-                
+
                 return `
-                    <div class="d-flex justify-end mb-4" style="margin-top: -1rem;">
-                        <button type="button" class="btn btn--secondary btn-sm" onclick="document.getElementById('stepHelpModal').showModal()" aria-label="مساعدة وتعليمات هذه الخطوة">
-                            كيف أملأ هذه الخطوة؟ 💡
-                        </button>
-                    </div>
-                    <dialog id="stepHelpModal" class="modal" aria-labelledby="helpModalTitle">
-                        <div class="modal-content" style="max-width: 600px;">
-                            <button type="button" class="modal-close" onclick="this.closest('dialog').close()" aria-label="إغلاق">&times;</button>
-                            <h3 id="helpModalTitle" class="text-gold mb-3">دليل الخطوة: ${metadata.label}</h3>
-                            <div class="help-section mb-4" style="background: var(--color-surface-hover); padding: 1.5rem; border-radius: var(--radius); border-right: 4px solid var(--color-primary);">
-                                <h4 class="mb-2">🤔 لماذا نطلب هذا؟</h4>
-                                <p class="mb-4 text-muted">${help.why}</p>
-                                <h4 class="mb-2">📝 كيف تملأه؟</h4>
-                                <p class="mb-0 text-muted">${help.how}</p>
-                            </div>
-                            ${hasFaq ? `
-                                <h4 class="mb-3">نصائح الخبراء والأسئلة الشائعة</h4>
-                                <div class="faq-list">
-                                    ${EXPERT_FAQ.map(f => `
-                                        <div class="faq-item mb-3 p-3" style="border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface);">
-                                            <p class="faq-q font-bold mb-2" style="color: var(--color-text);">${f.q}</p>
-                                            <p class="faq-a text-muted mb-0">${f.a}</p>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : ''}
+                    <details class="step-guide mb-4">
+                        <summary>دليل مختصر</summary>
+                        <div class="step-guide__body">
+                            <p><strong>الهدف:</strong> ${help.why}</p>
+                            <p><strong>المطلوب:</strong> ${help.how}</p>
                         </div>
-                    </dialog>
+                    </details>
                 `;
             })()}
-                ${stepId === 'assumptions' ? `<div class="alert alert--info mb-4"><strong>ملاحظة:</strong> يمكن الاستناد إلى معدل التضخم ومعدل الخصم الصادر عن البنك المركزي السعودي (ساما) عند تحديد الافتراضات. <a href="https://www.sama.gov.sa" target="_blank" rel="noopener">ساما</a></div><div class="alert alert--warning mb-4"><strong>رأس المال العامل حاسم:</strong> إهماله سبب رئيسي لأزمات السيولة. تأكد من تمويل 3–6 أشهر تشغيل قبل الاعتماد على الإيرادات.</div><div class="alert alert--info mb-4"><strong>مبرر المبيعات:</strong> وضّح لماذا المبيعات ثابتة أو متزايدة أو متناقصة — مطلوب لتبرير التوقعات.</div><div class="alert alert--info mb-4"><strong>الأوفر هيد:</strong> احسب احتياطياً للتكاليف غير المحسوبة (قطع كهرباء، غياب عامل، طوارئ) — من أكثر ما يزعج المشاريع.</div>` : ''}
-                ${stepId === 'technical' ? `<div class="alert alert--info mb-4"><strong>معيار التصنيف:</strong> الآلات والمعدات = عناصر <em>أساسية</em> لتنفيذ المشروع (مثل ماكينة القهوة للمقهى). الأثاث = عناصر <em>مساعدة</em> (طاولات، كراسي). نفس العنصر قد يُصنّف مختلفاً حسب نوع المشروع.</div><div class="alert alert--info mb-4"><strong>وصف العملية الإنتاجية:</strong> وصف خطوات الإنتاج من المدخلات للمخرجات يساعد في تحديد الاحتياجات (عمالة، معدات، مواد) بدقة.</div>` : ''}
-                ${stepId === 'marketing' ? `<div class="alert alert--info mb-4"><strong>توازن العرض والطلب:</strong> الطلب &gt; العرض = فرصة؛ العرض &gt; الطلب = خطر. ادرس اتجاه الطلب خلال 5 سنوات على الأقل — الاتجاه الصاعد إيجابي. <strong>المصدر المقترح لاتجاهات الطلب:</strong> GASTAT، دراسات قطاعية، الغرف. <strong>أساليب التنبؤ:</strong> إذا لديك بيانات تاريخية (5+ سنوات)، يمكن استخدام: نمو بسيط، نمو مركب، متوسط متحرك — التنبؤ يعتمد على بيانات الماضي.</div>` : ''}
-                ${stepId === 'projectInfo' ? `<div class="alert alert--info mb-4"><strong>خطوات جمع المعلومات:</strong> أسبوع بحث أونلاين (كلمات مفتاحية، جروبات، إعلانات، أوليكس، بيانات حكومية) — ثم زيارة منافسين، جهات حكومية (تراخيص)، جهات تمويل. <strong>البحث أونلاين يصفي 50% من الأفكار</strong> — الباقي يحتاج نزول ميداني. "جمع المعلومات هو أكبر جزء في دراسة الجدوى".</div>` : ''}
-                ${stepId === 'revenue' ? `<div class="alert alert--info mb-4"><strong>أفضل الممارسات المحلية:</strong> جمع المعلومات الدقيقة هو أساس دراسة جدوى موثوقة.</div><div class="alert alert--warning mb-4"><strong>تجنّب وهم المبيعات:</strong> تقدير المبيعات يجب أن يُبنى على دراسة السوق والمنافسين — «كم ستبيع فعلياً؟» يُجاب بناءً على بيانات، وليس تقديراً وهمياً.</div><div class="alert alert--info mb-4"><strong>مخرَج الدراسة السوقية:</strong> جدول (صنف، عدد متوقع بيعه، سعر) — الخدمة = الصنف، العملاء/شهر × 12 = العدد السنوي، متوسط السعر = السعر. هذا الجدول يغذّي الدراسة الفنية.</div>` : ''}
+                ${stepId === 'assumptions' ? `<div class="alert alert--warning mb-4"><strong>قبل الاعتماد:</strong> وثّق افتراضاتك وموّل 3–6 أشهر من التشغيل كرأس مال عامل.</div>` : ''}
+                ${stepId === 'technical' ? `<div class="alert alert--info mb-4"><strong>تجنّب التكرار:</strong> صنّف ما يلزم التشغيل كأصل، وسجّل الأثاث في جدوله المنفصل.</div>` : ''}
+                ${stepId === 'marketing' ? `<div class="alert alert--info mb-4"><strong>اعتمد الدليل:</strong> استخدم بيانات موثقة للطلب والمنافسة، لا الانطباع الشخصي.</div>` : ''}
+                ${stepId === 'revenue' ? `<div class="alert alert--warning mb-4"><strong>تقدير المبيعات:</strong> ابنِ الكمية والسعر على نتائج السوق والمنافسين.</div>` : ''}
         `;
 
         // ⚠️ FIX: Always get fresh data from store to ensure latest changes are reflected
@@ -264,9 +227,11 @@ export class Wizard {
 
         // Tables to render for this step
         let tablesToRender = metadata.tables || [];
+        let optionalTablesToRender = metadata.optionalTables || [];
         if (isQuickMode && stepId === 'projectInfo') {
             // إخفاء الجداول المعقدة من الخطوة الأولى في الوضع السريع
             tablesToRender = tablesToRender.filter(t => !['glossary', 'dataGatheringChecklist'].includes(t));
+            optionalTablesToRender = [];
         }
 
         // Render regular fields first (if section is object, not array) — لا لخطوة تستعير
@@ -316,6 +281,15 @@ export class Wizard {
         tablesToRender.forEach(tableKey => {
             html += `<div id="table-${tableKey}" class="mt-4"></div>`;
         });
+        if (optionalTablesToRender.length) {
+            html += `
+                <details class="optional-step-tools mt-4">
+                    <summary>قائمة تجهيز البيانات (اختيارية)</summary>
+                    <div class="optional-step-tools__body">
+                        ${optionalTablesToRender.map(tableKey => `<div id="table-${tableKey}"></div>`).join('')}
+                    </div>
+                </details>`;
+        }
 
         // Navigation buttons — الفهرس المحلي ضمن this.steps المُصفّاة، لا stepIndex
         // المطلق (تدقيق 2026-07-08، ملاحظة عالية #25: راجع _localStepIndex أعلاه).
@@ -428,7 +402,7 @@ export class Wizard {
         // Render dynamic tables - ensure we use fresh data
         // ⚠️ FIX: Re-fetch data right before rendering tables to ensure latest changes
         const freshStudyData = this.store.get();
-        tablesToRender.forEach(tableKey => {
+        [...tablesToRender, ...optionalTablesToRender].forEach(tableKey => {
             this.renderTable(stepId, tableKey, freshStudyData);
         });
     }
@@ -436,7 +410,6 @@ export class Wizard {
     bindNavigationEvents() {
         const prevBtn = document.getElementById('btnPrevStep');
         const nextBtn = document.getElementById('btnNextStep');
-        const exportBtn = document.getElementById('btnExportSection');
 
         this.container.querySelectorAll('.wizard-map-step').forEach(button => {
             button.addEventListener('click', () => {
@@ -461,44 +434,6 @@ export class Wizard {
                     if (this.validateStep(this.steps[localIdx])) {
                         this.onNavigate(this._absoluteStepIndex(localIdx + 1));
                     }
-                } else {
-                    // آخر خطوة: «إنهاء الدراسة» يقفز للوحة القرار (نفس مقصد btnGoDecisionDashboard)
-                    const decisionIdx = this.steps.findIndex(s => s.isDecisionDashboard);
-                    const targetLocalIdx = decisionIdx !== -1 ? decisionIdx : Math.max(0, this.steps.length - 5);
-                    this.onNavigate(this._absoluteStepIndex(targetLocalIdx));
-                }
-            });
-        }
-
-        if (exportBtn) {
-            exportBtn.addEventListener('click', async (e) => {
-                const currentStep = this.steps[this._localStepIndex()];
-                const sectionId = currentStep?.id || 'section';
-                const sectionLabel = currentStep?.label || 'القسم';
-
-                e.target.textContent = 'جاري التصدير…';
-                e.target.disabled = true;
-
-                try {
-                    const outName = await exportSectionToExcel(
-                        this.store.getState(),
-                        sectionId,
-                        sectionLabel
-                    );
-                    e.target.textContent = 'تم التصدير';
-                    if (outName) toast.success(`تم تصدير Excel: ${outName}`);
-                    setTimeout(() => {
-                        e.target.textContent = 'تصدير إكسل';
-                        e.target.disabled = false;
-                    }, 1500);
-                } catch (err) {
-                    console.error('Export error:', err);
-                    e.target.textContent = 'تعذّر التصدير';
-                    toast.error('فشل تصدير القسم. تحقق من الاتصال ومكتبة Excel.');
-                    setTimeout(() => {
-                        e.target.textContent = 'تصدير إكسل';
-                        e.target.disabled = false;
-                    }, 1500);
                 }
             });
         }

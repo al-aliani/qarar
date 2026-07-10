@@ -266,7 +266,7 @@ export class DashboardView {
                     { name: 'محاكاة التشغيل', desc: 'طاقة، انتظار، ضغط تشغيلي', icon: 'activity', step: stepIndexBy(s => s.isOperationalSim, 14), engine: true },
                     { name: 'خطة التوظيف', desc: 'المناصب والرواتب ونسبة التوطين (نطاقات) المطلوبة لنشاطك', icon: 'users', step: stepIndexBy(s => s.id === 'hr', 9) },
                     { name: 'خطة المشتريات والأصول', desc: 'معدات، أثاث، تقنية، وتجهيزات', icon: 'list', step: stepIndexBy(s => s.id === 'technical', 8) },
-                    { name: 'الجدول الزمني للتنفيذ', desc: 'مراحل، تواريخ، ومسؤوليات', icon: 'map', step: stepIndexBy(s => s.isTimeline, 33) },
+                    { name: 'خطة التنفيذ', desc: 'مراحل، تواريخ، ومسؤوليات', icon: 'map', step: stepIndexBy(s => s.isTimeline, 20) },
                     { name: 'أول تسعين يوم بعد الإطلاق', desc: 'متابعة الأداء الفعلي مقابل الخطة', icon: 'activity', step: stepIndexBy(s => s.isPostLaunch, 37), engine: true }
                 ]
             },
@@ -390,17 +390,21 @@ export class DashboardView {
                             <div class="dv-section__head dv-section__head--row">
                                 <h2 class="dv-section__title">دراساتك <span class="dv-count dv-num">(${filtered.length})</span></h2>
                                 <div class="dv-toolbar">
-                                    <button type="button" id="cardFullStudy" class="btn btn--sm btn--primary">${icon('i-plus')} دراسة جديدة</button>
-                                    <button type="button" id="cardQuickFeasibility" class="btn btn--sm btn--ghost">${icon('i-bolt')} جدوى سريعة (٣ خطوات)</button>
-                                    ${lastStep ? `<button type="button" id="btnContinueLastStep" class="btn btn--sm btn--ghost">${inlineIcon('play')} تابع: ${lastStep.label}</button>` : ''}
-                                    <button type="button" id="cardSampleReport" class="btn btn--sm btn--ghost">${icon('i-doc')} عينة تقرير</button>
+                                    <div class="dv-toolbar__actions">
+                                        <button type="button" id="cardFullStudy" class="btn btn--sm btn--primary">${icon('i-plus')} دراسة جديدة</button>
+                                        <button type="button" id="cardQuickFeasibility" class="btn btn--sm btn--ghost">${icon('i-bolt')} جدوى سريعة (٣ خطوات)</button>
+                                        ${lastStep ? `<button type="button" id="btnContinueLastStep" class="btn btn--sm btn--ghost">${inlineIcon('play')} تابع: ${lastStep.label}</button>` : ''}
+                                        <button type="button" id="cardSampleReport" class="btn btn--sm btn--ghost">${icon('i-doc')} عينة تقرير</button>
+                                    </div>
                                     ${hasProjects ? `
-                                    <label for="dashboardFolderFilter" class="dv-toolbar__label">عرض:</label>
-                                    <select id="dashboardFolderFilter" name="folderFilter" class="input input--sm dv-toolbar__select">
-                                        ${folderOptions}
-                                    </select>
-                                    <button type="button" id="btnNewFolder" class="btn btn--sm btn--secondary">${icon('i-folder')} مجلد جديد</button>
-                                    <input type="text" id="dashboardSearch" name="searchQuery" aria-label="بحث عن مشروع" class="input input--sm dv-toolbar__search" placeholder="بحث بالاسم..." value="${(this.searchQuery || '').replace(/"/g, '&quot;')}" />
+                                    <div class="dv-toolbar__organize">
+                                        <label for="dashboardFolderFilter" class="dv-toolbar__label">عرض:</label>
+                                        <select id="dashboardFolderFilter" name="folderFilter" class="input input--sm dv-toolbar__select">
+                                            ${folderOptions}
+                                        </select>
+                                        <button type="button" id="btnNewFolder" class="btn btn--sm btn--secondary">${icon('i-folder')} مجلد جديد</button>
+                                        <input type="text" id="dashboardSearch" name="searchQuery" aria-label="بحث عن مشروع" class="input input--sm dv-toolbar__search" placeholder="بحث بالاسم..." value="${(this.searchQuery || '').replace(/"/g, '&quot;')}" />
+                                    </div>
                                     ` : ''}
                                 </div>
                             </div>

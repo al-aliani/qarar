@@ -59,7 +59,7 @@ export class SmartGoals {
 
         this.container.innerHTML = `
             <div class="smart-goals">
-                <h2 class="section-title">🎯 الأهداف الذكية (SMART)</h2>
+                <h2 class="section-title">الأهداف الذكية</h2>
                 
                 <div class="card analysis-card">
                     <div class="smart-intro">

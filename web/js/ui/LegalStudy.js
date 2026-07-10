@@ -20,7 +20,7 @@ export class LegalStudy {
         this.container.innerHTML = `
             <div class="legal-study animate-entry">
                 <div class="flex-between mb-6">
-                    <h2 class="section-title mb-0">⚖️ الدراسة القانونية والتراخيص</h2>
+                    <h2 class="section-title mb-0">الدراسة القانونية</h2>
                     <button class="btn btn--magic" id="btnSuggestLegal"><span class="icon">✨</span> اقتراح الهيكل والتراخيص</button>
                 </div>
                 <p class="text-muted mb-6">حدد الشكل القانوني للمشروع وقائمة التراخيص المطلوبة لبدء النشاط.</p>

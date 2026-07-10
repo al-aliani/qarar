@@ -21,7 +21,7 @@ export class OperationalSim {
 
         this.container.innerHTML = `
             <div class="operational-sim animate-entry">
-                <h2 class="section-title">🏭 محاكاة التشغيل والازدحام</h2>
+                <h2 class="section-title">محاكاة التشغيل</h2>
                 <p class="text-muted mb-6">اختبر قدرة مشروعك على تحمل ضغط العملاء واكتشف "طوابير الانتظار" قبل الافتتاح.</p>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

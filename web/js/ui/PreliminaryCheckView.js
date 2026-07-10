@@ -15,15 +15,16 @@ const TRI_CHOICES = [
     { value: 'no', label: 'لا' }
 ];
 
-// عوامل مبدأ الملاءمة (د. الروضي) — أربعة أسئلة نعم/لا خفيفة
-const FITNESS_FACTORS = [
-    { id: 'age', label: 'يناسب سنك ومرحلة حياتك' },
-    { id: 'env', label: 'يناسب البيئة/الدولة التي تعمل فيها' },
-    { id: 'sector', label: 'القطاع ملائم لخبرتك' },
-    { id: 'income', label: 'الدخل المتوقع يناسب أهدافك' }
-];
-
 const esc = (s) => (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+// أيقونات هيرو داخلية بنفس لغة النظام (24×24، stroke، currentColor) — بديل الإيموجي
+const HERO_ICONS = {
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/>',
+    skip: '<path d="M6 5v14M18 5 9 12l9 7Z"/>',
+    shield: '<path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6Z"/><path d="m9 12 2 2 4-4"/>'
+};
+const heroIcon = (name) =>
+    `<svg class="pc-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${HERO_ICONS[name] || ''}</svg>`;
 
 /**
  * توافق خلفي: البيانات القديمة نصوص حرة. نقبل بادئة معيارية (yes/no/unsure)
@@ -101,18 +102,25 @@ export class PreliminaryCheckView {
         const state = this.store.getState();
         const pc = state.preliminaryCheck || {};
         const res = pc.resources || { money: false, experience: false, network: false };
-        const suit = pc.suitability || {};
 
         this.container.innerHTML = `
-            <div class="preliminary-check-view">
-                <h2 class="section-title">🔍 الدراسة المبدئية</h2>
-                <p class="text-muted mb-3">فرز سريع قبل التفاصيل — إجابات تقريبية تكفي.
-                    <strong>يمكنك تخطي هذه الخطوة</strong> إذا كانت لديك خبرة سابقة.
-                    ${fieldHelp('الهدف: قرار مبكر «أكمل / راجع / قارن أفكاراً بديلة» قبل صرف وقت في دراسة تفصيلية. تُجمع الإجابات بشكل بسيط من الأهل والمعارف، أو من الغرف التجارية والوزارات ومجلات الاستثمار.', 'مثال: قبل دراسة مطعم، اسأل ٣ من أصحاب المطاعم عن أصعب ما واجههم.')}
-                </p>
+            <div class="preliminary-check-view pc-premium">
+                <header class="pc-hero">
+                    <span class="pc-hero__glow" aria-hidden="true"></span>
+                    <span class="pc-hero__eyebrow"><span class="pc-hero__pulse" aria-hidden="true"></span> الخطوة الأولى — فرز سريع</span>
+                    <h1 class="pc-hero__title">قبل التفاصيل، لنتأكد أن فكرتك <span class="pc-hero__accent">تستحق الدراسة</span></h1>
+                    <p class="pc-hero__sub">أربعة أسئلة سريعة تمنحك قراراً مبكراً — <strong>أكمل</strong> أو <strong>راجع</strong> أو <strong>قارن بدائل</strong> — قبل أن تصرف وقتك في التفاصيل. إجابات تقريبية تكفي.
+                        ${fieldHelp('الهدف: قرار مبكر «أكمل / راجع / قارن أفكاراً بديلة» قبل صرف وقت في دراسة تفصيلية. تُجمع الإجابات بشكل بسيط من الأهل والمعارف، أو من الغرف التجارية والوزارات ومجلات الاستثمار.', 'مثال: قبل دراسة مطعم، اسأل ٣ من أصحاب المطاعم عن أصعب ما واجههم.')}
+                    </p>
+                    <div class="pc-hero__meta">
+                        <span class="pc-hero__chip">${heroIcon('clock')} أقل من دقيقة</span>
+                        <span class="pc-hero__chip">${heroIcon('skip')} يمكنك تخطي الخطوة</span>
+                        <span class="pc-hero__chip">${heroIcon('shield')} بدون التزام — إجابات تقريبية</span>
+                    </div>
+                </header>
 
-                <div class="card analysis-card mb-4">
-                    <h3 class="card-title">أسئلة تأهيلية</h3>
+                <div class="card analysis-card pc-card mb-4">
+                    <h3 class="card-title pc-card__title">أسئلة تأهيلية</h3>
                     ${this._renderTriQuestion('pc-feasible',
                         `1. هل المشروع ممكن تنفيذه؟ (بناءً على معلومات أولية) ${fieldHelp('هل يمكن فعلياً تنفيذ الفكرة بالإمكانات المتاحة في السوق؟ لا يلزم يقين — انطباع أولي يكفي.', 'مثال: مقهى صغير في حي سكني — نعم، المعدات والموردون متوفرون.')}`,
                         pc.isProjectFeasible)}
@@ -127,21 +135,6 @@ export class PreliminaryCheckView {
 
                 <!-- بطاقة النتيجة الفورية -->
                 <div id="pc-result" class="mb-4">${this._renderResultCard(pc)}</div>
-
-                <!-- مبدأ الملاءمة (د. الروضي) — تفاعلي واختياري -->
-                <details class="card analysis-card mb-4">
-                    <summary style="cursor: pointer; font-weight: 600; padding: 0.5rem 0;">✅ مبدأ الملاءمة — هل المشروع يناسبك؟ <span id="pc-fitness-count" class="text-muted" style="font-weight:400;font-size:.85rem;">${this._fitnessCountLabel(suit)}</span></summary>
-                    <div class="mt-3" style="font-size: 0.9rem;">
-                        <p class="text-muted mb-2">اختر «نعم» لكل عامل ينطبق — كلما زادت الملاءمة زادت فرص النجاح:</p>
-                        <div class="d-flex flex-column gap-2" data-fitness-group>
-                            ${FITNESS_FACTORS.map(f => `
-                                <label class="res-chip ${suit[f.id] === 'yes' ? 'active' : ''}" style="justify-content:space-between;">
-                                    <span>${f.label}</span>
-                                    <input type="checkbox" data-fitness="${f.id}" ${suit[f.id] === 'yes' ? 'checked' : ''}>
-                                </label>`).join('')}
-                        </div>
-                    </div>
-                </details>
             </div>
         `;
 
@@ -202,12 +195,12 @@ export class PreliminaryCheckView {
         const state = this.store.getState();
         const { score, color, breakdown } = calculateIdeaScore(state);
         if (!score) return '';
-        const dot = { green: '🟢', yellow: '🟡', red: '🔴' }[color] || '⚪';
+        const dotClass = ['green', 'yellow', 'red'].includes(color) ? `pc-dot--${color}` : '';
         const completenessPct = Math.round((breakdown.completeness / 40) * 100);
         return `
             <div class="card mb-3" style="padding:.75rem 1rem;">
                 <div class="flex-between" style="align-items:center;">
-                    <strong style="font-size:.92rem;">${dot} نتيجة الفكرة الأولية: ${score}/100</strong>
+                    <strong style="font-size:.92rem;"><span class="pc-dot ${dotClass}"></span>نتيجة الفكرة الأولية: ${score}/100</strong>
                     ${fieldHelp('تقدير سريع من جزأين ماليين فقط: الهامش الربحي المتوقع (إن حُسب) وحجم السوق TAM المُدخل — ليست حكماً نهائياً على جودة المشروع. اكتمال تعبئة البيانات معروض للعلم فقط ولا يدخل في هذا الرقم.', '')}
                 </div>
                 <div class="d-flex gap-3 mt-2 text-xs text-muted">
@@ -223,9 +216,9 @@ export class PreliminaryCheckView {
         if (level === 'none') return this._renderIdeaScoreChip();
 
         const palette = {
-            green: { bg: '#ecfdf5', border: '#10b981', icon: '🟢', title: 'مؤشرات أولية إيجابية' },
-            yellow: { bg: '#fffbeb', border: '#f59e0b', icon: '🟡', title: 'مؤشرات مقبولة مع نقاط تحتاج انتباهاً' },
-            red: { bg: '#fef2f2', border: '#ef4444', icon: '🔴', title: 'إشارات تحذير — تأنَّ قبل الدراسة التفصيلية' }
+            green: { title: 'مؤشرات أولية إيجابية' },
+            yellow: { title: 'مؤشرات مقبولة مع نقاط تحتاج انتباهاً' },
+            red: { title: 'إشارات تحذير — تأنَّ قبل الدراسة التفصيلية' }
         }[level];
 
         const body = {
@@ -241,17 +234,12 @@ export class PreliminaryCheckView {
 
         return `
             ${this._renderIdeaScoreChip()}
-            <div class="card" style="background:${palette.bg};border-inline-start:4px solid ${palette.border};">
-                <strong style="font-size:1rem;">${palette.icon} ${palette.title}</strong>
+            <div class="pc-result pc-result--${level}">
+                <strong style="font-size:1rem;"><span class="pc-dot pc-dot--${level}"></span>${palette.title}</strong>
                 <p class="mb-0 mt-2" style="font-size:.92rem;">${body}</p>
                 ${list}
                 ${cta}
             </div>`;
-    }
-
-    _fitnessCountLabel(suit) {
-        const n = FITNESS_FACTORS.filter(f => (suit || {})[f.id] === 'yes').length;
-        return n > 0 ? `(${n} من ${FITNESS_FACTORS.length} عوامل ملائمة)` : '';
     }
 
     _updateResultCard() {
@@ -276,19 +264,12 @@ export class PreliminaryCheckView {
         if (resources.network) parts.push('معارف وموردون');
         const hasInitialResources = parts.length ? `متوفر: ${parts.join('، ')}` : '';
 
-        const suitability = {};
-        FITNESS_FACTORS.forEach(f => {
-            const box = this.container.querySelector(`input[data-fitness="${f.id}"]`);
-            suitability[f.id] = box ? (box.checked ? 'yes' : 'no') : '';
-        });
-
         return {
             isProjectFeasible: this._readTriState('pc-feasible'),
             suitableForEnvironment: this._readTriState('pc-environment'),
             hasInitialResources,
             readyForDetailedStudy: this._readTriState('pc-ready'),
-            resources,
-            suitability
+            resources
         };
     }
 
@@ -323,16 +304,6 @@ export class PreliminaryCheckView {
                 box.closest('.res-chip')?.classList.toggle('active', box.checked);
                 save();
                 this._updateResultCard();
-            });
-        });
-
-        // مبدأ الملاءمة (checkboxes)
-        this.container.querySelectorAll('[data-fitness-group] input[type="checkbox"]').forEach(box => {
-            box.addEventListener('change', () => {
-                box.closest('.res-chip')?.classList.toggle('active', box.checked);
-                save();
-                const countEl = document.getElementById('pc-fitness-count');
-                if (countEl) countEl.textContent = this._fitnessCountLabel(this._collect().suitability);
             });
         });
     }

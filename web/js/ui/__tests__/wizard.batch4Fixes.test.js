@@ -7,11 +7,12 @@
  *     btn.disabled=true كان يُضبط قبل فحص confirm() لا بعده.
  *  3) زر «الجلب الذكي» لكل جدول (smart fill) كان يعلق دائماً معطّلاً «جاري البحث…» إن
  *     رمى المُعالج (handler) استثناءً، لأن e.target.disabled=false لم يكن داخل finally.
- *  4) اتساق الأرقام: شريط التقدّم بالأعلى كان يعرض أرقاماً لاتينية بينما بقية التطبيق
+ *  4) اتساق الأرقام: مؤشر المسار بالأعلى كان يعرض أرقاماً لاتينية بينما بقية التطبيق
  *     (الجداول) يعرض أرقاماً هندية عبر toLocaleString('ar-SA').
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Wizard } from '../Wizard.js';
+import { StudyJourney } from '../StudyJourney.js';
 import { SECTIONS, createEmptyStudy, TABLE_SCHEMAS } from '../../core/schema.js';
 import { escapeHtml } from '../../utils/escape.js';
 import { DataService } from '../../services/DataService.js';
@@ -155,40 +156,24 @@ describe('Wizard batch-4 — XSS، الأزرار العالقة، اتساق ا
     });
 
     // ────────────────────────────────────────────────────────────────
-    // 4) اتساق نظام الأرقام في شريط التقدّم
+    // 4) اتساق نظام الأرقام في مؤشر المسار
     // ────────────────────────────────────────────────────────────────
-    describe('البند 4 — شريط التقدّم يعرض أرقاماً هندية (ar-SA) لا لاتينية', () => {
-        it('عناصر شريط التقدّم (رقم الخطوة/النسبة/الدقائق) تحوي أرقاماً هندية', () => {
-            const state = createEmptyStudy();
-            const wizard = new Wizard('c', fakeStore(state), {}, {
-                steps: [
-                    { id: SECTIONS.PROJECT_INFO, label: 'معلومات المشروع', isForm: true, tables: [] },
-                    { id: SECTIONS.HR, label: 'الموارد البشرية', tables: [] }
-                ]
-            });
-            document.body.innerHTML = `<div id="c"></div>`;
-            wizard.container = document.getElementById('c');
+    describe('البند 4 — مؤشر المسار يعرض أرقاماً هندية (ar-SA) لا لاتينية', () => {
+        it('رقم الخطوة وإجمالي الخطوات يستخدمان الأرقام العربية', () => {
+            document.body.innerHTML = `
+                <div id="headerStageBar"></div>
+                <div id="mobileStageIndicator"></div>
+                <nav id="breadcrumbBar"><button id="btnOpenStudyMap"></button></nav>
+                <dialog id="studyMapDialog"></dialog>`;
+            const journey = new StudyJourney();
+            journey.update(12);
 
-            wizard.renderStep(SECTIONS.PROJECT_INFO, wizard.steps[0], 0);
-
-            const progressEl = wizard.container.querySelector('.wizard-progress');
-            expect(progressEl).toBeTruthy();
-            expect(progressEl.innerHTML).toMatch(/[٠-٩]/);
-
-            // لا وجود لأرقام لاتينية في التسميات الرقمية الثلاث نفسها (الخطوة/النسبة/الدقائق)
-            const stepLabelSpans = progressEl.querySelectorAll('.progress-step-label .num');
-            stepLabelSpans.forEach(span => {
-                expect(span.textContent).not.toMatch(/[0-9]/);
-                expect(span.textContent).toMatch(/[٠-٩]/);
-            });
-
-            const percentEl = progressEl.querySelector('.progress-percent');
-            expect(percentEl.textContent).toMatch(/[٠-٩]/);
-            expect(percentEl.textContent).not.toMatch(/[0-9]/);
-
-            const etaSpan = progressEl.querySelector('.progress-eta .num');
-            expect(etaSpan.textContent).toMatch(/[٠-٩]/);
-            expect(etaSpan.textContent).not.toMatch(/[0-9]/);
+            const header = document.getElementById('headerStageBar').textContent;
+            const mobile = document.getElementById('mobileStageIndicator').textContent;
+            expect(header).toMatch(/[٠-٩]/);
+            expect(header).not.toMatch(/[0-9]/);
+            expect(mobile).toMatch(/[٠-٩]/);
+            expect(mobile).not.toMatch(/[0-9]/);
         });
     });
 });

@@ -43,7 +43,7 @@ export class MarketAnalysis {
 
         this.container.innerHTML = `
             <div class="market-analysis">
-                <h2 class="section-title">📈 تحليل السوق</h2>
+                <h2 class="section-title">تحجيم السوق</h2>
                 <p class="text-muted text-sm mb-3"><strong>السوقية</strong> = المستهلكون والمنافسون والطلب. <strong>التسويقية</strong> = كيف تسوّق (المزيج التسويقي، الحملات).</p>
 
                 <!-- مواءمة رؤية 2030 -->

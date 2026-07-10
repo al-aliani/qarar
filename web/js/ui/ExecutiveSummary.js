@@ -37,7 +37,7 @@ export class ExecutiveSummary {
 
         this.container.innerHTML = `
             <div class="executive-summary">
-                <h2 class="section-title">📋 الملخص التنفيذي</h2>
+                <h2 class="section-title">الملخص التنفيذي</h2>
                 ${investmentDataWarningHtml(investmentDataWarning(state, financialResults))}
                 ${this.renderAuditorBanner(state, financialResults)}
 

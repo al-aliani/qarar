@@ -1310,7 +1310,31 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    gap: 10px 16px;
+}
+
+/* مجموعتان منفصلتان: أفعال البدء (يمين) وأدوات التنظيم (تُدفَع للطرف المقابل) —
+   بدل صفٍّ واحد يخلط ٦ عناصر متراصّة بلا هرمية. */
+.dv-toolbar__actions,
+.dv-toolbar__organize {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
+}
+
+.dv-toolbar__organize {
+    margin-inline-start: auto;
+    padding-inline-start: 16px;
+    border-inline-start: 1px solid var(--c-border);
+}
+
+@media (max-width: 640px) {
+    .dv-toolbar__organize {
+        margin-inline-start: 0;
+        padding-inline-start: 0;
+        border-inline-start: none;
+    }
 }
 
 .dv-toolbar__label {

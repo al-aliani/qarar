@@ -12,14 +12,17 @@
 .app-shell.dashboard-mode .app-header { display: none !important; }
 .app-header__brand { font-weight: 700; font-size: 1.1rem; color: var(--c-p-500); }
 .app-header__actions { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
-.stage-bar { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 240px; padding: 4px 8px; border: 1px solid var(--c-border); border-radius: var(--r-md); background: var(--c-surface-2); overflow-x: auto; scrollbar-width: thin; }
-.stage-chip { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 4px 8px; border-radius: var(--r-pill); border: 1px solid var(--c-border); color: var(--c-text-muted); font-size: 0.75rem; }
-.stage-chip.is-active { border-color: var(--c-gold-border); color: var(--c-text-main); background: var(--c-gold-subtle); }
-.stage-chip.is-complete { color: var(--c-text-main); }
-.stage-chip__dot { width: 8px; height: 8px; border-radius: 999px; background: var(--c-border); }
-.stage-chip.is-active .stage-chip__dot { background: var(--c-p-500); }
-.stage-chip.is-complete .stage-chip__dot { background: var(--c-success); }
+/* موضع ثابت يجيب عن سؤال «أين أنا؟» من دون تحويل الهيدر إلى شريط خطوات مزدحم. */
+.stage-bar { flex: 1; min-width: 180px; max-width: 320px; display: flex; }
+.stage-badge {
+  display: flex; align-items: baseline; gap: 8px; width: 100%;
+  padding: 6px 10px; border: 1px solid var(--c-border); border-radius: var(--r-md);
+  background: var(--c-surface-2); color: var(--c-text-main);
+}
+.stage-badge__meta { font-size: 0.7rem; color: var(--c-text-muted); white-space: nowrap; flex-shrink: 0; }
+.stage-badge__label { font-size: 0.8rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-header__kpi { display: flex; align-items: center; gap: var(--s-2); font-size: 0.85rem; }
+.mobile-header__actions { display: none; }
 .kpi-mini { white-space: nowrap; }
 .kpi-mini.badge { padding: 2px 8px; border-radius: var(--r-pill); background: var(--c-surface-2); color: var(--c-text-muted); font-size: 0.75rem; }
 .app-header #headerKpiNpv.text-danger, .app-header #headerKpiIrr.text-danger { color: var(--c-danger); }
@@ -50,3 +53,122 @@
   display: none !important;
 }
 .main-stage { grid-column: 1 / -1 !important; }
+
+/* مسار مختصر ثابت: عنوان الخطوة + زر واحد للخريطة + خط تقدم موضعي. */
+.breadcrumb-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: 48px;
+  padding: 8px max(16px, calc((100% - 800px) / 2));
+  color: var(--c-text-muted);
+  background: color-mix(in srgb, var(--c-bg-app) 94%, transparent);
+  border-bottom: 1px solid var(--c-border);
+  backdrop-filter: blur(12px);
+}
+.breadcrumb-bar::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-end: -1px;
+  width: var(--journey-progress, 0%);
+  height: 2px;
+  background: var(--c-p-500);
+  transition: width .2s ease;
+}
+.breadcrumb-trail { min-width: 0; display: flex; align-items: center; gap: 6px; }
+.breadcrumb-current { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--c-text-main); }
+.breadcrumb-item a { color: var(--c-p-500); text-decoration: none; }
+.breadcrumb-bar #btnOpenStudyMap { flex: none; min-height: 36px; }
+.app-shell.dashboard-mode .breadcrumb-bar { display: none !important; }
+
+/* خريطة الدراسة: وجهة واحدة واضحة بدل قائمة جانبية وخريطة مكررة داخل كل خطوة. */
+.study-map {
+  width: min(760px, calc(100vw - 32px));
+  max-width: 760px;
+  max-height: min(82vh, 760px);
+  padding: 0;
+  color: var(--c-text-main);
+  background: var(--c-bg-panel);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.study-map::backdrop { background: rgba(7, 22, 17, .58); backdrop-filter: blur(4px); }
+.study-map__header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  background: var(--c-bg-panel);
+  border-bottom: 1px solid var(--c-border);
+}
+.study-map__header h2 { margin: 2px 0 0; font-size: 1.2rem; }
+.study-map__eyebrow { margin: 0; color: var(--c-p-500); font-size: .75rem; font-weight: 700; }
+.study-map__close {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--c-border);
+  border-radius: 50%;
+  color: var(--c-text-main);
+  background: transparent;
+  font: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+.study-map__groups { max-height: calc(min(82vh, 760px) - 82px); padding: var(--s-3); overflow: auto; }
+.study-map__group + .study-map__group { margin-top: var(--s-4); }
+.study-map__group-title { margin: 0 0 var(--s-2); font-size: .82rem; color: var(--c-text-muted); }
+.study-map__steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.study-map__step {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  text-align: start;
+  color: var(--c-text-main);
+  background: var(--c-bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  font: inherit;
+  font-size: .82rem;
+  cursor: pointer;
+}
+.study-map__step:hover { border-color: var(--c-p-500); background: var(--c-p-subtle); }
+.study-map__step.is-current { border-color: var(--c-p-500); background: var(--c-p-subtle); font-weight: 700; }
+.study-map__number {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--c-text-muted);
+  background: var(--c-surface-2);
+  font-family: var(--font-mono);
+  font-size: .72rem;
+}
+.study-map__step.is-current .study-map__number { color: var(--c-p-contrast); background: var(--c-p-500); }
+
+@media (max-width: 768px) {
+  .breadcrumb-bar { padding: 7px 12px; min-height: 46px; }
+  .breadcrumb-trail { font-size: .78rem; }
+  .breadcrumb-bar #btnOpenStudyMap { padding-inline: 10px; font-size: .75rem; }
+  .study-map__steps { grid-template-columns: 1fr; }
+  .study-map__groups { padding: var(--s-2); }
+  .mobile-stage-indicator { max-width: 42%; }
+  .mobile-header__actions { display: flex; align-items: center; gap: 4px; margin-inline-start: auto; }
+  .mobile-header__actions .btn-icon { width: 38px; min-width: 38px; height: 38px; min-height: 38px; padding: 0; }
+  .fab-export { display: none !important; }
+}

@@ -30,7 +30,7 @@ export class PostLaunchTracker {
         this.container.innerHTML = `
             <div class="tracker-container animate-entry">
                 <div class="section-header">
-                    <h2 class="text-xl font-bold">🔭 مراقبة الأداء الفعلي (Post-Launch Tracker)</h2>
+                    <h2 class="text-xl font-bold">مراقبة الأداء الفعلي</h2>
                     <p class="text-muted">مقارنة الأداء الحقيقي للمشروع مع ما تم التخطيط له في دراسة الجدوى لمعرفة الانحرافات.</p>
                     <p class="text-sm text-muted">هذه الخطوة اختيارية بالكامل ومخصّصة لما بعد افتتاح المشروع فعلياً — لا حاجة لتعبئتها الآن، ويمكنك العودة إليها لاحقاً بعد بدء التشغيل.</p>
                     <div class="alert alert--info mt-3" style="font-size: 0.85rem;">

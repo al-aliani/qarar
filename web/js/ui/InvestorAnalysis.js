@@ -54,7 +54,7 @@ export class InvestorAnalysis {
 
         this.container.innerHTML = `
             <div class="investor-analysis animate-entry">
-                <h2 class="section-title">🤝 تحليل الجدوى الاستثمارية</h2>
+                <h2 class="section-title">تحليل الجدوى الاستثمارية</h2>
                 <p class="text-muted mb-4">تقييم المشروع من منظور المستثمر: درجة الجاذبية، قائمة الجاهزية، ومعايير القرار.</p>
 
                 <!-- درجة الجاذبية -->

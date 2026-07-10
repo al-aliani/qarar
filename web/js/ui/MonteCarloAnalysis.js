@@ -59,7 +59,7 @@ export class MonteCarloAnalysis {
 
         this.container.innerHTML = `
             <div class="monte-carlo-section">
-                <h2 class="section-title"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> محاكاة مونت كارلو (تحليل المخاطر)</h2>
+                <h2 class="section-title"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> محاكاة مونت كارلو</h2>
 
                 <div class="card">
                     <div class="flex-between mb-4">

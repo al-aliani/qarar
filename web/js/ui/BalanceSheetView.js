@@ -16,7 +16,7 @@ export class BalanceSheetView {
         if (!balanceSheets || balanceSheets.length === 0) {
             this.container.innerHTML = `
                 <div class="card glass-card">
-                    <h3 class="card-title">📊 الميزانية العمومية التقديرية</h3>
+                    <h2 class="card-title">الميزانية العمومية التقديرية</h2>
                     <div class="empty-state">
                         <p class="text-muted">لا تتوفر بيانات كافية لإنشاء الميزانية العمومية</p>
                     </div>
@@ -30,7 +30,7 @@ export class BalanceSheetView {
         this.container.innerHTML = `
             <div class="card glass-card">
                 <div class="card-header flex justify-between items-center">
-                    <h3 class="card-title">📊 الميزانية العمومية التقديرية</h3>
+                    <h2 class="card-title">الميزانية العمومية التقديرية</h2>
                     <div class="year-selector">
                         ${balanceSheets.map((s, idx) => `
                             <button class="btn-xs ${this.selectedYear === idx + 1 ? 'btn--primary' : 'btn--ghost'}" 

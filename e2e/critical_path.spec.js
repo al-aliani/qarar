@@ -5,17 +5,17 @@ test.describe('Critical Path: Full User Journey', () => {
   test('User can create a project, add revenue, and see calculations', async ({ page }) => {
     // 1. Landing Page
     await page.goto('/index.html');
-    await expect(page).toHaveTitle(/محاكي الجدوى/);
+    await expect(page).toHaveTitle(/محاكي دراسة الجدوى/);
     await page.waitForLoadState('domcontentloaded');
 
     // 2. Start New Project from Dashboard (or empty state)
-    await expect(page.locator('.dashboard-view, .dashboard-empty, #wizardContainer, .app-shell')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#wizardContainer')).toBeVisible({ timeout: 15000 });
 
     // Click "New Project" (Full Study) — only if dashboard/empty is shown
     const btnNew = page.locator('#btnNewProject, #btnNewProjectEmpty').filter({ hasText: 'دراسة جديدة' }).first();
     if (await btnNew.isVisible()) {
       await btnNew.click();
-      await expect(page.locator('#templateGalleryOverlay, .sidebar')).toBeVisible({ timeout: 8000 });
+      await expect(page.locator('#templateGalleryOverlay')).toBeVisible({ timeout: 8000 });
     }
 
     // 2.1 Template Gallery (if opened)
@@ -23,16 +23,18 @@ test.describe('Critical Path: Full User Journey', () => {
     if (await galleryOverlay.isVisible()) {
       const emptyTemplate = galleryOverlay.locator('.template-card[data-id="empty"]');
       await emptyTemplate.click();
+      const advancedMode = galleryOverlay.locator('.mode-card[data-mode="advanced"]');
+      if (await advancedMode.isVisible()) {
+        await advancedMode.click();
+        await galleryOverlay.locator('#btnBlankCreate').click();
+      }
       await expect(galleryOverlay).not.toBeVisible({ timeout: 5000 });
     }
 
-    // Sidebar should now be visible
-    const sidebar = page.locator('.sidebar');
-    await expect(sidebar).toBeVisible({ timeout: 10000 });
-
-    // Navigate to "Project Info" via Sidebar (already verified visibility)
-    // "معلومات المشروع ونموذج العمل (ريادي/شركات)"
-    const projectInfoStep = page.locator('.step-item .step-label').filter({ hasText: 'معلومات المشروع' }).first();
+    // Navigate through the single shared study map (the legacy sidebar is intentionally hidden)
+    await expect(page.locator('#btnOpenStudyMap')).toBeVisible({ timeout: 10000 });
+    await page.locator('#btnOpenStudyMap').click();
+    const projectInfoStep = page.locator('#studyMapDialog [data-study-step]').filter({ hasText: 'معلومات المشروع' });
     await projectInfoStep.click();
 
     // 3. Fill Project Info
@@ -49,7 +51,8 @@ test.describe('Critical Path: Full User Journey', () => {
     await nameInput.blur();
 
     // 4. Navigate to Revenue (مصادر الإيرادات)
-    const revenueStep = page.locator('.step-item .step-label').filter({ hasText: 'مصادر الإيرادات' }).first();
+    await page.locator('#btnOpenStudyMap').click();
+    const revenueStep = page.locator('#studyMapDialog [data-study-step]').filter({ hasText: 'مصادر الإيرادات' });
     await revenueStep.click();
 
     // 5. Add Revenue Stream
@@ -74,28 +77,19 @@ test.describe('Critical Path: Full User Journey', () => {
     // Trigger calculation by blurring or changing focus
     await row.locator('input[data-col="customersPerMonth"]').blur();
 
-    // 6. Verify Live Panel Updates
-    // The Live Panel #liveNPV should update after short debounce
-    const liveNPV = page.locator('#liveNPV');
-    await expect(liveNPV).not.toHaveText('--', { timeout: 15000 });
-    const npvText = await liveNPV.textContent();
-    console.log('Live NPV:', npvText);
-    expect(npvText).toBeTruthy();
-
-    // 7. Check Calculation Dashboard (Financial Indicators)
-    // Sidebar section: "مؤشرات التقييم المالي"
-    const financialEvalStep = page.locator('.step-item .step-label').filter({ hasText: 'مؤشرات التقييم' }).first();
-    if (await financialEvalStep.isVisible()) {
-        await financialEvalStep.click();
-        await expect(page.locator('h3, h4').filter({ hasText: 'صافي القيمة الحالية' }).first()).toBeVisible();
-    }
+    // 6. Check the financial indicators dashboard (the duplicate live panel and early-summary step were removed)
+    await page.locator('#btnOpenStudyMap').click();
+    const financialDashboardStep = page.locator('#studyMapDialog [data-study-step]').filter({ hasText: 'لوحة المؤشرات المالية' });
+    await financialDashboardStep.click();
+    await expect(page.locator('h2').filter({ hasText: 'لوحة المؤشرات المالية' })).toBeVisible();
   });
 
   test('Export Menu triggers download options', async ({ page }) => {
     await page.goto('/index.html');
     await page.waitForLoadState('domcontentloaded');
-    await expect(page.locator('#btnExportMenu')).toBeVisible({ timeout: 10000 });
-    await page.click('#btnExportMenu');
+    await page.goto('/index.html#/step/0');
+    await expect(page.locator('#headerExportMenu')).toBeVisible({ timeout: 10000 });
+    await page.click('#headerExportMenu');
     // Modal uses data-type (ExportMenu.js)
     await expect(page.locator('.export-modal')).toBeVisible({ timeout: 8000 });
     await expect(page.locator('.export-modal [data-type="excel"]')).toBeVisible();

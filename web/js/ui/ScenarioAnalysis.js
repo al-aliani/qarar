@@ -30,7 +30,7 @@ export class ScenarioAnalysis {
 
         this.container.innerHTML = `
             <div class="scenario-analysis">
-                <h2 class="section-title">📊 تحليل السيناريوهات</h2>
+                <h2 class="section-title">السيناريوهات</h2>
                 
                 <!-- Scenario Comparison -->
                 <div class="card analysis-card">

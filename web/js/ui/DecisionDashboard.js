@@ -34,7 +34,8 @@ export class DecisionDashboard {
         this._eventListeners = [];
     }
 
-    async render() {
+    async render(options = {}) {
+        const isCurrent = typeof options.isCurrent === 'function' ? options.isCurrent : () => true;
         const state = this.store.getState();
 
         // بلا إيرادات لا يصح إصدار حكم «غير مجدي» بأرقام سالبة مضللة —
@@ -115,6 +116,9 @@ export class DecisionDashboard {
             const { validateStudy } = await import('../utils/validation.js');
             validationResult = validateStudy(state);
         } catch (_) {}
+
+        // إذا انتقل المستخدم أثناء فحوص الجودة فلا تكتب نتيجة قديمة فوق الخطوة الجديدة.
+        if (!isCurrent()) return false;
 
         // «اجتياز نظيف» = بلا أخطاء حرجة وبلا تحذيرات مهمة وبلا أخطاء بيانات.
         // كان البانر الأخضر «اجتاز 100/100» يظهر بمجرد غياب الأخطاء الحرجة، فيتزامن مع تحذيرات
@@ -460,6 +464,7 @@ export class DecisionDashboard {
             const scoreEl = this.container.querySelector('#scoreValue');
             if (scoreEl) animateCounter(scoreEl, evaluation.score, { duration: 1500 });
         }, 300);
+        return true;
     }
 
     bindStressTestSliders(state, results) {

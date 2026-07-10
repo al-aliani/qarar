@@ -41,7 +41,7 @@ export class BusinessModelView {
                 <div class="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div>
                         <h2 class="section-title flex items-center gap-2">
-                            <span>💼</span> نموذج العمل
+                            نموذج العمل
                         </h2>
                         <p class="text-muted text-sm max-w-2xl">
                             لخّص مكوّنات نموذج العمل وفق إطار Business Model Canvas. يساعدك هذا القسم على توضيح فكرة مشروعك وتوحيد رؤيتك الاستراتيجية لنفسك — ملاحظة: هذه البيانات توثيقية حالياً ولا تدخل تلقائياً في حساب القرار المالي أو الملخص التنفيذي.

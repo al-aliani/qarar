@@ -1,47 +1,60 @@
 /**
  * @vitest-environment jsdom
  *
- * تدقيق 2026-07-08 (ملاحظة حرجة، منهجية IFC/UNIDO): خطوة «تفاصيل الفكرة» [3] وخطوة
- * «مقدمة الجدوى الموحدة» [5] كانتا تحرّران نفس products/introServices بأسماء حقول
- * متضاربة (uniqueCharacteristics/uniqueFeatures، addedValue/valueAdded،
- * supportive/supporting) — فيمسح IntroductionView.collectProducts() صامتاً أي حقل
- * أُدخل عبر جدول خطوة 3 بمجرد زيارة خطوة 5 وحفظها.
+ * فرضية المشروع خطوة تشغيلية: لا تعيد تحرير المنتجات أو الخدمات أو الموقع،
+ * ولا تعرض مصادر أو قاموساً نظرياً داخل مسار إدخال البيانات.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { IntroductionView } from '../IntroductionView.js';
-import { TABLE_SCHEMAS, createEmptyStudy } from '../../core/schema.js';
+import { createEmptyStudy } from '../../core/schema.js';
 
 function fakeStore(state) {
-    return { getState: () => state, get: () => state, update: () => {} };
+    return {
+        getState: () => state,
+        get: () => state,
+        update: vi.fn((section, value) => { state[section] = value; })
+    };
 }
 
-describe('IntroductionView — أسماء حقول موحّدة مع TABLE_SCHEMAS (لا فقدان بيانات صامت)', () => {
-    it('collectProducts يستخدم بالضبط مفاتيح TABLE_SCHEMAS.products.columns', () => {
-        document.body.innerHTML = `<div id="c"></div>`;
+describe('IntroductionView — فرضية تشغيلية بلا حشو أو إدخال مكرر', () => {
+    it('يعرض المشكلة والحل وسبب اختيار العميل فقط', () => {
+        document.body.innerHTML = '<div id="c"></div>';
         const state = createEmptyStudy();
-        state.projectInfo.products = [{ type: 'final', name: 'قهوة مختصة', description: 'وصف', uniqueFeatures: 'تحميص محلي', valueAdded: 'جودة عالية', customerBenefit: 'طعم مميز' }];
         const view = new IntroductionView('c', fakeStore(state), () => {});
-        view.render(0);
+        view.render(5);
 
-        const collected = view.collectProducts();
-        expect(collected).toHaveLength(1);
-        const schemaKeys = TABLE_SCHEMAS.products.columns.map(c => c.key).sort();
-        expect(Object.keys(collected[0]).sort()).toEqual(schemaKeys);
-        // القيمة المُدخلة فعلياً (لا تُفقد) تظهر في القيمة المُجمَّعة من DOM
-        expect(collected[0].uniqueFeatures).toBe('تحميص محلي');
-        expect(collected[0].valueAdded).toBe('جودة عالية');
+        expect(document.querySelector('h2').textContent).toBe('فرضية المشروع');
+        expect(document.querySelector('#hypothesis-problem')).toBeTruthy();
+        expect(document.querySelector('#hypothesis-solution')).toBeTruthy();
+        expect(document.querySelector('#hypothesis-insight')).toBeTruthy();
+        expect(document.querySelectorAll('.introduction-view textarea')).toHaveLength(3);
     });
 
-    it('collectServices يستخدم "supporting" (لا "supportive") مطابقاً لخيارات TABLE_SCHEMAS.introServices', () => {
-        document.body.innerHTML = `<div id="c"></div>`;
+    it('لا يعرض المصادر والقاموس والمنتجات والموقع المكررة في هذه الخطوة', () => {
+        document.body.innerHTML = '<div id="c"></div>';
         const state = createEmptyStudy();
-        state.projectInfo.introServices = [{ name: 'تركيب', type: 'supporting', description: 'خدمة تركيب مجانية' }];
+        state.projectInfo.products = [{ name: 'قهوة مختصة' }];
         const view = new IntroductionView('c', fakeStore(state), () => {});
-        view.render(0);
+        view.render(5);
 
-        const collected = view.collectServices();
-        expect(collected[0].type).toBe('supporting');
-        const validTypes = TABLE_SCHEMAS.introServices.columns.find(c => c.key === 'type').options.map(o => o.value);
-        expect(validTypes).toContain(collected[0].type);
+        const text = document.getElementById('c').textContent;
+        expect(text).not.toContain('مصادر البيانات الرسمية');
+        expect(text).not.toContain('تعريف المصطلحات');
+        expect(document.querySelector('.product-card')).toBeNull();
+        expect(document.querySelector('.location-alternatives-section')).toBeNull();
+    });
+
+    it('الانتقال للخطوة التالية لا يمسح كتالوج المنتجات والخدمات الموجود', () => {
+        document.body.innerHTML = '<div id="c"></div>';
+        const state = createEmptyStudy();
+        state.projectInfo.products = [{ name: 'قهوة مختصة' }];
+        state.projectInfo.introServices = [{ name: 'توصيل' }];
+        const store = fakeStore(state);
+        const view = new IntroductionView('c', store, () => {});
+        view.render(5);
+
+        document.querySelector('.btn-next-step').click();
+        expect(state.projectInfo.products).toEqual([{ name: 'قهوة مختصة' }]);
+        expect(state.projectInfo.introServices).toEqual([{ name: 'توصيل' }]);
     });
 });

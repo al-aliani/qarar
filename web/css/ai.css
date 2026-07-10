@@ -53,6 +53,11 @@
     .ai-chat-fab:hover { transform: none; }
 }
 
+@media (max-width: 768px) {
+    /* الإجراء موجود داخل ترويسة الجوال؛ لا زر عائم يحجب الحقول. */
+    .ai-chat-fab { display: none !important; }
+}
+
 /* 3. Animations */
 @keyframes slideInRight {
     from {

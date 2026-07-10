@@ -120,6 +120,7 @@
     <!-- App Header Toolbar (visible in workspace: save, export, theme, KPI mini) -->
     <header class="app-header" id="appHeader" role="banner">
       <div class="app-header__brand"><svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg> قرار</div>
+      <button type="button" id="headerGoHome" class="btn btn--secondary btn-sm" title="العودة إلى الرئيسية"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg> الرئيسية</button>
       <div id="headerStageBar" class="stage-bar" aria-label="مراحل الدراسة"></div>
       <div class="app-header__actions">
         <button type="button" id="headerThemeToggle" class="btn-icon" aria-label="تبديل المظهر" title="المظهر: داكن / فاتح / تلقائي">
@@ -137,6 +138,10 @@
       </button>
       <span class="brand-name-mobile"><svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg> قرار</span>
       <span id="mobileStageIndicator" class="mobile-stage-indicator" aria-live="polite" aria-label="المرحلة الحالية"></span>
+      <div class="mobile-header__actions">
+        <button type="button" id="mobileOpenAI" class="btn-icon" aria-label="فتح المستشار الذكي" title="المستشار الذكي"><svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg></button>
+        <button type="button" id="mobileOpenExport" class="btn-icon" aria-label="تصدير الدراسة" title="تصدير الدراسة"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></button>
+      </div>
     </header>
 
     <!-- Sidebar Overlay -->
@@ -220,10 +225,13 @@
 
     <!-- Main Wizard Stage -->
     <main class="main-stage">
-      <nav id="breadcrumbBar" class="breadcrumb-bar" aria-label="مسار التنقل" style="display:none; padding: 8px 16px; font-size: 14px; color: var(--c-text-muted); border-bottom: 1px solid var(--c-border);">
-        <span class="breadcrumb-item"><a href="#" data-breadcrumb-home>الرئيسية</a></span>
-        <span class="breadcrumb-sep"> / </span>
-        <span id="breadcrumbCurrent" class="breadcrumb-current"></span>
+      <nav id="breadcrumbBar" class="breadcrumb-bar" aria-label="مسار التنقل" style="display:none">
+        <div class="breadcrumb-trail">
+          <span class="breadcrumb-item"><a href="#" data-breadcrumb-home>الرئيسية</a></span>
+          <span class="breadcrumb-sep"> / </span>
+          <span id="breadcrumbCurrent" class="breadcrumb-current"></span>
+        </div>
+        <button type="button" id="btnOpenStudyMap" class="btn btn--ghost btn-sm">مسار الدراسة</button>
       </nav>
       <div id="wizardContainer" class="wizard-container" tabindex="-1">
         <!-- Active Step Content Injected Here -->
@@ -237,6 +245,7 @@
   <div id="shareStudyOverlay"></div>
   <div id="consultationModalOverlay"></div>
   <div id="authModalContainer"></div>
+  <dialog id="studyMapDialog" class="study-map" aria-label="مسار خطوات الدراسة"></dialog>
   
   <dialog id="aiSettingsModal" class="modal" aria-labelledby="aiSettingsTitle">
     <div class="modal-content" style="max-width: 500px;">

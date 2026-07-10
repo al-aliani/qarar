@@ -90,7 +90,7 @@ export class ProjectAlternativesView {
             <div class="project-alternatives-view animate-entry">
                 <h2 class="section-title">
                     <svg class="ic section-title__ic" aria-hidden="true"><use href="#i-chart"/></svg>
-                    اختيار المشروع قبل التفصيل
+                    مقارنة الأفكار
                 </h2>
                 <p class="text-muted mb-4">إذا لديك أكثر من فكرة مشروع، قارنها مبدئياً قبل الدخول في الدراسة التفصيلية. إذا مشروع واحد فقط — اكمل مباشرة.</p>
 

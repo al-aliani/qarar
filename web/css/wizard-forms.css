@@ -55,6 +55,17 @@
 .step-phase::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .step-content h2 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
 
+/* دليل الخطوة يبقى متاحاً عند الطلب ولا يزاحم الحقول بنصوص طويلة. */
+.step-guide { border: 1px solid var(--c-border); border-radius: var(--r-md); background: var(--c-bg-card); }
+.step-guide summary { min-height: 42px; padding: 10px 12px; color: var(--c-p-500); font-size: .82rem; font-weight: 700; cursor: pointer; }
+.step-guide__body { padding: 0 12px 12px; color: var(--c-text-muted); font-size: .84rem; line-height: 1.7; }
+.step-guide__body p { margin: 0; }
+.step-guide__body p + p { margin-top: 6px; }
+.step-guide__body strong { color: var(--c-text-main); }
+.optional-step-tools { border: 1px dashed var(--c-border); border-radius: var(--r-md); background: var(--c-bg-card); }
+.optional-step-tools > summary { min-height: 44px; padding: 11px 14px; color: var(--c-text-muted); font-size: .84rem; font-weight: 600; cursor: pointer; }
+.optional-step-tools__body { padding: 0 var(--s-3) var(--s-3); }
+
 /* ── 3) صناديق الإرشاد ── */
 .step-help-box { border: 1px solid var(--c-border); border-inline-start: 3px solid var(--c-p-500); background: var(--c-bg-card); border-radius: var(--r-md); padding: var(--s-3); box-shadow: var(--shadow-sm); }
 .step-help-box p { font-size: 0.85rem; line-height: 1.7; }
@@ -202,6 +213,10 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500)
     position: sticky;
     bottom: 0;
     z-index: 10;
+    display: grid;
+    grid-template-columns: minmax(120px, auto) minmax(0, 1fr) minmax(120px, auto);
+    align-items: center;
+    gap: var(--s-3);
     margin-top: var(--s-5);
     padding: var(--s-2) var(--s-3);
     background: var(--c-bg-card);
@@ -209,6 +224,9 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500)
     border-radius: var(--r-lg);
     box-shadow: var(--shadow-lg);
 }
+#btnPrevStep { grid-column: 1; }
+.wizard-nav > .nav-indicator { grid-column: 2; }
+#btnNextStep { grid-column: 3; }
 .wizard-nav .btn {
     display: inline-flex;
     align-items: center;
@@ -244,6 +262,38 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500)
 .nav-indicator .text-xs, .nav-indicator__caption { font-size: 0.68rem; color: var(--c-text-muted); }
 .nav-indicator .font-medium, .nav-indicator__label { font-size: 0.82rem; font-weight: 500; }
 .ic-nav { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ── 8ب) لوحة إغلاق آخر خطوة — تدقيق 2026-07-10: آخر خطوة كانت تنتهي بزر «التالي»
+   معطّل بلا أي مسار إغلاق فعلي (لا رجوع للرئيسية، لا تصدير، لا عرض قرار نهائي). ── */
+.wizard-completion {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-3);
+    margin-top: var(--s-3);
+    padding: var(--s-4) var(--s-4);
+    background: var(--c-p-subtle);
+    border: 1px solid var(--c-p-500);
+    border-radius: var(--r-lg);
+}
+.wizard-completion__icon { font-size: 1.6rem; line-height: 1; flex: none; }
+.wizard-completion__body { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+.wizard-completion__title { margin: 0; font-size: 1rem; font-weight: 700; color: var(--c-text-main); }
+.wizard-completion__desc { margin: 0; font-size: 0.85rem; color: var(--c-text-muted); }
+.wizard-completion__actions { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-2); }
+.wizard-completion__actions .btn { min-height: 40px; padding-inline: 18px; }
+@media (max-width: 560px) {
+    .wizard-completion { flex-direction: column; }
+    .wizard-completion__actions .btn { flex: 1 1 auto; }
+    .wizard-nav {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 8px;
+        padding: 8px;
+    }
+    .wizard-nav > .nav-indicator { grid-column: 1 / -1; grid-row: 1; }
+    #btnPrevStep { grid-column: 1; grid-row: 2; }
+    #btnNextStep { grid-column: 2; grid-row: 2; }
+    .wizard-nav .btn { min-width: 0; width: 100%; padding-inline: 12px; }
+}
 
 /* ── 9) الجداول الديناميكية: بطاقة هادئة بأرقام مصطفة ── */
 .dynamic-table { border: 1px solid var(--c-border); border-radius: var(--r-md); background: var(--c-bg-card); padding: var(--s-2) var(--s-3) var(--s-3); box-shadow: var(--shadow-sm); }
@@ -357,6 +407,182 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500)
 }
 .res-chip input[type="checkbox"] { accent-color: var(--c-p-500); width: 16px; height: 16px; }
 
+/* ═══ بطاقة نتيجة الفرز (الدراسة المبدئية) — ألوان من التوكنز لتعمل على الداكن ═══
+   كانت خلفياتها hex ثابتة (#ecfdf5/#fffbeb/#fef2f2) فتظهر صناديق فاتحة فوق
+   الأرضية الداكنة. الآن مشتقة من ألوان الحالة التي تتبدّل مع الثيم. */
+.pc-result {
+    border-radius: var(--r-md);
+    border: 1px solid var(--c-border);
+    border-inline-start-width: 4px;
+    padding: var(--s-3);
+}
+.pc-result--green {
+    background: color-mix(in srgb, var(--c-success) 10%, var(--c-bg-card));
+    border-inline-start-color: var(--c-success);
+}
+.pc-result--yellow {
+    background: var(--c-warning-subtle);
+    border-inline-start-color: var(--c-warning);
+}
+.pc-result--red {
+    background: var(--c-danger-subtle);
+    border-inline-start-color: var(--c-danger);
+}
+/* نقطة حالة ملوّنة بديل الإيموجي (🟢🟡🔴) — متسقة مع منع الإيموجي في بقية التطبيق */
+.pc-dot {
+    display: inline-block;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    margin-inline-end: 0.4rem;
+    vertical-align: middle;
+}
+.pc-dot--green { background: var(--c-success); }
+.pc-dot--yellow { background: var(--c-warning); }
+.pc-dot--red { background: var(--c-danger); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   إعادة تصميم الخطوة 0 (الدراسة المبدئية) — واجهة ترحيبية راقية
+   هوية «قرار»: أخضر صنوبري + لمسة نحاسية على أرضية ورقية، آمنة للوضع الداكن.
+   ═══════════════════════════════════════════════════════════════════ */
+.pc-premium { max-width: 860px; margin-inline: auto; }
+.pc-ic { width: 1rem; height: 1rem; flex: none; }
+
+/* ── الهيرو: بطاقة ترحيب بمساحة سلبية سخية وتدرّج ناعم ── */
+.pc-hero {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(1.5rem, 4vw, 2.75rem);
+    margin-bottom: var(--s-4);
+    border-radius: var(--r-xl);
+    border: 1px solid var(--c-border);
+    background:
+        radial-gradient(130% 130% at 100% 0%, var(--c-p-subtle), transparent 55%),
+        var(--card-sheen),
+        var(--c-bg-card);
+    box-shadow: var(--shadow-lg);
+}
+.pc-hero__glow {
+    position: absolute;
+    inset-inline-start: -12%;
+    top: -45%;
+    width: 48%;
+    height: 170%;
+    background: radial-gradient(circle, var(--c-gold-subtle), transparent 70%);
+    pointer-events: none;
+}
+.pc-hero__eyebrow {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.38rem 0.9rem;
+    border-radius: var(--r-pill);
+    background: var(--c-p-subtle);
+    color: var(--c-p-500);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+.pc-hero__pulse {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--c-p-500);
+}
+@media (prefers-reduced-motion: no-preference) {
+    .pc-hero__pulse { animation: pcPulse 2.4s ease-out infinite; }
+    @keyframes pcPulse {
+        0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-p-500) 55%, transparent); }
+        70%  { box-shadow: 0 0 0 7px transparent; }
+        100% { box-shadow: 0 0 0 0 transparent; }
+    }
+}
+.pc-hero__title {
+    position: relative;
+    margin: 1rem 0 0.65rem;
+    font-weight: 800;
+    font-size: clamp(1.55rem, 3.6vw, 2.2rem);
+    line-height: 1.28;
+    letter-spacing: -0.01em;
+    color: var(--c-text-main);
+}
+.pc-hero__accent {
+    position: relative;
+    color: var(--c-p-500);
+    white-space: nowrap;
+}
+.pc-hero__accent::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: -0.12em;
+    height: 0.16em;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--c-gold-deco), transparent);
+    opacity: 0.6;
+}
+.pc-hero__sub {
+    position: relative;
+    max-width: 60ch;
+    margin: 0;
+    color: var(--c-text-muted);
+    font-size: 1rem;
+    line-height: 1.75;
+}
+.pc-hero__sub strong { color: var(--c-text-main); font-weight: 700; }
+.pc-hero__meta {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.6rem;
+    margin-top: 1.35rem;
+}
+.pc-hero__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--r-pill);
+    background: var(--c-surface-2);
+    border: 1px solid var(--c-border);
+    color: var(--c-text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+.pc-hero__chip .pc-ic { color: var(--c-p-500); }
+
+/* ── بطاقات الخطوة: ظل أنعم، زوايا أكبر، لمعة علوية، تفاعل رقيق ── */
+.pc-card {
+    position: relative;
+    border-radius: var(--r-lg);
+    padding: clamp(1.1rem, 2.5vw, 1.6rem);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.pc-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--card-sheen);
+    pointer-events: none;
+}
+.pc-card > * { position: relative; }
+.pc-card:hover { box-shadow: var(--shadow-lg); }
+.pc-card__title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: var(--s-3);
+    padding-inline-start: 0.7rem;
+    border-inline-start: 3px solid var(--c-p-500);
+}
+
+/* حيوية العناصر التفاعلية داخل الخطوة */
+.pc-premium .yesno-btn:active { transform: translateY(1px); }
+.pc-premium .res-chip { transition: background-color 0.18s, border-color 0.18s, color 0.18s, transform 0.18s; }
+.pc-premium .res-chip:hover { transform: translateY(-1px); }
+
 /* ═══════════════════════════════════════════════════════════
    بطاقات تحجيم السوق (TAM/SAM/SOM) ومصفوفة TOWS — تحسينات دفعة 3
    ═══════════════════════════════════════════════════════════ */
@@ -415,96 +641,4 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500)
     background-color: var(--color-primary-light);
     color: var(--color-primary-dark);
     border-color: var(--color-primary);
-}
-.wizard-section-map {
-    margin: 0 0 1rem;
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    background: var(--color-surface);
-}
-
-.wizard-section-map summary {
-    cursor: pointer;
-    padding: .65rem .8rem;
-    font-weight: 600;
-}
-
-.wizard-section-map__groups {
-    display: flex;
-    flex-direction: column;
-    gap: .5rem;
-    padding: 0 .7rem .7rem;
-    max-height: 420px;
-    overflow: auto;
-}
-
-/* مجموعة فرعية لكل فئة (SIDEBAR_SECTIONS) — يطابق بنية .dv-journey في DashboardView.js
-   (تدقيق 2026-07-10: تجميع خريطة أقسام المعالج حسب الفئة بدل قائمة مسطّحة واحدة). */
-.wizard-section-map__group {
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    background: var(--color-surface-hover);
-}
-
-.wizard-section-map__group-head {
-    cursor: pointer;
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    padding: .5rem .65rem;
-    font-weight: 600;
-    font-size: .9rem;
-}
-
-.wizard-section-map__group-head::-webkit-details-marker {
-    display: none;
-}
-
-.wizard-section-map__group-head::after {
-    content: "⌄";
-    margin-inline-start: auto;
-    color: var(--color-text-muted);
-    transition: transform .15s ease;
-}
-
-.wizard-section-map__group:not([open]) .wizard-section-map__group-head::after {
-    transform: rotate(-90deg);
-}
-
-.wizard-section-map__group-count {
-    min-width: 22px;
-    height: 20px;
-    border-radius: 999px;
-    display: inline-grid;
-    place-items: center;
-    background: var(--color-surface);
-    color: var(--color-text-muted);
-    font-size: .7rem;
-}
-
-.wizard-section-map__group-steps {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: .35rem;
-    padding: 0 .55rem .55rem;
-}
-
-.wizard-map-step {
-    display: flex;
-    gap: .45rem;
-    align-items: center;
-    text-align: start;
-    border: 0;
-    border-radius: 4px;
-    padding: .45rem .55rem;
-    color: var(--color-text);
-    background: transparent;
-    cursor: pointer;
-}
-
-.wizard-map-step:hover,
-.wizard-map-step.is-current {
-    background: var(--color-surface-hover);
-    color: var(--color-primary);
 }

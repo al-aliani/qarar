@@ -100,60 +100,14 @@ describe('RiskMatrix — aria-label على زر الحذف + الأرقام ال
     });
 });
 
-describe('IntroductionView — aria-label على أزرار حذف المنتج/الخدمة/الموقع البديل/شريحة العميل', () => {
-    function buildState(overrides) {
-        const state = createEmptyStudy();
-        Object.assign(state.projectInfo, overrides);
-        return state;
-    }
-
-    it('.btn-remove-product يحمل aria-label="حذف المنتج"', () => {
-        const state = buildState({
-            products: [{ type: 'final', name: 'قهوة مختصة', description: '', uniqueFeatures: '', valueAdded: '', customerBenefit: '' }]
-        });
-        const view = new IntroductionView('c', fakeStore(state), () => {});
+describe('IntroductionView — فرضية المشروع بلا محررات مكررة', () => {
+    it('تبقى أزرار الاقتراح الثلاثة ذات أهداف واضحة ولا تظهر أزرار حذف من خطوات أخرى', () => {
+        const view = new IntroductionView('c', fakeStore(createEmptyStudy()), () => {});
         view.render(0);
 
-        const btn = document.querySelector('.btn-remove-product');
-        expect(btn).toBeTruthy();
-        expect(btn.getAttribute('aria-label')).toBe('حذف المنتج');
-    });
-
-    it('.btn-remove-service يحمل aria-label="حذف الخدمة"', () => {
-        const state = buildState({
-            introServices: [{ name: 'تركيب', type: 'supporting', description: 'خدمة تركيب' }]
-        });
-        const view = new IntroductionView('c', fakeStore(state), () => {});
-        view.render(0);
-
-        const btn = document.querySelector('.btn-remove-service');
-        expect(btn).toBeTruthy();
-        expect(btn.getAttribute('aria-label')).toBe('حذف الخدمة');
-    });
-
-    it('.btn-remove-loc-alt يحمل aria-label="حذف الموقع البديل"', () => {
-        const state = buildState({});
-        state.projectInfo.locationAnalysis.locationAlternatives = [
-            { name: 'موقع بديل 1', address: '', lat: '', lng: '', notes: '' }
-        ];
-        const view = new IntroductionView('c', fakeStore(state), () => {});
-        view.render(0);
-
-        const btn = document.querySelector('.btn-remove-loc-alt');
-        expect(btn).toBeTruthy();
-        expect(btn.getAttribute('aria-label')).toBe('حذف الموقع البديل');
-    });
-
-    it('.btn-remove-customer يحمل aria-label="حذف شريحة العملاء"', () => {
-        const state = buildState({
-            customerValues: [{ customerType: 'صاحب المقهى', customerNeed: '', valueWeProvide: '' }]
-        });
-        const view = new IntroductionView('c', fakeStore(state), () => {});
-        view.render(0);
-
-        const btn = document.querySelector('.btn-remove-customer');
-        expect(btn).toBeTruthy();
-        expect(btn.getAttribute('aria-label')).toBe('حذف شريحة العملاء');
+        const targets = [...document.querySelectorAll('.btn-ai-suggest')].map(btn => btn.dataset.target);
+        expect(targets).toEqual(['hypothesis-problem', 'hypothesis-solution', 'hypothesis-insight']);
+        expect(document.querySelector('.btn-remove-product, .btn-remove-service, .btn-remove-loc-alt, .btn-remove-customer')).toBeNull();
     });
 });
 

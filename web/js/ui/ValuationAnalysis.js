@@ -26,7 +26,7 @@ export class ValuationAnalysis {
         this.container.innerHTML = `
             <div class="valuation-container animate-entry">
                 <div class="section-header">
-                    <h2 class="text-xl font-bold">💎 تقييم الشركة</h2>
+                    <h2 class="text-xl font-bold">تقييم الشركة</h2>
                     <p class="text-muted">تقدير القيمة السوقية العادلة للمشروع لجذب المستثمرين أو تحديد حصص الشركاء.</p>
                 </div>
 

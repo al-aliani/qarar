@@ -31,7 +31,7 @@ export class FinancingStructure {
 
         this.container.innerHTML = `
             <div class="financing-structure">
-                <h2 class="section-title">💰 مصادر وهيكلة التمويل</h2>
+                <h2 class="section-title">التمويل</h2>
                 
                 <!-- Investment Summary -->
                 <div class="card analysis-card">

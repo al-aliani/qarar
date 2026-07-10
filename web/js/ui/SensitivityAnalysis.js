@@ -55,7 +55,7 @@ export class SensitivityAnalysis {
 
         this.container.innerHTML = `
             <div class="sensitivity-analysis">
-                <h2 class="section-title">🔍 تحليل الحساسية (Sensitivity Analysis)</h2>
+                <h2 class="section-title">تحليل الحساسية</h2>
                 
                 <div class="alert alert-warning mb-4" style="font-size: 0.9rem;">
                     <strong>⚠️ تحليل الحساسية إلزامي</strong> — أي دراسة بدونه تعتبر غير مكتملة. يقيس مدى تحمّل المشروع لتقلّبات الإيرادات والتكاليف.

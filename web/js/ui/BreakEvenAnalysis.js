@@ -21,7 +21,7 @@ export class BreakEvenAnalysis {
         if (!results) {
             this.container.innerHTML = `
                 <div class="break-even-analysis">
-                    <h2 class="section-title">⚖️ تحليل نقطة التعادل</h2>
+                    <h2 class="section-title">تحليل نقطة التعادل</h2>
                     <div class="card analysis-card">
                         <p class="text-muted">⚠️ لا توجد بيانات كافية لحساب نقطة التعادل. يرجى إكمال البيانات المالية الأساسية.</p>
                     </div>
@@ -37,7 +37,7 @@ export class BreakEvenAnalysis {
         if (!year1) {
             this.container.innerHTML = `
                 <div class="break-even-analysis">
-                    <h2 class="section-title">⚖️ تحليل نقطة التعادل</h2>
+                    <h2 class="section-title">تحليل نقطة التعادل</h2>
                     <div class="card analysis-card">
                         <p class="text-muted">⚠️ لا توجد بيانات للسنة الأولى. يرجى إكمال البيانات المالية الأساسية.</p>
                     </div>
@@ -59,7 +59,7 @@ export class BreakEvenAnalysis {
 
         this.container.innerHTML = `
             <div class="break-even-analysis">
-                <h2 class="section-title">⚖️ تحليل نقطة التعادل</h2>
+                <h2 class="section-title">تحليل نقطة التعادل</h2>
                 
                 <div class="card bep-hero animate-entry">
                     <div class="bep-chart-container">

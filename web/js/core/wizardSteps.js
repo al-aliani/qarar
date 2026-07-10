@@ -10,62 +10,61 @@ export { SECTIONS };
 export const STEPS = [
   // البداية والتعريف (0-6) — نقطة البداية (اختيار القالب/الوضع) صارت في نافذة «اختر نقطة البداية» قبل المسار
   { id: 'preliminaryCheck', label: "الدراسة المبدئية", isPreliminaryCheck: true }, // اختيارية، يمكن تخطيها
-  { id: 'projectAlternatives', label: "اختيار المشروع (مقارنة أفكار)", isProjectAlternatives: true, isAdvancedStep: true }, // مقارنة أفكار مبدئية (د. الروضي)
-  { id: SECTIONS.PROJECT_INFO, label: "معلومات المشروع ونموذج العمل (ريادي/شركات)", isForm: true, tables: ['glossary', 'dataGatheringChecklist'] }, // Main fields + خطوات جمع المعلومات
+  { id: 'projectAlternatives', label: "مقارنة الأفكار", isProjectAlternatives: true, isAdvancedStep: true }, // مقارنة أفكار مبدئية (د. الروضي)
+  { id: SECTIONS.PROJECT_INFO, label: "معلومات المشروع", isForm: true, tables: [], optionalTables: ['dataGatheringChecklist'] }, // الحقول أولاً؛ قائمة التجهيز اختيارية ومطوية
   // معرّف فريد للتنقل مع بقاء البيانات في قسم projectInfo (dataSection يستهلكه Wizard.js)
-  { id: 'projectDetails', dataSection: SECTIONS.PROJECT_INFO, label: "تفاصيل الفكرة (المنتجات والخدمات)", tables: ['products', 'introServices', 'customerValues'] },
+  { id: 'projectDetails', dataSection: SECTIONS.PROJECT_INFO, label: "المنتجات والخدمات", tables: ['products', 'introServices', 'customerValues'] },
   { id: SECTIONS.KEY_PEOPLE, label: "الأشخاص الرئيسون", tables: ['keyPeople', 'partnershipContracts'] },
-  { id: 'projectIntro', label: "مقدمة الجدوى الموحدة", isIntroduction: true, isAdvancedStep: true },
+  { id: 'projectIntro', label: "فرضية المشروع", isIntroduction: true, isAdvancedStep: true },
   { id: SECTIONS.SMART_GOALS, label: "الأهداف الذكية", isSmartGoals: true, isAdvancedStep: true },
 
   // السوقية والاستراتيجية (8-12) — السوق يحدد الطلب قبل الطاقة والأصول
-  { id: SECTIONS.MARKETING, label: "الدراسة السوقية", tables: ['marketAnalysis', 'historicalData', 'supplyDemandBalance', 'competitors', 'competitorBenchmarking', 'marketingPlan'] },
   // تحجيم السوق (TAM/SAM/SOM) — ركن معياري (IFC/UNIDO) يغذّي جاهزية السوق في لوحة القرار (marketSizing.som)
-  { id: 'marketSizing', label: "تحجيم السوق (TAM/SAM/SOM)", isMarketAnalysis: true },
+  { id: 'marketSizing', label: "تحجيم السوق", isMarketAnalysis: true },
+  { id: SECTIONS.MARKETING, label: "الدراسة السوقية", tables: ['marketAnalysis', 'historicalData', 'supplyDemandBalance', 'competitors', 'competitorBenchmarking', 'marketingPlan'] },
   { id: SECTIONS.STRATEGIC, label: "التحليل الاستراتيجي", isStrategic: true },
   { id: SECTIONS.REVENUE, label: "مصادر الإيرادات", tables: ['revenueStreams'] },
-  { id: SECTIONS.SERVICES, label: "تحليل الخدمات المفصل", isServiceAnalysis: true, isAdvancedStep: true },
+  { id: SECTIONS.SERVICES, label: "تحليل الخدمات", isServiceAnalysis: true, isAdvancedStep: true },
 
   // الفنية والقانونية (12-19)
-  { id: SECTIONS.TECHNICAL, label: "الدراسة الفنية (الأصول)", tables: ['establishmentCosts', 'capacityModel', 'capacityUtilization', 'buildings', 'equipment', 'furniture', 'locationAssessment'] },
-  { id: SECTIONS.HR, label: "الموارد البشرية (الرواتب)", tables: ['positions', 'advisoryBoard'] },
+  { id: SECTIONS.TECHNICAL, label: "الأصول والتجهيزات", tables: ['establishmentCosts', 'capacityModel', 'capacityUtilization', 'buildings', 'equipment', 'furniture', 'locationAssessment'] },
+  { id: 'operational_sim', label: "محاكاة التشغيل", isOperationalSim: true, isAdvancedStep: true },
+  { id: SECTIONS.HR, label: "الفريق والرواتب", tables: ['positions', 'advisoryBoard'] },
   { id: SECTIONS.TECH_RESOURCES, label: "الموارد التقنية", tables: ['techResources'] },
   { id: SECTIONS.LOGISTICS, label: "الموارد اللوجستية", tables: ['logistics'] },
   { id: SECTIONS.ADMINISTRATIVE, label: "الموارد الإدارية", tables: ['administrative'] },
   { id: SECTIONS.ORG_STRUCTURE, label: "الهيكل التنظيمي والحوكمة", tables: ['operationalKpis'], isOrgStructure: true },
-  { id: 'operational_sim', label: "محاكاة التشغيل (صفوف الانتظار)", isOperationalSim: true, isAdvancedStep: true },
   { id: SECTIONS.LEGAL, label: "الدراسة القانونية", tables: ['licenses'] },
 
-  // الدراسة المالية (20-28) — تشمل الزكاة/الضريبة وتقييم الشركة: مخرجات مالية أساسية (IFC/UNIDO)، لا تخطيط اختياري
-  { id: SECTIONS.FINANCING, label: "مصادر وهيكلة التمويل", isFinancing: true },
-  { id: 'investor_analysis', label: "تحليل الجدوى الاستثمارية", isInvestorAnalysis: true, isAdvancedStep: true },
+  // التنفيذ والجدولة (20) — بعد اكتمال المتطلبات الفنية والقانونية وقبل التمويل
+  { id: SECTIONS.TIMELINE, label: "خطة التنفيذ", isTimeline: true },
+
+  // الدراسة المالية (21-28) — الافتراضات والمدخلات أولاً، ثم التمويل والمخرجات
   { id: SECTIONS.ASSUMPTIONS, label: "الافتراضات المالية", tables: [] },
+  { id: SECTIONS.FINANCING, label: "التمويل", isFinancing: true },
   { id: SECTIONS.FINANCIAL_STATEMENTS, label: "القوائم المالية التقديرية", isFinancialStatements: true },
   { id: 'balance_sheet', label: "الميزانية العمومية", isBalanceSheet: true, isAdvancedStep: true },
   { id: SECTIONS.BREAK_EVEN, label: "تحليل نقطة التعادل", isBreakEven: true },
-  { id: 'financial_eval', label: "مؤشرات التقييم المالي (نظرة مبكرة)", isExecutiveSummary: true },
-  { id: SECTIONS.ZAKAT_TAX, label: "حساب الزكاة والضريبة", isZakatTax: true, isAdvancedStep: true },
+  { id: SECTIONS.ZAKAT_TAX, label: "الزكاة والضريبة", isZakatTax: true, isAdvancedStep: true },
+  { id: 'investor_analysis', label: "تحليل الجدوى الاستثمارية", isInvestorAnalysis: true, isAdvancedStep: true },
   { id: SECTIONS.VALUATION, label: "تقييم الشركة", isValuation: true, isAdvancedStep: true },
 
-  // المخاطر (29-33)
+  // المخاطر (29-33) — من العام إلى السيناريوهات ثم الاختبارات الأعمق
   { id: SECTIONS.RISK_ANALYSIS, label: "تحليل المخاطر", isRiskMatrix: true },
-  { id: 'stress_test', label: "اختبار التحمل", isStressTest: true, isAdvancedStep: true },
+  { id: SECTIONS.SCENARIOS, label: "السيناريوهات", isScenarios: true, isAdvancedStep: true },
   { id: 'sensitivity', label: "تحليل الحساسية", isSensitivity: true, isAdvancedStep: true },
-  { id: SECTIONS.SCENARIOS, label: "مستويات السيناريوهات", isScenarios: true, isAdvancedStep: true },
+  { id: 'stress_test', label: "اختبار التحمل", isStressTest: true, isAdvancedStep: true },
   { id: SECTIONS.MONTE_CARLO, label: "محاكاة مونت كارلو", isMonteCarlo: true, isAdvancedStep: true },
 
-  // التخطيط (34)
-  { id: SECTIONS.TIMELINE, label: "الجدول الزمني للتنفيذ", isTimeline: true },
+  // الملاحق والمصادر (34)
+  { id: SECTIONS.APPENDICES, label: "الأدلة والمرفقات", tables: ['references', 'reviewers'], isAppendices: true, isAdvancedStep: true },
 
-  // الملاحق والمصادر (35)
-  { id: SECTIONS.APPENDICES, label: "الملاحق والمصادر والمراجع", tables: ['references', 'reviewers'], isAppendices: true, isAdvancedStep: true },
-
-  // النتائج والقرار النهائي (36-41)
+  // النتائج والقرار النهائي (35-40)
   { id: SECTIONS.BUSINESS_MODEL, label: "نموذج العمل", isBusinessModel: true },
+  { id: 'dashboard', label: "لوحة المؤشرات المالية", isDashboard: true },
   { id: SECTIONS.DECISION_DASHBOARD, label: "لوحة القرار الاستثماري", isDecisionDashboard: true, isAdvancedStep: true },
-  { id: SECTIONS.EXECUTIVE_SUMMARY, label: "الملخص التنفيذي النهائي", isExecutiveSummary: true },
-  { id: 'reportBuilder', label: "بناء التقرير (ترتيب الأقسام)", isReportBuilder: true, isAdvancedStep: true },
-  { id: 'dashboard', label: "لوحة التحكم المالي العامة", isDashboard: true },
+  { id: SECTIONS.EXECUTIVE_SUMMARY, label: "الملخص التنفيذي", isExecutiveSummary: true },
+  { id: 'reportBuilder', label: "بناء التقرير", isReportBuilder: true, isAdvancedStep: true },
   { id: SECTIONS.ACTUALS, label: "مراقبة الأداء الفعلي", isPostLaunch: true, isAdvancedStep: true }, // ما بعد الافتتاح — تبقى الأخيرة
 ];
 
@@ -74,12 +73,11 @@ export const SIDEBAR_SECTIONS = [
   { id: 'setup', label: 'البداية والتعريف', range: [0, 6] },
   { id: 'marketing', label: 'الدراسة السوقية والاستراتيجية', range: [7, 11] },
   { id: 'technical', label: 'الدراسة الفنية والقانونية', range: [12, 19] },
-  // يشمل الزكاة/الضريبة وتقييم الشركة (33-34 سابقاً) — مخرجات مالية أساسية لا تخطيط متقدم اختياري
-  { id: 'financial', label: 'الدراسة المالية والتمويل', range: [20, 28] },
+  { id: 'advanced', label: 'خطة التنفيذ', range: [20, 20] },
+  { id: 'financial', label: 'الدراسة المالية والتمويل', range: [21, 28] },
   { id: 'strategic', label: 'تحليل المخاطر', range: [29, 33] },
-  { id: 'advanced', label: 'التخطيط والتحليلات المتقدمة', range: [34, 34] },
-  { id: 'appendices', label: 'الملاحق والمصادر', range: [35, 35] },
-  { id: 'results', label: 'النتائج والقرار النهائي', range: [36, 41] },
+  { id: 'appendices', label: 'الأدلة والمرفقات', range: [34, 34] },
+  { id: 'results', label: 'النتائج والقرار النهائي', range: [35, 40] },
 ];
 
 /**
@@ -92,8 +90,8 @@ const SECTION_PHASE_LABELS = {
   technical: { phase: 'فنية', label: 'المرحلة الفنية والقانونية' },
   financial: { phase: 'مالية', label: 'المرحلة المالية' },
   strategic: { phase: 'استراتيجية', label: 'تحليل المخاطر' },
-  advanced: { phase: 'متقدمة', label: 'التخطيط والتحليلات المتقدمة' },
-  appendices: { phase: 'ملاحق', label: 'الملاحق والمصادر' },
+  advanced: { phase: 'تنفيذ', label: 'خطة التنفيذ' },
+  appendices: { phase: 'أدلة', label: 'الأدلة والمرفقات' },
   results: { phase: 'نتائج', label: 'النتائج والقرار النهائي' },
 };
 
@@ -113,14 +111,14 @@ function getPhaseForStep(stepIndex) {
  * يُرجع { why, how } أو null إن لم يُعرّف للخطوة.
  * الترتيب يطابق STEPS واحداً بواحد — الحارس أدناه يكشف أي انحراف.
  */
-export const STEP_HELP = [
+const STEP_HELP_SOURCE = [
   // البداية والتعريف
   { why: 'نساعدك على تقييم أولي سريع قبل الدخول في التفاصيل.', how: 'أجب عن الأسئلة القصيرة؛ يمكنك تخطي هذه الخطوة والمتابعة.' },
   { why: 'مقارنة عدة أفكار تساعد في اختيار الأفضل قبل استثمار الوقت في دراسة واحدة.', how: 'أدخل أفكارك وقارنها حسب المعايير (السوق، الربحية، المخاطر).' },
   { why: 'معلومات المشروع أساس كل الأقسام التالية؛ الاسم والقطاع يظهران في التقرير.', how: 'املأ الاسم، النشاط، الموقع؛ استخدم قائمة جمع المعلومات كتذكير.' },
   { why: 'تفاصيل المنتجات والخدمات تحدد ما ستبيعه وتُبنى عليه الإيرادات لاحقاً.', how: 'اذكر المنتجات أو الخدمات الرئيسية وقيمة كل منها للعميل.' },
   { why: 'الفريق والشركاء يؤثرون في الجدوى والقدرة على التنفيذ.', how: 'أضف أدوار الفريق المؤسس والأسماء وعقود الشراكة إن وُجدت.' },
-  { why: 'المقدمة توحّد صياغة الجدوى وتُظهر للمراجع أن الدراسة منظمة.', how: 'اترك النص الافتراضي أو عدّله ليعكس مشروعك.' },
+  { why: 'فرضية المشروع تربط المشكلة بالحل وسبب قدرتك على النجاح.', how: 'اكتب المشكلة والحل وسبباً واقعياً واحداً يفسر لماذا سيختارك العميل.' },
   { why: 'الأهداف الذكية تجعل النتائج قابلة للقياس والمتابعة.', how: 'حدد أهدافاً محددة وقابلة للقياس وواقعية ومرتبطة بزمن.' },
   // السوقية والاستراتيجية
   { why: 'الدراسة السوقية تبرر حجم الطلب والعرض والمنافسة والإيرادات المتوقعة.', how: 'املأ تحليل السوق، العرض والطلب، المنافسين، خطة التسويق والتوقعات.' },
@@ -144,7 +142,6 @@ export const STEP_HELP = [
   { why: 'القوائم المالية التقديرية تلخص الإيرادات والتكاليف والتدفق والربح.', how: 'راجع الجداول المُولَّدة من المدخلات؛ عدّل المدخلات إن احتجت.' },
   { why: 'الميزانية العمومية تعرض الأصول والخصوم وحقوق الملكية في نقاط زمنية.', how: 'راجع الأرقام المُولَّدة من النموذج.' },
   { why: 'نقطة التعادل توضح عند أي حجم مبيعات يتساوى الإيراد مع التكلفة.', how: 'راجع الرسم والرقم؛ يساعد في قرارات التسعير والحجم.' },
-  { why: 'مؤشرات التقييم (NPV، IRR، فترة الاسترداد) أساس قرار GO/NO-GO.', how: 'راجع اللوحة والتوصية؛ عدّل الافتراضات لرؤية التأثير.' },
   { why: 'الزكاة والضريبة قد تكونان واجبتين حسب النشاط والبلد.', how: 'أدخل النسب والمبالغ المعفاة إن تنطبق؛ راجع استشارياً.' },
   { why: 'تقييم الشركة يفيد في المفاوضات مع مستثمر أو بيع.', how: 'راجع الطرق المعروضة (صافي الأصول، DCF إن وُجد).' },
   // المخاطر
@@ -156,7 +153,7 @@ export const STEP_HELP = [
   // التخطيط
   { why: 'الجدول الزمني يربط المهام بمراحل التنفيذ والتكلفة.', how: 'أدخل المراحل والمهام والتواريخ والتكلفة المرتبطة.' },
   // الملاحق
-  { why: 'الملاحق والمصادر تدعم مصداقية الدراسة وتسهّل المراجعة.', how: 'أضف المراجع وأسماء المراجعين إن وُجدت.' },
+  { why: 'الأدلة والمرفقات تثبت أرقام الدراسة وتسهّل مراجعتها.', how: 'أرفق المصادر وعروض الأسعار والاستبيانات وأسماء المراجعين إن وُجدت.' },
   // النتائج والقرار النهائي
   { why: 'نموذج العمل يلخص كيف تربح المشروع ومن هم العملاء والقيمة المقدمة.', how: 'املأ أو راجع البطاقة المعروضة.' },
   { why: 'لوحة القرار تعطيك التوصية النهائية (GO/NO-GO/REVISE) ومؤشرات القرار.', how: 'راجع التوصية والمؤشرات واقرأ "لماذا" و"الخطوات التالية".' },
@@ -165,6 +162,24 @@ export const STEP_HELP = [
   { why: 'لوحة التحكم المالية تعرض الأداء والسيناريوهات واقتراحات التحسين.', how: 'راجع الرسوم والمؤشرات واقتراحات التحسين.' },
   { why: 'مراقبة الأداء الفعلي تقارن التقديرات بما حدث فعلياً بعد الإطلاق.', how: 'أدخل البيانات الفعلية دورياً وقارنها بالتوقعات.' },
 ];
+
+// تثبيت الشرح بمعرّف الخطوة، لا بموقعها: يسمح بتحسين ترتيب الرحلة دون أن ينتقل
+// شرح خطوة إلى خطوة أخرى بالخطأ.
+const STEP_HELP_SOURCE_IDS = [
+  'preliminaryCheck', 'projectAlternatives', SECTIONS.PROJECT_INFO, 'projectDetails',
+  SECTIONS.KEY_PEOPLE, 'projectIntro', SECTIONS.SMART_GOALS,
+  SECTIONS.MARKETING, 'marketSizing', SECTIONS.STRATEGIC, SECTIONS.REVENUE, SECTIONS.SERVICES,
+  SECTIONS.TECHNICAL, SECTIONS.HR, SECTIONS.TECH_RESOURCES, SECTIONS.LOGISTICS,
+  SECTIONS.ADMINISTRATIVE, SECTIONS.ORG_STRUCTURE, 'operational_sim', SECTIONS.LEGAL,
+  SECTIONS.FINANCING, 'investor_analysis', SECTIONS.ASSUMPTIONS,
+  SECTIONS.FINANCIAL_STATEMENTS, 'balance_sheet', SECTIONS.BREAK_EVEN,
+  SECTIONS.ZAKAT_TAX, SECTIONS.VALUATION, SECTIONS.RISK_ANALYSIS, 'stress_test',
+  'sensitivity', SECTIONS.SCENARIOS, SECTIONS.MONTE_CARLO, SECTIONS.TIMELINE,
+  SECTIONS.APPENDICES, SECTIONS.BUSINESS_MODEL, SECTIONS.DECISION_DASHBOARD,
+  SECTIONS.EXECUTIVE_SUMMARY, 'reportBuilder', 'dashboard', SECTIONS.ACTUALS
+];
+const STEP_HELP_BY_ID = new Map(STEP_HELP_SOURCE_IDS.map((id, index) => [id, STEP_HELP_SOURCE[index]]));
+export const STEP_HELP = STEPS.map(step => STEP_HELP_BY_ID.get(step.id) || null);
 
 // حارس انحراف: الشروحات يجب أن تطابق عدد الخطوات واحداً بواحد
 if (STEP_HELP.length !== STEPS.length) {
@@ -185,8 +200,8 @@ export function stepIndexById(id) {
 // تصدير صريح لاستيراد Wizard.js وغيره (يتجنب مشاكل ESM/HMR)
 export const MAJOR_PHASES = [
   { id: 'phase1', label: 'التقييم والسوق', range: [0, 11] }, // setup & marketing
-  { id: 'phase2', label: 'البناء الفني والمالي', range: [12, 28] }, // technical & financial (incl. الزكاة/التقييم)
-  { id: 'phase3', label: 'المخاطر والقرار', range: [29, 41] }, // strategic, advanced, appendices, results
+  { id: 'phase2', label: 'البناء الفني والمالي', range: [12, 28] }, // technical, execution, financial
+  { id: 'phase3', label: 'المخاطر والقرار', range: [29, 40] }, // risk, evidence, results
 ];
 
 export function getMajorPhaseForStep(stepIndex) {

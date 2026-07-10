@@ -26,7 +26,7 @@ export class OrgStructure {
 
         this.container.innerHTML = `
             <div class="org-structure">
-                <h2 class="section-title">🏢 الهيكل التنظيمي والحوكمة</h2>
+                <h2 class="section-title">الهيكل التنظيمي والحوكمة</h2>
                 
                 <!-- Org Chart -->
                 <div class="card analysis-card">

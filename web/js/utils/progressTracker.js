@@ -8,6 +8,7 @@ export class ProgressTracker {
         this.totalSteps = totalSteps;
         this.currentStep = 0;
         this.completedSteps = new Set();
+        this.manualCompletedSteps = new Set();
     }
 
     /**
@@ -22,6 +23,7 @@ export class ProgressTracker {
      * Mark a step as completed
      */
     markCompleted(stepIndex) {
+        this.manualCompletedSteps.add(stepIndex);
         this.completedSteps.add(stepIndex);
         return this.getProgress();
     }
@@ -112,8 +114,9 @@ export class ProgressTracker {
      * Auto-detect completion based on store data
      */
     detectCompletion(storeData, stepConfig) {
-        this.completedSteps.clear();
-
+        // أعد بناء الاكتمال المستنتج كي لا تبقى خطوة «مكتملة» بعد حذف بياناتها،
+        // مع الحفاظ فقط على الخطوات التي وُسِمت صراحةً عبر markCompleted().
+        this.completedSteps = new Set(this.manualCompletedSteps);
         stepConfig.forEach((step, index) => {
             if (this.isStepComplete(step, storeData)) {
                 this.completedSteps.add(index);

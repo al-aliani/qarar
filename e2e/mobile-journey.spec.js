@@ -3,28 +3,17 @@ import { test, expect, devices } from '@playwright/test';
 test.use({ ...devices['Pixel 5'] });
 
 /**
- * يفتح خريطة أقسام الدراسة (Wizard.js renderStep) وينتقل لخطوة معيّنة بنصّ تسميتها.
- * الخريطة الآن مُجمَّعة حسب SIDEBAR_SECTIONS: <details class="wizard-section-map"> خارجي
- * يحوي <details class="wizard-section-map__group"> فرعياً لكل فئة — يجب فتح الاثنين قبل
- * أن يظهر زر الخطوة المستهدف. القائمة الجانبية (.sidebar) مُعطَّلة نهائياً (main.css:
- * "إلغاء القائمة الجانبية نهائياً") فلا تصلح كطريق تنقّل بديل على أي مقاس شاشة.
+ * يفتح خريطة الدراسة المشتركة وينتقل لخطوة معيّنة بنصّ تسميتها. الخريطة خارج
+ * محتوى الخطوة، لذلك تعمل مع المكوّنات العامة والمتخصصة على السواء.
  */
 async function goToWizardStep(page, labelSubstring, attempts = 3) {
     // ملحوظة: الصفحة تتجمّد أحياناً لثوانٍ طويلة (رسم/حفظ خلفي دوري) فيتعثر استقرار
     // هدف النقر مؤقتاً — مهلة سخية لكل محاولة مع إعادة محاولة واحدة كشبكة أمان.
-    const targetBtn = page.locator('.wizard-map-step').filter({ hasText: labelSubstring }).first();
     let lastError = null;
     for (let i = 0; i < attempts; i++) {
         try {
-            if (!(await targetBtn.isVisible().catch(() => false))) {
-                await page.locator('.wizard-section-map > summary').click({ timeout: 20000 });
-            }
-            if (!(await targetBtn.isVisible().catch(() => false))) {
-                const group = page.locator('details.wizard-section-map__group')
-                    .filter({ has: page.locator('.wizard-map-step').filter({ hasText: labelSubstring }) })
-                    .first();
-                await group.locator('> summary').click({ timeout: 20000 });
-            }
+            await page.locator('#btnOpenStudyMap').click({ timeout: 20000 });
+            const targetBtn = page.locator('#studyMapDialog [data-study-step]').filter({ hasText: labelSubstring });
             await expect(targetBtn).toBeVisible({ timeout: 10000 });
             await targetBtn.click({ timeout: 20000 });
             return;
@@ -89,18 +78,10 @@ test('mobile journey keeps wizard and wide tables usable', async ({ page }) => {
     await page.locator('#btnBlankCreate').click();
     await expect(galleryOverlay).not.toBeVisible({ timeout: 5000 });
 
-    // أول خطوتين في STEPS ("الدراسة المبدئية" ثم "اختيار المشروع") مكوّنان خاصان
-    // (PreliminaryCheckView / ProjectAlternativesView) لا يمرّان بـ Wizard.renderStep()،
-    // فلا تحوي صفحتاهما .wizard-section-map إطلاقاً. القفز مباشرة عبر موجّه التطبيق
-    // الداخلي (#/step/N، مدعوم فعلياً في app.js routeToView) هو أقصر طريق موثوق لخطوة
-    // فعلية من Wizard.js — هنا خطوة "معلومات المشروع" (index 2)، بلا فهرس سحري لاحقاً
-    // لأن بقية التنقل نصّي عبر goToWizardStep.
+    // الهبوط على معلومات المشروع؛ الخريطة المشتركة متاحة من كل خطوة بعد ذلك.
     await page.evaluate(() => { window.location.hash = '#/step/2'; });
 
-    // تحقق حقيقي غير مشروط الآن: بعد تنقّل فعلي لخطوة قياسية، خريطة الأقسام موجودة دائماً
-    // (Wizard.js يُدرجها في renderStep() لكل خطوة عادية) — لا حاجة لبوابة count() الميتة سابقاً.
-    const map = page.locator('.wizard-section-map');
-    await expect(map).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#btnOpenStudyMap')).toBeVisible({ timeout: 20000 });
     // فسحة تسوية قصيرة بعد الهبوط على أول خطوة قياسية — التنقّل الأول لاحقاً هو
     // الأكثر عرضة للتعثّر إن بدأ أثناء إعادة رسم لم تستقر بعد.
     await page.waitForTimeout(800);
@@ -121,9 +102,9 @@ test('mobile journey keeps wizard and wide tables usable', async ({ page }) => {
     await fillTableCell(revenueRow, 'customersPerMonth', '3000');
     await page.waitForTimeout(400);
 
-    // ── خطوة "الدراسة الفنية": تغذّي القوائم المالية بـ capex > 0 (بدونه تظهر
+    // ── خطوة "الأصول والتجهيزات": تغذّي القوائم المالية بـ capex > 0 (بدونه تظهر
     // رسالة "لا توجد بيانات استثمارات" بدل الجداول فعلياً) ──
-    await goToWizardStep(page, 'الدراسة الفنية');
+    await goToWizardStep(page, 'الأصول والتجهيزات');
     await expect(page.locator('#table-equipment')).toBeVisible({ timeout: 8000 });
     await page.waitForTimeout(400);
 

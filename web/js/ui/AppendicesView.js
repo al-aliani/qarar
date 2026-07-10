@@ -24,7 +24,8 @@ export class AppendicesView {
 
         this.container.innerHTML = `
             <div class="appendices-view">
-                <h2 class="section-title">📎 الملاحق والمصادر والمراجع</h2>
+                <h2 class="section-title">الأدلة والمرفقات</h2>
+                <p class="text-muted text-sm mb-4">وثّق الأرقام المهمة بمصدر أو عرض سعر أو نتيجة استبيان. لا تضف شرحاً نظرياً؛ أضف دليلاً يمكن مراجعته.</p>
 
                 <div class="card analysis-card">
                     <h3 class="card-title">نبذة عن المستثمر</h3>

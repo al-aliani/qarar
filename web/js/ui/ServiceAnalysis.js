@@ -92,7 +92,7 @@ export class ServiceAnalysis {
         });
 
         this.container.innerHTML = `
-            <h2 class="text-lg slide-up" style="margin-bottom: var(--s-3)">تحليل الخدمات المفصل</h2>
+            <h2 class="text-lg slide-up" style="margin-bottom: var(--s-3)">تحليل الخدمات</h2>
             ${dataWarnHtml}
 
             <!-- تفاصيل المنتجات/الخدمات — نموذج إضافة -->
