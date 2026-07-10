@@ -13,7 +13,11 @@ export const STEPS = [
   { id: 'projectAlternatives', label: "مقارنة الأفكار", isProjectAlternatives: true, isAdvancedStep: true }, // مقارنة أفكار مبدئية (د. الروضي)
   { id: SECTIONS.PROJECT_INFO, label: "معلومات المشروع", isForm: true, tables: [], optionalTables: ['dataGatheringChecklist'] }, // الحقول أولاً؛ قائمة التجهيز اختيارية ومطوية
   // معرّف فريد للتنقل مع بقاء البيانات في قسم projectInfo (dataSection يستهلكه Wizard.js)
-  { id: 'projectDetails', dataSection: SECTIONS.PROJECT_INFO, label: "المنتجات والخدمات", tables: ['products', 'introServices', 'customerValues'] },
+  // شاشة «ماذا تبيع وبكم» المدموجة (2026-07-11): تجمع المنتجات/الخدمات/القيمة للعميل
+  // مع مصادر الإيرادات في شاشة واحدة عبر OfferingView. البيانات تبقى في أقسامها
+  // الأصلية (projectInfo.* و revenue.streams)؛ خطوة «مصادر الإيرادات» تُخفى من
+  // المسار المبسّط (flow=advanced) لأنها تُدخَل هنا.
+  { id: 'projectDetails', dataSection: SECTIONS.PROJECT_INFO, label: "ماذا تبيع وبكم", tables: ['products', 'introServices', 'customerValues'], isOfferingView: true },
   { id: SECTIONS.KEY_PEOPLE, label: "الأشخاص الرئيسون", tables: ['keyPeople', 'partnershipContracts'] },
   { id: 'projectIntro', label: "فرضية المشروع", isIntroduction: true, isAdvancedStep: true },
   { id: SECTIONS.SMART_GOALS, label: "الأهداف الذكية", isSmartGoals: true, isAdvancedStep: true },
@@ -248,7 +252,7 @@ const STEP_FLOW_ENTRIES = [
   ['marketSizing', 'advanced'],               // TAM/SAM/SOM → يُدمج ضمن الدراسة السوقية
   [SECTIONS.MARKETING, 'input'],
   [SECTIONS.STRATEGIC, 'input'],
-  [SECTIONS.REVENUE, 'input'],
+  [SECTIONS.REVENUE, 'advanced'],             // مدموج داخل OfferingView (ماذا تبيع وبكم)
   [SECTIONS.SERVICES, 'advanced'],            // تحليل خدمات مكرّر مع المنتجات/الإيراد
   // ── تشغيلك وتكاليفك ──
   [SECTIONS.TECHNICAL, 'input'],
@@ -315,7 +319,7 @@ export const ADVANCED_TOOLS = STEPS
  * كل مرحلة تسرد معرّفات خطوات الإدخال التابعة لها (بالترتيب المنطقي المقترح).
  */
 export const INPUT_PHASES = [
-  { id: 'idea',     label: 'فكرتك',            stepIds: ['preliminaryCheck', SECTIONS.PROJECT_INFO, 'projectDetails', SECTIONS.REVENUE, 'projectIntro'] },
+  { id: 'idea',     label: 'فكرتك',            stepIds: ['preliminaryCheck', SECTIONS.PROJECT_INFO, 'projectDetails', 'projectIntro'] },
   { id: 'market',   label: 'سوقك',             stepIds: [SECTIONS.MARKETING, SECTIONS.STRATEGIC] },
   { id: 'ops',      label: 'تشغيلك وتكاليفك',  stepIds: [SECTIONS.TECHNICAL, SECTIONS.HR, SECTIONS.TECH_RESOURCES, SECTIONS.KEY_PEOPLE, SECTIONS.LEGAL] },
   { id: 'finance',  label: 'مالك',             stepIds: [SECTIONS.ASSUMPTIONS, SECTIONS.FINANCING, SECTIONS.TIMELINE] },

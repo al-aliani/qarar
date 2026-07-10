@@ -986,6 +986,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           components.sensitivityAnalysis = new SensitivityAnalysis(containerId, store, navigateTo);
         }
         components.sensitivityAnalysis.render(index);
+      } else if (step.isOfferingView) {
+        // شاشة «ماذا تبيع وبكم» المدموجة — تركّب products/introServices/customerValues
+        // (projectInfo.*) مع revenueStreams (revenue.streams) في شاشة واحدة، وتربطها
+        // عبر زر «استورد كمصادر إيراد». تعيد استخدام wizard.renderTable فيبقى الحفظ
+        // في الأقسام الأصلية (لا مساس بقراءة المحرّك لجدول الإيرادات).
+        if (!components.offering) {
+          const { OfferingView } = await import('./js/ui/OfferingView.js');
+          components.offering = new OfferingView(containerId, store, navigateTo, wizard);
+        }
+        components.offering.render(index);
       } else if (step.isOperatingCosts) {
         // شاشة «المصاريف التشغيلية» المدموجة — تركّب جداول techResources/logistics/
         // administrative في أكورديون واحد. تعيد استخدام wizard.renderTable فيبقى

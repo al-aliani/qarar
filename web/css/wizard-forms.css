@@ -619,6 +619,25 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500)
     padding-top: var(--s-3);
 }
 
+/* ═══ OfferingView (ماذا تبيع وبكم) ═══ */
+.offer-group__title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--c-text-main);
+    margin: 0 0 var(--s-3);
+    padding-inline-start: 0.7rem;
+    border-inline-start: 3px solid var(--c-gold-deco);
+}
+.offer-revenue { padding: clamp(1rem, 2.5vw, 1.4rem); }
+.offer-revenue__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem 1rem;
+}
+.offer-revenue__hint { font-size: 0.83rem; color: var(--c-text-muted); max-width: 46ch; }
+
 /* ═══════════════════════════════════════════════════════════
    بطاقات تحجيم السوق (TAM/SAM/SOM) ومصفوفة TOWS — تحسينات دفعة 3
    ═══════════════════════════════════════════════════════════ */
