@@ -199,7 +199,10 @@ export class PersistenceService {
             }
         });
 
-        return Array.from(map.values());
+        // بلا هذا الترتيب: قائمة المشاريع تخرج بترتيب دمج محلي/سحابي عشوائي فعلياً،
+        // فـ"الأحدث" (projects[0] في لوحة التحكم وشريط الجودة) غير مضمون أن يكون كذلك.
+        return Array.from(map.values())
+            .sort((a, b) => new Date(b.lastModified || 0) - new Date(a.lastModified || 0));
     }
 
     // --- Local Storage Helpers ---

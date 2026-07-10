@@ -37,27 +37,11 @@ export class AIChatModal {
 
         this.fab = document.createElement('button');
         this.fab.id = 'aiChatFab';
+        this.fab.type = 'button';
         this.fab.className = 'ai-chat-fab';
         this.fab.setAttribute('aria-label', 'فتح المستشار الذكي');
-        this.fab.innerHTML = '🤖<span class="ai-chat-fab-label">المستشار الذكي</span>';
-        this.fab.style.cssText = `
-            position: fixed; bottom: 24px; left: 24px; z-index: 9998;
-            display: flex; align-items: center; gap: 8px;
-            padding: 12px 20px; background: linear-gradient(135deg, #1e3a5f, #2d5a87);
-            color: #fff; border: none; border-radius: 999px;
-            font-family: inherit; font-size: 14px; font-weight: 600;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.25); cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        `;
+        this.fab.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.6 0-3.1-.4-4.4-1.2L3 20.5l1.7-4.9A8.5 8.5 0 1 1 21 11.5Z"/></svg><span class="ai-chat-fab-label">المستشار الذكي</span>';
         this.fab.addEventListener('click', () => this.toggle());
-        this.fab.addEventListener('mouseenter', () => {
-            this.fab.style.transform = 'scale(1.05)';
-            this.fab.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
-        });
-        this.fab.addEventListener('mouseleave', () => {
-            this.fab.style.transform = 'scale(1)';
-            this.fab.style.boxShadow = '0 4px 14px rgba(0,0,0,0.25)';
-        });
         document.body.appendChild(this.fab);
 
         // Panel container

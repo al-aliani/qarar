@@ -2,9 +2,10 @@ import { ProjectManager } from '../services/ProjectManager.js';
 import { createEmptyStudy } from '../core/schema.js';
 import { getAuthUser, signOut } from '../../supabaseClient.js';
 import { toast } from '../utils/toast.js';
-import { PLATFORM_STATS, TRIAL_OR_REFUND_TEXT, TRUST_TAGLINE, PRICING_DISPLAY } from '../config.js';
-import { RefundPolicyModal } from './RefundPolicyModal.js';
+import { PRICING_DISPLAY } from '../config.js';
 import { QualityCalculator } from '../utils/QualityCalculator.js';
+import { escapeHtml } from '../utils/escape.js';
+import { calculateStudyCompleteness } from '../utils/studyCompleteness.js';
 import { FundingSimulator } from './widgets/FundingSimulator.js';
 import { FounderCardGenerator } from './widgets/FounderCardGenerator.js';
 import { SensitivityWidget } from './widgets/SensitivityWidget.js';
@@ -152,19 +153,10 @@ export class DashboardView {
 
         const folderOptions = [
             '<option value="">جميع المشاريع</option>',
-            ...folders.map(f => `<option value="${f.id}" ${this.selectedFolderId === f.id ? 'selected' : ''}>${f.name}</option>`)
+            ...folders.map(f => `<option value="${f.id}" ${this.selectedFolderId === f.id ? 'selected' : ''}>${escapeHtml(f.name)}</option>`)
         ].join('');
 
         // شرط عرض روابط الأدوات: تُرندَر فقط إن وُجد ردّها (عقد قديم محفوظ)
-        const toolRow = (id, iconName, name, desc, engine = false) => `
-            <button type="button" id="${id}" class="dv-toolrow">
-                <span class="dv-toolrow__ic">${inlineIcon(iconName)}</span>
-                <span class="dv-toolrow__body">
-                    <span class="dv-toolrow__name">${name}${engine ? '<span class="dv-tag-engine">محرّك</span>' : ''}</span>
-                    <span class="dv-toolrow__desc">${desc}</span>
-                </span>
-                <span class="dv-toolrow__go">${inlineIcon('chev')}</span>
-            </button>`;
         const stepIcon = (step) => {
             if (step.isPreliminaryCheck) return 'target';
             if (step.isProjectAlternatives || step.isComparison) return 'scale';
@@ -211,10 +203,10 @@ export class DashboardView {
                 ${tool.id ? `id="${tool.id}"` : ''}
                 ${Number.isInteger(tool.step) ? `data-journey-step="${tool.step}"` : ''}
                 ${tool.sourceUrl ? `data-source-url="${tool.sourceUrl}"` : ''}
-                class="dv-toolrow dv-toolrow--compact">
+                class="dv-toolrow${tool.compact === false ? '' : ' dv-toolrow--compact'}">
                 <span class="dv-toolrow__ic">${inlineIcon(tool.icon || 'list')}</span>
                 <span class="dv-toolrow__body">
-                    <span class="dv-toolrow__name">${tool.name}${tool.engine ? '<span class="dv-tag-engine">محرّك</span>' : ''}${tool.tag ? `<span class="dv-tag-source">${tool.tag}</span>` : ''}</span>
+                    <span class="dv-toolrow__name">${tool.name}${tool.engine ? '<span class="dv-tag-engine">محرّك</span>' : ''}${tool.tag ? `<span class="dv-tag-source" title="${tool.sourceUrl ? 'رابط خارجي — يفتح موقع المصدر في تبويب جديد، وليس سحباً آلياً للبيانات' : ''}">${tool.tag}</span>` : ''}</span>
                     <span class="dv-toolrow__desc">${tool.desc}</span>
                 </span>
                 <span class="dv-toolrow__go">${inlineIcon('chev')}</span>
@@ -284,7 +276,7 @@ export class DashboardView {
                     { name: 'فحص اكتمال الدراسة', desc: 'اعرف النواقص قبل اعتماد القرار', icon: 'shield', id: 'linkStudyCompleteness', engine: true },
                     { name: 'هل أرقامي منطقية؟', desc: 'مقارنة أرقامك بالقطاع', icon: 'scale', id: 'linkBenchmarkingFromJourneys', engine: true },
                     { name: 'تحليل المخاطر', desc: 'احتمال، أثر، وخطة تخفيف', icon: 'shield', step: stepIndexBy(s => s.isRiskMatrix, 29) },
-                    { name: 'توافق منشآت', desc: 'تحقق من المتطلبات قبل التقديم', icon: 'shield', id: 'linkMonshaatToolkit' },
+                    { name: 'توافق منشآت', desc: 'جدول مرجعي يقارن أقسام دراستك بالنموذج الاسترشادي', icon: 'shield', id: 'linkMonshaatToolkit' },
                     { name: 'معاييرنا', desc: 'كيف تُفحص جودة المخرجات', icon: 'book', id: 'linkTrustCriteriaToolkit' }
                 ]
             },
@@ -339,7 +331,7 @@ export class DashboardView {
         this.container.innerHTML = `
             <div class="dashboard-view dv animate-entry">
 
-                <!-- 1. شريط العمل (مساحة عمل — لا هيرو تسويقي) -->
+                <!-- ١. شريط العمل (مساحة عمل — لا هيرو تسويقي) -->
                 <header class="dv-topbar">
                     <span class="dv-brand">
                         <span class="dv-brand__mark">ق</span>
@@ -360,175 +352,7 @@ export class DashboardView {
                     </div>
                 </header>
 
-                <!-- 2. الهيرو — بداية للمبتدئ: مسار واحد واضح + معاينة تقرير -->
-                <section class="qh-hero-section" aria-label="ابدأ الآن">
-                    <div class="qh-hero">
-                        <div class="qh-hero-copy">
-                            <span class="qh-kicker"><span></span>لأصحاب المطاعم والمقاهي الجدد</span>
-                            <h1 class="qh-h1">
-                                <span class="qh-lead">عندك فكرة مطعم، وباقي الخطوة الأصعب…</span>
-                                حوّل فكرتك إلى <span class="qh-accent">قرار واثق</span>
-                            </h1>
-                            <p class="qh-sub">
-                                ما تحتاج خبرة سابقة ولا محاسبة. نسألك أسئلة بسيطة عن فكرتك،
-                                و<b>نحسب لك الأرقام كلها</b> ونطلّعك بتقرير واضح يقول لك: نفّذ أو عدّل.
-                            </p>
-                            <div class="qh-cta">
-                                <button type="button" id="cardFullStudy" class="qh-btn-primary">
-                                    ابدأ دراستك المجانية
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
-                                </button>
-                                <button type="button" id="cardSampleReport" class="qh-btn-outline">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
-                                    شاهد عينة تقرير
-                                </button>
-                            </div>
-                            ${lastStep ? `
-                            <button type="button" id="btnContinueLastStep" class="qh-continue">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg>
-                                <span>تابع من حيث توقفت</span>
-                                <b>${lastStep.label}</b>
-                            </button>
-                            ` : ''}
-                            <div class="qh-minor">
-                                <button type="button" id="cardQuickFeasibility" class="qh-minor-link">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 11-13h-8z"/></svg>
-                                    جدوى سريعة (٣ خطوات)
-                                </button>
-                                <button type="button" id="btnRunDemo" class="qh-minor-link">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.5v13l10-6.5Z"/></svg>
-                                    جرّب بمثال جاهز
-                                </button>
-                                <button type="button" id="btnExploreTools" class="qh-minor-link">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-                                    استكشف الأدوات
-                                </button>
-                            </div>
-                            <div class="qh-reassure-row">
-                                <span class="qh-reassure">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
-                                    مصمّم للمبتدئين تماماً — نمشي معك خطوة بخطوة
-                                </span>
-                                <span class="qh-reassure-sep"></span>
-                                <span class="qh-reassure">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
-                                    بدون بطاقة بنكية
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="qh-hero-side">
-                            <span class="qh-card-ribbon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-                                هكذا يبدو تقريرك
-                            </span>
-                            <div class="qh-hero-card">
-                                <div class="qh-card-top">
-                                    <span class="qh-card-tag">مطعم مأكولات شعبية · الرياض</span>
-                                    <span class="qh-verdict">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-                                        نتيجة توضيحية
-                                    </span>
-                                </div>
-                                <div class="qh-metric">
-                                    <div class="qh-metric-label">نقطة التعادل المتوقعة</div>
-                                    <div class="qh-metric-val">الشهر الحادي عشر <small>تقريباً</small></div>
-                                </div>
-                                <div class="qh-bars">
-                                    <div class="qh-bar" style="height:34%"></div>
-                                    <div class="qh-bar" style="height:48%"></div>
-                                    <div class="qh-bar" style="height:60%"></div>
-                                    <div class="qh-bar" style="height:72%"></div>
-                                    <div class="qh-bar qh-hi" style="height:88%"></div>
-                                </div>
-                                <div class="qh-bars-cap">
-                                    <span>سنة ١</span><span>سنة ٢</span><span>سنة ٣</span><span>سنة ٤</span><span>سنة ٥</span>
-                                </div>
-                                <div class="qh-card-note">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-                                    الأرقام أعلاه مثال توضيحي لشكل المخرجات — تقريرك يُبنى على فكرتك أنت
-                                </div>
-                            </div>
-                            <div class="qh-float">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-                                <span>
-                                    <b>جاهز للبنك</b>
-                                    <span>تقرير وجداول قابلة للتصدير</span>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 2ب. كيف يشتغل قرار؟ — رحلة ٣ خطوات مرقّمة متصلة -->
-                <section class="qh-steps-section" aria-label="كيف يشتغل قرار">
-                    <div class="qh-sec-head">
-                        <div class="qh-sec-eyebrow">كيف يشتغل قرار؟</div>
-                        <h2 class="qh-sec-title">ثلاث خطوات، ولا خطوة تحتاج خبرة</h2>
-                        <p class="qh-sec-desc">تعبّي فكرتك بلغة عادية، والباقي علينا. لا معادلات، ولا جداول معقّدة.</p>
-                    </div>
-                    <div class="qh-journey">
-                        <div class="qh-jstep">
-                            <div class="qh-jnode">
-                                <span class="qh-jnum dv-num">١</span>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
-                            </div>
-                            <h3>عرّفنا بفكرتك</h3>
-                            <p>نوع المطعم، الموقع، وكم ميزانيتك تقريباً — أسئلة سهلة بلغة بسيطة، تجاوب عليها في دقائق.</p>
-                        </div>
-                        <div class="qh-jstep">
-                            <div class="qh-jnode">
-                                <span class="qh-jnum dv-num">٢</span>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2M14 10h2M8 14h2M14 14h2M8 18h2"/></svg>
-                            </div>
-                            <h3>قرار يحسب لك كل شي</h3>
-                            <p>التكاليف، الإيرادات، نقطة التعادل، والامتثال السعودي (ضريبة ١٥٪ وزكاة وتأمينات) — تلقائياً وبدون منك.</p>
-                        </div>
-                        <div class="qh-jstep">
-                            <div class="qh-jnode">
-                                <span class="qh-jnum dv-num">٣</span>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                            </div>
-                            <h3>تطلع بقرار واضح</h3>
-                            <p>توصية صريحة «نفّذ أو عدّل»، مع تقرير وجداول جاهزة تعرضها على البنك أو الشريك بثقة.</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 2ج. مخرجات صادقة — إشارات ثقة بلا مبالغة -->
-                <section class="qh-trust-section" aria-label="ماذا ستحصل عليه">
-                    <div class="qh-trust-panel">
-                        <div class="qh-trust-head">
-                            <div class="qh-sec-eyebrow">وش بتطلع فيه؟</div>
-                            <h2>مخرجات صادقة تُبنى على أرقامك أنت — لا وعود ولا مبالغات</h2>
-                        </div>
-                        <div class="qh-trust-grid">
-                            <div class="qh-trust-item">
-                                <div class="qh-trust-item-ico">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7 12 3 4 7v5c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9z"/><path d="m9 12 2 2 4-4"/></svg>
-                                </div>
-                                <h4>مصمّم للمبتدئين</h4>
-                                <p>لغة إنسان عادي، لا مصطلحات محاسبية ولا خطوات تتوه فيها.</p>
-                            </div>
-                            <div class="qh-trust-item">
-                                <div class="qh-trust-item-ico">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="M12 8v4"/><path d="M12 15h.01"/></svg>
-                                </div>
-                                <h4>امتثال سعودي مدمج</h4>
-                                <p>ضريبة القيمة المضافة ١٥٪، الزكاة، والتأمينات محسوبة داخل الدراسة.</p>
-                            </div>
-                            <div class="qh-trust-item">
-                                <div class="qh-trust-item-ico">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 4v16"/></svg>
-                                </div>
-                                <h4>جاهز للبنك والشريك</h4>
-                                <p>تقرير مرتّب وجداول مالية قابلة للتصدير تقدّمها كما هي.</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 3. مساحة العمل: تنقل جانبي + صفحة مستقلة لكل قسم -->
+                <!-- ٢. مساحة العمل: تنقل جانبي + صفحة مستقلة لكل قسم -->
                 <div class="dv-workspace" id="homeWorkspace">
                     <aside class="dv-home-nav" aria-label="تنقل مساحة العمل">
                         <div class="dv-home-nav__head">
@@ -546,35 +370,36 @@ export class DashboardView {
                         <section class="dv-section dv-home-panel" id="homePanel-studies" data-home-panel="studies" ${activeHomePanel !== 'studies' ? 'hidden' : ''}>
                             <div class="dv-section__head dv-section__head--row">
                                 <h2 class="dv-section__title">دراساتك <span class="dv-count dv-num">(${filtered.length})</span></h2>
-                                ${hasProjects ? `
                                 <div class="dv-toolbar">
+                                    <button type="button" id="cardFullStudy" class="btn btn--sm btn--primary">${icon('i-plus')} دراسة جديدة</button>
+                                    <button type="button" id="cardQuickFeasibility" class="btn btn--sm btn--ghost">${icon('i-bolt')} جدوى سريعة (٣ خطوات)</button>
+                                    ${lastStep ? `<button type="button" id="btnContinueLastStep" class="btn btn--sm btn--ghost">${inlineIcon('play')} تابع: ${lastStep.label}</button>` : ''}
+                                    <button type="button" id="cardSampleReport" class="btn btn--sm btn--ghost">${icon('i-doc')} عينة تقرير</button>
+                                    ${hasProjects ? `
                                     <label for="dashboardFolderFilter" class="dv-toolbar__label">عرض:</label>
                                     <select id="dashboardFolderFilter" name="folderFilter" class="input input--sm dv-toolbar__select">
                                         ${folderOptions}
                                     </select>
                                     <button type="button" id="btnNewFolder" class="btn btn--sm btn--secondary">${icon('i-folder')} مجلد جديد</button>
                                     <input type="text" id="dashboardSearch" name="searchQuery" aria-label="بحث عن مشروع" class="input input--sm dv-toolbar__search" placeholder="بحث بالاسم..." value="${(this.searchQuery || '').replace(/"/g, '&quot;')}" />
+                                    ` : ''}
                                 </div>
-                                ` : ''}
                             </div>
 
                             <!-- شريط الجودة (أكمل) -->
-                            ${this.renderQualityStrip(filtered)}
+                            ${await this.renderQualityStrip(filtered)}
 
                             <!-- Projects Grid -->
                             ${!hasProjects ? this.renderEmptyState() : `
                                 <div class="dv-projects" id="projectsGrid">
-                                    ${await Promise.all(filtered.map(async p => {
+                                    ${filtered.map(p => {
             try {
-                return await this.renderProjectCard(p);
+                return this.renderProjectCard(p);
             } catch (err) {
                 console.error('Error rendering project card:', err);
                 return '<div class="card">خطأ في عرض المشروع</div>';
             }
-        })).then(cards => cards.join('')).catch(err => {
-            console.error('Error rendering project cards:', err);
-            return '<div class="card">حدث خطأ أثناء تحميل المشاريع</div>';
-        })}
+        }).join('')}
                                 </div>
                             `}
                         </section>
@@ -592,11 +417,13 @@ export class DashboardView {
                             <div class="dv-tools dv-tools--journey">
                                 ${journeySections}
                             </div>
+                            <!-- الاختصارات الثلاثة الأخرى (تمويل/تصدير/موارد) أُزيلت من هنا — كانت مكرَّرة
+                                 حرفياً (نفس المعالج) مع أدوات «التحليل المالي» و«الإخراج والتقديم» في تبويب
+                                 «أدوات مساندة للدراسة»، بفهرس بحث منفصل لكل نسخة. أُبقي على محاكي التمويل
+                                 وحده لأنه الفحص الأهم لهذا التبويب تحديداً. -->
+                            <h3 class="dv-toolcol__title dv-quicktools__heading">اختصار سريع</h3>
                             <div class="dv-quicktools">
-                                ${toolRow('btnFundingSim', 'bank', 'محاكي قبول التمويل', 'اختبار سريع لجاهزية التمويل', true)}
-                                ${this.onShowFinancingGuide ? toolRow('linkFinancingFromJourneys', 'bank', 'قائمة تحقق التمويل', 'جهّز الطلب والمرفقات') : ''}
-                                ${this.onOpenExport ? toolRow('linkExportFromJourneys', 'download', 'تصدير الدراسة', 'تقرير وجداول وملف قابل للتعديل وعرض تقديمي') : ''}
-                                ${this.onShowResourcesGuide ? toolRow('linkResourcesFromJourneys', 'book', 'موارد وإرشاد', 'جهات داعمة للاستشارة والتمويل') : ''}
+                                ${toolButton({ id: 'btnFundingSim', icon: 'bank', name: 'محاكي قبول التمويل', desc: 'اختبار سريع لجاهزية التمويل', engine: true, compact: false })}
                             </div>
                         </section>
 
@@ -618,8 +445,6 @@ export class DashboardView {
                     </div>
                 </div>
 
-                <!-- 5. سطر الثقة (تسويق مصغّر لا يزاحم) -->
-                ${this.renderTrustLine()}
             </div>
 
             <!-- Competitor Gap 2: Sensitivity Widget (معطّل حالياً — انظر ملاحظة ما بعد الرندر) -->
@@ -660,6 +485,28 @@ export class DashboardView {
         }
 
         this.bindEvents();
+        // كان معرَّفاً بالكامل ولا يُستدعى إطلاقاً (تدقيق مجلس الحرب) — دليل الوصول
+        // الوحيد لتوجيه أول زيارة نحو «جدوى سريعة» أو «دراسة احترافية» بعد حذف الهيرو.
+        if (!hasProjects) this.maybeShowOnboarding();
+        this.hydrateProjectCompleteness(filtered);
+    }
+
+    // تحميل مؤجَّل لشارة «جودة المسودة» للبطاقات التي وصلت بلا بيانات كاملة (غالباً
+    // كل الدراسات) — بعد أول رسم فوري للصفحة، لا قبله (انظر renderProjectCard أعلاه).
+    hydrateProjectCompleteness(projects) {
+        (projects || []).forEach(project => {
+            if (project.data && project.data.projectInfo) return; // كانت متاحة فوراً أصلاً
+            const slot = this.container.querySelector(`[data-completeness-for="${project.id}"]`);
+            if (!slot) return;
+            ProjectManager.loadProject(project.id)
+                .then(loaded => {
+                    const freshSlot = this.container.querySelector(`[data-completeness-for="${project.id}"]`);
+                    if (!freshSlot) return; // المستخدم غادر البطاقة (فلترة/بحث) قبل اكتمال التحميل
+                    const projectData = loaded?.data || project;
+                    freshSlot.outerHTML = this.buildCompletenessHTML(projectData);
+                })
+                .catch(err => console.warn('Could not hydrate completeness for project:', project.id, err));
+        });
     }
 
     maybeShowOnboarding() {
@@ -750,19 +597,6 @@ export class DashboardView {
         setTimeout(() => (closeBtn || btnFull || btnQuick || btnDismiss)?.focus(), 0);
     }
 
-    /** سطر الثقة المصغّر (بديل renderPlatformStats): توافق + ضمان + عينة + معاييرنا */
-    renderTrustLine() {
-        return `
-            <div class="dv-trustline">
-                <span class="dv-trustline__note">هيكل التقرير متوافق مع متطلبات <b>بنك التنمية</b> و<b>منشآت</b></span>
-                <span class="dv-trustline__sep"></span>
-                ${TRIAL_OR_REFUND_TEXT ? `<button type="button" id="btnRefundPolicy" class="dv-trustline__link" title="${TRIAL_OR_REFUND_TEXT}">${icon('i-shield')} ضمان استرداد ١٥ يوماً</button>` : ''}
-                <span class="dv-trustline__sp"></span>
-                <button type="button" id="btnDownloadSample" class="dv-trustline__link">${icon('i-download')} تحميل نموذج تقرير</button>
-                ${this.onShowTrustCriteria ? '<button type="button" id="linkTrustCriteriaStats" class="dv-trustline__link">معاييرنا</button>' : ''}
-            </div>
-        `;
-    }
 
     renderEmptyState() {
         // حالة «تصفية بلا نتائج»: توجد دراسات لكن البحث/المجلد لم يُطابق شيئاً
@@ -793,7 +627,7 @@ export class DashboardView {
                     <li>${inlineIcon('chart')} توقعات مالية ٥ سنوات</li>
                     <li>${inlineIcon('trend')} مؤشرات القرار: عائد وقيمة</li>
                     <li>${inlineIcon('download')} تقرير وجداول قابلة للتصدير</li>
-                    <li>${inlineIcon('shield')} امتثال سعودي: ضريبة · زكاة · تأمينات</li>
+                    <li>${inlineIcon('shield')} ضريبة القيمة المضافة والزكاة والتأمينات محسوبة تلقائياً</li>
                 </ul>
                 <p class="dv-empty__price">${PRICING_DISPLAY?.startPrice || 'ابدأ مجاناً'} — جدوى سريعة في 3 خطوات</p>
                 <div class="dv-empty__actions">
@@ -804,38 +638,17 @@ export class DashboardView {
         `;
     }
 
-    async renderProjectCard(project) {
-        const date = new Date(project.lastModified || project.updated_at).toLocaleDateString('ar-SA');
-        const isCloud = project.source === 'cloud' || project.source === 'synced';
-        const isLocal = project.source === 'local';
-        // قائمة المشاريع ترجع عناوين خفيفة بلا `data`، فكانت جودة المسودة تُحسب على كائن فارغ = 0%.
-        // نحمّل الدراسة الكاملة عند غياب البيانات لحساب نسبة اكتمال صحيحة.
-        let projectData = project.data;
-        if (!projectData || !projectData.projectInfo) {
-            try {
-                const loaded = await ProjectManager.loadProject(project.id);
-                projectData = loaded?.data || project;
-            } catch (_) { projectData = project; }
-        }
-        const folders = DashboardView.getFolders();
-        const folderOptions = [
-            '<option value="">بدون مجلد</option>',
-            ...folders.map(f => `<option value="${f.id}" ${(project.folderId || null) === f.id ? 'selected' : ''}>${f.name}</option>`)
-        ].join('');
-
-        // Calculate completeness if project data is available
-        let completenessHTML = '';
+    // مقياس «جودة المسودة» يُبنى هنا لاستخدامه فوراً (بيانات جاهزة) أو لاحقاً (تحميل مؤجَّل).
+    buildCompletenessHTML(projectData) {
         try {
-            const { calculateStudyCompleteness } = await import('../utils/studyCompleteness.js');
             const completeness = calculateStudyCompleteness(projectData);
             const percentage = completeness.percentage;
             const level = percentage >= 80 ? 'is-good' : percentage >= 50 ? 'is-mid' : 'is-low';
-
             const tips = typeof completeness.getTipsToRaiseScore === 'function' ? completeness.getTipsToRaiseScore().slice(0, 1) : [];
-            completenessHTML = `
+            return `
                 <div class="dv-quality-mini ${level}">
                     <div class="dv-quality-mini__row">
-                        <span>جودة المسودة</span>
+                        <span title="نسبة اكتمال حقول الدراسة — لا تقيس جودة القرار المالي نفسه">جودة المسودة</span>
                         <b class="dv-num">${percentage}%</b>
                     </div>
                     <div class="dv-track dv-track--thin"><div class="dv-track__fill" style="width: ${percentage}%"></div></div>
@@ -844,21 +657,44 @@ export class DashboardView {
             `;
         } catch (e) {
             console.warn('Could not calculate completeness for project:', e);
+            return '';
         }
+    }
+
+    // مُتزامنة عمداً: قائمة المشاريع عناوين خفيفة بلا `data` غالباً، وتحميل الدراسة الكاملة
+    // (شبكياً للمحفوظ سحابياً) لكل بطاقة كان يُعلِّق رسم الصفحة كاملة بانتظار الجميع دفعة
+    // واحدة فقط لحساب نسبة زخرفية. الآن: رسم فوري ببيانات ما هو متاح، وتحميل مؤجَّل
+    // لشارة «جودة المسودة» فقط عبر hydrateProjectCompleteness() بعد أول رسم.
+    renderProjectCard(project) {
+        const date = new Date(project.lastModified || project.updated_at).toLocaleDateString('ar-SA');
+        const isCloud = project.source === 'cloud' || project.source === 'synced';
+        const isLocal = project.source === 'local';
+        const hasInlineData = !!(project.data && project.data.projectInfo);
+        const projectData = hasInlineData ? project.data : null;
+
+        const folders = DashboardView.getFolders();
+        const folderOptions = [
+            '<option value="">بدون مجلد</option>',
+            ...folders.map(f => `<option value="${f.id}" ${(project.folderId || null) === f.id ? 'selected' : ''}>${escapeHtml(f.name)}</option>`)
+        ].join('');
+
+        const completenessHTML = hasInlineData
+            ? this.buildCompletenessHTML(projectData)
+            : `<div class="dv-quality-mini dv-quality-mini--pending" data-completeness-for="${project.id}"></div>`;
 
         const badges = [
             isCloud ? `<span class="badge badge--info dv-badge" title="محفوظ سحابياً">${inlineIcon('cloud')} سحابي</span>` : '',
             (isLocal && !isCloud) ? `<span class="badge badge--warning dv-badge" title="محفوظ محلياً فقط">${inlineIcon('laptop')} محلي</span>` : '',
-            (projectData.projectInfo?.members?.length > 0) ? `<span class="badge badge--success dv-badge" title="مشترك مع فريق">${icon('i-user')} مشترك</span>` : ''
+            (hasInlineData && projectData.projectInfo?.members?.length > 0) ? `<span class="badge badge--success dv-badge" title="مشترك مع فريق">${icon('i-user')} مشترك</span>` : ''
         ].filter(Boolean).join('');
 
-        const safeName = (project.name || 'مشروع بدون اسم').replace(/"/g, '&quot;');
+        const safeName = escapeHtml(project.name || 'مشروع بدون اسم');
         return `
             <div class="project-card dv-card dv-project" data-id="${project.id}" role="button" tabindex="0" aria-label="فتح دراسة ${safeName}">
                 <div class="dv-project__head">
                     <span class="dv-card__ic dv-card__ic--soft dv-card__ic--sm">${icon('i-chart')}</span>
                     <div class="dv-project__id">
-                        <h3 class="dv-project__name" title="${safeName}">${project.name || 'مشروع بدون اسم'}</h3>
+                        <h3 class="dv-project__name" title="${safeName}">${safeName}</h3>
                         <p class="dv-project__date">آخر تعديل: <span class="dv-num">${date}</span></p>
                     </div>
                     <span class="dvh-project__enter" aria-hidden="true">${inlineIcon('chev')}</span>
@@ -884,10 +720,19 @@ export class DashboardView {
         `;
     }
 
-    renderQualityStrip(projects) {
+    // البيانات القادمة من قائمة المشاريع عناوين خفيفة بلا `projectInfo` (نفس علة renderProjectCard) —
+    // فالشرط القديم `!latest.projectInfo` كان يتحقق دائماً فيُسقط الشريط صامتاً لكل مستخدم حقيقي.
+    async renderQualityStrip(projects) {
         if (!projects || projects.length === 0) return '';
-        const latest = projects[0];
-        if (!latest.projectInfo) return '';
+        const header = projects[0];
+        let latest = header;
+        if (!latest.projectInfo) {
+            try {
+                const loaded = await ProjectManager.loadProject(header.id);
+                latest = loaded?.data || null;
+            } catch (_) { latest = null; }
+        }
+        if (!latest || !latest.projectInfo) return '';
 
         try {
             const q = QualityCalculator.calculate(latest);
@@ -898,13 +743,13 @@ export class DashboardView {
                         <div class="dv-quality__info">
                             <div class="dv-quality__head">
                                 <span class="dv-pill dv-pill--onband">${badgeLabel}</span>
-                                <h3 class="dv-quality__title">جودة دراستك — <span class="dv-quality__name">${latest.projectInfo ? latest.projectInfo.name : ''}</span></h3>
+                                <h3 class="dv-quality__title">جودة دراستك — <span class="dv-quality__name">${escapeHtml(latest.projectInfo.name || '')}</span></h3>
                             </div>
                             <p class="dv-quality__hint">أكملت <b class="dv-num">${q.score}%</b> من الدراسة. ${q.missing.length > 0 ? 'خطوتك التالية: ' + q.missing[0].label : 'ممتاز! الدراسة مكتملة.'}</p>
                         </div>
                         <div class="dv-quality__cta-wrap">
                             <div class="dv-track dv-track--onband"><div class="dv-track__fill" style="width: ${q.score}%"></div></div>
-                            <button class="btn btn--sm dv-quality__cta btn-open" data-id="${latest.id}">${icon('i-pen')} حسّن النتيجة</button>
+                            <button class="btn btn--sm dv-quality__cta btn-open" data-id="${header.id}">${icon('i-pen')} حسّن النتيجة</button>
                         </div>
                     </div>
                 </section>
@@ -949,12 +794,6 @@ export class DashboardView {
             handleNew();
         });
 
-        // Card: Startup Hypothesis
-        this.container.querySelector('#cardHypothesis')?.addEventListener('click', () => {
-            if (this.onShowHypothesis) this.onShowHypothesis();
-            else toast.info('الخدمة غير متوفرة حالياً');
-        });
-
         // Card: Quick Feasibility
         this.container.querySelector('#cardQuickFeasibility')?.addEventListener('click', () => {
             this.dismissOnboardingTip?.();
@@ -985,16 +824,12 @@ export class DashboardView {
             btn.addEventListener('click', () => switchHomePanel(btn.dataset.dvPanelButton));
         });
 
-        this.container.querySelector('#btnExploreTools')?.addEventListener('click', () => {
-            switchHomePanel('engines', { scroll: true, focusSelector: '#toolsSearch' });
-        });
-
         this.container.querySelector('#btnContinueLastStep')?.addEventListener('click', () => {
             const index = Number(localStorage.getItem('feas_last_step_index'));
             if (Number.isInteger(index) && STEPS[index]) this.options.onShowStudyStep?.(index);
         });
 
-        // تحميل عينة تقرير (مشترك بين btnDownloadSample و modal عينة تقرير)
+        // تحميل عينة تقرير (يُستدعى من داخل modal عينة التقرير)
         const runDownloadSample = async () => {
             try {
                 const emptyStudy = createEmptyStudy();
@@ -1060,42 +895,6 @@ export class DashboardView {
         // Initialize Resources Menu
         new ResourcesMenu('resources-menu-root', this.options).render();
 
-        // Journey Cards
-        const bindJourney = (id, handler) => {
-            const el = this.container.querySelector(id);
-            if (!el) return;
-            el.addEventListener('click', () => {
-                if (handler) handler();
-            });
-            el.addEventListener('keydown', (e) => {
-                if ((e.key === 'Enter' || e.key === ' ') && handler) {
-                    e.preventDefault();
-                    handler();
-                }
-            });
-        };
-
-        bindJourney('#journeyFeasibility', () => {
-             this.dismissOnboardingTip?.();
-             /* if (this.options.onStartQuickFeasibility) this.options.onStartQuickFeasibility();
-             else */ window.dispatchEvent(new CustomEvent('feasibility:newStudy'));
-        });
-        bindJourney('#journeyAdvisory', () => {
-            this.dismissOnboardingTip?.();
-            if (this.options.onShowAdvisory) this.options.onShowAdvisory();
-            else toast.info('رحلة الاستشارة — قريباً');
-        });
-        bindJourney('#journeyTemplates', () => {
-            this.dismissOnboardingTip?.();
-            window.dispatchEvent(new CustomEvent('feasibility:newStudy'));
-        });
-        bindJourney('#journeyPartner', () => {
-            this.dismissOnboardingTip?.();
-            if (this.options.onShowPartnerSelection) this.options.onShowPartnerSelection();
-            else if (this.options.onShowFinancingGuide) this.options.onShowFinancingGuide();
-            else toast.info('رحلة الشريك — قريباً');
-        });
-
         // Journey Links (دليل سريع، منشآت، تمويل، إلخ) — event delegation
         const journeyLinkHandlers = {
             linkQuickStartFromJourneys: () => this.options.onShowQuickStartGuide?.(),
@@ -1108,19 +907,16 @@ export class DashboardView {
                 else window.dispatchEvent(new CustomEvent('feasibility:newStudy'));
             },
             linkMonshaatFromJourneys: () => this.options.onShowMonshaatCompliance?.(),
-            linkFinancingFromJourneys: () => this.options.onShowFinancingGuide?.(),
             linkFinancingToolkit: () => this.options.onShowFinancingGuide?.(),
             linkOperationalSimFromJourneys: () => this.options.onShowOperationalSimulator?.(),
             linkStressTestFromJourneys: () => this.options.onShowStressTest?.(),
             linkSensitivityFromJourneys: () => this.options.onShowSensitivity?.(),
             linkMonteCarloFromJourneys: () => this.options.onShowMonteCarlo?.(),
             linkReportBuilderFromJourneys: () => this.options.onShowReportBuilder?.(),
-            linkExportFromJourneys: () => this.options.onOpenExport?.(),
             linkExportToolkit: () => this.options.onOpenExport?.(),
             linkAcceleratorFromJourneys: () => this.options.onShowAcceleratorTips?.(),
             linkPostFeasibilityFromJourneys: () => this.options.onShowPostFeasibility?.(),
             linkPostLaunchFromJourneys: () => this.options.onShowPostLaunch?.(),
-            linkResourcesFromJourneys: () => this.options.onShowResourcesGuide?.(),
             linkResourcesToolkit: () => this.options.onShowResourcesGuide?.(),
             linkExamplesFromJourneys: () => this.options.onShowExamplesInspire?.(),
             linkExamplesToolkit: () => this.options.onShowExamplesInspire?.(),
@@ -1199,38 +995,6 @@ export class DashboardView {
                     toast.info('جاري إعداد البطاقة...');
                 }
             });
-        });
-
-        // سياسة الاسترداد (المهمة 2 — خطة التفوق)
-        this.container.querySelector('#btnRefundPolicy')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            new RefundPolicyModal().open();
-        });
-
-        // Download Sample Report (يستخدم runDownloadSample المعرّف أعلاه)
-        this.container.querySelector('#btnDownloadSample')?.addEventListener('click', async () => {
-            const btn = this.container.querySelector('#btnDownloadSample');
-            // innerHTML وليس textContent: الزر يحتوي أيقونة SVG يجب استرجاعها
-            const originalHTML = btn.innerHTML;
-            btn.textContent = 'جاري التحضير...';
-            btn.disabled = true;
-            try {
-                await runDownloadSample();
-            } finally {
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
-            }
-        });
-
-        // Demo Simulation
-        this.container.querySelector('#btnRunDemo')?.addEventListener('click', async () => {
-            if (window.simulator) {
-                if (confirm('هل تريد بدء محاكاة تجربة مستخدم كاملة؟ (سيتم إنشاء دراسة تجريبية)')) {
-                    await window.simulator.runDemo('burger_joint');
-                }
-            } else {
-                toast.warning('المحاكي غير جاهز بعد. يرجى الانتظار ثوانٍ.');
-            }
         });
 
         // Open Project

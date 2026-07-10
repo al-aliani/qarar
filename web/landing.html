@@ -355,6 +355,7 @@
     table.cmp th, table.cmp td { text-align: start; padding: 16px 20px; font-size: var(--text-sm); border-bottom: 1px solid var(--line); vertical-align: top; }
     table.cmp thead th { font-weight: 700; font-size: var(--text-base); background: var(--mint-50); border-bottom: 2px solid var(--line-strong); }
     table.cmp thead th.us { color: var(--green-700); background: rgba(16,130,100,.08); }
+    table.cmp thead th.them { color: var(--muted); }
     table.cmp tbody th { font-weight: 700; color: var(--ink); width: 26%; background: rgba(6,46,35,.015); }
     table.cmp td.us { background: rgba(16,130,100,.05); color: var(--ink-2); font-weight: 500; border-inline: 1px solid rgba(16,130,100,.14); }
     table.cmp tbody tr:hover td.us { background: rgba(16,130,100,.09); }
@@ -432,6 +433,33 @@
     .reveal.in { animation: reveal-rise .6s cubic-bezier(.2,.7,.2,1) both; }
     @keyframes reveal-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
+    /* ═══ حركات بهلوانية متنوّعة — كل قسم يدخل بأسلوبه الخاص بدل تكرار نفس الصعود ═══ */
+    .reveal--flip.in { animation: reveal-flip .75s cubic-bezier(.2,.7,.2,1) both; transform-origin: 50% 100%; }
+    @keyframes reveal-flip { from { opacity: 0; transform: perspective(900px) rotateX(-75deg) translateY(24px); } to { opacity: 1; transform: perspective(900px) rotateX(0) translateY(0); } }
+
+    .reveal--spin.in { animation: reveal-spin .7s cubic-bezier(.34,1.56,.64,1) both; }
+    @keyframes reveal-spin { from { opacity: 0; transform: scale(.45) rotate(-16deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+
+    .reveal--pop.in { animation: reveal-pop .65s cubic-bezier(.34,1.56,.64,1) both; }
+    @keyframes reveal-pop { 0% { opacity: 0; transform: scale(.55) translateY(26px); } 70% { opacity: 1; transform: scale(1.05) translateY(-5px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+
+    .reveal--skew-r.in { animation: reveal-skew-r .6s cubic-bezier(.2,.7,.2,1) both; }
+    @keyframes reveal-skew-r { from { opacity: 0; transform: translateX(50px) skewX(-9deg) rotate(3deg); } to { opacity: 1; transform: translateX(0) skewX(0) rotate(0); } }
+
+    .reveal--skew-l.in { animation: reveal-skew-l .6s cubic-bezier(.2,.7,.2,1) both; }
+    @keyframes reveal-skew-l { from { opacity: 0; transform: translateX(-50px) skewX(9deg) rotate(-3deg); } to { opacity: 1; transform: translateX(0) skewX(0) rotate(0); } }
+
+    .reveal--bounce.in { animation: reveal-bounce .8s cubic-bezier(.22,1.2,.36,1) both; }
+    @keyframes reveal-bounce { 0% { opacity: 0; transform: translateY(64px); } 55% { opacity: 1; transform: translateY(-12px); } 78% { transform: translateY(5px); } 100% { transform: translateY(0); } }
+
+    /* تأخير متسلسل (دومينو) للعناصر المتتالية داخل نفس القائمة/الشبكة */
+    .rv-d1.reveal.in { animation-delay: .07s; }
+    .rv-d2.reveal.in { animation-delay: .14s; }
+    .rv-d3.reveal.in { animation-delay: .21s; }
+    .rv-d4.reveal.in { animation-delay: .28s; }
+    .rv-d5.reveal.in { animation-delay: .35s; }
+    .rv-d6.reveal.in { animation-delay: .42s; }
+
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       *, *::before, *::after {
@@ -441,7 +469,9 @@
         transition-duration: .001ms !important;
       }
       /* تحييد الحركات المعتمدة على التحويل حتى لا تبقى العناصر مطويّة */
-      .mini-chart span, .score-card.in .score-bar i, .reveal.in { transform: none !important; opacity: 1 !important; }
+      .mini-chart span, .score-card.in .score-bar i, .reveal.in,
+      .reveal--flip.in, .reveal--spin.in, .reveal--pop.in,
+      .reveal--skew-r.in, .reveal--skew-l.in, .reveal--bounce.in { transform: none !important; opacity: 1 !important; }
       .btn:hover, .card:hover, .price:hover, .step:hover,
       .pillar:hover, .pain-list li:hover, .hero-fact:hover { transform: none !important; }
     }
@@ -512,19 +542,6 @@
     </defs>
   </svg>
 
-  <div class="contact-bar">
-    <div class="wrap contact-in">
-      <div class="contact-list">
-        <span><strong>تسليم خلال 24 إلى 48 ساعة</strong> حسب اكتمال البيانات</span>
-        <span class="dot">•</span>
-        <span>تقرير بنكي + Excel + توصية GO / REVISE / NO-GO</span>
-      </div>
-      <div class="contact-actions">
-        <a href="#" data-wa data-pkg="استفسار سريع"><svg class="ic" style="width:15px;height:15px;stroke:none;fill:currentColor"><use href="#i-wa"/></svg> تواصل واتساب</a>
-        <a href="./privacy.html">الخصوصية</a>
-      </div>
-    </div>
-  </div>
 
   <header class="top" id="top">
     <div class="wrap top-in">
@@ -541,7 +558,6 @@
         <a href="#faq">الأسئلة</a>
       </nav>
       <div class="top-cta">
-        <a href="#sample" class="btn btn-outline btn-sm">تقرير نموذجي</a>
         <a href="./index.html" class="btn btn-primary btn-sm">ابدأ دراستك</a>
       </div>
     </div>
@@ -566,17 +582,10 @@
           <p class="lede">«قرار» يحوّل فكرة مشروعك إلى دراسة جدوى مالية واضحة وقابلة للتدقيق: كل رقم مربوط بافتراض تستطيع تعديله ومراجعته بنفسك، وتنتهي بتوصية صريحة — أكمِل، عدّل، أو توقّف. لا صندوق أسود، ولا وعود عامة.</p>
           <div class="hero-cta">
             <a href="./index.html" class="btn btn-light">ابدأ دراستك الآن</a>
-            <a href="#sample" class="btn btn-ghost"><svg class="ic"><use href="#i-eye"/></svg> شاهد تقريراً نموذجياً</a>
-          </div>
-          <div class="hero-facts" aria-label="حقائق سريعة">
-            <div class="hero-fact is-num"><b>24–48</b><span>ساعة للتسليم</span></div>
-            <div class="hero-fact is-num"><b>5</b><span>سنوات توقعات مالية</span></div>
-            <div class="hero-fact"><b>PDF + Excel</b><span>تقرير + نموذج مفتوح</span></div>
-            <div class="hero-fact"><b>GO / NO-GO</b><span>توصية صريحة</span></div>
           </div>
         </div>
 
-        <div class="report-card reveal" aria-label="نموذج توضيحي لمخرجات الدراسة">
+        <div class="report-card reveal reveal--spin" aria-label="نموذج توضيحي لمخرجات الدراسة">
           <div class="report-win"><span class="d"></span><span class="d"></span><span class="d"></span><span>قرار — ملخص القرار</span></div>
           <div class="report-head">
             <div class="report-title">
@@ -626,10 +635,10 @@
           <p>الحماس للفكرة شيء، والأرقام التي تحكم بقاءها شيء آخر. أغلب المشاريع تُوقّع عقد الإيجار وتصرف على التجهيز قبل أن تعرف رقمها الحقيقي.</p>
         </div>
         <ul class="pain-list grid-4" style="display:grid">
-          <li class="reveal"><svg class="ic"><use href="#i-alert"/></svg><p>تقدّر التكاليف بالحدس، فتكتشف بعد الافتتاح أن الإيجار وحده يلتهم الهامش.</p></li>
-          <li class="reveal"><svg class="ic"><use href="#i-alert"/></svg><p>لا تعرف نقطة التعادل الشهرية، فتظن أن الازدحام يعني ربحاً — وهو ليس كذلك دائماً.</p></li>
-          <li class="reveal"><svg class="ic"><use href="#i-alert"/></svg><p>تنسى بنوداً حقيقية: التأمينات، ضريبة القيمة المضافة، الصيانة، الاشتراكات، ومصروف الطوارئ.</p></li>
-          <li class="reveal"><svg class="ic"><use href="#i-alert"/></svg><p>حين تطلب تمويلاً، لا تملك أرقاماً منظّمة يفهمها الممول أو الشريك — فتضيع الفرصة أو الوقت.</p></li>
+          <li class="reveal reveal--skew-r rv-d1"><svg class="ic"><use href="#i-alert"/></svg><p>تقدّر التكاليف بالحدس، فتكتشف بعد الافتتاح أن الإيجار وحده يلتهم الهامش.</p></li>
+          <li class="reveal reveal--skew-l rv-d2"><svg class="ic"><use href="#i-alert"/></svg><p>لا تعرف نقطة التعادل الشهرية، فتظن أن الازدحام يعني ربحاً — وهو ليس كذلك دائماً.</p></li>
+          <li class="reveal reveal--skew-r rv-d3"><svg class="ic"><use href="#i-alert"/></svg><p>تنسى بنوداً حقيقية: التأمينات، ضريبة القيمة المضافة، الصيانة، الاشتراكات، ومصروف الطوارئ.</p></li>
+          <li class="reveal reveal--skew-l rv-d4"><svg class="ic"><use href="#i-alert"/></svg><p>حين تطلب تمويلاً، لا تملك أرقاماً منظّمة يفهمها الممول أو الشريك — فتضيع الفرصة أو الوقت.</p></li>
         </ul>
       </div>
     </section>
@@ -643,22 +652,22 @@
           <p>مكاتب الدراسات التقليدية تسلّمك تقريراً بأرقام نهائية دون أن ترى كيف اُحتسبت. «قرار» يفتح لك الصندوق.</p>
         </div>
         <div class="pillars">
-          <div class="pillar reveal">
+          <div class="pillar reveal reveal--pop rv-d1">
             <span class="pillar-ic"><svg class="ic"><use href="#i-eye"/></svg></span>
             <h3>شفاف</h3>
             <p>تفتح أي رقم فترى الافتراض الذي بُني عليه، وتعدّله وتشاهد أثره فوراً — لا صندوق أسود.</p>
           </div>
-          <div class="pillar reveal">
+          <div class="pillar reveal reveal--pop rv-d2">
             <span class="pillar-ic"><svg class="ic"><use href="#i-target"/></svg></span>
             <h3>متخصص</h3>
             <p>نموذج عام قابل للتخصيص، والقوالب القطاعية لا تظهر إلا عندما يضيفها مختص واضح الخبرة والنطاق.</p>
           </div>
-          <div class="pillar reveal">
+          <div class="pillar reveal reveal--pop rv-d3">
             <span class="pillar-ic"><svg class="ic"><use href="#i-bolt"/></svg></span>
             <h3>سريع</h3>
             <p>من <span data-price-min>249</span> ريالاً وتسليم خلال 24–48 ساعة، مقابل آلاف الريالات وأسابيع في المكتب التقليدي.</p>
           </div>
-          <div class="pillar reveal">
+          <div class="pillar reveal reveal--pop rv-d4">
             <span class="pillar-ic"><svg class="ic"><use href="#i-shield"/></svg></span>
             <h3>محلي</h3>
             <p>ضريبة القيمة المضافة، الزكاة، التأمينات الاجتماعية، وعمولات التطبيقات محسوبة داخل المحرك.</p>
@@ -676,14 +685,14 @@
             <h2 style="font-size:clamp(28px,3.1vw,40px);letter-spacing:-.01em;margin:14px 0 12px">كل ما يحتاجه قرار استثماري جاد، في مكان واحد</h2>
             <p style="color:var(--muted);font-size:var(--text-lg);line-height:1.65">لست أمام صفحات إنشائية، بل نموذج مالي مترابط يبدأ من فكرتك وينتهي بتوصية يمكن الدفاع عنها أمام أي ممول أو شريك.</p>
             <ul class="del-list">
-              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>ملخص تنفيذي وبطاقة قرار GO / REVISE / NO-GO مع أسبابها.</li>
-              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>توقعات مالية لخمس سنوات: قائمة دخل، تدفقات نقدية، وميزانية عمومية.</li>
-              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>مؤشرات التقييم: NPV، IRR، نقطة التعادل، وفترة الاسترداد.</li>
-              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تحليل حساسية وسيناريوهات (متفائل / أساسي / متحفظ) وسجل مخاطر.</li>
-              <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تقرير PDF بتنسيق بنكي + ملف Excel قابل للتعديل يبقى بين يديك.</li>
+              <li class="reveal reveal--skew-r rv-d1"><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>ملخص تنفيذي وبطاقة قرار GO / REVISE / NO-GO مع أسبابها.</li>
+              <li class="reveal reveal--skew-r rv-d2"><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>توقعات مالية لخمس سنوات: قائمة دخل، تدفقات نقدية، وميزانية عمومية.</li>
+              <li class="reveal reveal--skew-r rv-d3"><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>مؤشرات التقييم: NPV، IRR، نقطة التعادل، وفترة الاسترداد.</li>
+              <li class="reveal reveal--skew-r rv-d4"><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تحليل حساسية وسيناريوهات (متفائل / أساسي / متحفظ) وسجل مخاطر.</li>
+              <li class="reveal reveal--skew-r rv-d5"><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>تقرير PDF بتنسيق بنكي + ملف Excel قابل للتعديل يبقى بين يديك.</li>
             </ul>
           </div>
-          <div id="sample" class="del-card reveal" aria-label="معاينة تقرير نموذجي">
+          <div id="sample" class="del-card reveal reveal--flip" aria-label="معاينة تقرير نموذجي">
             <div class="del-card-head">
               <strong>نموذج مخرجات — مشروع تجاري</strong>
               <span class="sample-flag"><svg class="ic" style="width:13px;height:13px"><use href="#i-alert"/></svg> مثال توضيحي</span>
@@ -701,44 +710,6 @@
       </div>
     </section>
 
-    <!-- المنهجية والشفافية -->
-    <section id="method" class="pricing">
-      <div class="wrap">
-        <div class="sec-head">
-          <span class="eyebrow">المنهجية والشفافية</span>
-          <h2>«درجة المدقق»: كل رقم يقف على افتراض تراه وتعدّله</h2>
-          <p>الثقة عندنا لا تُبنى بشعارات، بل بأن تفتح النموذج بنفسك وتتحقق من كل حساب.</p>
-        </div>
-        <div class="method-grid">
-          <div class="score-card reveal" aria-label="بطاقة درجة المدقق — مثال">
-            <div class="score-top">
-              <div>
-                <div style="color:var(--muted);font-size:var(--text-sm);font-weight:500">درجة المدقق لهذه الدراسة</div>
-                <div style="color:var(--muted-2);font-size:var(--text-xs);margin-top:2px">تقييم آلي على 9 بنود منهجية</div>
-              </div>
-              <b class="num">82<small>/100</small></b>
-            </div>
-            <div class="score-bar" aria-hidden="true"><i style="--w:82%"></i></div>
-            <div class="score-tags">
-              <span class="score-tag">اكتمال البيانات</span>
-              <span class="score-tag">اتساق الافتراضات</span>
-              <span class="score-tag">توثيق CAPEX</span>
-              <span class="score-tag">المساهمة الذاتية</span>
-              <span class="score-tag">تغطية خدمة الدين</span>
-              <span class="score-tag">التوطين</span>
-            </div>
-            <p style="color:var(--muted-2);font-size:var(--text-xs);margin:14px 0 0">مثال توضيحي — الدرجة تُحتسب من بياناتك الفعلية داخل المنصة.</p>
-          </div>
-          <ul class="method-list">
-            <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span><div><h3>افتراضات ظاهرة وقابلة للتعديل</h3><p>غيّر الإيجار أو متوسط الفاتورة أو نسبة النمو، فتتحدث كل المؤشرات لحظياً.</p></div></li>
-            <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span><div><h3>منهجية مالية معيارية</h3><p>خصم التدفقات النقدية لاحتساب NPV وIRR، ونقطة تعادل من هيكل التكاليف الفعلي.</p></div></li>
-            <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span><div><h3>بوابة جودة مانعة</h3><p>الدراسة لا تُصدَّر إذا كانت البيانات ناقصة أو المؤشرات غير منطقية — لا تقرير مطمئن على أساس هشّ.</p></div></li>
-            <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span><div><h3>قيم السوق موسومة بصدق</h3><p>نميّز بوضوح بين رقمك أنت وبين قيمة مرجعية عامة عليك مراجعتها حسب واقعك.</p></div></li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
     <!-- كيف نعمل -->
     <section id="how">
       <div class="wrap">
@@ -748,10 +719,10 @@
           <p>بدل الاجتماعات الطويلة والرسائل المتفرقة، تدخل بياناتك خطوة بخطوة فيتحوّل كل شيء إلى نموذج مالي وتقرير جاهز.</p>
         </div>
         <div class="steps">
-          <article class="step reveal"><div class="step-num">1</div><h3>تحدّد المشروع</h3><p>النشاط، المدينة، المساحة، القنوات، والميزانية المتوقعة.</p></article>
-          <article class="step reveal"><div class="step-num">2</div><h3>نبني الافتراضات</h3><p>الإيرادات والتكاليف والعمالة والتمويل وفق نشاطك ونطاق القالب إن وجد.</p></article>
-          <article class="step reveal"><div class="step-num">3</div><h3>نراجع المخاطر</h3><p>نختبر السيناريوهات ونحدد أين قد ينهار الهامش أو يتأخر الاسترداد.</p></article>
-          <article class="step reveal"><div class="step-num">4</div><h3>تستلم القرار</h3><p>تقرير PDF، ملف Excel، وتوصية واضحة بما يجب تعديله قبل الالتزام.</p></article>
+          <article class="step reveal reveal--bounce rv-d1"><div class="step-num">1</div><h3>تحدّد المشروع</h3><p>النشاط، المدينة، المساحة، القنوات، والميزانية المتوقعة.</p></article>
+          <article class="step reveal reveal--bounce rv-d2"><div class="step-num">2</div><h3>نبني الافتراضات</h3><p>الإيرادات والتكاليف والعمالة والتمويل وفق نشاطك ونطاق القالب إن وجد.</p></article>
+          <article class="step reveal reveal--bounce rv-d3"><div class="step-num">3</div><h3>نراجع المخاطر</h3><p>نختبر السيناريوهات ونحدد أين قد ينهار الهامش أو يتأخر الاسترداد.</p></article>
+          <article class="step reveal reveal--bounce rv-d4"><div class="step-num">4</div><h3>تستلم القرار</h3><p>تقرير PDF، ملف Excel، وتوصية واضحة بما يجب تعديله قبل الالتزام.</p></article>
         </div>
       </div>
     </section>
@@ -764,13 +735,13 @@
           <h2>قرار مقابل مكتب دراسات جدوى تقليدي</h2>
           <p>لا نذكر منافساً بالاسم، ولا ندّعي ما لا نملكه — نقارن الفئتين على ما يهمّك فعلاً.</p>
         </div>
-        <div class="cmp-wrap reveal">
+        <div class="cmp-wrap reveal reveal--flip">
           <table class="cmp">
             <thead>
               <tr>
                 <th scope="col">المعيار</th>
                 <th scope="col" class="us">منصة «قرار»</th>
-                <th scope="col">مكتب دراسات جدوى تقليدي</th>
+                <th scope="col" class="them">مكتب دراسات جدوى تقليدي</th>
               </tr>
             </thead>
             <tbody>
@@ -825,7 +796,7 @@
           <p>ابدأ بنفسك، أو دع خبيراً يراجع افتراضاتك، أو سلّمنا البيانات لنبني الدراسة كاملة. الأسعار بالريال السعودي.</p>
         </div>
         <div class="prices">
-          <article class="price">
+          <article class="price reveal reveal--skew-l rv-d1">
             <div class="name">ذاتي</div>
             <div class="amount"><span data-price="self">249</span> <small>﷼ / دراسة</small></div>
             <p class="desc">لمن يريد بناء تقديره بنفسه على المنصة بمؤشرات فورية.</p>
@@ -837,7 +808,7 @@
             </ul>
             <a href="./index.html" class="btn btn-outline">ابدأ الآن</a>
           </article>
-          <article class="price featured">
+          <article class="price featured reveal reveal--pop rv-d2">
             <div class="tag">موصى بها</div>
             <div class="name">مراجَع بخبير</div>
             <div class="amount"><span data-price="reviewed">990</span> <small>﷼ / دراسة</small></div>
@@ -850,7 +821,7 @@
             </ul>
             <a href="#" class="btn btn-wa" data-wa data-pkg="مراجَع بخبير — 990 ﷼"><svg class="ic" style="stroke:none;fill:currentColor"><use href="#i-wa"/></svg> اطلب عبر واتساب</a>
           </article>
-          <article class="price">
+          <article class="price reveal reveal--skew-r rv-d3">
             <div class="name">خدمة كاملة</div>
             <div class="amount"><span data-price="full">2,900</span> <small>﷼ / دراسة</small></div>
             <p class="desc">تسلّمنا البيانات العامة، ونتولّى البناء والمراجعة والشرح.</p>
@@ -875,27 +846,27 @@
           <h2>قبل أن تبدأ</h2>
         </div>
         <div class="faq">
-          <details open>
+          <details open class="reveal reveal--skew-l rv-d1">
             <summary>هل التقرير يصلح للتقديم على تمويل؟ <span class="plus" aria-hidden="true"></span></summary>
             <p>التقرير مُعد بهيكل مالي ولغة مناسبة للنقاش مع جهات التمويل والشركاء، ويتضمن المؤشرات والجداول التي تُطلب عادةً. لكنه لا يضمن الموافقة؛ فقرار الاعتماد النهائي يعود دائماً للجهة الممولة وشروطها — وأي وعد بـ«اعتماد مضمون» هو إشارة إنذار لا ميزة.</p>
           </details>
-          <details>
+          <details class="reveal reveal--skew-r rv-d2">
             <summary>لماذا سعركم أقل بكثير من المكاتب التقليدية؟ <span class="plus" aria-hidden="true"></span></summary>
             <p>لأن محرك «قرار» المالي يقوم بالحسابات الثقيلة تلقائياً، فنوفّر وقت العمل اليدوي وتكاليفه دون التنازل عن دقة النموذج. أنت تدفع مقابل نموذج مالي متخصّص وشفاف، لا مقابل ساعات مكتب طويلة.</p>
           </details>
-          <details>
+          <details class="reveal reveal--skew-l rv-d3">
             <summary>ما مصدر الأرقام والافتراضات؟ <span class="plus" aria-hidden="true"></span></summary>
             <p>أنت مصدر الأرقام الأساسية (تكاليفك، أسعارك، مبيعاتك المتوقعة)، والمحرك يبني عليها القواعد المالية والنظامية السعودية. القيم المرجعية العامة موسومة بوضوح كقيم تقريبية عليك مراجعتها، ولا نقدّمها على أنها بيانات سوق مؤكدة.</p>
           </details>
-          <details>
+          <details class="reveal reveal--skew-r rv-d4">
             <summary>هل أستطيع تعديل الدراسة بعد استلامها؟ <span class="plus" aria-hidden="true"></span></summary>
             <p>نعم. بعد الدفع تُفتح لك خاصية التعديل الحي: تغيّر أي افتراض وتشاهد أثره على المؤشرات لحظياً، ثم تصدّر نسخة محدّثة من التقرير وملف Excel وقتما تشاء.</p>
           </details>
-          <details>
+          <details class="reveal reveal--skew-l rv-d5">
             <summary>ما الفرق بين الباقات الثلاث؟ <span class="plus" aria-hidden="true"></span></summary>
             <p>الباقة الذاتية (249) تمنحك المحرك والأدوات لتبني بنفسك. المراجَعة بخبير (990) تضيف مراجعة مختص لافتراضاتك وتوصياته قبل التسليم. الخدمة الكاملة (2,900) نتولّى فيها جمع بياناتك وتنظيمها وبناء الدراسة ومراجعتها مع جلسة شرح للنتائج.</p>
           </details>
-          <details>
+          <details class="reveal reveal--skew-r rv-d6">
             <summary>هل بياناتي محفوظة وآمنة؟ <span class="plus" aria-hidden="true"></span></summary>
             <p>الدراسات تُحفظ محلياً في متصفحك افتراضياً، ولا تُرسل إلى السحابة إلا عند تفعيل ميزات تتطلب ذلك. لا نبيع بياناتك ولا نشاركها. راجع <a href="./privacy.html" style="color:var(--green-700);font-weight:700">سياسة الخصوصية</a> للتفاصيل.</p>
           </details>
@@ -906,7 +877,7 @@
     <!-- الدعوة الختامية -->
     <section class="final-cta">
       <div class="wrap">
-        <div class="cta-box">
+        <div class="cta-box reveal reveal--pop">
           <h2>قبل أن توقّع عقد الإيجار، اختبر القرار بالأرقام</h2>
           <p>أرسل فكرة مشروعك الآن، أو ابدأ تقديرك بنفسك على المنصة، وحوّل الحماس إلى قرار استثماري تستطيع الدفاع عنه. أنت لا تخسر شيئاً بأن تعرف الرقم الحقيقي مبكراً — بل تخسر الكثير إن تجاهلته.</p>
           <div class="hero-cta">
