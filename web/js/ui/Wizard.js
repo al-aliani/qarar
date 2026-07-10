@@ -85,8 +85,61 @@ export class Wizard {
         // المتقدم (this.steps === STEPS الكاملة، فالمحلي=المطلق أصلاً).
         this.stepIndexMap = options.stepIndexMap || null;
         this.onNavigate = options.onNavigate || (() => { });
+        // تدقيق 2026-07-10: آخر خطوة (مراقبة الأداء الفعلي) كانت تنتهي بزر «التالي»
+        // معطّل بلا أي إجراء إغلاق حقيقي — لا رجوع للرئيسية، لا تصدير، لا عرض لقرار
+        // نهائي. onGoHome يتيح لوحة الإغلاق (renderCompletionPanel) إعادة استخدام نفس
+        // مسار showLandingDashboard() الذي يستخدمه شعار الهيدر أصلاً، بدل اختراع منطق
+        // جديد أو الاعتماد على محاكاة نقرة DOM هشة.
+        this.onGoHome = options.onGoHome || (() => { });
         this.lastValidationError = null; // Track last validation error to prevent spam
         this.validationDebounce = null; // Debounce timer
+    }
+
+    // مصدر واحد لشريط التنقل + لوحة الإغلاق — كانا مكررين حرفياً بين renderStep()
+    // وappendNav() (نفس شرط isLastStep يجب أن يتطابق في الموضعين، تدقيق 2026-07-09)،
+    // وهذا بالضبط نمط الخطأ الذي أنتج «undefined» بتسمية الخطوة التالية سابقاً حين
+    // نسي تعديل أحد الموضعين الآخر. استخراج الآن لدالة واحدة يمنع تكرار تلك العلة.
+    _renderNavHtml(isFirstStep, isLastStep, navCaption, navLabel) {
+        const navHtml = `
+            <div class="wizard-nav">
+                <button type="button" class="btn btn--secondary" id="btnPrevStep" ${isFirstStep ? 'disabled' : ''}>
+                    <svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+                    <span>السابق</span>
+                </button>
+                <div class="nav-actions">
+                    <button type="button" class="btn btn--ghost btn-sm" id="btnExportSection" title="تصدير هذا القسم">تصدير إكسل</button>
+                    <div class="nav-indicator">
+                        <span class="nav-indicator__caption">${navCaption}</span>
+                        <span class="nav-indicator__label">${navLabel}</span>
+                    </div>
+                </div>
+                <button type="button" class="btn btn--primary" id="btnNextStep">
+                    <span>${isLastStep ? 'إنهاء الدراسة' : 'التالي'}</span>
+                    ${isLastStep
+                        ? '<svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>'
+                        : '<svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>'}
+                </button>
+            </div>
+        `;
+        if (!isLastStep) return navHtml;
+        // لوحة إغلاق حقيقية لآخر خطوة — بدل ترك المستخدم بلا أي مسار خروج واضح بعد
+        // إكمال الرحلة كاملة. تعيد استخدام نفس البنية التحتية المستخدمة أصلاً في لوحة
+        // القرار (DecisionDashboard.js): ExportMenu نفسه، ونفس onNavigate للقفز للوحة
+        // القرار، وonGoHome الجديد الذي يوازي مسار شعار الهيدر إلى الرئيسية.
+        return navHtml + `
+            <div class="wizard-completion">
+                <div class="wizard-completion__icon" aria-hidden="true">🏁</div>
+                <div class="wizard-completion__body">
+                    <h3 class="wizard-completion__title">اكتملت جميع خطوات الدراسة</h3>
+                    <p class="wizard-completion__desc">راجع قرارك النهائي، صدّر دراستك كاملة، أو ارجع للرئيسية لإدارة دراساتك.</p>
+                    <div class="wizard-completion__actions">
+                        <button type="button" class="btn btn--secondary" id="btnGoDecisionDashboard">عرض لوحة القرار</button>
+                        <button type="button" class="btn btn--secondary" id="btnFinishExport">تصدير الدراسة</button>
+                        <button type="button" class="btn btn--primary" id="btnGoHome">العودة للرئيسية</button>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     // تدقيق 2026-07-08 (ملاحظة عالية #25): التنقل التالي/السابق كان يحسب
@@ -119,95 +172,8 @@ export class Wizard {
         let relativeStepIndex = activeSteps.findIndex(s => s.id === stepId);
         if (relativeStepIndex === -1) relativeStepIndex = 0; // Fallback
         
-        const progressPercent = totalSteps > 0 ? ((relativeStepIndex + 1) / totalSteps) * 100 : 0;
-        
-        let expectedMinutes;
-        if (isQuickMode) {
-             // 5 mins total, reduce by progress
-             expectedMinutes = Math.max(1, Math.round(5 * (1 - progressPercent/100)));
-        } else {
-             // 30 mins total
-             expectedMinutes = Math.max(5, Math.round(30 * (1 - progressPercent/100)));
-        }
-
-        const { phase: currentMajorPhase, index: currentMajorIndex } = getMajorPhaseForStep(relativeStepIndex);
-        
-        const phasesStepperHTML = MAJOR_PHASES.map((p, idx) => {
-            const isActive = idx === currentMajorIndex;
-            const isCompleted = idx < currentMajorIndex;
-            return `
-                <div class="major-phase-step ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}" style="flex: 1; text-align: center; border-bottom: 3px solid ${isActive ? 'var(--color-primary)' : isCompleted ? 'var(--color-success)' : 'var(--color-border)'}; padding-bottom: 0.5rem; color: ${isActive ? 'var(--color-primary)' : isCompleted ? 'var(--color-success)' : 'var(--color-muted)'}; font-weight: ${isActive ? 'bold' : 'normal'};">
-                    <span class="phase-number" style="display:inline-block; width: 24px; height: 24px; border-radius: 50%; background: ${isActive ? 'var(--color-primary)' : isCompleted ? 'var(--color-success)' : 'var(--color-surface)'}; color: ${isActive || isCompleted ? 'white' : 'inherit'}; line-height: 24px; font-size: 0.8rem; margin-left: 0.5rem;">${isCompleted ? '✓' : idx + 1}</span>
-                    ${p.label}
-                </div>
-            `;
-        }).join('');
-
-        const progressHTML = totalSteps > 0 ? `
-            <div class="wizard-major-phases" style="display: flex; justify-content: space-between; margin-bottom: 2rem; gap: 1rem;">
-                ${phasesStepperHTML}
-            </div>
-            <div class="wizard-progress" role="status" aria-live="polite">
-                <div class="progress-info">
-                    <span class="progress-step-label">الخطوة <span class="num">${(relativeStepIndex + 1).toLocaleString('ar-SA')}</span> من <span class="num">${totalSteps.toLocaleString('ar-SA')}</span></span>
-                    <span class="progress-percent">${Math.round(progressPercent).toLocaleString('ar-SA')}٪</span>
-                </div>
-                <div class="progress-bar-container">
-                    <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
-                </div>
-                <p class="progress-eta">الوقت المتبقي تقريباً <span class="num">${expectedMinutes.toLocaleString('ar-SA')}</span> دقائق</p>
-            </div>
-        ` : '';
-
         const phaseLabel = getPhaseForStep(stepIndex);
-        // مجمّعة حسب SIDEBAR_SECTIONS (نفس تصنيف الفئات في DashboardView/journeySections) بدل
-        // قائمة مسطّحة واحدة — تدقيق 2026-07-10: خريطة الأقسام كانت تعرض الـ42 خطوة في شبكة
-        // واحدة بلا تصنيف، بينما الصفحة الرئيسية تجمّعها في <details> فرعية لكل فئة (بداية/
-        // تسويقية/فنية/مالية...). الفهرسة المطلقة (data-wizard-step-index) والتظليل الحالي
-        // والنقر للتنقل لم تتغيّر — فقط شكل العرض تجمّع حسب الفئة.
-        const stepsWithMeta = activeSteps.map((step, idx) => ({ step, idx, absIdx: this.steps.indexOf(step) }));
-        const sectionMapGroupsHTML = SIDEBAR_SECTIONS.map(section => {
-            const groupSteps = stepsWithMeta.filter(({ absIdx }) => absIdx >= section.range[0] && absIdx <= section.range[1]);
-            if (groupSteps.length === 0) return '';
-            const hasCurrent = groupSteps.some(({ idx }) => idx === relativeStepIndex);
-            return `
-                <details class="wizard-section-map__group" data-section-id="${section.id}"${hasCurrent ? ' open' : ''}>
-                    <summary class="wizard-section-map__group-head">
-                        <span class="wizard-section-map__group-title">${section.label}</span>
-                        <span class="wizard-section-map__group-count">${groupSteps.length.toLocaleString('ar-SA')}</span>
-                    </summary>
-                    <div class="wizard-section-map__group-steps">
-                        ${groupSteps.map(({ step, idx, absIdx }) => {
-                            const isCurrent = idx === relativeStepIndex;
-                            // تدقيق 2026-07-10: كان الرمز ✓ يظهر لأي خطوة سابقة بالموقع فقط (مؤشر موضعي)
-                            // دون أي علاقة فعلية بامتلاء بياناتها — يوهم المستخدم بأنها "مكتملة" فعلاً.
-                            // لا توجد إشارة اكتمال رخيصة موثوقة على مستوى الخطوة الفردية (انظر
-                            // studyCompleteness.js: يحسب على مستوى القسم لا الخطوة، ونصف الخطوات لا
-                            // تقابل مفتاح قسم بيانات أصلاً) — فأبقينا المؤشر الموضعي لكن بصراحة:
-                            // "زُرت" لا "✓ مكتملة".
-                            const isVisited = idx < relativeStepIndex;
-                            const title = isCurrent ? 'الخطوة الحالية' : isVisited ? 'زُرت هذه الخطوة' : `الخطوة رقم ${(idx + 1).toLocaleString('ar-SA')}`;
-                            return `
-                                <button type="button" class="wizard-map-step ${isCurrent ? 'is-current' : ''}" data-wizard-step-index="${absIdx}" title="${title}">
-                                    <span aria-hidden="true">${isVisited ? '•' : idx + 1}</span>${step.label || step.id}
-                                </button>
-                            `;
-                        }).join('')}
-                    </div>
-                </details>
-            `;
-        }).join('');
-        const sectionMapHTML = `
-            <details class="wizard-section-map">
-                <summary>خريطة أقسام الدراسة (${totalSteps.toLocaleString('ar-SA')} خطوة)</summary>
-                <div class="wizard-section-map__groups">
-                    ${sectionMapGroupsHTML}
-                </div>
-            </details>
-        `;
         let html = `
-            ${progressHTML}
-            ${sectionMapHTML}
             <p class="step-phase" aria-label="المرحلة التعليمية">${phaseLabel}</p>
             <div class="step-content" key="${stepId}">
                 <h2 class="animate-entry" style="margin-bottom: var(--s-3)">${metadata.label}</h2>
@@ -365,25 +331,7 @@ export class Wizard {
             // معالج النقر لا يفعل شيئاً إطلاقاً عند آخر خطوة — راجع bindNavigationEvents أدناه).
             const navCaption = isLastStep ? 'الحالة' : 'الخطوة التالية';
             const navLabel = isLastStep ? 'اكتملت خطوات الدراسة' : this.steps[navLocalIdx + 1]?.label;
-            html += `
-                <div class="wizard-nav">
-                    <button type="button" class="btn btn--secondary" id="btnPrevStep" ${isFirstStep ? 'disabled' : ''}>
-                        <svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-                        <span>السابق</span>
-                    </button>
-                    <div class="nav-actions">
-                        <button type="button" class="btn btn--ghost btn-sm" id="btnExportSection" title="تصدير هذا القسم">تصدير إكسل</button>
-                        <div class="nav-indicator">
-                            <span class="nav-indicator__caption">${navCaption}</span>
-                            <span class="nav-indicator__label">${navLabel}</span>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn--primary" id="btnNextStep" ${isLastStep ? 'disabled' : ''}>
-                        <span>التالي</span>
-                        <svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
-                    </button>
-                </div>
-            `;
+            html += this._renderNavHtml(isFirstStep, isLastStep, navCaption, navLabel);
         }
 
         if (stepId === 'marketing') {
@@ -513,6 +461,11 @@ export class Wizard {
                     if (this.validateStep(this.steps[localIdx])) {
                         this.onNavigate(this._absoluteStepIndex(localIdx + 1));
                     }
+                } else {
+                    // آخر خطوة: «إنهاء الدراسة» يقفز للوحة القرار (نفس مقصد btnGoDecisionDashboard)
+                    const decisionIdx = this.steps.findIndex(s => s.isDecisionDashboard);
+                    const targetLocalIdx = decisionIdx !== -1 ? decisionIdx : Math.max(0, this.steps.length - 5);
+                    this.onNavigate(this._absoluteStepIndex(targetLocalIdx));
                 }
             });
         }
@@ -549,6 +502,35 @@ export class Wizard {
                 }
             });
         }
+
+        // أزرار لوحة إغلاق آخر خطوة (تدقيق 2026-07-10) — موجودة فقط في DOM عند isLastStep،
+        // فالحراسة هنا كافية بلا حاجة لتمرير isLastStep صراحة.
+        const goDecisionBtn = document.getElementById('btnGoDecisionDashboard');
+        if (goDecisionBtn) {
+            goDecisionBtn.addEventListener('click', () => {
+                const localIdx = this.steps.findIndex(s => s.isDecisionDashboard);
+                const targetLocalIdx = localIdx !== -1 ? localIdx : Math.max(0, this.steps.length - 5);
+                this.onNavigate(this._absoluteStepIndex(targetLocalIdx));
+            });
+        }
+
+        const finishExportBtn = document.getElementById('btnFinishExport');
+        if (finishExportBtn) {
+            finishExportBtn.addEventListener('click', async () => {
+                try {
+                    const { ExportMenu } = await import('./ExportMenu.js');
+                    new ExportMenu('exportMenuOverlay', this.store).open();
+                } catch (err) {
+                    console.error('ExportMenu load failed:', err);
+                    toast.error('تعذّر فتح قائمة التصدير');
+                }
+            });
+        }
+
+        const goHomeBtn = document.getElementById('btnGoHome');
+        if (goHomeBtn) {
+            goHomeBtn.addEventListener('click', () => this.onGoHome());
+        }
     }
 
     appendNav(stepIndex) {
@@ -565,31 +547,17 @@ export class Wizard {
         if (nav) {
             nav.remove();
         }
+        const existingCompletion = this.container.querySelector('.wizard-completion');
+        if (existingCompletion) {
+            existingCompletion.remove();
+        }
 
         // في آخر خطوة: لا وعد بإجراء «قادم» غير موجود — رسالة حالة صادقة بدل «إنهاء الدراسة»
-        // (تدقيق 2026-07-09: نفس الإصلاح المطابق تماماً لكتلة renderStep أعلاه — كلا الموضعين
-        // يشتركان في نفس شرط isLastStep ويجب أن يتطابقا حرفياً).
+        // (تدقيق 2026-07-09)، ولوحة إغلاق حقيقية بإجراءات فعلية (تدقيق 2026-07-10) —
+        // كلاهما عبر _renderNavHtml() المشتركة مع renderStep أعلاه.
         const navCaption = isLastStep ? 'الحالة' : 'الخطوة التالية';
         const nextStepLabel = isLastStep ? 'اكتملت خطوات الدراسة' : (this.steps[localIdx + 1]?.label || 'القسم التالي');
-        const navHtml = `
-            <div class="wizard-nav">
-                <button type="button" class="btn btn--secondary" id="btnPrevStep" ${isFirstStep ? 'disabled' : ''}>
-                    <svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-                    <span>السابق</span>
-                </button>
-                <div class="nav-actions">
-                    <button type="button" class="btn btn--ghost btn-sm" id="btnExportSection" title="تصدير هذا القسم">تصدير إكسل</button>
-                    <div class="nav-indicator">
-                        <span class="nav-indicator__caption">${navCaption}</span>
-                        <span class="nav-indicator__label">${nextStepLabel}</span>
-                    </div>
-                </div>
-                <button type="button" class="btn btn--primary" id="btnNextStep" ${isLastStep ? 'disabled' : ''}>
-                    <span>التالي</span>
-                    <svg class="ic-nav" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
-                </button>
-            </div>
-        `;
+        const navHtml = this._renderNavHtml(isFirstStep, isLastStep, navCaption, nextStepLabel);
 
         this.container.insertAdjacentHTML('beforeend', navHtml);
         this.bindNavigationEvents();
