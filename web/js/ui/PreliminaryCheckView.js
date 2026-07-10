@@ -142,11 +142,6 @@ export class PreliminaryCheckView {
                         </div>
                     </div>
                 </details>
-
-                <div class="flex-between gap-3">
-                    <button type="button" class="btn btn--ghost btn-skip-preliminary">تخطي — عندي خبرة سابقة</button>
-                    <button type="button" class="btn btn--primary btn-continue-preliminary">حفظ والمتابعة ←</button>
-                </div>
             </div>
         `;
 
@@ -304,20 +299,6 @@ export class PreliminaryCheckView {
 
     _bindEvents() {
         const save = () => this.store.updatePath('preliminaryCheck', null, this._collect());
-
-        // متابعة: الخطوة التالية مباشرة هي «مقارنة الأفكار» (كانت تقفز فوقها إلى القوالب)
-        this.container.querySelector('.btn-continue-preliminary')?.addEventListener('click', () => {
-            save();
-            this._goToAlternatives();
-        });
-
-        // تخطٍ: نحفظ أيضاً (الحفظ رخيص — لا نُضيّع ما أدخله المستخدم بلا تحذير)
-        this.container.querySelector('.btn-skip-preliminary')?.addEventListener('click', () => {
-            save();
-            this._goToAlternatives();
-        });
-
-        this.container.querySelector('.btn-goto-alternatives')?.addEventListener('click', () => this._goToAlternatives());
 
         // أزرار نعم/غير متأكد/لا
         ['pc-feasible', 'pc-environment', 'pc-ready'].forEach(id => {
