@@ -6,6 +6,9 @@
 
 import { calculateStudy as runFullModel, rateOrDefault } from '../core/engine.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class FinancingStructure {
     constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
@@ -40,7 +43,7 @@ export class FinancingStructure {
                         <div class="kpi-card">
                             <div class="kpi-label">
                                 إجمالي الاستثمار المطلوب
-                                <span class="tooltip-icon" title="${this.getInvestmentTooltip(capexBreakdown)}">ℹ️</span>
+                                <span class="tooltip-icon" title="${this.getInvestmentTooltip(capexBreakdown)}">${icon('i-info')}</span>
                             </div>
                             <div class="kpi-value text-gold">${this.formatCurrency(totalCapex)}</div>
                         </div>
@@ -49,14 +52,14 @@ export class FinancingStructure {
                     <div class="investment-breakdown mt-4" style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
                         <details class="breakdown-details">
                             <summary style="cursor: pointer; color: var(--text-muted); font-size: 0.9rem;">
-                                📊 تفاصيل الحساب (اضغط للعرض)
+                                ${icon('i-chart')} تفاصيل الحساب (اضغط للعرض)
                             </summary>
                             <div class="breakdown-content mt-3" style="padding-right: 1rem;">
                                 ${this.renderInvestmentBreakdown(capexBreakdown)}
                             </div>
                         </details>
                     </div>
-                <h2 class="section-title">💰 هيكل التمويل</h2>
+                <h2 class="section-title">${icon('i-bank')} هيكل التمويل</h2>
                 <div class="alert alert--info mb-3" style="font-size: 0.85rem;">
                     موّل رأس المال العامل (مخزون ورواتب 3–6 أشهر) مسبقاً — نقصه أشهر أسباب أزمات السيولة.
                 </div>
@@ -65,13 +68,13 @@ export class FinancingStructure {
                 </div>
                 ${capexBreakdown._engineError ? `
                 <div class="alert alert--warning">
-                    ⚠️ تعذّر حساب المحرك المالي — الرقم أعلاه <strong>تقدير مبدئي محلي</strong> وقد يختلف عن القوائم المالية.
+                    ${icon('i-warning')} تعذّر حساب المحرك المالي — الرقم أعلاه <strong>تقدير مبدئي محلي</strong> وقد يختلف عن القوائم المالية.
                     أكمل/راجع بيانات الدراسة (الإيرادات، الأصول) ثم أعد فتح هذه الخطوة قبل مطابقة التمويل.
                 </div>` : ''}
 
                 <!-- نسب التمويل المقترحة (الفجوة المعيارية) -->
                 <div class="card analysis-card">
-                    <h3 class="card-title">📋 نسب التمويل المقترحة</h3>
+                    <h3 class="card-title">${icon('i-clipboard')} نسب التمويل المقترحة</h3>
                     <p class="text-muted text-sm mb-3">النسب المعيارية لحساب رأس المال المطلوب عند البداية</p>
                     <div class="financing-percentages" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                         <div class="pct-item" style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px;">
@@ -126,7 +129,7 @@ export class FinancingStructure {
 
                 <!-- Guarantees & DSCR -->
                 <div class="card analysis-card">
-                    <h3 class="card-title">🛡️ الضمانات وتغطية خدمة الدين</h3>
+                    <h3 class="card-title">${icon('i-shield')} الضمانات وتغطية خدمة الدين</h3>
                     <p class="text-muted text-sm mb-3">البنوك تطلب ضمانات مقابل القرض ونسبة تغطية كافية لخدمة الدين. حدّدها لتقوية ملف التمويل.</p>
                     ${this.renderGuaranteesAndDSCR(financing)}
                 </div>
@@ -283,7 +286,7 @@ export class FinancingStructure {
                 <!-- Equity -->
                 <div class="funding-source equity-source">
                     <div class="source-header">
-                        <span class="source-icon">🏦</span>
+                        <span class="source-icon">${icon('i-bank')}</span>
                         <span class="source-name">التمويل الذاتي</span>
                     </div>
                     <div class="source-inputs">
@@ -299,7 +302,7 @@ export class FinancingStructure {
                 <!-- Bank Loan -->
                 <div class="funding-source loan-source">
                     <div class="source-header">
-                        <span class="source-icon">🏛️</span>
+                        <span class="source-icon">${icon('i-bank')}</span>
                         <span class="source-name">قرض بنكي</span>
                     </div>
                     <div class="source-inputs">
@@ -315,7 +318,7 @@ export class FinancingStructure {
                 <!-- Investors -->
                 <div class="funding-source investors-source">
                     <div class="source-header">
-                        <span class="source-icon">👥</span>
+                        <span class="source-icon">${icon('i-users')}</span>
                         <span class="source-name">مستثمرون</span>
                     </div>
                     <div class="source-inputs">
@@ -326,12 +329,12 @@ export class FinancingStructure {
                         <input type="number" id="funding-investors-pct" class="input funding-percentage" data-source="investors"
                                value="${investors.percentage || 0}" readonly>
                         <label for="funding-investors-equity">حصة الملكية المُتنازل عنها %
-                            <span class="tooltip-icon" title="النسبة من ملكية الشركة التي يحصل عليها المستثمرون مقابل مبلغهم — مختلفة عن نسبة مساهمتهم من إجمالي التمويل">ℹ️</span>
+                            <span class="tooltip-icon" title="النسبة من ملكية الشركة التي يحصل عليها المستثمرون مقابل مبلغهم — مختلفة عن نسبة مساهمتهم من إجمالي التمويل">${icon('i-info')}</span>
                         </label>
                         <input type="number" id="funding-investors-equity" class="input investor-input" data-field="equityShare"
                                value="${investors.equityShare || 0}" min="0" max="100" step="1">
                         <label for="funding-investors-premoney">التقييم قبل الجولة (ريال)
-                            <span class="tooltip-icon" title="قيمة المشروع قبل ضخّ استثمار هذه الجولة — يُحدّد نسبة الملكية العادلة مقابل المبلغ">ℹ️</span>
+                            <span class="tooltip-icon" title="قيمة المشروع قبل ضخّ استثمار هذه الجولة — يُحدّد نسبة الملكية العادلة مقابل المبلغ">${icon('i-info')}</span>
                         </label>
                         <input type="number" id="funding-investors-premoney" class="input investor-input" data-field="preMoneyValuation"
                                value="${investors.preMoneyValuation || 0}" min="0">
@@ -342,7 +345,7 @@ export class FinancingStructure {
                 <!-- Government Support -->
                 <div class="funding-source gov-source">
                     <div class="source-header">
-                        <span class="source-icon">🇸🇦</span>
+                        <span class="source-icon">${icon('i-flag-sa')}</span>
                         <span class="source-name">دعم حكومي</span>
                     </div>
                     <div class="source-inputs">
@@ -383,19 +386,19 @@ export class FinancingStructure {
             .reduce((sum, key) => sum + Number(sources[key]?.amount || 0), 0);
         const surplusFixableByEquity = gap >= 0 || othersTotal <= totalCapex;
         const statusHtml = isBalanced
-            ? '<span class="text-success">✓ التمويل مكتمل ويطابق الاستثمار المطلوب</span>'
+            ? `<span class="text-success">${icon('i-check')} التمويل مكتمل ويطابق الاستثمار المطلوب</span>`
             : gap > 0
-                ? `<span class="text-danger">⚠️ ناقص ${this.formatCurrency(gap)} — أضِف المبلغ أو استخدم زر «سدّ الفجوة»</span>`
+                ? `<span class="text-danger">${icon('i-warning')} ناقص ${this.formatCurrency(gap)} — أضِف المبلغ أو استخدم زر «سدّ الفجوة»</span>`
                 : surplusFixableByEquity
-                    ? `<span class="text-danger">⚠️ زائد ${this.formatCurrency(Math.abs(gap))} عن الاستثمار المطلوب — خفّض أحد المصادر أو استخدم زر «سدّ الفجوة»</span>`
-                    : `<span class="text-danger">⚠️ زائد ${this.formatCurrency(Math.abs(gap))} عن الاستثمار المطلوب — الفائض ناتج عن القرض/المستثمرين/الدعم الحكومي لا التمويل الذاتي، خفّض أحد هذه المصادر مباشرة</span>`;
+                    ? `<span class="text-danger">${icon('i-warning')} زائد ${this.formatCurrency(Math.abs(gap))} عن الاستثمار المطلوب — خفّض أحد المصادر أو استخدم زر «سدّ الفجوة»</span>`
+                    : `<span class="text-danger">${icon('i-warning')} زائد ${this.formatCurrency(Math.abs(gap))} عن الاستثمار المطلوب — الفائض ناتج عن القرض/المستثمرين/الدعم الحكومي لا التمويل الذاتي، خفّض أحد هذه المصادر مباشرة</span>`;
         const showAutoBalanceBtn = !isBalanced && (gap > 0 || surplusFixableByEquity);
         return `
             <div class="funding-validation" id="fundingValidation">
                 <span class="validation-label">إجمالي التمويل:</span>
                 <span class="validation-value" id="totalFunding">${this.formatCurrency(totalFunded)} / ${this.formatCurrency(totalCapex)}</span>
                 <span class="validation-status" id="fundingStatus">${statusHtml}</span>
-                ${showAutoBalanceBtn ? `<button type="button" class="btn btn--sm btn--secondary" id="btnAutoBalanceFunding" data-gap="${gap}">⚖️ سدّ الفجوة من التمويل الذاتي</button>` : ''}
+                ${showAutoBalanceBtn ? `<button type="button" class="btn btn--sm btn--secondary" id="btnAutoBalanceFunding" data-gap="${gap}">${icon('i-scale')} سدّ الفجوة من التمويل الذاتي</button>` : ''}
             </div>
         `;
     }
@@ -501,7 +504,7 @@ export class FinancingStructure {
                 </div>
                 <div class="loan-field">
                     <label for="loan-repaymentType">نوع السداد
-                        <span class="tooltip-icon" title="متساوي الأقساط: قسط ثابت شهرياً. متناقص: أصل ثابت وفائدة متناقصة (قسط أعلى بدايةً وأقل فوائد إجمالاً). دفعة أخيرة: فوائد فقط ثم أصل القرض دفعة واحدة عند الاستحقاق">ℹ️</span>
+                        <span class="tooltip-icon" title="متساوي الأقساط: قسط ثابت شهرياً. متناقص: أصل ثابت وفائدة متناقصة (قسط أعلى بدايةً وأقل فوائد إجمالاً). دفعة أخيرة: فوائد فقط ثم أصل القرض دفعة واحدة عند الاستحقاق">${icon('i-info')}</span>
                     </label>
                     <select id="loan-repaymentType" class="input loan-input" data-field="repaymentType">
                         <option value="equal" ${(loan.repaymentType || 'equal') === 'equal' ? 'selected' : ''}>متساوي الأقساط (Amortizing)</option>
@@ -552,10 +555,10 @@ export class FinancingStructure {
         return `
             <div class="dscr-field mb-3" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
                 <label for="financing-targetDSCR" style="font-weight:bold;">نسبة تغطية خدمة الدين المستهدفة (DSCR)
-                    <span class="tooltip-icon" title="DSCR = صافي التدفق النقدي التشغيلي ÷ أقساط الدين. البنوك تطلب عادة ≥ 1.25 لتضمن قدرة المشروع على السداد">ℹ️</span>
+                    <span class="tooltip-icon" title="DSCR = صافي التدفق النقدي التشغيلي ÷ أقساط الدين. البنوك تطلب عادة ≥ 1.25 لتضمن قدرة المشروع على السداد">${icon('i-info')}</span>
                 </label>
                 <input type="number" id="financing-targetDSCR" class="input input--sm" style="width:6rem;text-align:center;" value="${targetDSCR}" min="1" max="5" step="0.05">
-                ${targetDSCR < 1.25 ? '<span class="text-danger text-sm">⚠️ أقل من الحد الائتماني المعتاد (1.25)</span>' : '<span class="text-success text-sm">✓ ضمن النطاق المقبول للبنوك</span>'}
+                ${targetDSCR < 1.25 ? `<span class="text-danger text-sm">${icon('i-warning')} أقل من الحد الائتماني المعتاد (1.25)</span>` : `<span class="text-success text-sm">${icon('i-check')} ضمن النطاق المقبول للبنوك</span>`}
             </div>
             <table class="data-table">
                 <thead>
@@ -602,7 +605,7 @@ export class FinancingStructure {
                     </div>
                     <div class="wacc-item">
                         <span>تكلفة الملكية (Re)
-                            <span class="tooltip-icon" title="العائد الذي يتوقعه المُلّاك على أموالهم — أعلى من الفائدة البنكية لأنه يحمل مخاطر أعلى. 15% افتراض معتاد للمشاريع الصغيرة">ℹ️</span>
+                            <span class="tooltip-icon" title="العائد الذي يتوقعه المُلّاك على أموالهم — أعلى من الفائدة البنكية لأنه يحمل مخاطر أعلى. 15% افتراض معتاد للمشاريع الصغيرة">${icon('i-info')}</span>
                         </span>
                         <span><input type="number" id="wacc-costOfEquity" class="input input--sm" style="width:6rem;text-align:center;" value="${(costOfEquity * 100).toFixed(1)}" min="0" max="100" step="0.5">%</span>
                     </div>
@@ -620,7 +623,7 @@ export class FinancingStructure {
                     <span class="wacc-value">${(wacc * 100).toFixed(2)}%</span>
                 </div>
                 <div class="wacc-disclosure alert alert--warning mt-3" style="font-size: 0.85rem;">
-                    ⚠️ هذا الرقم إعلامي لمرجعك الشخصي فقط، ولا يُغذّي تلقائياً معدل الخصم الفعلي المستخدم لحساب
+                    ${icon('i-warning')} هذا الرقم إعلامي لمرجعك الشخصي فقط، ولا يُغذّي تلقائياً معدل الخصم الفعلي المستخدم لحساب
                     صافي القيمة الحالية (NPV) والعائد الداخلي (IRR) في هذه الدراسة — ذلك المعدل يُضبط بشكل منفصل
                     ضمن افتراضات الدراسة/الإعدادات المالية. إن رغبت في اعتماد هذا الرقم، انسخه يدوياً إلى حقل
                     «معدل الخصم» هناك.

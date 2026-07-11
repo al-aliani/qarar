@@ -4,6 +4,9 @@
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class ValuationAnalysis {
     constructor(containerId, store) {
         this.container = document.getElementById(containerId);
@@ -52,7 +55,7 @@ export class ValuationAnalysis {
                         </div>
                         <p class="text-xs text-muted mt-2">معدل الخصم يشمل علاوة حجم وسيولة لمنشأة صغيرة خاصة؛ القيمة محسوبة على التدفق النقدي بعد الزكاة/الضريبة وإحلال الأصول.</p>
                         <div class="wacc-disclosure alert alert--warning mt-3" style="font-size: 0.85rem;">
-                            ⚠️ هذا الرقم إعلامي لمرجعك الشخصي فقط، ولا يُغذّي تلقائياً معدل الخصم الفعلي المستخدم لحساب
+                            ${icon('i-warning')} هذا الرقم إعلامي لمرجعك الشخصي فقط، ولا يُغذّي تلقائياً معدل الخصم الفعلي المستخدم لحساب
                             صافي القيمة الحالية (NPV) والعائد الداخلي (IRR) في هذه الدراسة — ذلك المعدل يُضبط بشكل منفصل
                             ضمن افتراضات الدراسة/الإعدادات المالية. إن رغبت في اعتماد هذا الرقم، انسخه يدوياً إلى حقل
                             «معدل الخصم» هناك.
@@ -82,7 +85,7 @@ export class ValuationAnalysis {
 
                 <!-- Investment Terms -->
                 <div class="card glass-card mt-4 investment-terms-card">
-                    <h3 class="card-title text-center">🎯 بطاقة المستثمر</h3>
+                    <h3 class="card-title text-center">${icon('i-target')} بطاقة المستثمر</h3>
                     <div class="investor-terms-grid">
                         <div class="term-box">
                             <span class="term-label">التقييم قبل التمويل (Pre-money)</span>
@@ -103,7 +106,7 @@ export class ValuationAnalysis {
                     </div>
                     ${investmentMissing ? `<div class="alert alert--warning mt-4">لم يُدخل مبلغ الاستثمار المطلوب بعد، لذا تظهر «الحصة المقابلة» و«التقييم بعد التمويل» أصفاراً. انتقل إلى خطوة «مصادر وهيكلة التمويل» وأدخل إجمالي الاستثمار المطلوب لحساب الحصة والتقييم بدقة.</div>` : ''}
                     <div class="valuation-tip mt-4">
-                        <p>💡 <strong>نصيحة:</strong> إذا قمت ببيع حصة <strong>${valuation.equityOffer.toFixed(1)}%</strong> مقابل <strong>${this.formatCurrency(state.financing?.totalInvestment || 0)}</strong>، فإنك تقيّم حقوق ملكية مشروعك حالياً بـ <strong>${this.formatCurrency(valuation.dcf.equityValue)}</strong> قبل دخول المستثمر.</p>
+                        <p>${icon('i-lightbulb')} <strong>نصيحة:</strong> إذا قمت ببيع حصة <strong>${valuation.equityOffer.toFixed(1)}%</strong> مقابل <strong>${this.formatCurrency(state.financing?.totalInvestment || 0)}</strong>، فإنك تقيّم حقوق ملكية مشروعك حالياً بـ <strong>${this.formatCurrency(valuation.dcf.equityValue)}</strong> قبل دخول المستثمر.</p>
                     </div>
                 </div>
             </div>

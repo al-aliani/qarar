@@ -6,6 +6,9 @@
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class InvestorAnalysis {
     constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
@@ -59,7 +62,7 @@ export class InvestorAnalysis {
 
                 <!-- درجة الجاذبية -->
                 <div class="card mb-4">
-                    <h3 class="text-gold mb-2">📊 درجة الجاذبية الاستثمارية</h3>
+                    <h3 class="text-gold mb-2">${icon('i-chart')} درجة الجاذبية الاستثمارية</h3>
                     <div class="flex items-center gap-4 flex-wrap">
                         <div class="investability-gauge" style="width:100px;height:100px;flex-shrink:0;">
                             <svg viewBox="0 0 100 100" class="w-full h-full" style="transform:rotate(-90deg)">
@@ -82,11 +85,11 @@ export class InvestorAnalysis {
 
                 <!-- قائمة الجاهزية -->
                 <div class="card mb-4">
-                    <h3 class="text-gold mb-3">✅ قائمة الجاهزية للمستثمر</h3>
+                    <h3 class="text-gold mb-3">${icon('i-check')} قائمة الجاهزية للمستثمر</h3>
                     <div class="investor-readiness-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">
                         ${checklist.map(c => `
                             <div class="flex items-center gap-2 text-sm ${c.ok ? 'text-success' : 'text-muted'}">
-                                <span>${c.ok ? '✓' : '○'}</span>
+                                <span>${c.ok ? icon('i-check') : '○'}</span>
                                 <span>${c.label}</span>
                             </div>
                         `).join('')}
@@ -95,7 +98,7 @@ export class InvestorAnalysis {
 
                 <!-- معايير المستثمر vs مشروعك -->
                 <div class="card mb-4">
-                    <h3 class="text-gold mb-3">📋 معايير المستثمر مقابل مشروعك</h3>
+                    <h3 class="text-gold mb-3">${icon('i-clipboard')} معايير المستثمر مقابل مشروعك</h3>
                     <div class="table-wrapper">
                         <table class="service-comparison-table" style="font-size:0.8rem;">
                             <thead><tr><th>المعيار</th><th>عتبة نموذجية</th><th>وضعك</th><th>ملاحظة</th></tr></thead>
@@ -115,7 +118,7 @@ export class InvestorAnalysis {
 
                 <!-- ديون vs أسهم (منظور المؤسس) -->
                 <div class="card mb-4">
-                    <h3 class="text-gold mb-3">⚖️ مقارنة الديون والأسهم (منظورك كمؤسس)</h3>
+                    <h3 class="text-gold mb-3">${icon('i-scale')} مقارنة الديون والأسهم (منظورك كمؤسس)</h3>
                     <div class="table-wrapper">
                         <table class="service-comparison-table" style="font-size:0.85rem;">
                             <thead><tr><th>الاعتبار</th><th>تمويل بالديون (بنك/كفالة)</th><th>تمويل بالأسهم (ملاك/VC)</th></tr></thead>
@@ -131,7 +134,7 @@ export class InvestorAnalysis {
 
                 <!-- مسارات الخروج -->
                 <div class="card mb-4">
-                    <h3 class="text-gold mb-2">🚪 مسارات الخروج للمستثمر</h3>
+                    <h3 class="text-gold mb-2">${icon('i-link')} مسارات الخروج للمستثمر</h3>
                     <p class="text-muted text-sm mb-3">المستثمر يقدّر المشاريع التي تملك خيار خروج واضح:</p>
                     <ul class="text-sm space-y-2 text-muted" style="list-style:disc;padding-right:1.25rem;">
                         <li><strong style="color:var(--c-text-main)">البيع للطرف الثالث:</strong> بعد 5–7 سنوات إن تحققت النمو والإيرادات.</li>
@@ -143,7 +146,7 @@ export class InvestorAnalysis {
 
                 <!-- توصية مبنية على الأرقام -->
                 <div class="card" style="border-right:4px solid var(--c-p-500);">
-                    <h3 class="text-gold mb-2">💡 توصية مبنية على أرقامك</h3>
+                    <h3 class="text-gold mb-2">${icon('i-lightbulb')} توصية مبنية على أرقامك</h3>
                     <p>${this.getEvidenceBasedRecommendation(results, { npv, irr, payback, maxPayback, decision: results?.decision }, state)}</p>
                 </div>
             </div>

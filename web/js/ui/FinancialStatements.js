@@ -3,6 +3,9 @@
  * Displays Income Statement, Cash Flow, and Balance Sheet for 5 years
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
+
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
 import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
 
 export class FinancialStatements {
@@ -43,7 +46,7 @@ export class FinancialStatements {
                     <h2 class="section-title">القوائم المالية التقديرية</h2>
                     <div class="card analysis-card">
                         <div class="alert alert--warning">
-                            <p><strong>⚠️ ${errorMessage}</strong></p>
+                            <p><strong>${icon('i-warning')} ${errorMessage}</strong></p>
                             <p class="text-sm mt-2">تأكد من إكمال:</p>
                             <ul class="text-sm mt-2" style="list-style: disc; padding-right: 20px;">
                                 <li>مصادر الإيرادات (خطوة "مصادر الإيرادات")</li>
@@ -70,17 +73,17 @@ export class FinancialStatements {
                 <h2 class="section-title">القوائم المالية التقديرية</h2>
                 ${dataWarnHtml}
                 <div class="card analysis-card">
-                    <h3 class="card-title">💵 قائمة الدخل التقديرية (5 سنوات)</h3>
+                    <h3 class="card-title">${icon('i-doc')} قائمة الدخل التقديرية (5 سنوات)</h3>
                     ${this.renderIncomeStatement(results)}
                 </div>
 
                 <div class="card analysis-card">
-                    <h3 class="card-title">🌊 قائمة التدفقات النقدية</h3>
+                    <h3 class="card-title">${icon('i-chart')} قائمة التدفقات النقدية</h3>
                     ${this.renderCashFlow(results)}
                 </div>
 
                 <div class="card analysis-card">
-                    <h3 class="card-title">📅 قائمة التدفقات النقدية ربع سنوية (السنة الأولى)</h3>
+                    <h3 class="card-title">${icon('i-calendar')} قائمة التدفقات النقدية ربع سنوية (السنة الأولى)</h3>
                     <p class="text-muted text-sm mb-3">توزيع الإيرادات ربعياً مشتق من منحنى التصاعد المُدخل في الافتراضات (rampUp) — مجموع الأرباع = إيراد السنة الأولى بالضبط، دون خصم البداية البطيئة مرتين</p>
                     ${this.renderQuarterlyCashFlow(results)}
                 </div>
@@ -88,7 +91,7 @@ export class FinancialStatements {
                 ${this.renderSeasonality(results, state)}
 
                 <div class="card analysis-card">
-                    <h3 class="card-title">⚖️ الميزانية العمومية التقديرية (الافتتاحية)</h3>
+                    <h3 class="card-title">${icon('i-scale')} الميزانية العمومية التقديرية (الافتتاحية — سنة الأساس)</h3>
                     ${this.renderBalanceSheet(results, state)}
                 </div>
 
@@ -384,7 +387,7 @@ export class FinancialStatements {
                     </div>
                     ${showGap ? `
                     <div class="balance-item">
-                        <span class="text-danger">${fundingGap > 0 ? '⚠️ فجوة تمويل غير مغطاة — أكمل مصادر التمويل' : 'فائض تمويل فوق الاستثمار المطلوب'}</span>
+                        <span class="text-danger">${fundingGap > 0 ? `${icon('i-warning')} فجوة تمويل غير مغطاة — أكمل مصادر التمويل` : 'فائض تمويل فوق الاستثمار المطلوب'}</span>
                         <span class="text-mono text-danger">${this.formatCurrency(fundingGap)}</span>
                     </div>
                     ` : ''}
@@ -433,7 +436,7 @@ export class FinancialStatements {
 
         return `
             <div class="card analysis-card">
-                <h3 class="card-title">🗓️ التوزيع الشهري للإيراد (الموسمية: ${profileLabel})</h3>
+                <h3 class="card-title">${icon('i-calendar')} التوزيع الشهري للإيراد (الموسمية: ${profileLabel})</h3>
                 <p class="text-muted text-sm mb-3">إيراد السنة الأولى موزّعاً على الأشهر لتخطيط السيولة — لا يغيّر الربح السنوي، لكنه يكشف أشهر الضغط النقدي التي تحتاج احتياطياً.</p>
                 <div class="seasonality-bars" style="display:flex;align-items:flex-end;gap:4px;height:120px;padding:8px 0;">
                     ${monthly.map((m, i) => {
@@ -450,7 +453,7 @@ export class FinancialStatements {
                     <span class="text-success">▲ ذروة: ${months[peakI]} (${this.formatCurrency(monthly[peakI])})</span> ·
                     <span class="text-danger">▼ أدنى: ${months[lowI]} (${this.formatCurrency(monthly[lowI])})</span>
                 </div>
-                ${tightMonths > 0 ? `<div class="alert alert--warning mt-2"><strong>⚠️ ${tightMonths} ${tightMonths === 1 ? 'شهر' : 'أشهر'}</strong> يقلّ فيها الإيراد عن التكاليف الثابتة الشهرية (${this.formatCurrency(monthlyFixed)}) — احرص على احتياطي نقدي يغطّي هذا الضغط الموسمي.</div>` : ''}
+                ${tightMonths > 0 ? `<div class="alert alert--warning mt-2"><strong>${icon('i-warning')} ${tightMonths} ${tightMonths === 1 ? 'شهر' : 'أشهر'}</strong> يقلّ فيها الإيراد عن التكاليف الثابتة الشهرية (${this.formatCurrency(monthlyFixed)}) — احرص على احتياطي نقدي يغطّي هذا الضغط الموسمي.</div>` : ''}
             </div>
         `;
     }

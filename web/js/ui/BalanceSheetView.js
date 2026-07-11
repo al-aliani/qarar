@@ -1,5 +1,8 @@
 import { stepIndexById } from '../core/wizardSteps.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 /**
  * Balance Sheet Display Component
  * Shows projected balance sheets with Assets, Liabilities, Equity
@@ -44,7 +47,7 @@ export class BalanceSheetView {
                 <div class="balance-sheet-container">
                     <!-- ASSETS -->
                     <div class="bs-section assets">
-                        <h4 class="bs-section-title">📦 الأصول</h4>
+                        <h4 class="bs-section-title">${icon('i-box')} الأصول</h4>
                         
                         <div class="bs-group">
                             <div class="bs-group-title">الأصول المتداولة</div>
@@ -90,7 +93,7 @@ export class BalanceSheetView {
 
                     <!-- LIABILITIES & EQUITY -->
                     <div class="bs-section liabilities">
-                        <h4 class="bs-section-title">💳 الخصوم وحقوق الملكية</h4>
+                        <h4 class="bs-section-title">${icon('i-bank')} الخصوم وحقوق الملكية</h4>
                         
                         <div class="bs-group">
                             <div class="bs-group-title">الخصوم المتداولة</div>
@@ -104,7 +107,7 @@ export class BalanceSheetView {
                             </div>
                             ${(sheet.liabilities.current.cashShortfall || 0) > 0 ? `
                             <div class="bs-line negative">
-                                <span>⚠️ عجز سيولة تراكمي (تمويل قصير أجل ضمني مطلوب)</span>
+                                <span>${icon('i-warning')} عجز سيولة تراكمي (تمويل قصير أجل ضمني مطلوب)</span>
                                 <span>${this.formatCurrency(sheet.liabilities.current.cashShortfall)}</span>
                             </div>
                             ` : ''}
@@ -145,13 +148,13 @@ export class BalanceSheetView {
                         ${Math.abs(sheet.fundingGap || 0) > 5 ? `
                         <div class="bs-group">
                             <div class="bs-line negative">
-                                <span>${(sheet.fundingGap || 0) > 0 ? '⚠️ فجوة تمويل غير مغطاة (مصادر التمويل أقل من الاستثمار)' : 'فائض تمويل فوق الاستثمار المطلوب'}</span>
+                                <span>${(sheet.fundingGap || 0) > 0 ? `${icon('i-warning')} فجوة تمويل غير مغطاة (مصادر التمويل أقل من الاستثمار)` : 'فائض تمويل فوق الاستثمار المطلوب'}</span>
                                 <span>${this.formatCurrency(sheet.fundingGap)}</span>
                             </div>
                             ${(sheet.fundingGap || 0) > 0 ? `
                             <div class="bs-funding-gap-hint">
                                 <span>عادة ما يظهر هذا بعد ضبط التمويل إذا عُدِّل بند تكلفة (فني/تشغيلي) لاحقاً — إجمالي الاستثمار يُعاد حسابه حياً بينما تبقى مصادر التمويل عند آخر مبلغ أدخلته. راجع خطوة التمويل وأعد الضغط على «سدّ الفجوة».</span>
-                                <button type="button" class="btn-xs btn--secondary btn-go-financing">إعادة ضبط التمويل ↩</button>
+                                <button type="button" class="btn-xs btn--secondary btn-go-financing">${icon('i-reset')} إعادة ضبط التمويل</button>
                             </div>
                             ` : ''}
                         </div>
@@ -166,8 +169,8 @@ export class BalanceSheetView {
                 <!-- Balance Check -->
                 <div class="balance-check ${sheet.isBalanced ? 'balanced' : 'unbalanced'}">
                     ${sheet.isBalanced
-                ? '✅ الميزانية متوازنة (الأصول = الخصوم + حقوق الملكية)'
-                : '⚠️ تنبيه: الميزانية غير متوازنة! الفرق: ' + this.formatCurrency(sheet.imbalance)
+                ? `${icon('i-check')} الميزانية متوازنة (الأصول = الخصوم + حقوق الملكية)`
+                : `${icon('i-warning')} تنبيه: الميزانية غير متوازنة! الفرق: ` + this.formatCurrency(sheet.imbalance)
             }
                 </div>
                 ${!sheet.isBalanced ? `<div class="balance-check-reason">${this.getImbalanceReason(sheet)}</div>` : ''}

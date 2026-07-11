@@ -132,9 +132,14 @@ describe('اتساق الصياغة بين المكوّنين', () => {
         const fs = Object.create(FinancingStructure.prototype);
         fs.store = { getState: () => study };
         const financingHtml = fs.renderWACC(study.financing, 500000);
-        const financingMatch = financingHtml.match(/<div class="wacc-disclosure[^>]*>([\s\S]*?)<\/div>/);
-        expect(financingMatch).not.toBeNull();
-        const financingText = financingMatch[1].replace(/\s+/g, ' ').trim();
+        // نقرأ textContent (لا HTML الخام) كي تُجرَّد أيقونة i-warning الـsprite تماماً كما
+        // تُجرَّد من textContent في نسخة Valuation أدناه — المقارنة على النص المرئي لا الوسم
+        // (تدقيق تنظيف الإيموجي 2026-07-11: كانت ⚠️ محرفاً نصّياً حاضراً في الطرفين).
+        document.body.innerHTML = `<div id="cf"></div>`;
+        document.getElementById('cf').innerHTML = financingHtml;
+        const financingEl = document.querySelector('.wacc-disclosure');
+        expect(financingEl).not.toBeNull();
+        const financingText = financingEl.textContent.replace(/\s+/g, ' ').trim();
 
         document.body.innerHTML = `<div id="c2"></div>`;
         const store2 = fakeStore(representativeStudy());

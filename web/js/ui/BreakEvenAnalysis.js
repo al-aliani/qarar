@@ -3,6 +3,9 @@
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class BreakEvenAnalysis {
     constructor(containerId, store) {
         this.container = document.getElementById(containerId);
@@ -23,7 +26,7 @@ export class BreakEvenAnalysis {
                 <div class="break-even-analysis">
                     <h2 class="section-title">تحليل نقطة التعادل</h2>
                     <div class="card analysis-card">
-                        <p class="text-muted">⚠️ لا توجد بيانات كافية لحساب نقطة التعادل. يرجى إكمال البيانات المالية الأساسية.</p>
+                        <p class="text-muted">${icon('i-warning')} لا توجد بيانات كافية لحساب نقطة التعادل. يرجى إكمال البيانات المالية الأساسية.</p>
                     </div>
                 </div>
             `;
@@ -39,7 +42,7 @@ export class BreakEvenAnalysis {
                 <div class="break-even-analysis">
                     <h2 class="section-title">تحليل نقطة التعادل</h2>
                     <div class="card analysis-card">
-                        <p class="text-muted">⚠️ لا توجد بيانات للسنة الأولى. يرجى إكمال البيانات المالية الأساسية.</p>
+                        <p class="text-muted">${icon('i-warning')} لا توجد بيانات للسنة الأولى. يرجى إكمال البيانات المالية الأساسية.</p>
                     </div>
                 </div>
             `;
@@ -94,10 +97,10 @@ export class BreakEvenAnalysis {
                         </div>
                     </div>
                     <div class="bep-interpretation">
-                        <p>💡 يحتاج المشروع لتحقيق مبيعات لا تقل عن <strong>${this.formatCurrency(bepValue)}</strong> سنوياً لتغطية كافة تكاليفه دون ربح أو خسارة.</p>
+                        <p>${icon('i-lightbulb')} يحتاج المشروع لتحقيق مبيعات لا تقل عن <strong>${this.formatCurrency(bepValue)}</strong> سنوياً لتغطية كافة تكاليفه دون ربح أو خسارة.</p>
                         ${bepPercentage <= 1
                             ? `<p>المشروع في منطقة الأمان بهامش <strong>${((1 - bepPercentage) * 100).toFixed(0)}%</strong> من إيراداته المستهدفة.</p>`
-                            : `<p class="text-danger">⚠️ الإيراد المتوقع <strong>دون نقطة التعادل بنسبة ${((bepPercentage - 1) * 100).toFixed(0)}%</strong> — المشروع يعمل بخسارة في السنة الأولى بهذه الأرقام. ارفع المبيعات أو خفّض الثوابت.</p>`}
+                            : `<p class="text-danger">${icon('i-warning')} الإيراد المتوقع <strong>دون نقطة التعادل بنسبة ${((bepPercentage - 1) * 100).toFixed(0)}%</strong> — المشروع يعمل بخسارة في السنة الأولى بهذه الأرقام. ارفع المبيعات أو خفّض الثوابت.</p>`}
                     </div>
                 </div>
             </div>
