@@ -109,7 +109,10 @@ describe('ScenarioAnalysis — تعذّر حساب سيناريو فردي: "--"
 
         const verdict = document.querySelector('.verdict-box');
         expect(verdict.className).toContain('verdict-neutral');
-        expect(verdict.textContent).toContain('❔ تعذّر حساب السيناريو المتشائم');
+        // العلامة المحايدة صارت أيقونة sprite (i-info) بلا نص إيموجي — الصنف verdict-neutral
+        // هو الإشارة الدلالية المُختبَرة (تدقيق تنظيف الإيموجي 2026-07-11).
+        expect(verdict.textContent).toContain('تعذّر حساب السيناريو المتشائم');
+        expect(verdict.querySelector('use')?.getAttribute('href')).toBe('#i-info');
         expect(verdict.textContent).not.toContain('قد لا يكون مجدياً');
     });
 });

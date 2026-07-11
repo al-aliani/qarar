@@ -4,6 +4,9 @@
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class SensitivityAnalysis {
     constructor(containerId, store) {
         this.container = document.getElementById(containerId);
@@ -58,7 +61,7 @@ export class SensitivityAnalysis {
                 <h2 class="section-title">تحليل الحساسية</h2>
                 
                 <div class="alert alert-warning mb-4" style="font-size: 0.9rem;">
-                    <strong>⚠️ تحليل الحساسية إلزامي</strong> — أي دراسة بدونه تعتبر غير مكتملة. يقيس مدى تحمّل المشروع لتقلّبات الإيرادات والتكاليف.
+                    <strong>${icon('i-warning')} تحليل الحساسية إلزامي</strong> — أي دراسة بدونه تعتبر غير مكتملة. يقيس مدى تحمّل المشروع لتقلّبات الإيرادات والتكاليف.
                 </div>
 
                 <div class="card glass-card">

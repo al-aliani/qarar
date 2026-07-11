@@ -7,6 +7,9 @@ import { generateTableSuggestions } from '../services/AIConnector.js';
 import { escapeHtml } from '../utils/escape.js';
 import { getRiskScore, classifyRiskScore } from '../core/riskScoring.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class RiskMatrix {
     constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
@@ -25,10 +28,6 @@ export class RiskMatrix {
         this.container.innerHTML = `
             <div class="risk-analysis">
                 <h2 class="section-title">تحليل المخاطر</h2>
-                <div class="alert alert--info mb-4" style="font-size: 0.85rem;">
-                    <strong>مخاطر التقنية:</strong> المشاريع التقنية تحمل مخاطر عالية — تقنية جديدة قد تنسف المشروع (مثال: نوكيا). إذا مشروعك يعتمد على التقنية، أضف خطر «اختراق تقني / تقادم تقني» من نوع تقني.
-                </div>
-                
                 <!-- Risk Matrix Visual -->
                 <div class="card analysis-card">
                     <h3 class="card-title">مصفوفة المخاطر</h3>
@@ -194,16 +193,16 @@ export class RiskMatrix {
                                     </td>
                                     <td>
                                         <select class="input input--sm risk-field" data-field="probability">
-                                            <option value="low" ${risk.probability === 'low' ? 'selected' : ''}>🟢 منخفض</option>
-                                            <option value="medium" ${risk.probability === 'medium' ? 'selected' : ''}>🟡 متوسط</option>
-                                            <option value="high" ${risk.probability === 'high' ? 'selected' : ''}>🔴 عالي</option>
+                                            <option value="low" ${risk.probability === 'low' ? 'selected' : ''}>منخفض</option>
+                                            <option value="medium" ${risk.probability === 'medium' ? 'selected' : ''}>متوسط</option>
+                                            <option value="high" ${risk.probability === 'high' ? 'selected' : ''}>عالي</option>
                                         </select>
                                     </td>
                                     <td>
                                         <select class="input input--sm risk-field" data-field="impact">
-                                            <option value="low" ${risk.impact === 'low' ? 'selected' : ''}>🟢 منخفض</option>
-                                            <option value="medium" ${risk.impact === 'medium' ? 'selected' : ''}>🟡 متوسط</option>
-                                            <option value="high" ${risk.impact === 'high' ? 'selected' : ''}>🔴 عالي</option>
+                                            <option value="low" ${risk.impact === 'low' ? 'selected' : ''}>منخفض</option>
+                                            <option value="medium" ${risk.impact === 'medium' ? 'selected' : ''}>متوسط</option>
+                                            <option value="high" ${risk.impact === 'high' ? 'selected' : ''}>عالي</option>
                                         </select>
                                     </td>
                                     <td class="text-center"><span class="badge ${getScoreBadge(score)}">${getScoreLabel(score)} (${score.toLocaleString('ar-SA')})</span></td>
@@ -225,7 +224,7 @@ export class RiskMatrix {
                                     </td>
                                     <td><input type="text" class="input input--sm risk-field" data-field="earlyWarning" value="${escapeHtml(risk.earlyWarning)}" placeholder="مؤشر يُنذر باقتراب الخطر"></td>
                                     <td><input type="text" class="input input--sm risk-field" data-field="owner" value="${escapeHtml(risk.owner)}"></td>
-                                    <td><button class="btn-icon btn-remove-risk" data-idx="${idx}" aria-label="حذف الخطر">🗑️</button></td>
+                                    <td><button class="btn-icon btn-remove-risk" data-idx="${idx}" aria-label="حذف الخطر">${icon('i-trash')}</button></td>
                                 </tr>
                             `;
         }).join('')}
@@ -247,9 +246,9 @@ export class RiskMatrix {
                 <div class="actions-row" style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
                     <button class="btn btn--sm btn--ghost btn-add-risk">+ إضافة خطر</button>
                     <button class="btn btn--sm btn--secondary btn-suggest-risk" ${this.isGenerating ? 'disabled' : ''}>
-                        ${this.isGenerating ? '<span class="spinner-sm"></span> جاري الاقتراح...' : '🪄 اقتراح بنود'}
+                        ${this.isGenerating ? 'جاري الاقتراح...' : `${icon('i-sparkle')} اقتراح بنود`}
                     </button>
-                    ${risks.length === 0 ? `<button class="btn btn--sm btn--primary btn-inject-sector-risks">📦 حقن حزمة مخاطر قطاعية (مطاعم/مقاهي)</button>` : ''}
+                    ${risks.length === 0 ? `<button class="btn btn--sm btn--primary btn-inject-sector-risks">${icon('i-box')} حقن حزمة مخاطر قطاعية (مطاعم/مقاهي)</button>` : ''}
                 </div>
             </div>
         `;

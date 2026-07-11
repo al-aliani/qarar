@@ -7,6 +7,9 @@
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { computeStressSurvival } from '../core/financial/stressTestMath.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 // سيناريوهات صدمة جاهزة (إزاحة المبيعات %، إزاحة التكاليف %)
 const PRESETS = [
     { key: 'recession', label: 'ركود سوقي', salesDrop: 30, costHike: 5, note: 'انكماش الطلب مع ثبات نسبي للتكاليف' },
@@ -29,7 +32,7 @@ export class StressTest {
                 <div class="stress-test animate-entry">
                     <h2 class="section-title">اختبار التحمل</h2>
                     <div class="alert alert--warning">
-                        <p><strong>⚠️ لا تتوفر أرقام كافية لاختبار التحمل.</strong></p>
+                        <p><strong>${icon('i-warning')} لا تتوفر أرقام كافية لاختبار التحمل.</strong></p>
                         <p class="text-sm mt-2">أكمل الإيرادات والتكاليف (الرواتب والمصاريف التشغيلية) في الخطوات السابقة، ثم عُد لاختبار صمود المشروع أمام الأزمات.</p>
                     </div>
                 </div>`;
@@ -64,12 +67,12 @@ export class StressTest {
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                            <label class="block mb-2">📉 انخفاض المبيعات المفاجئ</label>
+                            <label class="block mb-2">انخفاض المبيعات المفاجئ</label>
                             <input type="range" class="input-range danger-slider" id="salesDrop" min="0" max="100" value="${salesDrop}">
                             <div class="flex-between font-bold text-danger"><span id="salesDropVal">${salesDrop}</span>% انخفاض</div>
                         </div>
                         <div>
-                            <label class="block mb-2">📈 ارتفاع التكاليف</label>
+                            <label class="block mb-2">ارتفاع التكاليف</label>
                             <input type="range" class="input-range danger-slider" id="costHike" min="0" max="100" value="${costHike}">
                             <div class="flex-between font-bold text-danger"><span id="costHikeVal">${costHike}</span>% ارتفاع</div>
                         </div>
@@ -167,7 +170,7 @@ export class StressTest {
             monthsEl.className = 'text-4xl font-bold mb-2 text-success';
             bar.style.width = '100%'; bar.style.background = 'var(--c-success,#22c55e)';
             advice.className = 'alert alert--success mt-2';
-            advice.textContent = '✅ مشروعك يبقى مغطّياً لمصاريفه حتى تحت هذه الصدمة — مرونة عالية.';
+            advice.textContent = 'مشروعك يبقى مغطّياً لمصاريفه حتى تحت هذه الصدمة — مرونة عالية.';
             return;
         }
 
@@ -178,17 +181,17 @@ export class StressTest {
             monthsEl.className = 'text-4xl font-bold mb-2 text-danger';
             bar.style.background = 'var(--c-danger,#ef4444)';
             advice.className = 'alert alert--danger mt-2';
-            advice.innerHTML = '🚨 <strong>خطر سيولة:</strong> الاحتياطي ينفد خلال أقل من 3 أشهر تحت هذه الصدمة. ارفع رأس المال العامل أو خفّض التكاليف الثابتة أو رتّب تسهيلاً ائتمانياً احتياطياً قبل الإطلاق.';
+            advice.innerHTML = `${icon('i-warning')} <strong>خطر سيولة:</strong> الاحتياطي ينفد خلال أقل من 3 أشهر تحت هذه الصدمة. ارفع رأس المال العامل أو خفّض التكاليف الثابتة أو رتّب تسهيلاً ائتمانياً احتياطياً قبل الإطلاق.`;
         } else if (months < 6) {
             monthsEl.className = 'text-4xl font-bold mb-2 text-warning';
             bar.style.background = 'var(--c-warning,#f59e0b)';
             advice.className = 'alert alert--warning mt-2';
-            advice.innerHTML = '⚠️ <strong>وضع حرج:</strong> يُنصح أن يغطّي الاحتياطي 6 أشهر من صافي الحرق على الأقل. جهّز خطة طوارئ (خفض مؤقت للتكاليف، تأجيل توسّع).';
+            advice.innerHTML = `${icon('i-warning')} <strong>وضع حرج:</strong> يُنصح أن يغطّي الاحتياطي 6 أشهر من صافي الحرق على الأقل. جهّز خطة طوارئ (خفض مؤقت للتكاليف، تأجيل توسّع).`;
         } else {
             monthsEl.className = 'text-4xl font-bold mb-2 text-success';
             bar.style.background = 'var(--c-success,#22c55e)';
             advice.className = 'alert alert--success mt-2';
-            advice.innerHTML = '✅ <strong>وضع جيد:</strong> سيولة كافية للصمود فترة معقولة تحت الصدمة مع هامش أمان.';
+            advice.innerHTML = `${icon('i-check')} <strong>وضع جيد:</strong> سيولة كافية للصمود فترة معقولة تحت الصدمة مع هامش أمان.`;
         }
     }
 

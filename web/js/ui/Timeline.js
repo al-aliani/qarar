@@ -6,6 +6,9 @@ import { SECTIONS } from '../core/schema.js';
 import { generateTableSuggestions } from '../services/AIConnector.js';
 import { TimelineChart } from './TimelineChart.js';
 
+// أيقونة من الـsprite الموحّد بدل رمز نصّي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 function escapeHtml(s) {
     if (s == null) return '';
     const div = document.createElement('div');
@@ -42,7 +45,7 @@ export class Timeline {
                             ${activities.sort((a,b)=>(a.startMonth||1)-(b.startMonth||1)).map(act => `
                                 <span class="timeline-phase-tag">
                                     <span>${escapeHtml(act.name || '')} (م${act.startMonth || 1})</span>
-                                    <button type="button" class="btn-delete-act btn-icon-sm" data-id="${act.id}" title="حذف المرحلة" aria-label="حذف">×</button>
+                                    <button type="button" class="btn-delete-act btn-icon-sm" data-id="${act.id}" title="حذف المرحلة" aria-label="حذف">${icon('i-x')}</button>
                                 </span>
                             `).join('')}
                         </div>

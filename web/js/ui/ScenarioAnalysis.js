@@ -6,6 +6,9 @@
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { DEFAULT_SCENARIOS } from '../core/schema.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class ScenarioAnalysis {
     constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
@@ -35,11 +38,8 @@ export class ScenarioAnalysis {
                 <!-- Scenario Comparison -->
                 <div class="card analysis-card">
                     <h3 class="card-title">مقارنة السيناريوهات</h3>
-                    <p class="text-muted text-sm mb-3">المتشائم vs الأساسي vs المتفائل — محسوبة بالمحرك الفعلي</p>
-                    <!-- تدقيق 2026-07-08 (ملاحظة منخفضة #59): نسب السيناريوهات الافتراضية
-                    ثوابت تقديرية عامة بلا مصدر خارجي منشور — عدِّلها من الحقول أدناه
-                    بحسب واقع مشروعك ونشاطك. -->
-                    <p class="text-xs text-muted mb-3">النسب الافتراضية (متشائم ‎-20%‏/+15%، متفائل ‎+25%‏/‎-10%‏) تقديرات عامة (ASSUMPTION) قابلة للتعديل الكامل — لا مصدر خارجي منشور لها.</p>
+                    <p class="text-muted text-sm mb-3">المتشائم مقابل الأساسي مقابل المتفائل — محسوبة بالمحرك الفعلي</p>
+                    <p class="text-xs text-muted mb-3">النسب الافتراضية تقديرات عامة — عدّلها من الحقول أدناه بما يناسب مشروعك.</p>
                     ${this.renderScenarioComparison(scenarios, baseResults)}
                 </div>
 
@@ -111,7 +111,6 @@ export class ScenarioAnalysis {
                 <!-- Pessimistic -->
                 <div class="scenario-card scenario-pessimistic">
                     <div class="scenario-header">
-                        <span class="scenario-icon">😟</span>
                         <span class="scenario-title">السيناريو المتشائم</span>
                     </div>
                     <div class="scenario-inputs">
@@ -134,7 +133,6 @@ export class ScenarioAnalysis {
                 <!-- Base -->
                 <div class="scenario-card scenario-base">
                     <div class="scenario-header">
-                        <span class="scenario-icon">😐</span>
                         <span class="scenario-title">السيناريو الأساسي</span>
                     </div>
                     <div class="scenario-inputs">
@@ -153,7 +151,6 @@ export class ScenarioAnalysis {
                 <!-- Optimistic -->
                 <div class="scenario-card scenario-optimistic">
                     <div class="scenario-header">
-                        <span class="scenario-icon">😊</span>
                         <span class="scenario-title">السيناريو المتفائل</span>
                     </div>
                     <div class="scenario-inputs">
@@ -186,10 +183,10 @@ export class ScenarioAnalysis {
             يخالف نفس مبدأ "null لا صفر ملفَّق" المطبَّق على بطاقات المؤشرات أعلاه. -->
             <div class="verdict-box ${viewPess.npv == null ? 'verdict-neutral' : (viewPess.npv > 0 ? 'verdict-success' : 'verdict-warning')}">
                 ${viewPess.npv == null
-                ? '❔ تعذّر حساب السيناريو المتشائم — أكمل بيانات الدراسة الأساسية (الإيرادات والتكاليف) أولاً'
+                ? `${icon('i-info')} تعذّر حساب السيناريو المتشائم — أكمل بيانات الدراسة الأساسية (الإيرادات والتكاليف) أولاً`
                 : (viewPess.npv > 0
-                    ? '✅ المشروع مجدي حتى في السيناريو المتشائم'
-                    : '⚠️ المشروع قد لا يكون مجدياً في السيناريو المتشائم')}
+                    ? `${icon('i-check')} المشروع مجدي حتى في السيناريو المتشائم`
+                    : `${icon('i-warning')} المشروع قد لا يكون مجدياً في السيناريو المتشائم`)}
             </div>
         `;
     }

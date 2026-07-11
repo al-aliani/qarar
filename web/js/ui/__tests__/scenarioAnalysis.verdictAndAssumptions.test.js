@@ -44,7 +44,9 @@ describe('ScenarioAnalysis — عنقود #34/#59/#60', () => {
         const verdict = document.querySelector('.verdict-box');
 
         expect(verdict.className).toContain('verdict-neutral');
-        expect(verdict.textContent).toContain('❔ تعذّر حساب السيناريو المتشائم');
+        // العلامة المحايدة صارت أيقونة sprite (i-info) بلا نص إيموجي — الصنف verdict-neutral
+        // هو الإشارة الدلالية المُختبَرة (تدقيق تنظيف الإيموجي 2026-07-11).
+        expect(verdict.textContent).toContain('تعذّر حساب السيناريو المتشائم');
         expect(verdict.textContent).not.toContain('قد لا يكون مجدياً');
     });
 
@@ -61,8 +63,10 @@ describe('ScenarioAnalysis — عنقود #34/#59/#60', () => {
         view.render();
         const html = document.getElementById('c').innerHTML;
 
-        expect(html).toContain('ASSUMPTION');
-        expect(html).toContain('لا مصدر خارجي منشور لها');
+        // الإفصاح صار موجزاً بطلب المالك (تدقيق 2026-07-11): يكفي أن يوضح أنها
+        // تقديرات عامة قابلة للتعديل — دون مصطلح ASSUMPTION التقني في الواجهة.
+        expect(html).toContain('تقديرات عامة');
+        expect(html).toContain('عدّلها');
     });
 
     it('#59: القيم الافتراضية في schema.js (SECTIONS.SCENARIOS) لم تتغيّر رقمياً (التوسيم تعليق توثيقي فقط)', () => {
