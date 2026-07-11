@@ -8,6 +8,9 @@ import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id, cls = '') => `<svg class="ic${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class StrategicAnalysis {
     constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
@@ -33,7 +36,7 @@ export class StrategicAnalysis {
                             <h3 class="card-title">تحليل بيستل (PESTEL)</h3>
                             <p class="text-muted text-sm mb-3">تحليل البيئة الخارجية للمشروع</p>
                         </div>
-                        <button type="button" class="btn-xs btn-magic btn-generate-pestel" title="توليد PESTEL من بيانات المشروع (بدون اتصال خارجي)">✨ توليد تلقائي من البيانات</button>
+                        <button type="button" class="btn-xs btn-magic btn-generate-pestel" title="توليد PESTEL من بيانات المشروع (بدون اتصال خارجي)">${icon('i-sparkle')} توليد تلقائي من البيانات</button>
                     </div>
                     ${this.renderPESTEL(strategic.pestel || [])}
                 </div>
@@ -46,8 +49,8 @@ export class StrategicAnalysis {
                             <p class="text-muted text-sm mb-3">نقاط القوة والضعف والفرص والتهديدات</p>
                         </div>
                         <div class="flex gap-2 flex-wrap">
-                            <button type="button" class="btn-xs btn-magic btn-generate-swot" title="توليد SWOT من بيانات المشروع (بدون اتصال خارجي)">✨ توليد تلقائي من البيانات</button>
-                            <button class="btn-xs btn-magic ai-swot-btn">✨ اقتراح تلقائي (AI)</button>
+                            <button type="button" class="btn-xs btn-magic btn-generate-swot" title="توليد SWOT من بيانات المشروع (بدون اتصال خارجي)">${icon('i-sparkle')} توليد تلقائي من البيانات</button>
+                            <button class="btn-xs btn-magic ai-swot-btn">${icon('i-sparkle')} اقتراح تلقائي (AI)</button>
                         </div>
                     </div>
                     ${this.renderSWOT(strategic.swot || {})}
@@ -71,7 +74,7 @@ export class StrategicAnalysis {
                             <h3 class="card-title">القوى الخمس لبورتر</h3>
                             <p class="text-muted text-sm mb-3">تحليل القوى التنافسية في الصناعة</p>
                         </div>
-                        <button type="button" class="btn-xs btn-magic btn-generate-porter" title="توليد تحليل بورتر من بيانات المشروع (بدون اتصال خارجي)">✨ توليد تلقائي من البيانات</button>
+                        <button type="button" class="btn-xs btn-magic btn-generate-porter" title="توليد تحليل بورتر من بيانات المشروع (بدون اتصال خارجي)">${icon('i-sparkle')} توليد تلقائي من البيانات</button>
                     </div>
                     ${this.renderPorter(strategic.porter || {})}
                 </div>
@@ -130,9 +133,9 @@ export class StrategicAnalysis {
                         <div class="pestel-impact">
                             <label class="text-sm text-muted" for="pestel-impact-${idx}">التأثير:</label>
                             <select id="pestel-impact-${idx}" class="input input--sm pestel-impact-select" data-idx="${idx}" data-field="impact">
-                                <option value="positive" ${f.impact === 'positive' ? 'selected' : ''}>✅ إيجابي</option>
-                                <option value="negative" ${f.impact === 'negative' ? 'selected' : ''}>❌ سلبي</option>
-                                <option value="neutral" ${f.impact === 'neutral' ? 'selected' : ''}>➖ محايد</option>
+                                <option value="positive" ${f.impact === 'positive' ? 'selected' : ''}>إيجابي</option>
+                                <option value="negative" ${f.impact === 'negative' ? 'selected' : ''}>سلبي</option>
+                                <option value="neutral" ${f.impact === 'neutral' ? 'selected' : ''}>محايد</option>
                             </select>
                         </div>
                     </div>
@@ -218,9 +221,9 @@ export class StrategicAnalysis {
                             <div class="porter-force-icon">${f.icon}</div>
                             <div class="porter-force-label">${f.label}</div>
                             <select class="input input--sm porter-level" data-force="${f.key}">
-                                <option value="low" ${data.level === 'low' ? 'selected' : ''}>🟢 منخفض</option>
-                                <option value="medium" ${data.level === 'medium' ? 'selected' : ''}>🟡 متوسط</option>
-                                <option value="high" ${data.level === 'high' ? 'selected' : ''}>🔴 عالي</option>
+                                <option value="low" ${data.level === 'low' ? 'selected' : ''}>منخفض</option>
+                                <option value="medium" ${data.level === 'medium' ? 'selected' : ''}>متوسط</option>
+                                <option value="high" ${data.level === 'high' ? 'selected' : ''}>عالي</option>
                             </select>
                             <textarea class="input porter-desc" data-force="${f.key}" rows="3"
                                    placeholder="وصف...">${escapeHtml(data.description)}</textarea>
@@ -315,7 +318,7 @@ export class StrategicAnalysis {
                 if (this.isGenerating) return;
 
                 e.target.disabled = true;
-                e.target.textContent = 'جاري التحليل... 🧠';
+                e.target.textContent = 'جاري التحليل...';
                 this.isGenerating = true;
 
                 const state = this.store.getState();
@@ -347,7 +350,7 @@ export class StrategicAnalysis {
                 }
 
                 e.target.disabled = false;
-                e.target.textContent = '✨ اقتراح تلقائي';
+                e.target.innerHTML = `${icon('i-sparkle')} اقتراح تلقائي`;
                 this.isGenerating = false;
             });
         });

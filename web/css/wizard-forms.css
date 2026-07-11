@@ -306,6 +306,20 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500)
 .dynamic-table .table-input { font-variant-numeric: tabular-nums; }
 .dynamic-table .table-input:not([type]), .dynamic-table select.table-input { font-family: var(--font-ui); }
 .dynamic-table .computed-cell { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+/* #6/#4 (تدقيق 2026-07-11): حد أدنى للجدول يجعل التمرير الأفقي يعمل فعلاً على الشاشات
+   الضيقة بدل سحق الأعمدة لعرض غير قابل للاستخدام (~50px)؛ على صفحات الفئات الواسعة
+   تتّسع الأعمدة تلقائياً (width:100%). ينطبق على DynamicTable وجداول MarketAnalysis اليدوية. */
+.table-wrapper, .competitor-matrix, .segments-container { overflow-x: auto; max-width: 100%; min-width: 0; }
+.dynamic-table table { min-width: 640px; }
+.competitor-matrix .data-table { min-width: 760px; }
+/* #13: العمود المحسوب (غير قابل للتحرير) بخلفية خافتة تميّزه عن حقول الإدخال */
+.dynamic-table .computed-cell { background: var(--c-surface-2); border-radius: var(--r-sm); }
+/* #12: توحيد مظهر جداول MarketAnalysis اليدوية (.data-table) مع DynamicTable —
+   نفس تمييز الصف عند hover ونفس نمط الترويسة المصغّرة. */
+.data-table th { font-size: 0.75rem; letter-spacing: 0.02em; }
+.data-table tbody tr { transition: background 0.12s; }
+.data-table tbody tr:hover { background: color-mix(in srgb, var(--c-p-500) 5%, transparent); }
+
 .table-footer { margin-top: var(--s-2); padding-top: var(--s-2); border-top: 1px dashed var(--c-border); }
 .table-footer .text-gold { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; font-size: 1.05rem; }
 /* نبض «اقتراح بنود» ثلاث مرات ثم يهدأ — بدل نبض لا نهائي */
@@ -637,6 +651,43 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500)
     gap: 0.6rem 1rem;
 }
 .offer-revenue__hint { font-size: 0.83rem; color: var(--c-text-muted); max-width: 46ch; }
+
+/* ═══ مؤشرات حالة موحّدة (تدقيق إيموجي 2026-07-11) — بديل CSS بدل إيموجي نصية
+   (🟢🟡🔴 / ✅❌➖ / ✅⚠️) لأثر بيستل وقوى بورتر وجدوى الخدمة. نفس نمط .pc-dot
+   في wizard-forms.css أعلاه، بمقياس ثلاثي معاد استخدامه لأكثر من سياق. ═══ */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--r-pill);
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.status-badge::before {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    flex: none;
+}
+/* ثلاثي عام: إيجابي/سلبي/محايد (بيستل)، ومنخفض/متوسط/عالي (بورتر) بنفس الألوان */
+.status-badge--positive, .status-badge--low {
+    color: var(--c-success);
+    background: color-mix(in srgb, var(--c-success) 12%, transparent);
+}
+.status-badge--positive::before, .status-badge--low::before { background: var(--c-success); }
+.status-badge--negative, .status-badge--high {
+    color: var(--c-danger);
+    background: var(--c-danger-subtle);
+}
+.status-badge--negative::before, .status-badge--high::before { background: var(--c-danger); }
+.status-badge--neutral, .status-badge--medium {
+    color: var(--c-warning);
+    background: var(--c-warning-subtle);
+}
+.status-badge--neutral::before, .status-badge--medium::before { background: var(--c-warning); }
 
 /* ═══════════════════════════════════════════════════════════
    بطاقات تحجيم السوق (TAM/SAM/SOM) ومصفوفة TOWS — تحسينات دفعة 3

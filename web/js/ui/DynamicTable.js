@@ -2,6 +2,9 @@ import { getLabel } from '../core/labels.js';
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id, cls = '') => `<svg class="ic${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 /**
  * Dynamic Table Component
  * Renders editable tables with add/delete row functionality
@@ -194,8 +197,8 @@ export class DynamicTable {
                 <tr>
                     <td colspan="${cols.length + 2}" class="text-center p-4">
                         <div class="empty-state text-center" style="padding: 2rem; background: var(--color-surface-hover); border-radius: var(--radius); border: 1px dashed var(--color-border);">
-                            <p class="text-muted mb-3" style="font-size: 1.1em;">هذا الجدول فارغ حالياً</p>
-                            ${this.onSuggest ? `<button type="button" class="btn btn--secondary btn-suggest" style="margin: 0 auto;">إضافة مقترحات أولية ✨</button>` : ''}
+                            <p class="text-muted mb-0" style="font-size: 1.1em;">هذا الجدول فارغ حالياً</p>
+                            ${this.onSuggest ? `<p class="text-muted mt-1" style="font-size:.9em;">استخدم «اقتراح بنود» أو «+ إضافة بند» بالأعلى.</p>` : ''}
                         </div>
                     </td>
                 </tr>
@@ -291,7 +294,7 @@ export class DynamicTable {
                 // Magic Wand for empty numbers (متاح في الوضعين السريع والمفصل)
                 let magicBtn = '';
                 if (col.type === 'number' && (!val || val == 0)) {
-                   magicBtn = `<button type="button" class="btn-magic-cell" data-row="${rowIndex}" data-col="${col.key}" title="تقدير تلقائي" aria-label="تقدير تلقائي للقيمة">🪄</button>`;
+                   magicBtn = `<button type="button" class="btn-magic-cell" data-row="${rowIndex}" data-col="${col.key}" title="تقدير تلقائي" aria-label="تقدير تلقائي للقيمة">${icon('i-sparkle')}</button>`;
                 }
 
                 html += `<td class="${isHidden ? 'hidden col-advanced' : ''} relative">
@@ -309,7 +312,7 @@ export class DynamicTable {
             }
         });
 
-        html += `<td><button type="button" class="btn-delete" data-row="${rowIndex}" title="حذف الصف" aria-label="حذف الصف">🗑️</button></td>`;
+        html += `<td><button type="button" class="btn-delete" data-row="${rowIndex}" title="حذف الصف" aria-label="حذف الصف">${icon('i-trash')}</button></td>`;
         html += `</tr>`;
         return html;
     }
@@ -412,9 +415,8 @@ export class DynamicTable {
         const isFractionPct = DynamicTable.isFractionPercentColumn(colKey);
         const estimatedValue = DynamicTable.estimateCellValue(colKey, itemName);
 
-        // Animate
-        const originalText = btn.textContent;
-        btn.textContent = '✨';
+        // Animate — نُبقي أيقونة الزر (i-sparkle) ونضيف نبضاً فقط بدل استبدالها بنص إيموجي
+        // مؤقت (تدقيق 2026-07-11)؛ render() يعيد بناء الزر بعد التقدير على أي حال.
         btn.disabled = true;
         btn.classList.add('animate-pulse');
 

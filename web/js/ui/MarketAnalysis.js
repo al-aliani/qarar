@@ -11,6 +11,10 @@ import { suggest, isUsable } from '../services/DataConnectors.js';
 import '../services/connectors/OverpassConnector.js'; // يسجّل 'market.competitors' ذاتياً عند التحميل
 import { toast } from '../utils/toast.js';
 import { SAUDI_REGIONS } from '../data/SaudiCityStats.js';
+import { fieldHelp } from './components/FieldHelp.js';
+
+// أيقونات من الـsprite الموحّد (index.html) بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id, cls = '') => `<svg class="ic${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
 
 // أحياء شائعة لأبرز المدن — datalist يسمح بالكتابة الحرة
 const COMMON_NEIGHBORHOODS = [
@@ -44,67 +48,25 @@ export class MarketAnalysis {
         this.container.innerHTML = `
             <div class="market-analysis">
                 <h2 class="section-title">تحجيم السوق</h2>
-                <p class="text-muted text-sm mb-3"><strong>السوقية</strong> = المستهلكون والمنافسون والطلب. <strong>التسويقية</strong> = كيف تسوّق (المزيج التسويقي، الحملات).</p>
 
-                <!-- مواءمة رؤية 2030 -->
+                <!-- TAM-SAM-SOM: جوهر الخطوة — أولاً، لا مدفوناً تحت أقسام توثيقية -->
                 <div class="card analysis-card">
                     <div class="flex-between mb-3">
-                        <h3 class="card-title mb-0">🇸🇦 مواءمة رؤية 2030</h3>
-                        <button type="button" class="btn-xs btn-magic btn-generate-vision" title="توليد مواءمة 2030 واقتصاد الدولة">✨ توليد تلقائي</button>
-                    </div>
-                    <p class="text-muted text-sm mb-3">كيف يرتبط المشروع بأهداف رؤية المملكة 2030 والبرامج ذات الصلة</p>
-                    <div class="form-group">
-                        <div class="flex-between mb-1">
-                            <label for="vision2030-alignment">ربط المشروع برؤية 2030</label>
-                            <button type="button" class="btn-xs btn-magic btn-ai-field" data-target="vision2030-alignment">✨ ولّد</button>
+                        <div>
+                            <h3 class="card-title">حجم السوق</h3>
+                            <p class="text-muted text-sm">إجمالي حجم السوق | السوق المتاح | حصتنا المستهدفة
+                                ${fieldHelp('إجمالي حجم السوق (TAM): كل الطلب المحتمل. السوق المتاح (SAM): الجزء الذي يمكنك خدمته. حصتنا المستهدفة (SOM): ما تتوقعه خلال الفترة.')}
+                            </p>
                         </div>
-                        <textarea id="vision2030-alignment" class="input" rows="2" placeholder="وصف ارتباط المشروع بالرؤية (مثال: دعم قطاع الترفيه، توطين الصناعة...)">${(marketSizing.vision2030?.alignment || '').replace(/</g, '&lt;')}</textarea>
+                        <button type="button" class="btn-xs btn-magic btn-generate-market" title="توليد أوصاف حجم السوق من بيانات المشروع (بدون اتصال خارجي)">${icon('i-sparkle')} توليد تلقائي من البيانات</button>
                     </div>
-                    <div class="form-group">
-                        <label for="vision2030-programs">البرامج ذات الصلة</label>
-                        <input type="text" id="vision2030-programs" class="input" placeholder="برامج رفع المحتوى المحلي، منشآت، كفالة..." value="${(marketSizing.vision2030?.relevantPrograms || '').replace(/</g, '&lt;')}">
-                    </div>
-                    <div class="form-group">
-                        <div class="flex-between mb-1">
-                            <label for="vision2030-impact">الأثر المتوقع على أهداف الرؤية</label>
-                            <button type="button" class="btn-xs btn-magic btn-ai-field" data-target="vision2030-impact">✨ ولّد</button>
-                        </div>
-                        <textarea id="vision2030-impact" class="input" rows="2" placeholder="مساهمة في التوظيف، التنويع الاقتصادي...">${(marketSizing.vision2030?.impact || '').replace(/</g, '&lt;')}</textarea>
-                    </div>
+                    <div id="tam-suggestion-box" class="tam-suggestion-box mb-3" aria-live="polite"></div>
+                    ${this.renderTAMSAMSOM(marketSizing)}
                 </div>
 
-                <!-- دراسة اقتصاد الدولة -->
                 <div class="card analysis-card">
-                    <h3 class="card-title">📊 دراسة اقتصاد الدولة</h3>
-                    <p class="text-muted text-sm mb-3">مؤشرات وطنية واتجاهات قطاعية ذات صلة بالمشروع</p>
-                    <div class="form-group">
-                        <label for="economy-gdp">معدل النمو والاتجاه الاقتصادي</label>
-                        <input type="text" id="economy-gdp" class="input" placeholder="نمو الناتج المحلي، التضخم، اتجاهات القطاع..." value="${(marketSizing.nationalEconomy?.gdpGrowth || '').replace(/</g, '&lt;')}">
-                    </div>
-                    <div class="form-group">
-                        <label for="economy-sector">نمو القطاع المستهدف</label>
-                        <input type="text" id="economy-sector" class="input" placeholder="اتجاهات نمو القطاع..." value="${(marketSizing.nationalEconomy?.sectorGrowth || '').replace(/</g, '&lt;')}">
-                    </div>
-                    <div class="form-group">
-                        <label for="economy-indicators">مؤشرات وطنية ذات صلة</label>
-                        <input type="text" id="economy-indicators" class="input" placeholder="مؤشرات الاستثمار، الاستهلاك، السياحة..." value="${(marketSizing.nationalEconomy?.keyIndicators || '').replace(/</g, '&lt;')}">
-                    </div>
-                    <div class="form-group">
-                        <div class="flex-between mb-1">
-                            <label for="economy-trends">الاتجاهات الاقتصادية المؤثرة</label>
-                            <button type="button" class="btn-xs btn-magic btn-ai-field" data-target="economy-trends">✨ ولّد</button>
-                        </div>
-                        <textarea id="economy-trends" class="input" rows="2" placeholder="التوجهات التي تؤثر على فرص المشروع...">${(marketSizing.nationalEconomy?.trends || '').replace(/</g, '&lt;')}</textarea>
-                    </div>
-                </div>
-
-                <!-- التقسيم الجغرافي للسوق (الفجوة المعيارية) -->
-                <div class="alert alert--info mb-3" style="font-size: 0.85rem;">
-                    إذا مستهدفك شرق الرياض، لا تدرس منافسي غرب الرياض — السوق يختلف حسب المنطقة. الموقع يجب أن يناسب الشريحة (مدرسة قريبة من طلاب، مستشفى قريب من مرضى، بقالة في حي سكني).
-                </div>
-                <div class="card analysis-card">
-                    <h3 class="card-title">📍 التقسيم الجغرافي للسوق</h3>
-                    <p class="text-muted text-sm mb-3">حدّد المنطقة والحي المستهدف بدقة</p>
+                    <h3 class="card-title">${icon('i-pin')} التقسيم الجغرافي للسوق</h3>
+                    <p class="text-muted text-sm mb-3">حدّد المنطقة والحي بدقة — منافسو شرق الرياض لا يهمّون مشروعاً في غربها.</p>
                     <div class="form-row form-row--2">
                         <div class="form-group">
                             <label for="target-district">المنطقة/القطاع المستهدف</label>
@@ -123,7 +85,7 @@ export class MarketAnalysis {
 
                 <!-- دراسة إحصائية للسكان (الفجوة المعيارية) -->
                 <div class="card analysis-card">
-                    <h3 class="card-title">📊 دراسة إحصائية للسكان</h3>
+                    <h3 class="card-title">${icon('i-chart')} دراسة إحصائية للسكان</h3>
                     <p class="text-muted text-sm mb-3">تعداد سكان، ديموغرافيا، توزيع عمري وفق هيئة الإحصاء</p>
                     <div class="form-row form-row--2">
                         <div class="form-group">
@@ -159,8 +121,8 @@ export class MarketAnalysis {
                 <!-- تحليل القطاع والصناعة -->
                 <div class="card analysis-card">
                     <div class="flex-between mb-3">
-                        <h3 class="card-title mb-0">🏭 تحليل القطاع والصناعة</h3>
-                        <button type="button" class="btn-xs btn-magic btn-generate-sector" title="توليد مقترح">✨ توليد تلقائي</button>
+                        <h3 class="card-title mb-0">${icon('i-factory')} تحليل القطاع والصناعة</h3>
+                        <button type="button" class="btn-xs btn-magic btn-generate-sector" title="توليد مقترح">${icon('i-sparkle')} توليد تلقائي</button>
                     </div>
                     <small class="text-muted d-block mb-2">المصدر المقترح: الغرفة التجارية، الغرفة الصناعية، معهد الإدارة العامة</small>
                     <div class="form-group">
@@ -177,20 +139,20 @@ export class MarketAnalysis {
                 <div class="card analysis-card">
                     <div class="flex-between mb-3">
                         <div>
-                            <h3 class="card-title">📦 المزيج التسويقي (4P)</h3>
+                            <h3 class="card-title">${icon('i-box')} المزيج التسويقي (4P)</h3>
                             <p class="text-muted text-sm mb-0">منتج، سعر، مكان، ترويج</p>
                         </div>
-                        <button type="button" class="btn-xs btn-magic btn-generate-4p" title="توليد مقترح للمزيج التسويقي">✨ توليد تلقائي</button>
+                        <button type="button" class="btn-xs btn-magic btn-generate-4p" title="توليد مقترح للمزيج التسويقي">${icon('i-sparkle')} توليد تلقائي</button>
                     </div>
                     <div class="form-group">
                         <label for="mix-product">المنتج (Product)</label>
                         <textarea id="mix-product" class="input" rows="2" placeholder="المواصفات، الجودة، العلامة التجارية...">${(marketing.marketingMix?.product || '').replace(/</g, '&lt;')}</textarea>
-                        <small class="text-muted" style="display:block; margin-top:4px;">الجودة الفنية ≠ الجودة المدركة — الأولى (المواصفات) قد تكون عالية، والثانية (ما يدركه العميل) هي التي تؤثر على الشراء. ركّز على القيمة المدركة.</small>
+                        <small class="text-muted" style="display:block; margin-top:4px;">ركّز على القيمة كما يدركها العميل، لا المواصفات الفنية وحدها.</small>
                     </div>
                     <div class="form-group">
                         <label for="mix-price">السعر (Price)</label>
                         <input type="text" id="mix-price" class="input" placeholder="استراتيجية التسعير، الخصومات، الدفع..." value="${(marketing.marketingMix?.price || '').replace(/</g, '&lt;')}">
-                        <small class="text-muted" style="display:block; margin-top:4px;"><strong>تسعير حسب نوع المنتج:</strong> منتج مبتكر (لا منافس مباشر) = حرية تسعير. منتج معدّل على شيء موجود = 25–30% فوق المنافس — السعر المنخفض جداً قد يغري المنافس بالدخول. <strong>لا حرب أسعار</strong> — قارن مع التكلفة وأسعار المنافسين وقدرات المستهلكين.</small>
+                        <small class="text-muted" style="display:block; margin-top:4px;">قارن بالتكلفة وأسعار المنافسين وقدرة عملائك — وتجنّب حرب الأسعار.</small>
                     </div>
                     <div class="form-group">
                         <label for="mix-place">المكان (Place)</label>
@@ -199,14 +161,10 @@ export class MarketAnalysis {
                     <div class="form-group">
                         <label for="mix-promotion">الترويج (Promotion)</label>
                         <textarea id="mix-promotion" class="input" rows="2" placeholder="الإعلان، العلاقات العامة، الحملات...">${(marketing.marketingMix?.promotion || '').replace(/</g, '&lt;')}</textarea>
-                        <small class="text-muted" style="display:block; margin-top:4px;">إذا منتجك لفئة 20% فقط، لا تعمل حملة واسعة لكل الناس — اختر حملة مخصصة للشريحة المستهدفة.</small>
+                        <small class="text-muted" style="display:block; margin-top:4px;">وجّه الحملة للشريحة المستهدفة، لا للجميع.</small>
                     </div>
                 </div>
                 
-                <!-- إرشاد أنواع الفجوة السوقية + مرونة الطلب + جدول صنف/عدد/سعر -->
-                <div class="alert alert-info mb-3" style="font-size: 0.85rem;">
-                    <strong>أنواع الفجوة السوقية:</strong> الدخول للسوق يمكن أن يكون من فجوة <strong>كمية</strong>، <strong>سعرية</strong>، <strong>جودة</strong>، <strong>زمانية</strong>، <strong>مكانية</strong>. حدّد نوع الفجوة التي تستهدفها. <strong>تنبيه:</strong> الاستيراد يثبت وجود طلب لكن لا يكفي — فائض الطلب لا يعني بالضرورة مشروعاً ناجحاً.
-                </div>
                 <div class="form-group mb-3">
                     <label for="demand-elasticity">مرونة الطلب السعرية</label>
                     <select id="demand-elasticity" class="input">
@@ -217,27 +175,6 @@ export class MarketAnalysis {
                     </select>
                     <small class="text-muted">مرونة الطلب تؤثر على استراتيجية التسعير</small>
                 </div>
-                <div class="alert alert--info mb-3" style="font-size: 0.85rem;">
-                    <strong>مخرَج الدراسة السوقية:</strong> جدول (صنف، عدد متوقع بيعه، سعر) — منه تُستمد متطلبات الدراسة الفنية (المواد، الآلات، العمالة). هذا الجدول يغذّي الدراسة الفنية.
-                </div>
-                <div class="alert alert--info mb-3" style="font-size: 0.85rem;">
-                    <strong>أساليب التنبؤ بالطلب:</strong> إذا لديك بيانات تاريخية (5+ سنوات)، يمكن استخدام: نمو بسيط، نمو مركب، متوسط متحرك — التنبؤ يعتمد على بيانات الماضي وسلاسل زمنية.
-                </div>
-
-                <!-- TAM-SAM-SOM -->
-                <div class="card analysis-card">
-                    <div class="flex-between mb-3">
-                        <div>
-                            <h3 class="card-title">حجم السوق</h3>
-                            <p class="text-muted text-sm">إجمالي حجم السوق | السوق المتاح | حصتنا المستهدفة
-                                <span class="tooltip-icon" title="إجمالي حجم السوق (TAM): كل الطلب المحتمل. السوق المتاح (SAM): الجزء الذي يمكنك خدمته. حصتنا المستهدفة (SOM): ما تتوقعه خلال الفترة">ℹ️</span>
-                            </p>
-                        </div>
-                        <button type="button" class="btn-xs btn-magic btn-generate-market" title="توليد أوصاف حجم السوق من بيانات المشروع (بدون اتصال خارجي)">✨ توليد تلقائي من البيانات</button>
-                    </div>
-                    <div id="tam-suggestion-box" class="tam-suggestion-box mb-3" aria-live="polite"></div>
-                    ${this.renderTAMSAMSOM(marketSizing)}
-                </div>
 
                 <!-- Customer Segments -->
                 <div class="card analysis-card">
@@ -247,8 +184,8 @@ export class MarketAnalysis {
                             <p class="text-muted text-sm mb-3">تحليل وتصنيف العملاء المستهدفين. حدّد شريحة واضحة — تجنّب عبارة "جميع فئات المجتمع".</p>
                          </div>
                          <div class="flex gap-2 flex-wrap">
-                            <button type="button" class="btn-xs btn-magic btn-generate-segments" title="توليد شرائح من بيانات المشروع (بدون اتصال خارجي)">✨ توليد تلقائي من البيانات</button>
-                            <button class="btn-xs btn-magic ai-segments-btn">✨ اكتشف (AI)</button>
+                            <button type="button" class="btn-xs btn-magic btn-generate-segments" title="توليد شرائح من بيانات المشروع (بدون اتصال خارجي)">${icon('i-sparkle')} توليد تلقائي من البيانات</button>
+                            <button class="btn-xs btn-magic ai-segments-btn">${icon('i-sparkle')} اكتشف (AI)</button>
                          </div>
                     </div>
                     ${this.renderSegments(marketSizing.segments || [])}
@@ -262,12 +199,61 @@ export class MarketAnalysis {
                             <p class="text-muted text-sm mb-3">مقارنة تفصيلية مع المنافسين. <strong>المصدر المقترح:</strong> زيارة ميدانية، استبيان، مراقبة مباشرة</p>
                         </div>
                         <div class="flex gap-2 flex-wrap">
-                            <button type="button" class="btn-xs btn-magic btn-generate-competitors" title="توليد منافسين من بيانات المشروع (بدون اتصال خارجي)">✨ توليد تلقائي من البيانات</button>
-                            <button class="btn-xs btn-magic ai-competitors-btn">✨ اكتشف (AI)</button>
+                            <button type="button" class="btn-xs btn-magic btn-generate-competitors" title="توليد منافسين من بيانات المشروع (بدون اتصال خارجي)">${icon('i-sparkle')} توليد تلقائي من البيانات</button>
+                            <button class="btn-xs btn-magic ai-competitors-btn">${icon('i-sparkle')} اكتشف (AI)</button>
                         </div>
                     </div>
                     ${this.renderCompetitorMatrix(marketing.competitors || [])}
                 </div>
+
+                <!-- مواءمة رؤية 2030 واقتصاد الدولة: توثيق اختياري يظهر في التقرير — مطوي كي لا يزاحم جوهر الخطوة -->
+                <details class="card advanced-fields">
+                    <summary style="cursor: pointer; font-weight: 600; padding: 0.5rem 0;">${icon('i-flag-sa')} مواءمة رؤية 2030 ودراسة اقتصاد الدولة (اختياري — يظهر في التقرير)</summary>
+                    <div class="mt-3">
+                        <div class="flex-between mb-3">
+                            <h3 class="card-title mb-0">مواءمة رؤية 2030</h3>
+                            <button type="button" class="btn-xs btn-magic btn-generate-vision" title="توليد مواءمة 2030 واقتصاد الدولة">${icon('i-sparkle')} توليد تلقائي</button>
+                        </div>
+                        <div class="form-group">
+                            <div class="flex-between mb-1">
+                                <label for="vision2030-alignment">ربط المشروع برؤية 2030</label>
+                                <button type="button" class="btn-xs btn-magic btn-ai-field" data-target="vision2030-alignment">${icon('i-sparkle')} ولّد</button>
+                            </div>
+                            <textarea id="vision2030-alignment" class="input" rows="2" placeholder="وصف ارتباط المشروع بالرؤية (مثال: دعم قطاع الترفيه، توطين الصناعة...)">${(marketSizing.vision2030?.alignment || '').replace(/</g, '&lt;')}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="vision2030-programs">البرامج ذات الصلة</label>
+                            <input type="text" id="vision2030-programs" class="input" placeholder="برامج رفع المحتوى المحلي، منشآت، كفالة..." value="${(marketSizing.vision2030?.relevantPrograms || '').replace(/</g, '&lt;')}">
+                        </div>
+                        <div class="form-group">
+                            <div class="flex-between mb-1">
+                                <label for="vision2030-impact">الأثر المتوقع على أهداف الرؤية</label>
+                                <button type="button" class="btn-xs btn-magic btn-ai-field" data-target="vision2030-impact">${icon('i-sparkle')} ولّد</button>
+                            </div>
+                            <textarea id="vision2030-impact" class="input" rows="2" placeholder="مساهمة في التوظيف، التنويع الاقتصادي...">${(marketSizing.vision2030?.impact || '').replace(/</g, '&lt;')}</textarea>
+                        </div>
+                        <h3 class="card-title mt-4">دراسة اقتصاد الدولة</h3>
+                        <div class="form-group">
+                            <label for="economy-gdp">معدل النمو والاتجاه الاقتصادي</label>
+                            <input type="text" id="economy-gdp" class="input" placeholder="نمو الناتج المحلي، التضخم، اتجاهات القطاع..." value="${(marketSizing.nationalEconomy?.gdpGrowth || '').replace(/</g, '&lt;')}">
+                        </div>
+                        <div class="form-group">
+                            <label for="economy-sector">نمو القطاع المستهدف</label>
+                            <input type="text" id="economy-sector" class="input" placeholder="اتجاهات نمو القطاع..." value="${(marketSizing.nationalEconomy?.sectorGrowth || '').replace(/</g, '&lt;')}">
+                        </div>
+                        <div class="form-group">
+                            <label for="economy-indicators">مؤشرات وطنية ذات صلة</label>
+                            <input type="text" id="economy-indicators" class="input" placeholder="مؤشرات الاستثمار، الاستهلاك، السياحة..." value="${(marketSizing.nationalEconomy?.keyIndicators || '').replace(/</g, '&lt;')}">
+                        </div>
+                        <div class="form-group">
+                            <div class="flex-between mb-1">
+                                <label for="economy-trends">الاتجاهات الاقتصادية المؤثرة</label>
+                                <button type="button" class="btn-xs btn-magic btn-ai-field" data-target="economy-trends">${icon('i-sparkle')} ولّد</button>
+                            </div>
+                            <textarea id="economy-trends" class="input" rows="2" placeholder="التوجهات التي تؤثر على فرص المشروع...">${(marketSizing.nationalEconomy?.trends || '').replace(/</g, '&lt;')}</textarea>
+                        </div>
+                    </div>
+                </details>
 
                 <!-- Navigation -->
                 <div class="wizard-nav margin-top-lg">
@@ -308,7 +294,7 @@ export class MarketAnalysis {
                         <label class="input-label" for="market-tam">
                             <span class="badge badge--tam">إجمالي حجم السوق</span>
                             <span title="كل الطلب المحتمل للمنتج في المنطقة الجغرافية المستهدفة. مثال: إجمالي مبيعات المطاعم في المملكة">(TAM)</span>
-                            <span class="tooltip-icon" title="إجمالي السوق المتاح: كل الطلب المحتمل للمنتج في المنطقة الجغرافية المستهدفة. مثال: إجمالي مبيعات المطاعم في المملكة">ℹ️</span>
+                            ${fieldHelp('إجمالي السوق المتاح: كل الطلب المحتمل للمنتج في المنطقة الجغرافية المستهدفة.', 'مثال: إجمالي مبيعات المطاعم في المملكة')}
                         </label>
                         <input type="number" id="market-tam" class="input tam-value" data-field="tam" 
                                value="${tam.value || 0}" placeholder="بالريال">
@@ -319,7 +305,7 @@ export class MarketAnalysis {
                         <label class="input-label" for="market-sam">
                             <span class="badge badge--sam">السوق المتاح</span>
                             <span title="الجزء من إجمالي السوق الذي يمكنك الوصول إليه فعلياً بناءً على قدراتك الجغرافية والتشغيلية">(SAM)</span>
-                            <span class="tooltip-icon" title="السوق المتاح: الجزء من TAM الذي يمكنك الوصول إليه فعلياً بناءً على قدراتك الجغرافية والتشغيلية. مثال: مبيعات المطاعم في المدينة المستهدفة">ℹ️</span>
+                            ${fieldHelp('السوق المتاح: الجزء من TAM الذي يمكنك الوصول إليه فعلياً بناءً على قدراتك الجغرافية والتشغيلية.', 'مثال: مبيعات المطاعم في المدينة المستهدفة')}
                         </label>
                         <input type="number" id="market-sam" class="input sam-value" data-field="sam" 
                                value="${sam.value || 0}" placeholder="بالريال">
@@ -330,7 +316,7 @@ export class MarketAnalysis {
                         <label class="input-label" for="market-som">
                             <span class="badge badge--som">حصتنا المستهدفة</span>
                             <span title="النسبة من السوق المتاح التي تتوقع الاستحواذ عليها خلال 3-5 سنوات">(SOM)</span>
-                            <span class="tooltip-icon" title="حصة السوق المستهدفة: النسبة من SAM التي تستطيع الاستحواذ عليها فعلياً خلال 3-5 سنوات. مثال: 2% من سوق المطاعم في المدينة">ℹ️</span>
+                            ${fieldHelp('حصة السوق المستهدفة: النسبة من SAM التي تستطيع الاستحواذ عليها فعلياً خلال 3-5 سنوات.', 'مثال: 2% من سوق المطاعم في المدينة')}
                         </label>
                         <input type="number" id="market-som" class="input som-value" data-field="som" 
                                value="${som.value || 0}" placeholder="بالريال">
@@ -396,13 +382,13 @@ export class MarketAnalysis {
                                         <option value="tertiary" ${seg.priority === 'tertiary' ? 'selected' : ''}>ثالثي</option>
                                     </select>
                                 </td>
-                                <td><button class="btn-icon btn-remove-segment" data-idx="${idx}" aria-label="حذف الشريحة السوقية">🗑️</button></td>
+                                <td><button class="btn-icon btn-remove-segment" data-idx="${idx}" aria-label="حذف الشريحة السوقية">${icon('i-trash')}</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
                 <div class="flex gap-2 mt-3">
-                    <button class="btn btn--sm btn--secondary btn-suggest-segments">🪄 اقتراح بنود</button>
+                    <button class="btn btn--sm btn--secondary btn-suggest-segments">${icon('i-sparkle')} اقتراح بنود</button>
                     <button class="btn btn--sm btn--ghost btn-add-segment">+ إضافة شريحة</button>
                 </div>
             </div>
@@ -422,6 +408,8 @@ export class MarketAnalysis {
                             <th>نقاط القوة</th>
                             <th>نقاط الضعف</th>
                             <th>الميزة التنافسية</th>
+                            <th>عملاء/يوم (تقديري)</th>
+                            <th>متوسط فاتورة (ريال)</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -433,13 +421,15 @@ export class MarketAnalysis {
                                 <td><input type="text" class="input input--sm competitor-field" data-field="strengths" value="${comp.strengths || ''}"></td>
                                 <td><input type="text" class="input input--sm competitor-field" data-field="weaknesses" value="${comp.weaknesses || ''}"></td>
                                 <td><input type="text" class="input input--sm competitor-field" data-field="advantage" value="${comp.advantage || ''}"></td>
-                                <td><button class="btn-icon btn-remove-competitor" data-idx="${idx}" aria-label="حذف المنافس">🗑️</button></td>
+                                <td><input type="number" class="input input--sm competitor-field" data-field="estimatedDailyCustomers" value="${comp.estimatedDailyCustomers || 0}" placeholder="للمقارنة"></td>
+                                <td><input type="number" class="input input--sm competitor-field" data-field="estimatedAvgTicket" value="${comp.estimatedAvgTicket || 0}" placeholder="عدد × متوسط = مبيعات يومية"></td>
+                                <td><button class="btn-icon btn-remove-competitor" data-idx="${idx}" aria-label="حذف المنافس">${icon('i-trash')}</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
                 <div class="flex gap-2 mt-3">
-                    <button class="btn btn--sm btn--secondary btn-suggest-competitors">🪄 اقتراح بنود</button>
+                    <button class="btn btn--sm btn--secondary btn-suggest-competitors">${icon('i-sparkle')} اقتراح بنود</button>
                     <button class="btn btn--sm btn--ghost btn-add-competitor">+ إضافة منافس</button>
                 </div>
             </div>
@@ -495,7 +485,7 @@ export class MarketAnalysis {
                         inputEl.value = suggestion;
                         inputEl.dispatchEvent(new Event('change'));
                         this.saveVisionAndEconomy();
-                        toast.success('تم اقتراح النص بنجاح ✨');
+                        toast.success('تم اقتراح النص بنجاح');
                     } catch (err) {
                         console.error(err);
                         toast.error('حدث خطأ أثناء التوليد');
@@ -732,7 +722,7 @@ export class MarketAnalysis {
                 if (this.isGenerating) return;
 
                 e.target.disabled = true;
-                e.target.textContent = 'جاري البحث... 🕵️‍♂️';
+                e.target.textContent = 'جاري البحث...';
                 this.isGenerating = true;
 
                 const state = this.store.getState();
@@ -778,7 +768,7 @@ export class MarketAnalysis {
                 }
 
                 e.target.disabled = false;
-                e.target.textContent = '✨ اكتشف المنافسين';
+                e.target.innerHTML = `${icon('i-sparkle')} اكتشف المنافسين`;
                 this.isGenerating = false;
             });
         });
@@ -788,7 +778,7 @@ export class MarketAnalysis {
             btn.addEventListener('click', async (e) => {
                 if (this.isGenerating) return;
                 e.target.disabled = true;
-                e.target.textContent = 'جاري البحث... 🕵️‍♂️';
+                e.target.textContent = 'جاري البحث...';
                 this.isGenerating = true;
 
                 const state = this.store.getState();
@@ -808,7 +798,7 @@ export class MarketAnalysis {
                 }
 
                 e.target.disabled = false;
-                e.target.textContent = '✨ اكتشف (AI)';
+                e.target.innerHTML = `${icon('i-sparkle')} اكتشف (AI)`;
                 this.isGenerating = false;
             });
         });
@@ -891,7 +881,7 @@ export class MarketAnalysis {
             box.innerHTML = `
                 <div class="tam-suggestion-card p-3 rounded-lg border border-border" style="background: var(--c-bg-app);">
                     <div class="flex items-center gap-2 mb-2">
-                        <span class="text-sm font-medium">📊 اقتراح من بيانات هيئة الإحصاء</span>
+                        <span class="text-sm font-medium">${icon('i-chart')} اقتراح من بيانات هيئة الإحصاء</span>
                     </div>
                     <p class="text-sm text-muted mb-2">بناءً على مدينة <strong>${escapeHtml(city)}</strong>: عدد السكان <strong>${popStr}</strong> نسمة، ونسبة استهلاك القطاع. TAM المقترح: <strong>${(suggestion.tam || 0).toLocaleString('ar-SA')}</strong> ريال سنوياً.</p>
                     <p class="text-xs text-muted mb-2">المصدر: ${escapeHtml(suggestion.sourceLabel)} — <a href="https://www.stats.gov.sa" target="_blank" rel="noopener">هيئة الإحصاء</a></p>
@@ -982,7 +972,8 @@ export class MarketAnalysis {
         const row = e.target.closest('tr');
         const idx = parseInt(row.dataset.idx);
         const field = e.target.dataset.field;
-        const value = field === 'marketShare' ? parseFloat(e.target.value) || 0 : e.target.value;
+        const numericFields = ['marketShare', 'estimatedDailyCustomers', 'estimatedAvgTicket'];
+        const value = numericFields.includes(field) ? parseFloat(e.target.value) || 0 : e.target.value;
 
         const state = this.store.getState();
         const marketing = { ...state.marketing };
@@ -999,7 +990,7 @@ export class MarketAnalysis {
         const state = this.store.getState();
         const marketing = { ...state.marketing };
         const competitors = [...(marketing.competitors || [])];
-        competitors.push({ name: '', marketShare: 0, strengths: '', weaknesses: '', advantage: '' });
+        competitors.push({ name: '', marketShare: 0, strengths: '', weaknesses: '', advantage: '', estimatedDailyCustomers: 0, estimatedAvgTicket: 0 });
         marketing.competitors = competitors;
         this.store.update('marketing', marketing);
         this.render();

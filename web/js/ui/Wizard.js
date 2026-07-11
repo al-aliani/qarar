@@ -150,6 +150,24 @@ export class Wizard {
         return idx === -1 ? this.currentStepIndex : idx;
     }
 
+    // خطوة خارج المسار المُصفّى (رابط عميق/بحث/رحلة الدراسة): الفهرس المطلق ليس
+    // محلياً — كان يُفسَّر كمحلي فتظهر تسمية «الخطوة التالية» لخطوة عشوائية ويقفز
+    // «التالي» لغير جارتها. هنا نحسب الجارين المرئيين الحقيقيين حول الخطوة الحالية.
+    _visibleNeighbors() {
+        const last = this.steps.length - 1;
+        if (!this.stepIndexMap) {
+            const i = this.currentStepIndex;
+            return { currentLocal: i, prevLocal: i - 1, nextLocal: i + 1, isFirst: i <= 0, isLast: i >= last };
+        }
+        const found = this.stepIndexMap.indexOf(this.currentStepIndex);
+        if (found !== -1) {
+            return { currentLocal: found, prevLocal: found - 1, nextLocal: found + 1, isFirst: found === 0, isLast: found === last };
+        }
+        const ins = this.stepIndexMap.findIndex(abs => abs > this.currentStepIndex);
+        if (ins === -1) return { currentLocal: null, prevLocal: last, nextLocal: null, isFirst: false, isLast: true };
+        return { currentLocal: null, prevLocal: ins - 1, nextLocal: ins, isFirst: ins === 0, isLast: false };
+    }
+
     _absoluteStepIndex(localIndex) {
         if (!this.stepIndexMap) return localIndex;
         return this.stepIndexMap[localIndex] ?? localIndex;
@@ -245,6 +263,12 @@ export class Wizard {
                     // التنسيق يأتي من .step-content .card h4 في wizard-forms.css — لا inline styles
                     let part = `<h4>${getLabel(key)}</h4>`;
                     Object.entries(val).forEach(([subKey, subVal]) => {
+                        // مرونة الطلب السعرية لها محرر مخصص أغنى في خطوة «تحجيم السوق»
+                        // (MarketAnalysis.js) — تدقيق 2026-07-11: كلاهما يكتب نفس المسار
+                        // marketing.marketAnalysis.demandElasticity، فتخطّي عرضها هنا
+                        // يمنع إدخالاً مزدوجاً لنفس الحقل (خلافاً لـswot/towsMatrix أعلاه،
+                        // هذا الحقل متداخل داخل marketAnalysis لا في المستوى الأعلى مباشرة).
+                        if (stepId === 'marketing' && key === 'marketAnalysis' && subKey === 'demandElasticity') return;
                         // null قيمة مشروعة لحقل رقمي اختياري (dsoDays مثلاً) —
                         // typeof null === 'object' كان يتخطاها فلا تظهر إطلاقاً
                         if (!Array.isArray(subVal) && (subVal === null || typeof subVal !== 'object')) {
@@ -271,9 +295,21 @@ export class Wizard {
                     `;
                 }
             } else {
+                // SWOT/TOWS لهما محرر غني مخصص في خطوة «التحليل الاستراتيجي» (مع مزامنة
+                // ثنائية في store.js) — عرض حقولهما هنا أيضاً كان إدخالاً مزدوجاً مربكاً
+                // لنفس البيانات في خطوتين (وبنسخة أفقر تنقصها «الفرص» أصلاً).
+                // marketingMix (4P) له محرر مخصص أغنى (زر توليد AI + نص إرشادي لكل حقل)
+                // في خطوة «تحجيم السوق» (MarketAnalysis.js) — تدقيق 2026-07-11: كلاهما
+                // كانا يكتبان نفس المسار marketing.marketingMix، فيظهر الحقل مرتين.
+                const editedElsewhere = stepId === 'marketing' ? ['swot', 'towsMatrix', 'marketingMix'] : [];
                 html += `<div class="card form-grid">`;
-                Object.entries(sectionData).forEach(entry => { html += renderEntry(entry); });
+                Object.entries(sectionData)
+                    .filter(([key]) => !editedElsewhere.includes(key))
+                    .forEach(entry => { html += renderEntry(entry); });
                 html += `</div>`;
+                if (editedElsewhere.length) {
+                    html += `<p class="text-sm text-muted mt-2">التحليل الرباعي (SWOT) ومصفوفة الاستراتيجيات (TOWS) تحرّرهما في خطوة «التحليل الاستراتيجي»، والمزيج التسويقي (4P) في خطوة «تحجيم السوق».</p>`;
+                }
             }
         }
 
@@ -291,11 +327,10 @@ export class Wizard {
                 </details>`;
         }
 
-        // Navigation buttons — الفهرس المحلي ضمن this.steps المُصفّاة، لا stepIndex
-        // المطلق (تدقيق 2026-07-08، ملاحظة عالية #25: راجع _localStepIndex أعلاه).
-        const navLocalIdx = this._localStepIndex();
-        const isFirstStep = navLocalIdx === 0;
-        const isLastStep = navLocalIdx === this.steps.length - 1;
+        // Navigation buttons — الجيران المرئيون الحقيقيون في كل الأوضاع (راجع _visibleNeighbors أعلاه).
+        const nb = this._visibleNeighbors();
+        const isFirstStep = nb.isFirst;
+        const isLastStep = nb.isLast;
         const showNav = this.steps.length > 1;
 
         if (showNav) {
@@ -304,7 +339,7 @@ export class Wizard {
             // (تدقيق 2026-07-09: كانت التسمية توحي بأن الضغط على «التالي» سيُنهي شيئاً، بينما
             // معالج النقر لا يفعل شيئاً إطلاقاً عند آخر خطوة — راجع bindNavigationEvents أدناه).
             const navCaption = isLastStep ? 'الحالة' : 'الخطوة التالية';
-            const navLabel = isLastStep ? 'اكتملت خطوات الدراسة' : this.steps[navLocalIdx + 1]?.label;
+            const navLabel = isLastStep ? 'اكتملت خطوات الدراسة' : (this.steps[nb.nextLocal]?.label || 'القسم التالي');
             html += this._renderNavHtml(isFirstStep, isLastStep, navCaption, navLabel);
         }
 
@@ -420,20 +455,21 @@ export class Wizard {
 
         if (prevBtn) {
             prevBtn.addEventListener('click', () => {
-                const localIdx = this._localStepIndex();
-                if (localIdx > 0) {
-                    this.onNavigate(this._absoluteStepIndex(localIdx - 1));
+                const nb = this._visibleNeighbors();
+                if (!nb.isFirst && nb.prevLocal >= 0) {
+                    this.onNavigate(this._absoluteStepIndex(nb.prevLocal));
                 }
             });
         }
 
         if (nextBtn) {
             nextBtn.addEventListener('click', () => {
-                const localIdx = this._localStepIndex();
-                if (localIdx < this.steps.length - 1) {
-                    if (this.validateStep(this.steps[localIdx])) {
-                        this.onNavigate(this._absoluteStepIndex(localIdx + 1));
-                    }
+                const nb = this._visibleNeighbors();
+                if (nb.isLast || nb.nextLocal == null) return;
+                // خطوة خارج المسار المرئي لا تملك إعدادات ضمن this.steps — تُتجاوز صلاحيتها
+                const currentStep = nb.currentLocal != null ? this.steps[nb.currentLocal] : null;
+                if (!currentStep || this.validateStep(currentStep)) {
+                    this.onNavigate(this._absoluteStepIndex(nb.nextLocal));
                 }
             });
         }
@@ -470,9 +506,9 @@ export class Wizard {
 
     appendNav(stepIndex) {
         this.currentStepIndex = stepIndex;
-        const localIdx = this._localStepIndex();
-        const isFirstStep = localIdx === 0;
-        const isLastStep = localIdx === this.steps.length - 1;
+        const nb = this._visibleNeighbors();
+        const isFirstStep = nb.isFirst;
+        const isLastStep = nb.isLast;
         const showNav = this.steps.length > 1;
 
         if (!showNav) return;
@@ -491,7 +527,7 @@ export class Wizard {
         // (تدقيق 2026-07-09)، ولوحة إغلاق حقيقية بإجراءات فعلية (تدقيق 2026-07-10) —
         // كلاهما عبر _renderNavHtml() المشتركة مع renderStep أعلاه.
         const navCaption = isLastStep ? 'الحالة' : 'الخطوة التالية';
-        const nextStepLabel = isLastStep ? 'اكتملت خطوات الدراسة' : (this.steps[localIdx + 1]?.label || 'القسم التالي');
+        const nextStepLabel = isLastStep ? 'اكتملت خطوات الدراسة' : (this.steps[nb.nextLocal]?.label || 'القسم التالي');
         const navHtml = this._renderNavHtml(isFirstStep, isLastStep, navCaption, nextStepLabel);
 
         this.container.insertAdjacentHTML('beforeend', navHtml);

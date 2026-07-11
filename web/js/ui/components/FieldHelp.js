@@ -13,29 +13,36 @@ function injectStyles() {
     const style = document.createElement('style');
     style.id = 'field-help-styles';
     style.textContent = `
+        /* تدقيق 2026-07-11: الألوان كانت احتياطيات Tailwind ثابتة (--border-color/--bg-secondary
+           غير موجودة في نظام التصميم) فتُطبَّق دائماً وتكسر الوضع الداكن. الآن توكنز --c-* الحقيقية
+           التي تتبدّل مع الثيم. وكُبّر الزر 20→22px وخط البوب أب 12.5→13.5px لسهولة أعلى. */
         .field-help { position: relative; display: inline-flex; vertical-align: middle; margin-inline-start: 6px; }
         .field-help-btn {
-            width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-color, #cbd5e1);
-            background: var(--bg-secondary, #f1f5f9); color: var(--text-secondary, #64748b);
-            font-size: 13px; font-weight: 700; line-height: 1; cursor: help; padding: 0;
+            width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--c-border, #cbd5e1);
+            background: var(--c-surface-2, #f1f5f9); color: var(--c-text-muted, #64748b);
+            font-size: 13.5px; font-weight: 700; line-height: 1; cursor: help; padding: 0;
             display: inline-flex; align-items: center; justify-content: center;
+            transition: background-color .15s, color .15s, border-color .15s;
         }
-        .field-help-btn:hover, .field-help-btn:focus-visible { background: var(--primary-color, #2563eb); color: #fff; border-color: transparent; }
+        .field-help-btn:hover, .field-help-btn:focus-visible { background: var(--c-p-500, #2563eb); color: var(--c-p-contrast, #fff); border-color: transparent; }
+        .field-help-btn:focus-visible { outline: 2px solid var(--c-p-500, #2563eb); outline-offset: 2px; }
         .field-help-pop {
             position: absolute; z-index: 1000; top: calc(100% + 6px); inset-inline-start: 0; inset-inline-end: auto;
             width: 280px; max-width: min(280px, calc(100vw - 32px));
-            background: var(--bg-primary, #fff); color: var(--text-primary, #1e293b);
-            border: 1px solid var(--border-color, #cbd5e1); border-radius: 8px;
-            box-shadow: 0 6px 20px rgba(0,0,0,.12); padding: 10px 12px;
-            font-size: 12.5px; font-weight: 400; line-height: 1.7; text-align: right; white-space: normal;
+            background: var(--c-bg-card, #fff); color: var(--c-text-main, #1e293b);
+            border: 1px solid var(--c-border, #cbd5e1); border-radius: var(--r-md, 10px);
+            box-shadow: var(--shadow-lg, 0 6px 20px rgba(0,0,0,.12)); padding: 10px 12px;
+            font-size: 13.5px; font-weight: 400; line-height: 1.7; text-align: right; white-space: normal;
             display: none; transform: translateX(var(--field-help-shift, 0px));
         }
         [dir="ltr"] .field-help-pop { text-align: left; }
         .field-help.open .field-help-pop,
         .field-help:hover .field-help-pop,
         .field-help:focus-within .field-help-pop { display: block; }
-        .field-help-pop .fh-example { display: block; margin-top: 6px; color: var(--text-secondary, #64748b); }
-        .field-help-pop .fh-example::before { content: '💡 '; }
+        .field-help-pop .fh-example { display: block; margin-top: 6px; color: var(--c-text-muted, #64748b); }
+        .field-help-pop .fh-example::before { content: '';
+            display: inline-block; width: 0.55rem; height: 0.55rem; margin-inline-end: 0.35rem;
+            border-radius: 50%; background: var(--c-gold-deco, #b07d2c); vertical-align: middle; }
         .field-help--standalone { margin-block: 0 4px; }
         th .field-help { margin-inline-start: 4px; }
     `;

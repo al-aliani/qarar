@@ -125,6 +125,13 @@ table {
     padding-bottom: 100px;
 }
 
+/* تدقيق 2026-07-11 (#4/#5): حبس 800px مثالي لنموذج حقول عمود واحد، لكنه يخنق صفحات
+   الفئات التي تُكدّس عدة خطوات بجداول عريضة (9 أعمدة) — فتنسحق الحقول لـ~50px. توسيع
+   الحاوية فقط حين تحتوي صفحة فئة (تبقى صفحة الفئة نفسها محكومة بـmin(100%,1180px)). */
+.wizard-container:has(> .category-page) {
+    max-width: 1180px;
+}
+
 /* --- Right Panel (Live Dashboard) --- */
 .live-panel {
     background-color: var(--c-bg-panel);

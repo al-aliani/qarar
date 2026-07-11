@@ -10,6 +10,13 @@ import { fieldHelp } from './FieldHelp.js';
 const CONTROL_SELECTOR = 'input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]), textarea, select';
 const HELP_MARKER_SELECTOR = '.field-help, .tooltip-icon[title], .tooltip-auditor[title], .tooltip-wrapper';
 const CHOICE_WORDS = new Set(['نعم', 'لا', 'غير متأكد']);
+// حقول «إضافة عنصر جديد» (SWOT/الجداول) وصف نفسها ذاتياً عبر الـplaceholder — إضافة «؟»
+// لها ضجيج، وأسوأ: يولّد نصاً ركيكاً «اكتب إضافة بند جديد...». تُستثنى من المولّد.
+const ADD_AFFORDANCE_SELECTOR = '.swot-add, .dt-add, [class*="-add"], [class*="add-item"], [class*="add-row"]';
+function isAddAffordance(control) {
+    if (control.closest(ADD_AFFORDANCE_SELECTOR)) return true;
+    return /^\s*(إضافة|أضف)\b/.test(control.placeholder || '');
+}
 
 const CONTEXT_RULES = [
     {
@@ -199,7 +206,11 @@ function contextualHelp(control, label) {
     const registered = getFieldHelp(key);
     if (registered) return registered;
 
-    const haystack = `${key} ${label} ${control.placeholder || ''}`;
+    // تدقيق 2026-07-11 (علة حرجة): كان المعرّف الإنجليزي (key) جزءاً من نص المطابقة،
+    // فيطابق بالمصادفة عبر جزء من كلمة — «demand-elastiCITY» يحوي «city» فتُسنَد مساعدة
+    // «الموقع» لحقل مرونة الطلب. المطابقة الآن على التسمية العربية والـplaceholder فقط
+    // (وهي الإشارة الموثوقة)؛ يبقى key للبحث المسجّل الدقيق getFieldHelp أعلاه فقط.
+    const haystack = `${label} ${control.placeholder || ''}`;
     const rule = CONTEXT_RULES.find(entry => entry.match.test(haystack));
     if (rule) return { help: rule.help, example: rule.example };
 
@@ -250,6 +261,13 @@ export function enhanceFieldHelp(container) {
 
     for (const control of controls) {
         if (control.dataset.fieldHelpCovered === 'true') {
+            covered++;
+            continue;
+        }
+
+        // حقول الإضافة تُعلَّم كمغطّاة بلا إضافة «؟» (وصفها الذاتي يكفي).
+        if (isAddAffordance(control)) {
+            control.dataset.fieldHelpCovered = 'true';
             covered++;
             continue;
         }

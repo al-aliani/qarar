@@ -17,7 +17,7 @@ export const STEPS = [
   // مع مصادر الإيرادات في شاشة واحدة عبر OfferingView. البيانات تبقى في أقسامها
   // الأصلية (projectInfo.* و revenue.streams)؛ خطوة «مصادر الإيرادات» تُخفى من
   // المسار المبسّط (flow=advanced) لأنها تُدخَل هنا.
-  { id: 'projectDetails', dataSection: SECTIONS.PROJECT_INFO, label: "ماذا تبيع وبكم", tables: ['products', 'introServices', 'customerValues'], isOfferingView: true },
+  { id: 'projectDetails', dataSection: SECTIONS.PROJECT_INFO, label: "المنتجات والخدمات", tables: ['products', 'introServices', 'customerValues'], isOfferingView: true },
   { id: SECTIONS.KEY_PEOPLE, label: "الأشخاص الرئيسون", tables: ['keyPeople', 'partnershipContracts'] },
   { id: 'projectIntro', label: "فرضية المشروع", isIntroduction: true, isAdvancedStep: true },
   { id: SECTIONS.SMART_GOALS, label: "الأهداف الذكية", isSmartGoals: true, isAdvancedStep: true },
@@ -25,7 +25,12 @@ export const STEPS = [
   // السوقية والاستراتيجية (8-12) — السوق يحدد الطلب قبل الطاقة والأصول
   // تحجيم السوق (TAM/SAM/SOM) — ركن معياري (IFC/UNIDO) يغذّي جاهزية السوق في لوحة القرار (marketSizing.som)
   { id: 'marketSizing', label: "تحجيم السوق", isMarketAnalysis: true },
-  { id: SECTIONS.MARKETING, label: "الدراسة السوقية", tables: ['marketAnalysis', 'historicalData', 'supplyDemandBalance', 'competitors', 'competitorBenchmarking', 'marketingPlan'] },
+  // تدقيق 2026-07-11: أُزيل جدول 'competitors' من هنا — كان تكراراً حرفياً لبطاقة
+  // «مصفوفة المنافسين» في خطوة «تحجيم السوق» (MarketAnalysis.js)، ونفس مسار البيانات
+  // (marketing.competitors). أُبقيت البطاقة هناك لأنها أغنى (بحث OSM حي + مولّد داخلي +
+  // AI)، وأُضيف لها الحقلان الناقصان (estimatedDailyCustomers/estimatedAvgTicket) كي لا
+  // يُفقد أي عمود تقرير كان يقرأهما من نسخة الجدول القديمة.
+  { id: SECTIONS.MARKETING, label: "الدراسة السوقية", tables: ['marketAnalysis', 'historicalData', 'supplyDemandBalance', 'competitorBenchmarking', 'marketingPlan'] },
   { id: SECTIONS.STRATEGIC, label: "التحليل الاستراتيجي", isStrategic: true },
   { id: SECTIONS.REVENUE, label: "مصادر الإيرادات", tables: ['revenueStreams'] },
   { id: SECTIONS.SERVICES, label: "تحليل الخدمات", isServiceAnalysis: true, isAdvancedStep: true },
@@ -78,14 +83,14 @@ export const STEPS = [
 
 /** Ranges [start, end] inclusive; must match STEPS indices. Update when adding steps. */
 export const SIDEBAR_SECTIONS = [
-  { id: 'setup', label: 'البداية والتعريف', range: [0, 6] },
-  { id: 'marketing', label: 'الدراسة السوقية والاستراتيجية', range: [7, 11] },
-  { id: 'technical', label: 'الدراسة الفنية والقانونية', range: [12, 19] },
+  { id: 'setup', label: 'التحقق والتعريف', range: [0, 6] },
+  { id: 'marketing', label: 'السوق والإيرادات', range: [7, 11] },
+  { id: 'technical', label: 'التشغيل والتأسيس', range: [12, 19] },
   { id: 'advanced', label: 'خطة التنفيذ', range: [20, 20] },
-  { id: 'financial', label: 'الدراسة المالية والتمويل', range: [21, 28] },
-  { id: 'strategic', label: 'تحليل المخاطر', range: [29, 33] },
+  { id: 'financial', label: 'المالية والتمويل', range: [21, 28] },
+  { id: 'strategic', label: 'المخاطر والاختبارات', range: [29, 33] },
   { id: 'appendices', label: 'الأدلة والمرفقات', range: [34, 34] },
-  { id: 'results', label: 'النتائج والقرار النهائي', range: [35, 40] },
+  { id: 'results', label: 'النتائج والمتابعة', range: [35, 40] },
 ];
 
 /**
@@ -204,6 +209,17 @@ function getStepHelp(stepIndex) {
 export function stepIndexById(id) {
   return STEPS.findIndex(s => s.id === id);
 }
+
+/**
+ * خطوات استوعبتها شاشة مدموجة بالكامل (2026-07-11، تدقيق تصادم معرّفات DOM): logistics
+ * وadministrative صارت محتواة كاملةً داخل أكورديون OperatingCostsView (خطوة techResources)،
+ * وكلاهما في تصنيف الفئة 'technical' نفسه — عرضهما كخطوتين مستقلتين أيضاً في StudyCategoryView
+ * كان يبني حاويات "table-logistics"/"table-administrative" مرتين على نفس الصفحة، فيتصادم
+ * DynamicTable الثاني مع الأول ويُفرغ أحد الجدولين بصمت. تُستبعد هنا من قائمة الخطوات
+ * الظاهرة في صفحة الفئة — بياناتهما تبقى محفوظة وقابلة للتعديل كاملةً داخل الشاشة المدموجة.
+ * (لا تشمل revenue: هي في تصنيف فئة مختلف عن OfferingView فلا تصادم حيّ على نفس الصفحة.)
+ */
+export const STEPS_ABSORBED_IN_CATEGORY_VIEW = [SECTIONS.LOGISTICS, SECTIONS.ADMINISTRATIVE];
 
 // تصدير صريح لاستيراد Wizard.js وغيره (يتجنب مشاكل ESM/HMR)
 export const MAJOR_PHASES = [

@@ -441,8 +441,11 @@ export class ServiceAnalysis {
      */
     renderServiceCard(analysis) {
         const statusClass = analysis.isViable ? 'service-viable' : 'service-not-viable';
+        // مؤشر حالة CSS بدل إيموجي (✅/⚠️) — تدقيق تنظيف 2026-07-11، نفس نمط .status-badge.
         const statusText = analysis.hasAllocatedInvestment
-            ? (analysis.isViable ? 'مجدي ✅' : 'غير مجدي ⚠️')
+            ? (analysis.isViable
+                ? '<span class="status-badge status-badge--positive">مجدي</span>'
+                : '<span class="status-badge status-badge--negative">غير مجدي</span>')
             : (analysis.unitEconomicsPositive ? 'هامش إيجابي' : 'يحتاج تسعير/تكلفة');
 
         return `
@@ -516,7 +519,7 @@ export class ServiceAnalysis {
                                 <td class="text-mono">${this.formatPercent(a.irr)}</td>
                                 <td class="text-mono">${this.formatPercent(a.roi)}</td>
                                 <td class="text-mono">${this.formatBreakEvenUnits(a.breakEvenUnits)}</td>
-                                <td>${a.hasAllocatedInvestment ? (a.isViable ? '✅' : '⚠️') : 'هامش'}</td>
+                                <td>${a.hasAllocatedInvestment ? (a.isViable ? '<span class="status-badge status-badge--positive">مجدي</span>' : '<span class="status-badge status-badge--negative">غير مجدي</span>') : 'هامش'}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -542,7 +545,7 @@ export class ServiceAnalysis {
                         <span class="ranking-npv ${this.metricClass(rankingScore(a))}">
                             ${Number.isFinite(a.npv) ? 'صافي القيمة الحالية' : 'صافي ربح سنة 1'}: ${this.formatCurrency(rankingScore(a))}
                         </span>
-                        ${i === 0 ? '<span class="ranking-badge">🏆 الأعلى ربحية</span>' : ''}
+                        ${i === 0 ? '<span class="ranking-badge">الأعلى ربحية</span>' : ''}
                     </div>
                 `).join('')}
             </div>

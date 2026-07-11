@@ -1,10 +1,12 @@
 import { store } from './js/core/store.js';
 import { TEMPLATES } from './js/core/templates.js';
 import { TABLE_SCHEMAS, createEmptyStudy } from './js/core/schema.js';
-import { STEPS, SECTIONS, SIDEBAR_SECTIONS, stepIndexById } from './js/core/wizardSteps.js';
+import { STEPS, SECTIONS, SIDEBAR_SECTIONS, stepIndexById, STEPS_ABSORBED_IN_CATEGORY_VIEW } from './js/core/wizardSteps.js';
 import { Sidebar } from './js/ui/Sidebar.js';
 import { Wizard } from './js/ui/Wizard.js';
+import { renderStepComponent } from './js/ui/stepComponentRegistry.js';
 import { StudyJourney } from './js/ui/StudyJourney.js';
+import { StudyCategoryView } from './js/ui/StudyCategoryView.js';
 import { calculateStudy as runFullModel } from './js/core/engine.js';
 // المكونات الثقيلة تُحمّل عند أول زيارة للخطوة (Lazy Loading في navigateTo)
 import { toast } from './js/utils/toast.js';
@@ -21,72 +23,68 @@ import { enhanceFieldHelp, observeFieldHelp } from './js/ui/components/FieldHelp
 
 document.addEventListener('DOMContentLoaded', async () => {
   const installArabicUiGuard = () => {
+    // كل الأنماط بحدود كلمات (\b) حصراً: الاستبدال بلا حدود كان يفسد أي نص يحوي
+    // النمط داخل كلمة («QAR» صارت «فحص الجودةR»). أسماء الصيغ المعروفة عالمياً
+    // (PDF/Excel/Word/CSV/JSON/HTML/PowerPoint) لا تُستبدل إطلاقاً: مصادرها عربية
+    // أصلاً بجانب اسم الصيغة، واستبدالها كان يولّد نصاً ملتصقاً («تقرير تقريرتقرير شامل»).
     const replacements = [
-      [/Market Structure/gi, 'هيكل السوق'],
-      [/Perfect Competition/gi, 'منافسة تامة'],
-      [/Monopolistic Competition/gi, 'منافسة احتكارية'],
-      [/Oligopoly/gi, 'احتكار القلة'],
-      [/Monopoly/gi, 'احتكار تام'],
-      [/Market Gap/gi, 'الفجوة السوقية'],
-      [/Market Simulation/gi, 'محاكاة السوق'],
-      [/Market Analysis/gi, 'تحليل السوق'],
-      [/Market Opportunity/gi, 'فرصة السوق'],
-      [/Market Snapshot/gi, 'لمحة السوق'],
-      [/Market Share/gi, 'الحصة السوقية'],
-      [/Market/gi, 'السوق'],
-      [/Structure/gi, 'الهيكل'],
-      [/Dashboard/gi, 'لوحة التحكم'],
-      [/Pitch Deck/gi, 'العرض التقديمي'],
-      [/Pitch/gi, 'العرض'],
-      [/PowerPoint/gi, 'عرض تقديمي'],
-      [/PDF/gi, 'تقرير'],
-      [/Excel/gi, 'جداول'],
-      [/Word/gi, 'ملف قابل للتعديل'],
-      [/CSV/gi, 'ملف جدولي'],
-      [/JSON/gi, 'نسخة احتياطية'],
-      [/HTML/gi, 'صفحة قابلة للطباعة'],
-      [/GO\/NO-GO/gi, 'نفّذ أو راجع'],
-      [/NO-GO/gi, 'لا تنفّذ'],
+      [/\bMarket Structure\b/gi, 'هيكل السوق'],
+      [/\bPerfect Competition\b/gi, 'منافسة تامة'],
+      [/\bMonopolistic Competition\b/gi, 'منافسة احتكارية'],
+      [/\bOligopoly\b/gi, 'احتكار القلة'],
+      [/\bMonopoly\b/gi, 'احتكار تام'],
+      [/\bMarket Gap\b/gi, 'الفجوة السوقية'],
+      [/\bMarket Simulation\b/gi, 'محاكاة السوق'],
+      [/\bMarket Analysis\b/gi, 'تحليل السوق'],
+      [/\bMarket Opportunity\b/gi, 'فرصة السوق'],
+      [/\bMarket Snapshot\b/gi, 'لمحة السوق'],
+      [/\bMarket Share\b/gi, 'الحصة السوقية'],
+      [/\bMarket\b/gi, 'السوق'],
+      [/\bStructure\b/gi, 'الهيكل'],
+      [/\bDashboard\b/gi, 'لوحة التحكم'],
+      [/\bPitch Deck\b/gi, 'العرض التقديمي'],
+      [/\bPitch\b/gi, 'العرض'],
+      [/\bGO\/NO-GO\b/gi, 'نفّذ أو راجع'],
+      [/\bNO-GO\b/gi, 'لا تنفّذ'],
       [/\bGO\b/g, 'نفّذ'],
-      [/NPV/gi, 'صافي القيمة الحالية'],
-      [/IRR/gi, 'معدل العائد الداخلي'],
-      [/ROI/gi, 'العائد على الاستثمار'],
-      [/WACC/gi, 'متوسط تكلفة رأس المال'],
-      [/EBITDA/gi, 'الأرباح قبل الفوائد والضرائب والإهلاك'],
-      [/DCF/gi, 'التدفقات النقدية المخصومة'],
-      [/TAM\/SAM\/SOM/gi, 'إجمالي السوق والسوق المتاح والحصة المستهدفة'],
-      [/TAM/gi, 'إجمالي السوق'],
-      [/SAM/gi, 'السوق المتاح'],
-      [/SOM/gi, 'الحصة المستهدفة'],
-      [/SWOT/gi, 'تحليل نقاط القوة والضعف والفرص والتهديدات'],
-      [/TOWS/gi, 'مصفوفة الاستراتيجيات'],
-      [/KPI/gi, 'مؤشر أداء'],
-      [/QA/gi, 'فحص الجودة'],
-      [/Startup/gi, 'شركة ناشئة'],
-      [/Quick Feasibility/gi, 'جدوى سريعة'],
-      [/Quick/gi, 'سريع'],
-      [/Benchmarking/gi, 'المقارنة المرجعية'],
-      [/Benchmark/gi, 'معيار مقارنة'],
-      [/Payback/gi, 'فترة الاسترداد'],
-      [/Breakeven|Break-Even/gi, 'نقطة التعادل'],
-      [/COGS/gi, 'تكلفة البضاعة المباعة'],
-      [/OPEX/gi, 'المصروفات التشغيلية'],
-      [/CAPEX/gi, 'المصاريف الرأسمالية'],
-      [/Google Sheets/gi, 'جداول جوجل'],
-      [/Google/gi, 'جوجل'],
-      [/Supabase/gi, 'خدمة قاعدة البيانات'],
-      [/OpenStreetMap/gi, 'خريطة مفتوحة المصدر'],
-      [/Zoom/gi, 'اجتماع مرئي'],
-      [/Calendly|Cal\.com/gi, 'نظام حجز المواعيد'],
-      [/LivePlan|Bizplan|Upmetrics|PlanGuru/gi, 'منصة أجنبية']
+      [/\bNPV\b/gi, 'صافي القيمة الحالية'],
+      [/\bIRR\b/gi, 'معدل العائد الداخلي'],
+      [/\bROI\b/gi, 'العائد على الاستثمار'],
+      [/\bWACC\b/gi, 'متوسط تكلفة رأس المال'],
+      [/\bEBITDA\b/gi, 'الربح التشغيلي'],
+      [/\bDCF\b/gi, 'التدفقات النقدية المخصومة'],
+      [/\bTAM\/SAM\/SOM\b/gi, 'إجمالي السوق والسوق المتاح والحصة المستهدفة'],
+      [/\bTAM\b/gi, 'إجمالي السوق'],
+      [/\bSAM\b/gi, 'السوق المتاح'],
+      [/\bSOM\b/gi, 'الحصة المستهدفة'],
+      [/\bSWOT\b/gi, 'التحليل الرباعي'],
+      [/\bTOWS\b/gi, 'مصفوفة الاستراتيجيات'],
+      [/\bKPI\b/gi, 'مؤشر أداء'],
+      [/\bStartup\b/gi, 'شركة ناشئة'],
+      [/\bQuick Feasibility\b/gi, 'جدوى سريعة'],
+      [/\bQuick\b/gi, 'سريع'],
+      [/\bBenchmarking\b/gi, 'المقارنة المرجعية'],
+      [/\bBenchmark\b/gi, 'معيار مقارنة'],
+      [/\bPayback\b/gi, 'فترة الاسترداد'],
+      [/\b(Breakeven|Break-Even)\b/gi, 'نقطة التعادل'],
+      [/\bCOGS\b/gi, 'تكلفة البضاعة المباعة'],
+      [/\bOPEX\b/gi, 'المصروفات التشغيلية'],
+      [/\bCAPEX\b/gi, 'المصاريف الرأسمالية'],
+      [/\bGoogle Sheets\b/gi, 'جداول جوجل'],
+      [/\bGoogle\b/gi, 'جوجل'],
+      [/\bSupabase\b/gi, 'خدمة قاعدة البيانات'],
+      [/\bOpenStreetMap\b/gi, 'خريطة مفتوحة المصدر'],
+      [/\bZoom\b/gi, 'اجتماع مرئي'],
+      [/\b(Calendly|Cal\.com)\b/gi, 'نظام حجز المواعيد'],
+      [/\b(LivePlan|Bizplan|Upmetrics|PlanGuru)\b/gi, 'منصة أجنبية']
     ];
 
     const arabize = (value) => {
       if (!value || !/[A-Za-z]/.test(value)) return value;
-      // L8: اختصار إنجليزي مفرد بين قوسين بعد المصطلح العربي — مثل (NPV) أو (EBITDA) —
-      // يُحفظ كما هو: لا يُعرّب ولا يُحذف. نقنّعه قبل التعريب ثم نعيده.
+      // L8: اختصار إنجليزي بين قوسين بعد المصطلح العربي — مثل (NPV) أو (TAM/SAM/SOM)
+      // أو (GO/NO-GO) — يُحفظ كما هو: لا يُعرّب ولا يُحذف. نقنّعه قبل التعريب ثم نعيده.
       const keep = [];
-      let out = String(value).replace(/\(([A-Z][A-Za-z]{1,9})\)/g, (m, abbr) => '￼' + (keep.push(abbr) - 1) + '￼');
+      let out = String(value).replace(/\(([A-Z][A-Za-z0-9/\-]{1,24})\)/g, (m, abbr) => '￼' + (keep.push(abbr) - 1) + '￼');
       for (const [pattern, replacement] of replacements) {
         out = out.replace(pattern, replacement);
       }
@@ -241,8 +239,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Component Instance Cache
   const components = {};
   let studyJourney = null;
+  let categoryView = null;
   let navigationRequestId = 0;
   let latestRequestedStepIndex = 0;
+  const CATEGORY_STEPS = SIDEBAR_SECTIONS.map(category => ({ id: category.id, label: category.label }));
+  const CATEGORY_JOURNEY_SECTIONS = SIDEBAR_SECTIONS.map((category, index) => ({
+    id: category.id,
+    label: category.label,
+    range: [index, index]
+  }));
+  const CATEGORY_SIDEBAR_SECTIONS = [{
+    id: 'study_categories',
+    label: 'تصنيفات الدراسة',
+    range: [0, CATEGORY_STEPS.length - 1]
+  }];
 
   // Dashboard vars defined above (lines 141-142), duplicates removed.
   let projectsDashboard = null; // The main landing dashboard
@@ -741,7 +751,71 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
+  const categoryNavigationEnabled = window.__FEASIBILITY_LEGACY_STEPS__ !== true;
+  const categoryIndexForStep = (stepIndex) => SIDEBAR_SECTIONS.findIndex(category => (
+    stepIndex >= category.range[0] && stepIndex <= category.range[1]
+  ));
+  // صفحة الفئة تعرض كل الخطوات دفعة واحدة على نفس الصفحة (بخلاف المعالج التسلسلي) —
+  // فأي خطوة استوعبتها شاشة مدموجة يجب استبعادها هنا، وإلا تتصادم حاويات جداولها
+  // (انظر تعريف STEPS_ABSORBED_IN_CATEGORY_VIEW في wizardSteps.js).
+  const absorbedStepIndexes = new Set(
+    STEPS_ABSORBED_IN_CATEGORY_VIEW.map(id => STEPS.findIndex(s => s.id === id)).filter(i => i >= 0)
+  );
+  const categoryVisibleStepIndexes = () => STEPS.map((_, index) => index).filter(i => !absorbedStepIndexes.has(i));
+
+  const navigateToCategory = async (categoryIndex, focusStepIndex = null) => {
+    const requestId = ++navigationRequestId;
+    const safeCategoryIndex = Math.min(Math.max(Number(categoryIndex) || 0, 0), SIDEBAR_SECTIONS.length - 1);
+    const category = SIDEBAR_SECTIONS[safeCategoryIndex];
+    if (!category) return;
+
+    enterWorkspaceMode();
+    const activeStepIndex = Number.isInteger(focusStepIndex) ? focusStepIndex : category.range[0];
+    latestRequestedStepIndex = activeStepIndex;
+    try {
+      localStorage.setItem('feas_last_step_index', String(activeStepIndex));
+      localStorage.setItem('feas_last_category_index', String(safeCategoryIndex));
+    } catch (_) { }
+
+    syncHash('category/' + safeCategoryIndex);
+    sidebar.setActive(safeCategoryIndex);
+
+    const breadcrumbBar = document.getElementById('breadcrumbBar');
+    const breadcrumbCurrent = document.getElementById('breadcrumbCurrent');
+    if (breadcrumbBar && breadcrumbCurrent) {
+      breadcrumbBar.style.display = 'flex';
+      breadcrumbCurrent.textContent = category.label;
+    }
+
+    if (!categoryView) {
+      categoryView = new StudyCategoryView('wizardContainer', store, TABLE_SCHEMAS, {
+        steps: STEPS,
+        categories: SIDEBAR_SECTIONS,
+        onNavigateCategory: navigateToCategory,
+        onGoHome: showLandingDashboard
+      });
+    }
+    categoryView.setVisibleStepIndexes(categoryVisibleStepIndexes());
+
+    const rendered = await categoryView.render(safeCategoryIndex, {
+      focusStepIndex: activeStepIndex,
+      isCurrent: () => requestId === navigationRequestId
+    });
+    if (!rendered || requestId !== navigationRequestId) return;
+
+    enhanceFieldHelp(document.getElementById('wizardContainer'));
+    studyJourney?.update(safeCategoryIndex);
+
+    const mainStage = document.querySelector('.main-stage');
+    if (mainStage && activeStepIndex === category.range[0]) mainStage.scrollTop = 0;
+    document.getElementById('wizardContainer')?.focus({ preventScroll: true });
+  };
+
   const navigateTo = async (index) => {
+    if (categoryNavigationEnabled) {
+      const categoryIndex = categoryIndexForStep(Number(index) || 0);
+      return navigateToCategory(categoryIndex >= 0 ? categoryIndex : 0, Number(index) || 0);
+    }
     const requestId = ++navigationRequestId;
     try {
       enterWorkspaceMode();
@@ -774,240 +848,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const containerId = 'wizardContainer';
 
-      // Cleanup any previous trash view if sticking around
-      // (Usually handled by wizard.renderStep clearing container, but good to be safe)
-
-      if (step.isDashboard) {
-        if (!components.dashboard) {
-          const { FinancialDashboard } = await import('./js/ui/FinancialDashboard.js');
-          components.dashboard = new FinancialDashboard(containerId, store);
-        }
-        components.dashboard.render();
-      } else if (step.isZakatTax) {
-        if (!components.zakat) {
-          const { ZakatView } = await import('./js/ui/ZakatView.js');
-          components.zakat = new ZakatView(containerId, store);
-        }
-        components.zakat.render();
-      } else if (step.isPreliminaryCheck || step.id === 'preliminaryCheck') {
-        if (!components.preliminaryCheck) {
-          const { PreliminaryCheckView } = await import('./js/ui/PreliminaryCheckView.js');
-          components.preliminaryCheck = new PreliminaryCheckView(containerId, store, navigateTo);
-        }
-        components.preliminaryCheck.render();
-      } else if (step.isProjectAlternatives || step.id === 'projectAlternatives') {
-        if (!components.projectAlternatives) {
-          const { ProjectAlternativesView } = await import('./js/ui/ProjectAlternativesView.js');
-          components.projectAlternatives = new ProjectAlternativesView(containerId, store, navigateTo);
-        }
-        components.projectAlternatives.render();
-      } else if (step.isTimeline || step.id === SECTIONS.TIMELINE) {
-        if (!components.timeline) {
-          const { Timeline } = await import('./js/ui/Timeline.js');
-          components.timeline = new Timeline(containerId, store);
-        }
-        components.timeline.render();
-      } else if (step.isMonteCarlo) {
-        if (!components.monteCarlo) {
-          const { MonteCarloAnalysis } = await import('./js/ui/MonteCarloAnalysis.js');
-          components.monteCarlo = new MonteCarloAnalysis(containerId, store);
-        }
-        components.monteCarlo.render();
-      } else if (step.isValuation) {
-        if (!components.valuation) {
-          const { ValuationAnalysis } = await import('./js/ui/ValuationAnalysis.js');
-          components.valuation = new ValuationAnalysis(containerId, store);
-        }
-        components.valuation.render();
-      } else if (step.isScenario || step.isScenarios) {
-        if (step.id === 'scenarioSwitcher') {
-          if (!components.scenarioSwitcher) {
-            const { ScenarioSwitcher } = await import('./js/ui/ScenarioSwitcher.js');
-            components.scenarioSwitcher = new ScenarioSwitcher(containerId, store);
-          }
-          components.scenarioSwitcher.render();
-        } else {
-          if (!components.scenarioAnalysis) {
-            const { ScenarioAnalysis } = await import('./js/ui/ScenarioAnalysis.js');
-            components.scenarioAnalysis = new ScenarioAnalysis(containerId, store, navigateTo);
-          }
-          components.scenarioAnalysis.render(index);
-        }
-      } else if (step.isPostLaunch) {
-        if (!components.postLaunch) {
-          const { PostLaunchTracker } = await import('./js/ui/PostLaunchTracker.js');
-          components.postLaunch = new PostLaunchTracker(containerId, store);
-        }
-        components.postLaunch.render();
-      } else if (step.isBusinessModel) {
-        if (!components.businessModel) {
-          const { BusinessModelView } = await import('./js/ui/BusinessModelView.js');
-          components.businessModel = new BusinessModelView(containerId, store, navigateTo);
-        }
-        components.businessModel.render(index);
-      } else if (step.isComparison) {
-        if (!components.studyComparison) {
-          const { StudyComparison } = await import('./js/ui/StudyComparison.js');
-          components.studyComparison = new StudyComparison(containerId, store, navigateTo);
-        }
-        await components.studyComparison.render();
-      } else if (step.isDecisionDashboard) {
-        if (!components.decisionDashboard) {
-          const { DecisionDashboard } = await import('./js/ui/DecisionDashboard.js');
-          components.decisionDashboard = new DecisionDashboard(containerId, store);
-        }
-        try {
-          const rendered = await components.decisionDashboard.render({
-            isCurrent: () => requestId === navigationRequestId
-          });
-          if (rendered === false) return;
-        } catch (err) {
-          console.error('Failed to render DecisionDashboard:', err);
-        }
-      } else if (step.isExecutiveSummary) {
-        if (!components.executiveSummary) {
-          const { ExecutiveSummary } = await import('./js/ui/ExecutiveSummary.js');
-          components.executiveSummary = new ExecutiveSummary(containerId, store, navigateTo);
-        }
-        components.executiveSummary.render(index);
-      } else if (step.isReportBuilder) {
-        if (!components.reportBuilder) {
-          const { ReportBuilderView } = await import('./js/ui/ReportBuilderView.js');
-          components.reportBuilder = new ReportBuilderView(containerId, store);
-        }
-        components.reportBuilder.render();
-      } else if (step.id === SECTIONS.SERVICES) {
-        if (!components.serviceAnalysis) {
-          const { ServiceAnalysis } = await import('./js/ui/ServiceAnalysis.js');
-          components.serviceAnalysis = new ServiceAnalysis(containerId, store, navigateTo);
-        }
-        components.serviceAnalysis.render(index);
-      } else if (step.id === SECTIONS.LEGAL) {
-        if (!components.legalStudy) {
-          const { LegalStudy } = await import('./js/ui/LegalStudy.js');
-          components.legalStudy = new LegalStudy(containerId, store, navigateTo);
-        }
-        components.legalStudy.render(index);
-      } else if (step.isStrategic) {
-        if (!components.strategicAnalysis) {
-          const { StrategicAnalysis } = await import('./js/ui/StrategicAnalysis.js');
-          components.strategicAnalysis = new StrategicAnalysis(containerId, store, navigateTo);
-        }
-        components.strategicAnalysis.render(index);
-      } else if (step.isMarketAnalysis) {
-        if (!components.marketAnalysis) {
-          const { MarketAnalysis } = await import('./js/ui/MarketAnalysis.js');
-          components.marketAnalysis = new MarketAnalysis(containerId, store, navigateTo);
-        }
-        components.marketAnalysis.render(index);
-      } else if (step.isRiskMatrix) {
-        if (!components.riskMatrix) {
-          const { RiskMatrix } = await import('./js/ui/RiskMatrix.js');
-          components.riskMatrix = new RiskMatrix(containerId, store, navigateTo);
-        }
-        components.riskMatrix.render(index);
-      } else if (step.isFinancing) {
-        if (!components.financing) {
-          const { FinancingStructure } = await import('./js/ui/FinancingStructure.js');
-          components.financing = new FinancingStructure(containerId, store, navigateTo);
-        }
-        components.financing.render(index);
-      } else if (step.isOrgStructure) {
-        if (!components.orgStructure) {
-          const { OrgStructure } = await import('./js/ui/OrgStructure.js');
-          components.orgStructure = new OrgStructure(containerId, store, navigateTo);
-        }
-        components.orgStructure.render(index);
-      } else if (step.isOperationalSim) {
-        if (!components.operationalSim) {
-          const { OperationalSim } = await import('./js/ui/OperationalSim.js');
-          components.operationalSim = new OperationalSim(containerId, store, navigateTo);
-        }
-        components.operationalSim.render(index);
-      } else if (step.isInvestorAnalysis) {
-        if (!components.investorAnalysis) {
-          const { InvestorAnalysis } = await import('./js/ui/InvestorAnalysis.js');
-          components.investorAnalysis = new InvestorAnalysis(containerId, store, navigateTo);
-        }
-        components.investorAnalysis.render(index);
-      } else if (step.isStressTest) {
-        if (!components.stressTest) {
-          const { StressTest } = await import('./js/ui/StressTest.js');
-          components.stressTest = new StressTest(containerId, store, navigateTo);
-        }
-        components.stressTest.render(index);
-      } else if (step.isAppendices) {
-        if (!components.appendices) {
-          const { AppendicesView } = await import('./js/ui/AppendicesView.js');
-          components.appendices = new AppendicesView(containerId, store, navigateTo);
-        }
-        components.appendices.render(index);
-      } else if (step.isIntroduction || step.id === 'projectIntro') {
-        if (!components.introduction) {
-          const { IntroductionView } = await import('./js/ui/IntroductionView.js');
-          components.introduction = new IntroductionView(containerId, store, navigateTo);
-        }
-        components.introduction.render(index);
-      } else if (step.isSmartGoals) {
-        if (!components.smartGoals) {
-          const { SmartGoals } = await import('./js/ui/SmartGoals.js');
-          components.smartGoals = new SmartGoals(containerId, store, navigateTo);
-        }
-        components.smartGoals.render(index);
-      } else if (step.isFinancialStatements) {
-        if (!components.financialStatements) {
-          const { FinancialStatements } = await import('./js/ui/FinancialStatements.js');
-          components.financialStatements = new FinancialStatements(containerId, store, navigateTo);
-        }
-        components.financialStatements.render(index);
-      } else if (step.isLoanSchedule) {
-        if (!components.loanSchedule) {
-          const { LoanScheduleView } = await import('./js/ui/LoanScheduleView.js');
-          components.loanSchedule = new LoanScheduleView(containerId, store);
-        }
-        const results = runFullModel(store.getState());
-        components.loanSchedule.render(results.loanSchedule);
-      } else if (step.isBalanceSheet) {
-        if (!components.balanceSheet) {
-          const { BalanceSheetView } = await import('./js/ui/BalanceSheetView.js');
-          components.balanceSheet = new BalanceSheetView(containerId, store, navigateTo);
-        }
-        const results = runFullModel(store.getState());
-        components.balanceSheet.render(results.balanceSheets);
-      } else if (step.isBreakEven) {
-        if (!components.breakEvenAnalysis) {
-          const { BreakEvenAnalysis } = await import('./js/ui/BreakEvenAnalysis.js');
-          components.breakEvenAnalysis = new BreakEvenAnalysis(containerId, store);
-        }
-        components.breakEvenAnalysis.render();
-      } else if (step.isSensitivity) {
-        if (!components.sensitivityAnalysis) {
-          const { SensitivityAnalysis } = await import('./js/ui/SensitivityAnalysis.js');
-          components.sensitivityAnalysis = new SensitivityAnalysis(containerId, store, navigateTo);
-        }
-        components.sensitivityAnalysis.render(index);
-      } else if (step.isOfferingView) {
-        // شاشة «ماذا تبيع وبكم» المدموجة — تركّب products/introServices/customerValues
-        // (projectInfo.*) مع revenueStreams (revenue.streams) في شاشة واحدة، وتربطها
-        // عبر زر «استورد كمصادر إيراد». تعيد استخدام wizard.renderTable فيبقى الحفظ
-        // في الأقسام الأصلية (لا مساس بقراءة المحرّك لجدول الإيرادات).
-        if (!components.offering) {
-          const { OfferingView } = await import('./js/ui/OfferingView.js');
-          components.offering = new OfferingView(containerId, store, navigateTo, wizard);
-        }
-        components.offering.render(index);
-      } else if (step.isOperatingCosts) {
-        // شاشة «المصاريف التشغيلية» المدموجة — تركّب جداول techResources/logistics/
-        // administrative في أكورديون واحد. تعيد استخدام wizard.renderTable فيبقى
-        // الحفظ في الأقسام الأصلية (لا مساس بالمحرّكات). نمرّر wizard كوسيط رابع.
-        if (!components.operatingCosts) {
-          const { OperatingCostsView } = await import('./js/ui/OperatingCostsView.js');
-          components.operatingCosts = new OperatingCostsView(containerId, store, navigateTo, wizard);
-        }
-        components.operatingCosts.render(index);
-      } else {
-        wizard.renderStep(step.id, step, index);
-      }
+      // موزّع «علَم الخطوة → المكوّن» موحَّد الآن في stepComponentRegistry.js (تدقيق
+      // 2026-07-11) — كان مكرَّراً هنا وفي StudyCategoryView.renderStepInto بسلسلتين
+      // مستقلتين وجب تطابقهما يدوياً؛ الآن مصدر واحد لكلا المستهلكين.
+      const { rendered } = await renderStepComponent(step, containerId, index, {
+        store,
+        onNavigate: navigateTo,
+        isCurrent: () => requestId === navigationRequestId,
+        cache: components,
+        wizardFactory: () => wizard,
+        runFullModel
+      });
+      if (rendered === false) return;
 
       // قد تكتمل استيرادات المكوّنات الكسولة بترتيب مختلف عند النقر السريع.
       // إذا أصبحت هذه العملية قديمة، أعد رسم أحدث وجهة فقط ولا تُلحق بها شريطاً قديماً.
@@ -1038,6 +890,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Wrapper: resolve step index when using filtered steps (simple/mini mode)
   const handleStepClick = (stepOrIndex) => {
+    if (categoryNavigationEnabled && typeof stepOrIndex === 'object') {
+      const categoryIndex = SIDEBAR_SECTIONS.findIndex(category => category.id === stepOrIndex.id);
+      if (categoryIndex >= 0) {
+        navigateToCategory(categoryIndex);
+        return;
+      }
+    }
     const idx = typeof stepOrIndex === 'object'
       ? STEPS.findIndex(s => s.id === stepOrIndex.id && s.label === stepOrIndex.label)
       : stepOrIndex;
@@ -1070,12 +929,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // يغطّي أيضاً الخانات والصفوف التي يضيفها المستخدم داخل الخطوة بعد الرسم الأول.
   observeFieldHelp(document.getElementById('wizardContainer'), {
-    isActive: () => /#\/?step\/\d+/.test(window.location.hash)
+    isActive: () => /#\/?(?:step|category)\/\d+/.test(window.location.hash)
   });
 
   studyJourney = new StudyJourney({
-    steps: STEPS,
-    onNavigate: navigateTo
+    steps: CATEGORY_STEPS,
+    masterSteps: CATEGORY_STEPS,
+    sections: CATEGORY_JOURNEY_SECTIONS,
+    unitLabel: 'التصنيف',
+    mapHeading: 'انتقل إلى أي تصنيف',
+    onNavigate: navigateToCategory
   });
 
   sidebar.setProgressTracker(progressTracker);
@@ -1399,6 +1262,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       if (route === '' || route === 'home') {
         await showLandingDashboard();
+      } else if (route.startsWith('category/')) {
+        const categoryIndex = parseInt(route.slice(9), 10);
+        if (Number.isInteger(categoryIndex) && categoryIndex >= 0 && categoryIndex < SIDEBAR_SECTIONS.length) {
+          await navigateToCategory(categoryIndex);
+        } else await showLandingDashboard();
       } else if (route.startsWith('step/')) {
         const idx = parseInt(route.slice(5), 10);
         if (Number.isInteger(idx) && idx >= 0 && idx < STEPS.length) await navigateTo(idx);
@@ -1545,15 +1413,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       sidebar.sections = SIDEBAR_SECTIONS;
     }
 
-    sidebar.steps = visibleSteps;
-    sidebar.stepIndexMap = stepIndexMap;
-    wizard.steps = visibleSteps;
-    // تدقيق 2026-07-08 (ملاحظة عالية #25): بدون هذا، كان الويزارد يحسب التالي/السابق
-    // بجمع/طرح 1 من فهرس مطلق مباشرة على مصفوفة مُصفّاة قصيرة — يوصل المستخدم لخطوة
-    // متقدمة/مخفية بدل الخطوة التالية ضمن المسار المُصفّى فعلياً. راجع Wizard.js
-    // _localStepIndex/_absoluteStepIndex.
-    wizard.stepIndexMap = stepIndexMap;
-    studyJourney?.setSteps(visibleSteps, stepIndexMap);
+    if (categoryNavigationEnabled) {
+      sidebar.steps = CATEGORY_STEPS;
+      sidebar.stepIndexMap = null;
+      sidebar.sections = CATEGORY_SIDEBAR_SECTIONS;
+      wizard.steps = STEPS;
+      wizard.stepIndexMap = null;
+      categoryView?.setVisibleStepIndexes(categoryVisibleStepIndexes());
+      studyJourney?.setSteps(CATEGORY_STEPS, null);
+    } else {
+      sidebar.steps = visibleSteps;
+      sidebar.stepIndexMap = stepIndexMap;
+      wizard.steps = visibleSteps;
+      // في المسار القديم، يجب تحويل فهرس الخطوة المرئية إلى فهرسها المطلق.
+      wizard.stepIndexMap = stepIndexMap;
+      studyJourney?.setSteps(visibleSteps, stepIndexMap);
+    }
 
     // Save effective mode to store for persistence
     if (store.getState().appSettings?.mode !== effective) {
@@ -1562,7 +1437,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     sidebar.render();
 
-    studyJourney?.update(sidebar.activeStep || 0);
+    const activeJourneyIndex = categoryNavigationEnabled
+      ? Math.min(Math.max(sidebar.activeStep || 0, 0), CATEGORY_STEPS.length - 1)
+      : (sidebar.activeStep || 0);
+    studyJourney?.update(activeJourneyIndex);
   }
 
   // آخر تحديث منذ X دقائق — جدوى كلاود (يُحدَّث عند الحفظ)
@@ -2066,7 +1944,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     mobileStepperNav.querySelectorAll('.step-item').forEach(el => {
       el.addEventListener('click', () => {
         const idx = parseInt(el.dataset.index);
-        navigateTo(idx);
+        if (categoryNavigationEnabled) navigateToCategory(idx);
+        else navigateTo(idx);
         toggleMobileMenu(false);
         // Also update mobile nav visually
         renderMobileNav();
