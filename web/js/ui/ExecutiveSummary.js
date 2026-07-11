@@ -12,6 +12,9 @@ import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class ExecutiveSummary {
     constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
@@ -21,8 +24,13 @@ export class ExecutiveSummary {
         this.isGenerating = false;
     }
 
-    render(stepIndex) {
+    render(stepIndex, variant) {
         if (typeof stepIndex === 'number') this.stepIndex = stepIndex;
+        // خطوة «مؤشرات التقييم المالي (نظرة مبكرة)» كانت تعرض الملخص التنفيذي كاملاً
+        // (نفس مكوّن الخطوة الأخيرة حرفياً بحقول الوصف والمخاطر) — تكرار مربك.
+        // الوضع المختصر يعرض المؤشرات والدرجة والتوصية فقط.
+        if (variant) this.variant = variant;
+        const compact = this.variant === 'indicators';
         const state = this.store.getState();
         const execSummary = state.executiveSummary || {};
 
@@ -37,7 +45,7 @@ export class ExecutiveSummary {
 
         this.container.innerHTML = `
             <div class="executive-summary">
-                <h2 class="section-title">الملخص التنفيذي</h2>
+                <h2 class="section-title">${compact ? 'مؤشرات التقييم المالي (نظرة مبكرة)' : 'الملخص التنفيذي'}</h2>
                 ${investmentDataWarningHtml(investmentDataWarning(state, financialResults))}
                 ${this.renderAuditorBanner(state, financialResults)}
 
@@ -47,6 +55,7 @@ export class ExecutiveSummary {
                     ${this.renderFeasibilityScore(score, breakdown)}
                 </div>
 
+                ${compact ? '' : `
                 <!-- Project Overview -->
                 <div class="card analysis-card">
                     <h3 class="card-title">نظرة عامة على المشروع</h3>
@@ -55,6 +64,7 @@ export class ExecutiveSummary {
 
                 <!-- الفرضية ولماذا سنربح (YC / تقييم أفكار الستارت آب) -->
                 ${this.renderHypothesisAndAdvantage(state)}
+                `}
 
                 <!-- Investment Highlights -->
                 <div class="card analysis-card">
@@ -62,6 +72,7 @@ export class ExecutiveSummary {
                     ${this.renderInvestmentHighlights(state, financialResults)}
                 </div>
 
+                ${compact ? '' : `
                 <!-- Key Risks -->
                 <div class="card analysis-card">
                     <h3 class="card-title">المخاطر الرئيسية</h3>
@@ -73,6 +84,7 @@ export class ExecutiveSummary {
                     <h3 class="card-title">الحلول المقترحة للتحديات</h3>
                     ${this.renderProposedSolutions(state)}
                 </div>
+                `}
 
                 <!-- Final Recommendation -->
                 <div class="card analysis-card">
@@ -80,10 +92,14 @@ export class ExecutiveSummary {
                     ${this.renderRecommendation(score, financialResults, state)}
                 </div>
 
+                ${compact
+                    ? `<p class="text-sm text-muted mt-4">هذه نظرة مبكرة على المؤشرات — قد تتغيّر مع استكمال بقية الخطوات. الملخص التنفيذي الكامل في نهاية الدراسة.</p>`
+                    : `
                 <!-- تنبيه الدراسة ليست مضمونة -->
                 <div class="alert alert--info mt-4" style="font-size: 0.85rem;">
                     <strong>تنبيه:</strong> الدراسة قد تُعدّ بعناية مهنية، لكن المستقبل مجهول — متغيرات السوق والحكومة والفنية قد تتغير. تحليل الحساسية إلزامي لأي دراسة مكتملة.
                 </div>
+                `}
 
                 <!-- Navigation -->
                 <div class="wizard-nav margin-top-lg">
@@ -93,7 +109,7 @@ export class ExecutiveSummary {
 
                 <!-- Industry Benchmarks -->
                 <div class="card analysis-card">
-                    <h3 class="card-title">📊 مقارنة بمعايير الصناعة</h3>
+                    <h3 class="card-title">${icon('i-chart')} مقارنة بمعايير الصناعة</h3>
                     ${this.renderIndustryBenchmarks(state, financialResults)}
                 </div>
             </div>
@@ -164,7 +180,7 @@ export class ExecutiveSummary {
 
         return `
                 <div class="card analysis-card">
-                    <h3 class="card-title">🎯 الفرضية ولماذا سنربح</h3>
+                    <h3 class="card-title">${icon('i-target')} الفرضية ولماذا سنربح</h3>
                     <div class="overview-grid" style="font-size: 0.95rem;">
                         ${sh.problem ? `<div class="overview-item full-width"><span class="overview-label">المشكلة (الظروف الأولية)</span><p class="overview-value mt-1">${escapeHtml(sh.problem)}</p></div>` : ''}
                         ${sh.solution ? `<div class="overview-item full-width"><span class="overview-label">الحل (التجربة / المنتج أو الخدمة)</span><p class="overview-value mt-1">${escapeHtml(sh.solution)}</p></div>` : ''}
@@ -193,7 +209,7 @@ export class ExecutiveSummary {
                     <div class="ai-toolbar">
                         <small class="text-muted">يمكنك كتابة الوصف يدوياً أو استخدام الذكاء الاصطناعي:</small>
                         <button type="button" class="btn-xs btn-magic ai-generate-btn" data-target="projectOverview" title="توليد محلي بالكامل من بيانات دراستك — لا اتصال بأي مزوّد ذكاء اصطناعي خارجي">
-                            ✨ توليد بالذكاء الاصطناعي
+                            ${icon('i-sparkle')} توليد بالذكاء الاصطناعي
                         </button>
                     </div>
                     <textarea class="input exec-field" data-field="projectOverview" id="projectOverview" rows="4"
@@ -202,7 +218,7 @@ export class ExecutiveSummary {
                 <div class="overview-item full-width">
                     <div class="ai-toolbar flex-between mb-1">
                         <label for="exec-problemStatement">المشكلة التي يحلها المشروع</label>
-                        <button type="button" class="btn-xs btn-magic ai-field-btn" data-target="exec-problemStatement" title="ولّد بالذكاء الاصطناعي">✨ ولّد</button>
+                        <button type="button" class="btn-xs btn-magic ai-field-btn" data-target="exec-problemStatement" title="ولّد بالذكاء الاصطناعي">${icon('i-sparkle')} ولّد</button>
                     </div>
                     <textarea id="exec-problemStatement" class="input exec-field" data-field="problemStatement" rows="2"
                               placeholder="ما المشكلة أو الحاجة التي يلبيها مشروعك؟">${escapeHtml(execSummary.problemStatement || '')}</textarea>
@@ -210,7 +226,7 @@ export class ExecutiveSummary {
                 <div class="overview-item full-width">
                     <div class="ai-toolbar flex-between mb-1">
                         <label for="exec-uniqueValue">الميزة التنافسية الفريدة</label>
-                        <button type="button" class="btn-xs btn-magic ai-field-btn" data-target="exec-uniqueValue" title="ولّد بالذكاء الاصطناعي">✨ ولّد</button>
+                        <button type="button" class="btn-xs btn-magic ai-field-btn" data-target="exec-uniqueValue" title="ولّد بالذكاء الاصطناعي">${icon('i-sparkle')} ولّد</button>
                     </div>
                     <textarea id="exec-uniqueValue" class="input exec-field" data-field="uniqueValueProposition" rows="2"
                               placeholder="ما الذي يميز مشروعك عن المنافسين؟">${escapeHtml(execSummary.uniqueValueProposition || '')}</textarea>
@@ -226,11 +242,11 @@ export class ExecutiveSummary {
         const payback = ind.paybackPeriod ?? ind.payback ?? null;
 
         const highlights = [
-            { label: 'إجمالي الاستثمار', value: this.formatCurrency(inv), icon: '💰' },
-            { label: 'صافي القيمة الحالية', value: this.formatCurrency(ind.npv ?? 0), icon: '📈', positive: (ind.npv ?? 0) > 0 },
-            { label: 'معدل العائد الداخلي', value: `${((ind.irr ?? 0) * 100).toFixed(1)}%`, icon: '📊' },
-            { label: 'فترة الاسترداد', value: (payback != null && Number.isFinite(payback) && payback > 0 && payback < 900) ? `${payback.toFixed(1)} سنة` : 'غير محقق', icon: '⏱️' },
-            { label: 'العائد على الاستثمار', value: `${((ind.roi ?? 0) * 100).toFixed(0)}%`, icon: '💹' }
+            { label: 'إجمالي الاستثمار', value: this.formatCurrency(inv), icon: icon('i-bank') },
+            { label: 'صافي القيمة الحالية', value: this.formatCurrency(ind.npv ?? 0), icon: icon('i-chart'), positive: (ind.npv ?? 0) > 0 },
+            { label: 'معدل العائد الداخلي', value: `${((ind.irr ?? 0) * 100).toFixed(1)}%`, icon: icon('i-chart') },
+            { label: 'فترة الاسترداد', value: (payback != null && Number.isFinite(payback) && payback > 0 && payback < 900) ? `${payback.toFixed(1)} سنة` : 'غير محقق', icon: icon('i-clock') },
+            { label: 'العائد على الاستثمار', value: `${((ind.roi ?? 0) * 100).toFixed(0)}%`, icon: icon('i-chart') }
         ];
 
         return `
@@ -290,7 +306,7 @@ export class ExecutiveSummary {
         const items = warnings.slice(0, 4).map(m => `<li>${escapeHtml(m)}</li>`).join('');
         return `
             <div class="alert alert--warning" role="alert" style="margin-bottom:1rem;">
-                <strong>🔍 نظرة المدقق — انتبه قبل الاعتماد على النتيجة:</strong>
+                <strong>${icon('i-shield')} نظرة المدقق — انتبه قبل الاعتماد على النتيجة:</strong>
                 <ul style="margin:.4rem 0 .2rem; padding-inline-start:1.2rem;">${items}</ul>
                 <small class="text-muted">راجع «هل أرقامي منطقية؟» و«نظرة المدقق» في اللوحة المالية للتفاصيل.</small>
             </div>`;
@@ -318,7 +334,7 @@ export class ExecutiveSummary {
                 ${risks.map(risk => `
                     <div class="risk-item">
                         <span class="risk-severity ${sev(risk) >= 9 ? 'critical' : 'high'}">
-                            ${sev(risk) >= 9 ? '🔴' : '🟡'}
+                            ${sev(risk) >= 9 ? 'حرج' : 'عالٍ'}
                         </span>
                         <span class="risk-name">${risk.name ? escapeHtml(risk.name) : (risk.description ? escapeHtml(risk.description) : 'خطر غير محدد')}</span>
                         <span class="risk-mitigation">${risk.mitigation ? escapeHtml(risk.mitigation) : 'لا توجد خطة مواجهة'}</span>
@@ -380,9 +396,9 @@ export class ExecutiveSummary {
         return `
             <div class="recommendation-container">
                 <div class="decision-banner ${bannerClass}">
-                    ${recommendation === 'go' ? '✅ المشروع مجدي - GO' :
-                recommendation === 'nogo' ? '❌ المشروع غير مجدي - NO GO' :
-                    '⚠️ يحتاج مراجعة - CONDITIONAL'}
+                    ${recommendation === 'go' ? `${icon('i-check')} المشروع مجدي - GO` :
+                recommendation === 'nogo' ? `${icon('i-x')} المشروع غير مجدي - NO GO` :
+                    `${icon('i-warning')} يحتاج مراجعة - CONDITIONAL`}
                 </div>
                 <p class="recommendation-message">${message}</p>
                 <div class="recommended-actions">
@@ -480,7 +496,7 @@ export class ExecutiveSummary {
 
                 // UI Loading State
                 e.target.disabled = true;
-                e.target.textContent = 'جاري التفكير... 🧠';
+                e.target.textContent = 'جاري التفكير...';
                 this.isGenerating = true;
 
                 // Collect Context
@@ -510,15 +526,15 @@ export class ExecutiveSummary {
                     }
 
                     // Success feedback
-                    e.target.textContent = '✅ تم التوليد';
+                    e.target.textContent = 'تم التوليد';
                     setTimeout(() => {
-                        e.target.textContent = '✨ توليد بالذكاء الاصطناعي';
+                        e.target.innerHTML = `${icon('i-sparkle')} توليد بالذكاء الاصطناعي`;
                     }, 2000);
                 } catch (error) {
                     console.error('AI Generation error:', error);
-                    e.target.textContent = '❌ فشل التوليد';
+                    e.target.textContent = 'فشل التوليد';
                     setTimeout(() => {
-                        e.target.textContent = '✨ توليد بالذكاء الاصطناعي';
+                        e.target.innerHTML = `${icon('i-sparkle')} توليد بالذكاء الاصطناعي`;
                     }, 3000);
                 } finally {
                     // Reset Button
@@ -546,13 +562,13 @@ export class ExecutiveSummary {
                         const suggestion = InternalAIGenerator.generateFieldSuggestion(targetId, originalVal, state);
                         inputEl.value = suggestion;
                         inputEl.dispatchEvent(new Event('change'));
-                        toast.success('تم اقتراح النص بنجاح ✨');
+                        toast.success('تم اقتراح النص بنجاح');
                     } catch (err) {
                         console.error(err);
                         toast.error('حدث خطأ أثناء التوليد');
                     } finally {
                         e.target.disabled = false;
-                        e.target.textContent = '✨ ولّد';
+                        e.target.innerHTML = `${icon('i-sparkle')} ولّد`;
                         this.isGenerating = false;
                     }
                 }, 400);

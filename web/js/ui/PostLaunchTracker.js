@@ -6,6 +6,9 @@ import { calculateStudy as runFullModel } from '../core/engine.js';
 import { SECTIONS } from '../core/schema.js';
 import { escapeHtml } from '../utils/escape.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class PostLaunchTracker {
     constructor(containerId, store) {
         this.container = document.getElementById(containerId);
@@ -31,10 +34,9 @@ export class PostLaunchTracker {
             <div class="tracker-container animate-entry">
                 <div class="section-header">
                     <h2 class="text-xl font-bold">مراقبة الأداء الفعلي</h2>
-                    <p class="text-muted">مقارنة الأداء الحقيقي للمشروع مع ما تم التخطيط له في دراسة الجدوى لمعرفة الانحرافات.</p>
-                    <p class="text-sm text-muted">هذه الخطوة اختيارية بالكامل ومخصّصة لما بعد افتتاح المشروع فعلياً — لا حاجة لتعبئتها الآن، ويمكنك العودة إليها لاحقاً بعد بدء التشغيل.</p>
+                    <p class="text-muted">قارن الأداء الفعلي بعد الافتتاح بتوقعات الدراسة. خطوة اختيارية — عُد إليها بعد بدء التشغيل.</p>
                     <div class="alert alert--info mt-3" style="font-size: 0.85rem;">
-                        <strong>حكم النجاح/الفشل:</strong> من الأشهر الأولى: الخسائر يجب أن تتناقص، الأرباح تتزايد. إذا خسارة شهر ن &gt; خسارة شهر ن-1 لمدة 3 أشهر متتالية — انتبه. بعد سنة أعد التقييم جذرياً.
+                        إشارة تحذير مبكرة: خسائر تتزايد 3 أشهر متتالية بدل أن تتناقص.
                     </div>
                 </div>
 
@@ -71,7 +73,7 @@ export class PostLaunchTracker {
 
                 <!-- Comparison Chart -->
                 <div class="card glass-card mt-4">
-                    <h3 class="card-title text-center">مقارنة الإيرادات: المخطط 🤝 الفعلي</h3>
+                    <h3 class="card-title text-center">مقارنة الإيرادات: المخطط مقابل الفعلي</h3>
                     <div class="chart-container" style="height: 300px;">
                         <canvas id="trackerChart"></canvas>
                     </div>
@@ -101,7 +103,7 @@ export class PostLaunchTracker {
         if (enteredRev.length === 0) {
             return `<div class="variance-item">
                 <span class="label">انحراف الإيرادات</span>
-                <small>ℹ️ لم تُدخل بيانات فعلية بعد — أدخل إيراد شهر واحد على الأقل لبدء تحليل الانحراف.</small>
+                <small>${icon('i-info')} لم تُدخل بيانات فعلية بعد — أدخل إيراد شهر واحد على الأقل لبدء تحليل الانحراف.</small>
             </div>`;
         }
         const totalActualRev = enteredRev.reduce((sum, m) => sum + parseFloat(m.revenue), 0);
@@ -118,15 +120,15 @@ export class PostLaunchTracker {
             <div class="variance-item ${revVariance >= 0 ? 'positive' : 'negative'}">
                 <span class="label">انحراف الإيرادات (Revenue Variance)</span>
                 <span class="value">${this.formatCurrency(revVariance)} (${revVarPercent.toFixed(1)}%)</span>
-                <small>${revVariance >= 0 ? '🟢 أداء أعلى من المتوقع' : '🔴 أداء أقل من المخطط'}</small>
+                <small>${revVariance >= 0 ? `<span class="status-badge status-badge--positive">أداء أعلى من المتوقع</span>` : `<span class="status-badge status-badge--negative">أداء أقل من المخطط</span>`}</small>
             </div>
             <div class="variance-item ${opexVariance <= 0 ? 'positive' : 'negative'} mt-4">
                 <span class="label">انحراف المصاريف (Expense Variance)</span>
                 <span class="value">${this.formatCurrency(opexVariance)}</span>
-                <small>${opexVariance <= 0 ? '🟢 توفير في التكاليف' : '🔴 تجاوز للميزانية المخططة'}</small>
+                <small>${opexVariance <= 0 ? `<span class="status-badge status-badge--positive">توفير في التكاليف</span>` : `<span class="status-badge status-badge--negative">تجاوز للميزانية المخططة</span>`}</small>
             </div>
             <div class="valuation-tip mt-4">
-                <p>💡 <strong>ملاحظة:</strong> الأرقام المخططة مبنية على متوسط أول سنة في دراستك (Year 1 Average).</p>
+                <p>${icon('i-lightbulb')} <strong>ملاحظة:</strong> الأرقام المخططة مبنية على متوسط أول سنة في دراستك (Year 1 Average).</p>
             </div>
         `;
     }
