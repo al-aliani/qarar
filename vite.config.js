@@ -125,6 +125,27 @@ export default defineConfig({
                     res.setHeader('Content-Type', types[ext] || 'application/octet-stream');
                     res.end(data);
                 });
+                
+                const serveDir = (prefix, targetDir) => {
+                    server.middlewares.use(prefix, (req, res, next) => {
+                        let pathname = (req.url?.split('?')[0] || '/').replace(/^\//, '');
+                        try { pathname = decodeURIComponent(pathname); } catch (_) {}
+                        if (pathname.includes('..')) return next();
+                        const file = resolve(__dirname, targetDir, pathname);
+                        if (!file.startsWith(resolve(__dirname, targetDir)) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+                            return next();
+                        }
+                        const data = fs.readFileSync(file);
+                        const ext = (pathname.split('.').pop() || '').toLowerCase();
+                        const types = { pdf: 'application/pdf', jpg: 'image/jpeg', png: 'image/png', zip: 'application/zip', rar: 'application/x-rar-compressed' };
+                        res.setHeader('Content-Type', types[ext] || 'application/octet-stream');
+                        res.end(data);
+                    });
+                };
+                
+                serveDir('/studies', 'درسات جدوى');
+                serveDir('/databases', 'ملفات قواعد البيانات');
+                serveDir('/hr-files', 'ملفات الموارد البشرية/الموارد البشرية');
             }
         }
     ],

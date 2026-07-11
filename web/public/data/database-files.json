@@ -1,0 +1,379 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-11",
+  "sourceFolder": "ملفات قواعد البيانات",
+  "totalFiles": 23,
+  "totalGroups": 13,
+  "groups": [
+    {
+      "id": "0eaf79b3f04a",
+      "label": "الأجهزة الطبية",
+      "sourceFolder": "أجهزة طبية",
+      "description": "قواعد بيانات الجهات والشركات العاملة في مجال الأجهزة الطبية.",
+      "count": 2,
+      "files": [
+        {
+          "id": "ff53903b2a18",
+          "title": "أجهزة طبية نسخة تجريبية",
+          "filename": "أجهزة-طبية-sample.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%A3%D8%AC%D9%87%D8%B2%D8%A9%20%D8%B7%D8%A8%D9%8A%D8%A9/%D8%A3%D8%AC%D9%87%D8%B2%D8%A9-%D8%B7%D8%A8%D9%8A%D8%A9-sample.xlsx",
+          "downloadName": "أجهزة طبية نسخة تجريبية.xlsx",
+          "sizeLabel": "11 كيلوبايت",
+          "isSample": true
+        },
+        {
+          "id": "cf145d5ec2bb",
+          "title": "أجهزة طبية",
+          "filename": "أجهزة-طبية.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%A3%D8%AC%D9%87%D8%B2%D8%A9%20%D8%B7%D8%A8%D9%8A%D8%A9/%D8%A3%D8%AC%D9%87%D8%B2%D8%A9-%D8%B7%D8%A8%D9%8A%D8%A9.xlsx",
+          "downloadName": "أجهزة طبية.xlsx",
+          "sizeLabel": "416 كيلوبايت",
+          "isSample": false
+        }
+      ]
+    },
+    {
+      "id": "5a9edd4ff272",
+      "label": "الاشتراكات الرقمية",
+      "sourceFolder": "أسرار الإشتراكات الرقمية",
+      "description": "مادة مرجعية عن الاشتراكات والخدمات الرقمية.",
+      "count": 1,
+      "files": [
+        {
+          "id": "28047607ceb3",
+          "title": "أسرار الإشتراكات الرقمية",
+          "filename": "أسرار الإشتراكات الرقمية .pdf",
+          "format": "وثيقة",
+          "formatLabel": "وثيقة",
+          "url": "/databases/%D8%A3%D8%B3%D8%B1%D8%A7%D8%B1%20%D8%A7%D9%84%D8%A5%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%D8%A7%D8%AA%20%D8%A7%D9%84%D8%B1%D9%82%D9%85%D9%8A%D8%A9/%D8%A3%D8%B3%D8%B1%D8%A7%D8%B1%20%D8%A7%D9%84%D8%A5%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%D8%A7%D8%AA%20%D8%A7%D9%84%D8%B1%D9%82%D9%85%D9%8A%D8%A9%20.pdf",
+          "downloadName": "أسرار الإشتراكات الرقمية.pdf",
+          "sizeLabel": "991 كيلوبايت",
+          "isSample": false
+        }
+      ]
+    },
+    {
+      "id": "62031c825102",
+      "label": "مكاتب الاستقدام",
+      "sourceFolder": "إستقدام",
+      "description": "دليل مكاتب الاستقدام وبيانات التواصل معها.",
+      "count": 1,
+      "files": [
+        {
+          "id": "83585b6074a3",
+          "title": "دليل مكاتب الإستقدام",
+          "filename": "دليل مكاتب الإستقدام.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%A5%D8%B3%D8%AA%D9%82%D8%AF%D8%A7%D9%85/%D8%AF%D9%84%D9%8A%D9%84%20%D9%85%D9%83%D8%A7%D8%AA%D8%A8%20%D8%A7%D9%84%D8%A5%D8%B3%D8%AA%D9%82%D8%AF%D8%A7%D9%85.xlsx",
+          "downloadName": "دليل مكاتب الإستقدام.xlsx",
+          "sizeLabel": "80 كيلوبايت",
+          "isSample": false
+        }
+      ]
+    },
+    {
+      "id": "a7586bdd6ee0",
+      "label": "المطاعم والمقاهي",
+      "sourceFolder": "المطاعم والكافيهات",
+      "description": "بيانات المطاعم والمقاهي ومعلومات التواصل والتصنيف.",
+      "count": 3,
+      "files": [
+        {
+          "id": "99e4a19c27e1",
+          "title": "عينة مطاعم",
+          "filename": "عينة-مطاعم.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%A7%D9%84%D9%85%D8%B7%D8%A7%D8%B9%D9%85%20%D9%88%D8%A7%D9%84%D9%83%D8%A7%D9%81%D9%8A%D9%87%D8%A7%D8%AA/%D8%B9%D9%8A%D9%86%D8%A9-%D9%85%D8%B7%D8%A7%D8%B9%D9%85.xlsx",
+          "downloadName": "عينة مطاعم.xlsx",
+          "sizeLabel": "15 كيلوبايت",
+          "isSample": false
+        },
+        {
+          "id": "73678618c696",
+          "title": "كافيهات عينة",
+          "filename": "كافيهات-عينة.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%A7%D9%84%D9%85%D8%B7%D8%A7%D8%B9%D9%85%20%D9%88%D8%A7%D9%84%D9%83%D8%A7%D9%81%D9%8A%D9%87%D8%A7%D8%AA/%D9%83%D8%A7%D9%81%D9%8A%D9%87%D8%A7%D8%AA-%D8%B9%D9%8A%D9%86%D8%A9.xlsx",
+          "downloadName": "كافيهات عينة.xlsx",
+          "sizeLabel": "13 كيلوبايت",
+          "isSample": false
+        },
+        {
+          "id": "4e4fa739df16",
+          "title": "مطاعم وكافيهات",
+          "filename": "مطاعم-وكافيهات.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%A7%D9%84%D9%85%D8%B7%D8%A7%D8%B9%D9%85%20%D9%88%D8%A7%D9%84%D9%83%D8%A7%D9%81%D9%8A%D9%87%D8%A7%D8%AA/%D9%85%D8%B7%D8%A7%D8%B9%D9%85-%D9%88%D9%83%D8%A7%D9%81%D9%8A%D9%87%D8%A7%D8%AA.xlsx",
+          "downloadName": "مطاعم وكافيهات.xlsx",
+          "sizeLabel": "668 كيلوبايت",
+          "isSample": false
+        }
+      ]
+    },
+    {
+      "id": "93039a9dfb8f",
+      "label": "المتاجر الإلكترونية",
+      "sourceFolder": "دليل المتاجر الإلكترونية",
+      "description": "دليل المتاجر الإلكترونية والأنشطة المسجلة.",
+      "count": 2,
+      "files": [
+        {
+          "id": "861ab3a2b87e",
+          "title": "بيانات متاجر الكترونية بالسعودية",
+          "filename": "بيانات متاجر الكترونية بالسعودية.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%AF%D9%84%D9%8A%D9%84%20%D8%A7%D9%84%D9%85%D8%AA%D8%A7%D8%AC%D8%B1%20%D8%A7%D9%84%D8%A5%D9%84%D9%83%D8%AA%D8%B1%D9%88%D9%86%D9%8A%D8%A9/%D8%A8%D9%8A%D8%A7%D9%86%D8%A7%D8%AA%20%D9%85%D8%AA%D8%A7%D8%AC%D8%B1%20%D8%A7%D9%84%D9%83%D8%AA%D8%B1%D9%88%D9%86%D9%8A%D8%A9%20%D8%A8%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9.xlsx",
+          "downloadName": "بيانات متاجر الكترونية بالسعودية.xlsx",
+          "sizeLabel": "13.8 ميجابايت",
+          "isSample": false
+        },
+        {
+          "id": "3477f0c4184b",
+          "title": "بيانات متاجر الكترونية بالسعودية نسخة تجريبية",
+          "filename": "‏‏بيانات متاجر الكترونية بالسعودية نسخة تجريبية .xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%AF%D9%84%D9%8A%D9%84%20%D8%A7%D9%84%D9%85%D8%AA%D8%A7%D8%AC%D8%B1%20%D8%A7%D9%84%D8%A5%D9%84%D9%83%D8%AA%D8%B1%D9%88%D9%86%D9%8A%D8%A9/%E2%80%8F%E2%80%8F%D8%A8%D9%8A%D8%A7%D9%86%D8%A7%D8%AA%20%D9%85%D8%AA%D8%A7%D8%AC%D8%B1%20%D8%A7%D9%84%D9%83%D8%AA%D8%B1%D9%88%D9%86%D9%8A%D8%A9%20%D8%A8%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9%20%D9%86%D8%B3%D8%AE%D8%A9%20%D8%AA%D8%AC%D8%B1%D9%8A%D8%A8%D9%8A%D8%A9%20.xlsx",
+          "downloadName": "بيانات متاجر الكترونية بالسعودية نسخة تجريبية.xlsx",
+          "sizeLabel": "14 كيلوبايت",
+          "isSample": true
+        }
+      ]
+    },
+    {
+      "id": "40eb9338e00b",
+      "label": "المصانع السعودية",
+      "sourceFolder": "دليل المصانع السعودية",
+      "description": "دليل المصانع السعودية وبياناتها التعريفية.",
+      "count": 2,
+      "files": [
+        {
+          "id": "ea4fdf63e223",
+          "title": "نسخة دليل المصانع السعودية",
+          "filename": "نسخة دليل المصانع السعودية.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%AF%D9%84%D9%8A%D9%84%20%D8%A7%D9%84%D9%85%D8%B5%D8%A7%D9%86%D8%B9%20%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9/%D9%86%D8%B3%D8%AE%D8%A9%20%D8%AF%D9%84%D9%8A%D9%84%20%D8%A7%D9%84%D9%85%D8%B5%D8%A7%D9%86%D8%B9%20%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9.xlsx",
+          "downloadName": "نسخة دليل المصانع السعودية.xlsx",
+          "sizeLabel": "1.1 ميجابايت",
+          "isSample": false
+        },
+        {
+          "id": "aa8da4af5fec",
+          "title": "نسخة تجريبية دليل المصانع السعودية",
+          "filename": "‏‏نسخة تجريبية دليل المصانع السعودية .xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%AF%D9%84%D9%8A%D9%84%20%D8%A7%D9%84%D9%85%D8%B5%D8%A7%D9%86%D8%B9%20%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9/%E2%80%8F%E2%80%8F%D9%86%D8%B3%D8%AE%D8%A9%20%D8%AA%D8%AC%D8%B1%D9%8A%D8%A8%D9%8A%D8%A9%20%D8%AF%D9%84%D9%8A%D9%84%20%D8%A7%D9%84%D9%85%D8%B5%D8%A7%D9%86%D8%B9%20%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9%20.xlsx",
+          "downloadName": "نسخة تجريبية دليل المصانع السعودية.xlsx",
+          "sizeLabel": "286 كيلوبايت",
+          "isSample": true
+        }
+      ]
+    },
+    {
+      "id": "515ff8c0511f",
+      "label": "شركات المقاولات",
+      "sourceFolder": "دليل شركات المقاولات",
+      "description": "بيانات شركات المقاولات ومواقعها ووسائل التواصل.",
+      "count": 2,
+      "files": [
+        {
+          "id": "535301dc62f0",
+          "title": "داتا شركات مقاولات سعودية",
+          "filename": "داتا شركات مقاولات سعودية.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%AF%D9%84%D9%8A%D9%84%20%D8%B4%D8%B1%D9%83%D8%A7%D8%AA%20%D8%A7%D9%84%D9%85%D9%82%D8%A7%D9%88%D9%84%D8%A7%D8%AA/%D8%AF%D8%A7%D8%AA%D8%A7%20%D8%B4%D8%B1%D9%83%D8%A7%D8%AA%20%D9%85%D9%82%D8%A7%D9%88%D9%84%D8%A7%D8%AA%20%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9.xlsx",
+          "downloadName": "داتا شركات مقاولات سعودية.xlsx",
+          "sizeLabel": "1.8 ميجابايت",
+          "isSample": false
+        },
+        {
+          "id": "58909b0c8491",
+          "title": "داتا شركات مقاولات سعودية نسخة تجريبية",
+          "filename": "‏‏داتا شركات مقاولات سعودية -  نسخة تجريبية.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%AF%D9%84%D9%8A%D9%84%20%D8%B4%D8%B1%D9%83%D8%A7%D8%AA%20%D8%A7%D9%84%D9%85%D9%82%D8%A7%D9%88%D9%84%D8%A7%D8%AA/%E2%80%8F%E2%80%8F%D8%AF%D8%A7%D8%AA%D8%A7%20%D8%B4%D8%B1%D9%83%D8%A7%D8%AA%20%D9%85%D9%82%D8%A7%D9%88%D9%84%D8%A7%D8%AA%20%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9%20-%20%20%D9%86%D8%B3%D8%AE%D8%A9%20%D8%AA%D8%AC%D8%B1%D9%8A%D8%A8%D9%8A%D8%A9.xlsx",
+          "downloadName": "داتا شركات مقاولات سعودية نسخة تجريبية.xlsx",
+          "sizeLabel": "17 كيلوبايت",
+          "isSample": true
+        }
+      ]
+    },
+    {
+      "id": "23e04db38857",
+      "label": "الشركات الإدارية والبرمجية",
+      "sourceFolder": "شركات ادارية وبرمجية",
+      "description": "بيانات الشركات الإدارية والبرمجية والخدمات التي تقدمها.",
+      "count": 2,
+      "files": [
+        {
+          "id": "cab0b1547eae",
+          "title": "شركات ادارية وبرمجية (1)",
+          "filename": "شركات-ادارية-وبرمجية (1).xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%B4%D8%B1%D9%83%D8%A7%D8%AA%20%D8%A7%D8%AF%D8%A7%D8%B1%D9%8A%D8%A9%20%D9%88%D8%A8%D8%B1%D9%85%D8%AC%D9%8A%D8%A9/%D8%B4%D8%B1%D9%83%D8%A7%D8%AA-%D8%A7%D8%AF%D8%A7%D8%B1%D9%8A%D8%A9-%D9%88%D8%A8%D8%B1%D9%85%D8%AC%D9%8A%D8%A9%20%281%29.xlsx",
+          "downloadName": "شركات ادارية وبرمجية (1).xlsx",
+          "sizeLabel": "480 كيلوبايت",
+          "isSample": false
+        },
+        {
+          "id": "6b5181ca8c37",
+          "title": "شركات ادارية وبرمجية (2)",
+          "filename": "شركات-ادارية-وبرمجية (2).xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D8%B4%D8%B1%D9%83%D8%A7%D8%AA%20%D8%A7%D8%AF%D8%A7%D8%B1%D9%8A%D8%A9%20%D9%88%D8%A8%D8%B1%D9%85%D8%AC%D9%8A%D8%A9/%D8%B4%D8%B1%D9%83%D8%A7%D8%AA-%D8%A7%D8%AF%D8%A7%D8%B1%D9%8A%D8%A9-%D9%88%D8%A8%D8%B1%D9%85%D8%AC%D9%8A%D8%A9%20%282%29.xlsx",
+          "downloadName": "شركات ادارية وبرمجية (2).xlsx",
+          "sizeLabel": "16 كيلوبايت",
+          "isSample": false
+        }
+      ]
+    },
+    {
+      "id": "1651e759de49",
+      "label": "العطور والبخور",
+      "sourceFolder": "مؤسسات عطور وبخور",
+      "description": "بيانات المؤسسات العاملة في العطور والبخور والعود.",
+      "count": 1,
+      "files": [
+        {
+          "id": "8e7814839152",
+          "title": "مؤسسات عود بخور عطور",
+          "filename": "مؤسسات عود-بخور-عطور.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D9%85%D8%A4%D8%B3%D8%B3%D8%A7%D8%AA%20%D8%B9%D8%B7%D9%88%D8%B1%20%D9%88%D8%A8%D8%AE%D9%88%D8%B1/%D9%85%D8%A4%D8%B3%D8%B3%D8%A7%D8%AA%20%D8%B9%D9%88%D8%AF-%D8%A8%D8%AE%D9%88%D8%B1-%D8%B9%D8%B7%D9%88%D8%B1.xlsx",
+          "downloadName": "مؤسسات عود بخور عطور.xlsx",
+          "sizeLabel": "186 كيلوبايت",
+          "isSample": false
+        }
+      ]
+    },
+    {
+      "id": "a7764174759f",
+      "label": "مصانع الأعلاف",
+      "sourceFolder": "مصانع الأعلاف",
+      "description": "بيانات مصانع الأعلاف والجهات العاملة في القطاع.",
+      "count": 2,
+      "files": [
+        {
+          "id": "f019eb1fa8eb",
+          "title": "أعلاف",
+          "filename": "أعلاف.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D9%85%D8%B5%D8%A7%D9%86%D8%B9%20%D8%A7%D9%84%D8%A3%D8%B9%D9%84%D8%A7%D9%81/%D8%A3%D8%B9%D9%84%D8%A7%D9%81.xlsx",
+          "downloadName": "أعلاف.xlsx",
+          "sizeLabel": "54 كيلوبايت",
+          "isSample": false
+        },
+        {
+          "id": "99f5661d46f0",
+          "title": "ملف بيانات مصانع الأعلاف",
+          "filename": "أعلافsample.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D9%85%D8%B5%D8%A7%D9%86%D8%B9%20%D8%A7%D9%84%D8%A3%D8%B9%D9%84%D8%A7%D9%81/%D8%A3%D8%B9%D9%84%D8%A7%D9%81sample.xlsx",
+          "downloadName": "ملف بيانات مصانع الأعلاف.xlsx",
+          "sizeLabel": "10 كيلوبايت",
+          "isSample": true
+        }
+      ]
+    },
+    {
+      "id": "c3220d5c9834",
+      "label": "مصانع الأدوية",
+      "sourceFolder": "مصانع الدواء",
+      "description": "بيانات مصانع الأدوية والجهات المرخصة في القطاع.",
+      "count": 2,
+      "files": [
+        {
+          "id": "391162e1f5a6",
+          "title": "دوا",
+          "filename": "دوا.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D9%85%D8%B5%D8%A7%D9%86%D8%B9%20%D8%A7%D9%84%D8%AF%D9%88%D8%A7%D8%A1/%D8%AF%D9%88%D8%A7.xlsx",
+          "downloadName": "دوا.xlsx",
+          "sizeLabel": "158 كيلوبايت",
+          "isSample": false
+        },
+        {
+          "id": "d92e65db3bc1",
+          "title": "ملف بيانات مصانع الأدوية",
+          "filename": "دواsample.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D9%85%D8%B5%D8%A7%D9%86%D8%B9%20%D8%A7%D9%84%D8%AF%D9%88%D8%A7%D8%A1/%D8%AF%D9%88%D8%A7sample.xlsx",
+          "downloadName": "ملف بيانات مصانع الأدوية.xlsx",
+          "sizeLabel": "12 كيلوبايت",
+          "isSample": true
+        }
+      ]
+    },
+    {
+      "id": "7e737af2a2c7",
+      "label": "مصانع الأغذية",
+      "sourceFolder": "مصانع الغذاء",
+      "description": "بيانات مصانع ومستودعات الأغذية.",
+      "count": 2,
+      "files": [
+        {
+          "id": "02890a0bac0f",
+          "title": "ملف بيانات مصانع الأغذية",
+          "filename": "الغذاsample.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D9%85%D8%B5%D8%A7%D9%86%D8%B9%20%D8%A7%D9%84%D8%BA%D8%B0%D8%A7%D8%A1/%D8%A7%D9%84%D8%BA%D8%B0%D8%A7sample.xlsx",
+          "downloadName": "ملف بيانات مصانع الأغذية.xlsx",
+          "sizeLabel": "11 كيلوبايت",
+          "isSample": true
+        },
+        {
+          "id": "b4dcf9cef88b",
+          "title": "مصنع ومستودعات اغذية",
+          "filename": "مصنع ومستودعات اغذية .xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D9%85%D8%B5%D8%A7%D9%86%D8%B9%20%D8%A7%D9%84%D8%BA%D8%B0%D8%A7%D8%A1/%D9%85%D8%B5%D9%86%D8%B9%20%D9%88%D9%85%D8%B3%D8%AA%D9%88%D8%AF%D8%B9%D8%A7%D8%AA%20%D8%A7%D8%BA%D8%B0%D9%8A%D8%A9%20.xlsx",
+          "downloadName": "مصنع ومستودعات اغذية.xlsx",
+          "sizeLabel": "19 كيلوبايت",
+          "isSample": false
+        }
+      ]
+    },
+    {
+      "id": "08f76a60cd54",
+      "label": "المكاتب الهندسية",
+      "sourceFolder": "مكاتب هندسية",
+      "description": "دليل المكاتب الهندسية وبيانات الاتصال بها.",
+      "count": 1,
+      "files": [
+        {
+          "id": "911630e5e821",
+          "title": "مكاتب هندسية",
+          "filename": "مكاتب هندسية.xlsx",
+          "format": "جدول",
+          "formatLabel": "جدول بيانات",
+          "url": "/databases/%D9%85%D9%83%D8%A7%D8%AA%D8%A8%20%D9%87%D9%86%D8%AF%D8%B3%D9%8A%D8%A9/%D9%85%D9%83%D8%A7%D8%AA%D8%A8%20%D9%87%D9%86%D8%AF%D8%B3%D9%8A%D8%A9.xlsx",
+          "downloadName": "مكاتب هندسية.xlsx",
+          "sizeLabel": "60 كيلوبايت",
+          "isSample": false
+        }
+      ]
+    }
+  ]
+}

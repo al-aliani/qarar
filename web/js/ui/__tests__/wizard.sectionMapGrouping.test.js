@@ -84,4 +84,32 @@ describe('StudyJourney — مسار موحّد ومصنّف لكل الخطوا�
         expect(previous.textContent).not.toContain('✓');
         expect(previous.getAttribute('title')).toBeNull();
     });
+
+    it('can present the eight classifications as the primary journey', () => {
+        const categories = SIDEBAR_SECTIONS.map(section => ({ id: section.id, label: section.label }));
+        const categorySections = categories.map((category, index) => ({
+            id: category.id,
+            label: category.label,
+            range: [index, index]
+        }));
+        document.body.innerHTML = `
+            <div id="headerStageBar"></div>
+            <div id="mobileStageIndicator"></div>
+            <nav id="breadcrumbBar"><button id="btnOpenStudyMap">المسار</button></nav>
+            <dialog id="studyMapDialog"></dialog>`;
+        const journey = new StudyJourney({
+            steps: categories,
+            masterSteps: categories,
+            sections: categorySections,
+            unitLabel: 'التصنيف',
+            mapHeading: 'انتقل إلى أي تصنيف'
+        });
+
+        journey.update(3);
+
+        expect(document.querySelectorAll('[data-study-step]')).toHaveLength(8);
+        expect(document.querySelectorAll('.study-map__group')).toHaveLength(1);
+        expect(document.getElementById('headerStageBar').textContent).toContain('التصنيف ٤ من ٨');
+        expect(document.getElementById('btnOpenStudyMap').getAttribute('aria-label')).toContain('تصنيفات الدراسة');
+    });
 });

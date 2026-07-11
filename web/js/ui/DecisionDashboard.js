@@ -130,9 +130,6 @@ export class DecisionDashboard {
 
         this.container.innerHTML = `
             <div class="decision-dashboard animate-entry">
-                <div class="alert alert--info dd-note">
-                    <strong>أفضل الممارسات المحلية:</strong> لا تتخذ قرار الاستقالة أو الاستثمار الكبير قبل إكمال الدراسة.
-                </div>
                 ${investmentDataWarningHtml(investmentDataWarning(state, results))}
                 ${this.renderFinancingGate(financingDiagnostics)}
                 <div class="dd-verdict">
@@ -253,7 +250,7 @@ export class DecisionDashboard {
                     <div class="card dd-status dd-status--success">
                         <div class="dd-status__head">
                             <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
-                            <h4 class="dd-status__title">الدراسة اجتازت فحص الجودة (QA Gate)</h4>
+                            <h4 class="dd-status__title">الدراسة اجتازت فحص الجودة</h4>
                         </div>
                     </div>
                 ` : ''}

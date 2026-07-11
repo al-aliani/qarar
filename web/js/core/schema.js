@@ -161,7 +161,7 @@ export function createEmptyStudy() {
             },
             // قائمة خطوات جمع المعلومات (زيارات ميدانية)
             dataGatheringChecklist: [
-                { step: "أسبوع بحث أونلاين (كلمات مفتاحية، جروبات، إعلانات، أوليكس، بيانات حكومية)", done: false, notes: "" },
+                { step: "بحث أونلاين (خرائط جوجل، حراج، بيانات حكومية، حسابات المنافسين)", done: false, notes: "" },
                 { step: "زيارة منافسين", done: false, notes: "" },
                 { step: "زيارة جهات حكومية (تراخيص)", done: false, notes: "" },
                 { step: "زيارة جهات تمويل", done: false, notes: "" }

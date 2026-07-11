@@ -11,6 +11,9 @@ import { FundingSimulator } from './widgets/FundingSimulator.js';
 import { FounderCardGenerator } from './widgets/FounderCardGenerator.js';
 import { SensitivityWidget } from './widgets/SensitivityWidget.js';
 import { SampleReportModal } from './SampleReportModal.js';
+import { ReadyStudiesView } from './ReadyStudiesView.js';
+import { HRFilesView } from './HRFilesView.js';
+import { DatabaseFilesView } from './DatabaseFilesView.js';
 import { STEPS, SIDEBAR_SECTIONS } from '../core/wizardSteps.js';
 import { DATA_SOURCE_CATALOG } from '../services/DataConnectors.js';
 
@@ -90,6 +93,9 @@ export class DashboardView {
         this.options = options;
         Object.assign(this, options); // for template: this.onShowX, this.onStartQuickFeasibility, etc.
         this.currentUser = null;
+        this.readyStudiesView = null;
+        this.hrFilesView = null;
+        this.databaseFilesView = null;
     }
 
     async render() {
@@ -311,7 +317,7 @@ export class DashboardView {
                 return stored === 'dark' ? 'dark' : 'light';
             } catch (_) { return 'light'; }
         })();
-        const activeHomePanel = ['studies', 'engines', 'support'].includes(this.activeHomePanel)
+        const activeHomePanel = ['studies', 'engines', 'support', 'additional', 'databases', 'hr'].includes(this.activeHomePanel)
             ? this.activeHomePanel
             : 'studies';
         const allSupportTools = toolkitGroups.flatMap(group => group.tools);
@@ -321,7 +327,10 @@ export class DashboardView {
         const homePanelId = (panel) => ({
             studies: 'homePanel-studies',
             engines: 'toolsAndEngines',
-            support: 'studyToolkits'
+            support: 'studyToolkits',
+            additional: 'additionalReadyStudies',
+            databases: 'databaseFilesRootPanel',
+            hr: 'hrFilesRootPanel'
         }[panel] || 'homePanel-studies');
         const homeNavButton = (panel, iconName, title, desc, badge) => `
             <button type="button"
@@ -382,6 +391,9 @@ export class DashboardView {
                             ${homeNavButton('studies', 'folder', 'دراساتك', 'مشاريعك المحفوظة والتنظيم', filtered.length)}
                             ${homeNavButton('engines', 'chart', 'الأدوات والمحرّكات', 'اختصارات خطوات الدراسة والنتائج', STEPS.length)}
                             ${homeNavButton('support', 'clipboard', 'أدوات مساندة للدراسة', 'جمع بيانات، تحقق، تصدير، وربط', supportToolsCount)}
+                            ${homeNavButton('additional', 'book', 'دراسات جدوى جاهزة', 'ملفات جاهزة للتحميل', 'ملفات')}
+                            ${homeNavButton('databases', 'list', 'قواعد بيانات', 'أدلة وبيانات القطاعات', 'ملفات')}
+                            ${homeNavButton('hr', 'users', 'الموارد البشرية', 'نماذج ووصف وظيفي', 'ملفات')}
                         </div>
                     </aside>
 
@@ -430,6 +442,18 @@ export class DashboardView {
         }).join('')}
                                 </div>
                             `}
+                        </section>
+
+                        <section class="dv-section dv-home-panel" id="additionalReadyStudies" data-home-panel="additional" ${activeHomePanel !== 'additional' ? 'hidden' : ''}>
+                            <div id="readyStudiesRoot"></div>
+                        </section>
+
+                        <section class="dv-section dv-home-panel" id="databaseFilesRootPanel" data-home-panel="databases" ${activeHomePanel !== 'databases' ? 'hidden' : ''}>
+                            <div id="databaseFilesRoot"></div>
+                        </section>
+
+                        <section class="dv-section dv-home-panel" id="hrFilesRootPanel" data-home-panel="hr" ${activeHomePanel !== 'hr' ? 'hidden' : ''}>
+                            <div id="hrFilesRoot"></div>
                         </section>
 
                         <!-- 4. مختصر رحلة الدراسة — نفس خطوات القائمة اليسرى داخل صفحة مستقلة -->
@@ -513,6 +537,30 @@ export class DashboardView {
         const simContainer = this.container.querySelector('#funding-sim-container');
         if (document.getElementById('funding-sim-root')) {
             new FundingSimulator('funding-sim-container', this.store).render();
+        }
+
+        const readyStudiesRoot = this.container.querySelector('#readyStudiesRoot');
+        if (readyStudiesRoot) {
+            this.readyStudiesView = new ReadyStudiesView('readyStudiesRoot');
+            if (this.activeHomePanel === 'additional') {
+                this.readyStudiesView.render();
+            }
+        }
+
+        const databaseFilesRoot = this.container.querySelector('#databaseFilesRoot');
+        if (databaseFilesRoot) {
+            this.databaseFilesView = new DatabaseFilesView('databaseFilesRoot');
+            if (this.activeHomePanel === 'databases') {
+                this.databaseFilesView.render();
+            }
+        }
+
+        const hrFilesRoot = this.container.querySelector('#hrFilesRoot');
+        if (hrFilesRoot) {
+            this.hrFilesView = new HRFilesView('hrFilesRoot');
+            if (this.activeHomePanel === 'hr') {
+                this.hrFilesView.render();
+            }
         }
 
         this.bindEvents();
@@ -890,8 +938,18 @@ export class DashboardView {
         });
 
         const switchHomePanel = (panel, { scroll = false, focusSelector = null } = {}) => {
-            if (!['studies', 'engines', 'support'].includes(panel)) return;
+            if (!['studies', 'engines', 'support', 'additional', 'databases', 'hr'].includes(panel)) return;
             this.activeHomePanel = panel;
+            
+            if (panel === 'additional' && this.readyStudiesView && !this.readyStudiesView.loaded) {
+                this.readyStudiesView.render();
+            }
+            if (panel === 'databases' && this.databaseFilesView && !this.databaseFilesView.loaded) {
+                this.databaseFilesView.render();
+            }
+            if (panel === 'hr' && this.hrFilesView && !this.hrFilesView.loaded) {
+                this.hrFilesView.render();
+            }
             this.container.querySelectorAll('[data-dv-panel-button]').forEach(btn => {
                 const isActive = btn.dataset.dvPanelButton === panel;
                 btn.classList.toggle('is-active', isActive);

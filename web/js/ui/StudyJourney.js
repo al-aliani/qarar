@@ -5,12 +5,12 @@ const arabicNumber = (value) => new Intl.NumberFormat('ar-SA-u-nu-arab', {
     maximumFractionDigits: 0
 }).format(Number(value) || 0);
 
-export function getStudyJourneyContext(activeStepIndex, steps = STEPS, stepIndexMap = null) {
+export function getStudyJourneyContext(activeStepIndex, steps = STEPS, stepIndexMap = null, sections = SIDEBAR_SECTIONS, masterSteps = STEPS) {
     const visibleSteps = Array.isArray(steps) && steps.length ? steps : STEPS;
     const absoluteIndices = Array.isArray(stepIndexMap) && stepIndexMap.length === visibleSteps.length
         ? stepIndexMap
         : visibleSteps.map((step, index) => {
-            const absolute = STEPS.indexOf(step);
+            const absolute = masterSteps.indexOf(step);
             return absolute >= 0 ? absolute : index;
         });
 
@@ -18,9 +18,9 @@ export function getStudyJourneyContext(activeStepIndex, steps = STEPS, stepIndex
     if (localIndex < 0) localIndex = Math.min(Math.max(Number(activeStepIndex) || 0, 0), visibleSteps.length - 1);
 
     const absoluteIndex = absoluteIndices[localIndex] ?? localIndex;
-    const section = SIDEBAR_SECTIONS.find(item => (
+    const section = sections.find(item => (
         absoluteIndex >= item.range[0] && absoluteIndex <= item.range[1]
-    )) || SIDEBAR_SECTIONS[0];
+    )) || sections[0];
     const total = visibleSteps.length;
     const position = localIndex + 1;
 
@@ -45,6 +45,10 @@ export class StudyJourney {
         this.dialog = document.getElementById(options.dialogId || 'studyMapDialog');
         this.onNavigate = options.onNavigate || (() => {});
         this.steps = options.steps || STEPS;
+        this.masterSteps = options.masterSteps || STEPS;
+        this.sections = options.sections || SIDEBAR_SECTIONS;
+        this.unitLabel = options.unitLabel || 'الخطوة';
+        this.mapHeading = options.mapHeading || 'انتقل إلى أي خطوة';
         this.stepIndexMap = options.stepIndexMap || null;
         this.activeStepIndex = 0;
         this.bindEvents();
@@ -58,10 +62,10 @@ export class StudyJourney {
 
     update(activeStepIndex = 0) {
         this.activeStepIndex = Number.isInteger(activeStepIndex) ? activeStepIndex : 0;
-        const context = getStudyJourneyContext(this.activeStepIndex, this.steps, this.stepIndexMap);
+        const context = getStudyJourneyContext(this.activeStepIndex, this.steps, this.stepIndexMap, this.sections, this.masterSteps);
         const position = arabicNumber(context.position);
         const total = arabicNumber(context.total);
-        const stepText = `الخطوة ${position} من ${total}`;
+        const stepText = `${this.unitLabel} ${position} من ${total}`;
 
         if (this.header) {
             this.header.innerHTML = `
@@ -83,7 +87,8 @@ export class StudyJourney {
         }
 
         if (this.openButton) {
-            this.openButton.setAttribute('aria-label', `عرض كل خطوات الدراسة — ${stepText}`);
+            const mapLabel = this.unitLabel === 'التصنيف' ? 'تصنيفات الدراسة' : 'كل خطوات الدراسة';
+            this.openButton.setAttribute('aria-label', `عرض ${mapLabel} — ${stepText}`);
         }
 
         this.renderDialog(context);
@@ -93,7 +98,13 @@ export class StudyJourney {
     renderDialog(context) {
         if (!this.dialog) return;
 
-        const groups = SIDEBAR_SECTIONS.map(section => {
+        const groups = this.unitLabel === 'التصنيف'
+            ? `<section class="study-map__group"><div class="study-map__steps study-map__steps--categories">${context.visibleSteps.map((step, localIndex) => {
+                const absoluteIndex = context.absoluteIndices[localIndex];
+                const isCurrent = absoluteIndex === context.absoluteIndex;
+                return `<button type="button" class="study-map__step ${isCurrent ? 'is-current' : ''}" data-study-step="${absoluteIndex}" ${isCurrent ? 'aria-current="step"' : ''}><span class="study-map__number">${arabicNumber(localIndex + 1)}</span><span>${escapeHtml(step.label)}</span></button>`;
+            }).join('')}</div></section>`
+            : this.sections.map(section => {
             const items = context.visibleSteps.map((step, localIndex) => ({
                 step,
                 localIndex,
@@ -126,7 +137,7 @@ export class StudyJourney {
             <div class="study-map__header">
                 <div>
                     <p class="study-map__eyebrow">مسار الدراسة</p>
-                    <h2>انتقل إلى أي خطوة</h2>
+                    <h2>${escapeHtml(this.mapHeading)}</h2>
                 </div>
                 <button type="button" class="study-map__close" data-study-map-close aria-label="إغلاق">×</button>
             </div>
@@ -162,4 +173,3 @@ export class StudyJourney {
         else this.dialog.removeAttribute('open');
     }
 }
-

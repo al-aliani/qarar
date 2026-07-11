@@ -27,7 +27,7 @@ describe('ProjectAlternativesView — إفصاح ASSUMPTION عن معاملات 
     });
     afterEach(() => { document.body.innerHTML = ''; });
 
-    it('يعرض إفصاحاً في الواجهة يوسم معاملات المخاطرة/عتبة الاسترداد الطويل كتقديرات داخلية (ASSUMPTION)', () => {
+    it('يعرض إفصاحاً في الواجهة يوسم معاملات المخاطرة/عتبة الاسترداد كتقديرات استرشادية', () => {
         const state = {
             projectAlternatives: {
                 ideas: [
@@ -40,9 +40,10 @@ describe('ProjectAlternativesView — إفصاح ASSUMPTION عن معاملات 
         view.render();
         const html = document.getElementById('c').innerHTML;
 
-        expect(html).toContain('ASSUMPTION');
-        // يشير تحديداً لعدم وجود صيغة منشورة / انحراف معياري فعلي
-        expect(html).toMatch(/صيغة منشورة|انحراف معياري/);
+        // الإفصاح صار موجزاً بطلب المالك (تدقيق 2026-07-11): تقديرات استرشادية
+        // قابلة للتعديل بحكم المستخدم — التوثيق التقني الكامل بقي تعليقاً في المصدر.
+        expect(html).toContain('تقديرات استرشادية');
+        expect(html).toContain('عدّلها');
     });
 
     it('الكود المصدري يوثّق مصدر RISK_OPTIONS كتقدير داخلي غير مشتق من صيغة منشورة', () => {

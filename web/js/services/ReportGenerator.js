@@ -25,7 +25,7 @@ const REPORT_SECTION_LABELS = {
     swot: 'التحليل الاستراتيجي (التحليل الرباعي)',
     pestel: 'تحليل البيئة الكلية (PESTEL)',
     porter: 'تحليل قوى بورتر الخمس',
-    tows: 'مصفوفة استراتيجيات TOWS',
+    tows: 'مصفوفة الاستراتيجيات (TOWS)',
     capex: 'الاستثمارات الرأسمالية',
     legal: 'الدراسة القانونية والتراخيص',
     income_statement: 'قائمة الدخل',
@@ -836,7 +836,7 @@ export class ReportGenerator {
                 const tows = state.marketing?.towsMatrix;
                 if (!tows || !['so', 'wo', 'st', 'wt'].some(k => (tows[k] || '').trim())) return null;
                 html = `<div class="section">
-                        <h3 class="section-title"><span class="section-number">${num}</span>مصفوفة استراتيجيات TOWS</h3>
+                        <h3 class="section-title"><span class="section-number">${num}</span>مصفوفة الاستراتيجيات (TOWS)</h3>
                         <div class="section-content">${this.renderTOWS(tows)}</div>
                     </div>`;
                 break;
