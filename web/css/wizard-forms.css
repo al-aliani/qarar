@@ -657,6 +657,15 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500)
    في OrgStructure/RiskMatrix وغيرها). تدقيق 2026-07-11. */
 button .ic, .btn-icon .ic, [role="button"] .ic { pointer-events: none; }
 
+/* إصلاحات تخطيط الجوال (تدقيق كل التصنيفات 2026-07-11): عناصر بعرض ثابت/شبكات بلا
+   نقطة كسر كانت تتجاوز أفقياً على الشاشات الضيقة. إضافات آمنة (طبقة متأخّرة). */
+.risk-matrix-container,
+.sensitivity-matrix-container { overflow-x: auto; }
+.ratios-strip { flex-wrap: wrap; }
+@media (max-width: 640px) {
+    .wacc-breakdown { grid-template-columns: 1fr; }
+}
+
 /* ═══ مؤشرات حالة موحّدة (تدقيق إيموجي 2026-07-11) — بديل CSS بدل إيموجي نصية
    (🟢🟡🔴 / ✅❌➖ / ✅⚠️) لأثر بيستل وقوى بورتر وجدوى الخدمة. نفس نمط .pc-dot
    في wizard-forms.css أعلاه، بمقياس ثلاثي معاد استخدامه لأكثر من سياق. ═══ */
