@@ -10,6 +10,10 @@ import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11. (أيقونات بلوكات
+// Business Model Canvas التسع تُترك كمجموعة دلالية متمايزة بلا مقابل sprite مفرد.)
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 const BLOCKS = [
     { key: 'valueProposition', label: 'عرض القيمة', icon: '💎', placeholder: 'ما الذي يقدّمه المشروع للعميل؟ ما المشكلة التي يحلها؟' },
     { key: 'customerSegments', label: 'شرائح العملاء', icon: '👥', placeholder: 'من هم العملاء المستهدفون؟ ما خصائصهم وحاجاتهم؟' },
@@ -48,7 +52,7 @@ export class BusinessModelView {
                         </p>
                     </div>
                     <button type="button" class="btn btn-magic ai-bm-btn flex-shrink-0 flex items-center gap-2" title="توليد الحقول من بيانات المشروع المدخلة (بدون اتصال خارجي)">
-                        <span>✨</span>
+                        <span>${icon('i-sparkle')}</span>
                         <span class="ai-bm-btn-text">توليد تلقائي من بيانات المشروع</span>
                     </button>
                 </div>

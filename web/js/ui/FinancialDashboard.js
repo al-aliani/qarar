@@ -23,6 +23,9 @@ const LEVER_DECREASE_RE = /(خفّض|خفضت?|قلّلت?|قللت?|نقصت?|�
 
 function normalizeAlef(s) { return String(s || '').replace(/[إأآ]/g, 'ا'); }
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 /** يحدد مفتاح تجاوز المحرك (override key) والتسمية المعروضة من كلمة المتغير المطابَقة */
 function detectLever(word) {
     const w = normalizeAlef(word);
@@ -794,7 +797,7 @@ export class FinancialDashboard {
     renderKPICard(term, label, value, status) {
         const statusClass = status === 'positive' ? 'kpi-positive' : status === 'negative' ? 'kpi-negative' : '';
         const statusText = status === 'positive' ? 'ضمن النطاق' : status === 'negative' ? 'يحتاج مراجعة' : '';
-        const statusIcon = status === 'positive' ? '✓' : status === 'negative' ? '!' : '';
+        const statusIcon = status === 'positive' ? icon('i-check') : status === 'negative' ? icon('i-warning') : '';
         const labelWithTooltip = term ? wrapWithTooltip(label, term) : label;
 
         return `
