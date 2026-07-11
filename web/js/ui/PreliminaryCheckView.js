@@ -26,6 +26,9 @@ const HERO_ICONS = {
 const heroIcon = (name) =>
     `<svg class="pc-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${HERO_ICONS[name] || ''}</svg>`;
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 /**
  * توافق خلفي: البيانات القديمة نصوص حرة. نقبل بادئة معيارية (yes/no/unsure)
  * أو عربية (نعم/لا/غير متأكد) متبوعة بفاصل؛ وإلا يُعرض النص كله في حقل التوضيح.
@@ -91,9 +94,9 @@ export class PreliminaryCheckView {
             <div class="form-group">
                 <label id="pc-resources-label">3. ما الموارد الأولية المتوفرة لديك؟ ${fieldHelp('اختر ما ينطبق. لا يلزم توفّرها كلها — لكن نقصها يوجّهك لخطوات الدعم والتمويل لاحقاً.', 'مثال: 100 ألف ريال مدّخرة + معارف موردين، بلا خبرة سابقة.')}</label>
                 <div class="d-flex gap-2 mt-2 flex-wrap" data-res-group role="group" aria-labelledby="pc-resources-label">
-                    ${chip('pc-res-money', res.money, '💰 مبلغ للبدء')}
-                    ${chip('pc-res-exp', res.experience, '🎓 خبرة في المجال')}
-                    ${chip('pc-res-net', res.network, '🤝 معارف وموردون')}
+                    ${chip('pc-res-money', res.money, `${icon('i-bank')} مبلغ للبدء`)}
+                    ${chip('pc-res-exp', res.experience, `${icon('i-graduation')} خبرة في المجال`)}
+                    ${chip('pc-res-net', res.network, `${icon('i-users')} معارف وموردون`)}
                 </div>
             </div>`;
     }

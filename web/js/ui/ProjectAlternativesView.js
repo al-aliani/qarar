@@ -5,6 +5,9 @@
  */
 import { stepIndexById } from '../core/wizardSteps.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 // تدقيق 2026-07-09 (مفاضلة الأفكار): معاملات تعديل المخاطرة (ASSUMPTION) — تقديرات
 // داخلية تقريبية لترتيب الأفكار مبدئياً فقط، وليست مشتقة من صيغة منشورة أو من
 // انحراف معياري فعلي للطلب/التدفقات النقدية. لا تُستخدم كمُدخل للنموذج المالي التفصيلي.
@@ -100,17 +103,17 @@ export class ProjectAlternativesView {
                     </div>` : ''}
 
                 <div class="alert alert--info mb-4 pa-note">
-                    <strong>شرط المفاضلة:</strong> لا تستثمر في مشروع واحد بدون مقارنة — قارن ٢–٣ أفكار (تكلفة، عائد، مخاطرة) ثم اختر الأفضل للمتابعة. <strong>«قرار» يحسب لك فترة الاسترداد ويرشّح الأفضل تلقائياً.</strong>
+                    قارن ٢–٣ أفكار (تكلفة، عائد، مخاطرة) — «قرار» يحسب الاسترداد ويرشّح الأفضل تلقائياً.
                 </div>
 
                 <div class="card analysis-card mb-4 pa-card">
                     <h3 class="card-title">جدول مقارنة الأفكار (مبدئي)</h3>
-                    <p class="text-xs text-muted mb-2">معامل تعديل المخاطرة (١٠٪/١٥٪/٣٠٪) وعتبة «استرداد طويل» (٥/٧/٩ سنوات حسب حجم التكلفة التقريبية) تقديرات داخلية عامة (ASSUMPTION) لترتيب الأفكار مبدئياً فقط — غير مشتقة من صيغة منشورة أو انحراف معياري للطلب. عدّلها بحكمك حسب واقع كل فكرة.</p>
+                    <p class="text-xs text-muted mb-2">معامل المخاطرة وعتبة الاسترداد تقديرات استرشادية لترتيب الأفكار مبدئياً — عدّلها بحكمك.</p>
                     <div class="table-responsive pa-table-wrap">
                         <table class="data-table pa-table" id="alternativesTable">
                             <thead>
                                 <tr>
-                                    <th scope="col"><span class="sr-only">اختيار</span>✓</th>
+                                    <th scope="col"><span class="sr-only">اختيار</span>${icon('i-check')}</th>
                                     <th scope="col">اسم الفكرة</th>
                                     <th scope="col">تكلفة تقريبية (ر.س)</th>
                                     <th scope="col">عائد متوقع (ر.س/سنة)</th>
@@ -137,7 +140,7 @@ export class ProjectAlternativesView {
                                     <tr data-idx="${i}" class="${i === bestIdx ? 'pa-best' : ''}">
                                         <td class="pa-td-select">
                                             <input type="radio" name="selectedAlt" ${selectedIndex === i ? 'checked' : ''} value="${i}" aria-label="اختيار الفكرة ${i + 1}">
-                                            ${i === bestIdx ? '<span class="pa-trophy" title="الأفضل حسب الأرقام">🏆</span>' : ''}
+                                            ${i === bestIdx ? `<span class="pa-trophy" title="الأفضل حسب الأرقام">${icon('i-trophy')}</span>` : ''}
                                         </td>
                                         <td><input type="text" class="input input--sm alt-field" data-field="name" placeholder="اسم الفكرة" aria-label="اسم الفكرة" value="${esc(idea.name)}"></td>
                                         <td><input type="text" inputmode="numeric" class="input input--sm alt-field alt-num" data-field="estimatedCost" placeholder="0" aria-label="تكلفة تقريبية" value="${idea.estimatedCost ? fmtNum(idea.estimatedCost) : ''}"></td>
@@ -170,7 +173,7 @@ export class ProjectAlternativesView {
     _pickBestButtonHtml(ideas, bestIdx, validCount) {
         if (!(validCount >= 2 && bestIdx >= 0)) return '';
         const esc = (s) => (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-        return `<button type="button" class="btn btn--ghost btn-sm" id="btnPickBest">🏆 اختر الأفضل (${esc(ideas[bestIdx].name) || 'الفكرة ' + (bestIdx + 1)})</button>`;
+        return `<button type="button" class="btn btn--ghost btn-sm" id="btnPickBest">${icon('i-trophy')} اختر الأفضل (${esc(ideas[bestIdx].name) || 'الفكرة ' + (bestIdx + 1)})</button>`;
     }
 
     _bestHintHtml(ideas, bestIdx, validCount) {
@@ -201,7 +204,7 @@ export class ProjectAlternativesView {
             tr.classList.toggle('pa-best', i === bestIdx);
             let trophy = tr.querySelector('.pa-trophy');
             if (i === bestIdx && !trophy) {
-                tr.querySelector('.pa-td-select')?.insertAdjacentHTML('beforeend', '<span class="pa-trophy" title="الأفضل حسب الأرقام">🏆</span>');
+                tr.querySelector('.pa-td-select')?.insertAdjacentHTML('beforeend', `<span class="pa-trophy" title="الأفضل حسب الأرقام">${icon('i-trophy')}</span>`);
             } else if (i !== bestIdx && trophy) {
                 trophy.remove();
             }

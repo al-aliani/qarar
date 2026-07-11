@@ -16,6 +16,11 @@ import { getFieldHelp } from '../core/fieldHelpTexts.js';
 import { fieldHelp } from './components/FieldHelp.js';
 import { escapeHtml } from '../utils/escape.js';
 
+// أيقونة sprite + تجريد إيموجي من التسميات القادمة من schema (smartFill.label تحوي 🪄)
+// — تدقيق تنظيف 2026-07-11: تُنظَّف عند العرض بلا لمس ملف schema المشترك.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+const stripEmoji = (s) => (s || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}️‍]/gu, '').trim();
+
 /** Smart Fill handlers keyed by TABLE_SCHEMAS.*.smartFill.dataKey. Add new tables here. */
 export const SMART_FILL_HANDLERS = {
     staffing: (state) => {
@@ -544,11 +549,13 @@ export class Wizard {
         const handler = smart?.dataKey && SMART_FILL_HANDLERS[smart.dataKey];
         if (handler && smart.label) {
             const btnId = `btn-smart-${tableKey}`;
+            // تسمية schema تبدأ بـ🪄 — نجرّدها ونضع أيقونة sprite موحّدة بدل الإيموجي.
+            const labelHtml = `${icon('i-sparkle')} ${stripEmoji(smart.label)}`;
             if (!document.getElementById(btnId)) {
                 const btnHtml = `
                     <div class="flex-between mb-2">
                         <span></span>
-                        <button id="${btnId}" class="btn-xs btn-magic">${smart.label}</button>
+                        <button id="${btnId}" class="btn-xs btn-magic">${labelHtml}</button>
                     </div>
                 `;
                 container.insertAdjacentHTML('beforebegin', btnHtml);
@@ -565,11 +572,11 @@ export class Wizard {
                             this.tables[tableKey].render();
                         }
                         e.target.textContent = 'تم الجلب بنجاح';
-                        setTimeout(() => { e.target.textContent = smart.label; }, 2000);
+                        setTimeout(() => { e.target.innerHTML = labelHtml; }, 2000);
                     } catch (err) {
                         console.error('Smart fill handler failed:', err);
                         toast.error('تعذّر الجلب التلقائي');
-                        e.target.textContent = smart.label;
+                        e.target.innerHTML = labelHtml;
                     } finally {
                         e.target.disabled = false;
                     }

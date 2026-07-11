@@ -10,6 +10,9 @@ import { TABLE_SCHEMAS } from '../core/schema.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { escapeHtml } from '../utils/escape.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class OrgStructure {
     constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
@@ -56,14 +59,14 @@ export class OrgStructure {
 
                 <!-- مؤشرات قياس الأداء التشغيلية (KPI) -->
                 <div class="card analysis-card">
-                    <h3 class="card-title">📊 مؤشرات قياس الأداء التشغيلية</h3>
+                    <h3 class="card-title">${icon('i-chart')} مؤشرات قياس الأداء التشغيلية</h3>
                     <p class="text-muted text-sm mb-3">الهدف، المؤشر، طريقة الحساب، وحدة القياس، القيمة المعيارية</p>
                     <div id="operationalKpisTable"></div>
                 </div>
 
                 <!-- Saudization / نطاقات -->
                 <div class="card analysis-card">
-                    <h3 class="card-title">🇸🇦 السعودة ونطاقات</h3>
+                    <h3 class="card-title">${icon('i-flag-sa')} السعودة ونطاقات</h3>
                     <p class="text-muted text-sm mb-3">نسبة توطين الوظائف — تطلبها جهات التمويل (منشآت/الصندوق) وتؤثر على تصنيف نطاقات ورسوم العمالة الوافدة.</p>
                     ${this.renderSaudization(orgStructure.saudization || {}, hrData)}
                 </div>
@@ -149,7 +152,7 @@ export class OrgStructure {
                                         `).join('')}
                                     </select>
                                 </td>
-                                <td><button class="btn-icon btn-remove-dept" data-idx="${idx}" aria-label="حذف القسم">🗑️</button></td>
+                                <td><button class="btn-icon btn-remove-dept" data-idx="${idx}" aria-label="حذف القسم">${icon('i-trash')}</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -190,7 +193,7 @@ export class OrgStructure {
                             <tr data-idx="${idx}">
                                 <td><input type="text" class="input input--sm advisory-field" data-field="name" value="${escapeHtml(a.name)}" placeholder="الاسم"></td>
                                 <td><input type="text" class="input input--sm advisory-field" data-field="role" value="${escapeHtml(a.role)}" placeholder="مثال: خبير تطوير أعمال"></td>
-                                <td><button class="btn-icon btn-remove-advisory" data-idx="${idx}" aria-label="حذف عضو الاستشاري">🗑️</button></td>
+                                <td><button class="btn-icon btn-remove-advisory" data-idx="${idx}" aria-label="حذف عضو الاستشاري">${icon('i-trash')}</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -228,7 +231,7 @@ export class OrgStructure {
                                 <td><input type="number" class="input input--sm board-field" data-field="share" value="${member.share ?? ''}" min="0" max="100" step="0.1" placeholder="%"></td>
                                 <td><input type="checkbox" class="board-field" data-field="independent" ${member.independent ? 'checked' : ''}></td>
                                 <td><input type="text" class="input input--sm board-field" data-field="committees" value="${escapeHtml(member.committees || '')}"></td>
-                                <td><button class="btn-icon btn-remove-board" data-idx="${idx}" aria-label="حذف عضو مجلس الإدارة">🗑️</button></td>
+                                <td><button class="btn-icon btn-remove-board" data-idx="${idx}" aria-label="حذف عضو مجلس الإدارة">${icon('i-trash')}</button></td>
                             </tr>
                         `).join('')}
                     </tbody>

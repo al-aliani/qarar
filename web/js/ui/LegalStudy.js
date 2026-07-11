@@ -3,6 +3,9 @@ import { TABLE_SCHEMAS } from '../core/schema.js';
 import { AIWriter } from '../services/AIWriter.js';
 import { generateTableSuggestions } from '../services/AIConnector.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class LegalStudy {
     constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
@@ -21,7 +24,7 @@ export class LegalStudy {
             <div class="legal-study animate-entry">
                 <div class="flex-between mb-6">
                     <h2 class="section-title mb-0">الدراسة القانونية</h2>
-                    <button class="btn btn--magic" id="btnSuggestLegal"><span class="icon">✨</span> اقتراح الهيكل والتراخيص</button>
+                    <button class="btn btn--magic" id="btnSuggestLegal">${icon('i-sparkle')} اقتراح الهيكل والتراخيص</button>
                 </div>
                 <p class="text-muted mb-6">حدد الشكل القانوني للمشروع وقائمة التراخيص المطلوبة لبدء النشاط.</p>
 
@@ -142,7 +145,7 @@ export class LegalStudy {
             this.isGenerating = true;
             const btn = this.container.querySelector('#btnSuggestLegal');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="icon">⌛</span> جاري التوليد...';
+            btn.innerHTML = 'جاري التوليد...';
             btn.disabled = true;
 
             const state = this.store.getState();
@@ -166,13 +169,13 @@ export class LegalStudy {
                     this.renderTable(result.licenses);
 
                     // 3. Show Success
-                    aiDiv.innerHTML = `<strong>✨ تم تطبيق الاقتراحات!</strong><br>تم تحديد الشكل القانوني وإضافة ${result.licenses.length} من البنود المتوقعة للجدول.`;
+                    aiDiv.innerHTML = `<strong>تم تطبيق الاقتراحات!</strong><br>تم تحديد الشكل القانوني وإضافة ${result.licenses.length} من البنود المتوقعة للجدول.`;
                     aiDiv.className = 'alert alert--success mb-6 animate-entry';
                     aiDiv.classList.remove('hidden');
                 } else {
                     // Fallback for text (if server old or error)
                     const formatted = (typeof result === 'string' ? result : JSON.stringify(result)).replace(/\n/g, '<br>');
-                    aiDiv.innerHTML = `<strong>💡 مقترح الذكاء الاصطناعي:</strong><br><div class="text-sm mt-2">${formatted}</div>`;
+                    aiDiv.innerHTML = `<strong>${icon('i-lightbulb')} مقترح الذكاء الاصطناعي:</strong><br><div class="text-sm mt-2">${formatted}</div>`;
                     aiDiv.className = 'alert alert--info mb-6 animate-entry';
                     aiDiv.classList.remove('hidden');
                 }

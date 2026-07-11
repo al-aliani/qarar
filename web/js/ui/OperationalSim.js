@@ -2,6 +2,9 @@
  * Operational Simulation Component (Queueing Theory)
  * Simulates customer flow to detect bottlenecks and wait times.
  */
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class OperationalSim {
     constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
@@ -27,7 +30,7 @@ export class OperationalSim {
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <!-- Controls -->
                     <div class="card">
-                        <h3 class="card-title mb-4">⚙️ إعدادات المحاكاة</h3>
+                        <h3 class="card-title mb-4">${icon('i-settings')} إعدادات المحاكاة</h3>
                         
                         <div class="form-group mb-4">
                             <label>معدل وصول العملاء (عميل/ساعة)</label>
@@ -47,12 +50,12 @@ export class OperationalSim {
                             <div class="flex-between text-sm text-gold"><span id="serversVal">${operational.servers}</span> موظف</div>
                         </div>
 
-                        <button class="btn btn--primary w-full" id="btnRunSim">🎬 تشغيل المحاكاة</button>
+                        <button class="btn btn--primary w-full" id="btnRunSim">${icon('i-play')} تشغيل المحاكاة</button>
                     </div>
 
                     <!-- Visualizer -->
                     <div class="card lg:col-span-2 flex flex-col items-center justify-center bg-dark" style="min-height:300px; position:relative; overflow:hidden;">
-                        <canvas id="simCanvas" width="600" height="300"></canvas>
+                        <canvas id="simCanvas" width="600" height="300" style="max-width:100%; height:auto;"></canvas>
                         <div id="simOverlay" class="text-center">
                             <h2 class="text-white text-2xl mb-2">اضغط تشغيل</h2>
                             <p class="text-gray-400">لتبدأ محاكاة حركة العملاء</p>

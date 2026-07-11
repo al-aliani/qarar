@@ -652,6 +652,11 @@ input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--c-p-500)
 }
 .offer-revenue__hint { font-size: 0.83rem; color: var(--c-text-muted); max-width: 46ch; }
 
+/* أيقونات SVG داخل الأزرار زخرفية (aria-hidden) — تعطيل التقاطها للنقر يضمن أن
+   e.target يبقى الزر نفسه، فلا تنكسر معالجات تقرأ e.target.dataset (أزرار حذف يدوية
+   في OrgStructure/RiskMatrix وغيرها). تدقيق 2026-07-11. */
+button .ic, .btn-icon .ic, [role="button"] .ic { pointer-events: none; }
+
 /* ═══ مؤشرات حالة موحّدة (تدقيق إيموجي 2026-07-11) — بديل CSS بدل إيموجي نصية
    (🟢🟡🔴 / ✅❌➖ / ✅⚠️) لأثر بيستل وقوى بورتر وجدوى الخدمة. نفس نمط .pc-dot
    في wizard-forms.css أعلاه، بمقياس ثلاثي معاد استخدامه لأكثر من سياق. ═══ */

@@ -8,6 +8,9 @@ import { toast } from '../utils/toast.js';
 import { fieldHelp } from './components/FieldHelp.js';
 import { escapeHtml } from '../utils/escape.js';
 
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 // خيارات «قابل للتحقيق» — value معياري، label عربي معروض ومخزّن
 const ACHIEVABLE_CHOICES = [
     { value: 'yes', label: 'نعم' },
@@ -80,8 +83,8 @@ export class SmartGoals {
                     <div class="flex-between">
                         <h3 class="card-title">${this.editingId ? 'تعديل الهدف' : 'إضافة هدف جديد'}</h3>
                         <div class="actions">
-                            ${this.editingId ? `<button class="btn btn--ghost btn-sm btn-cancel-edit">❌ إلغاء</button>` : ''}
-                            <button class="btn btn--secondary btn-sm btn-suggest-goals">🪄 اقتراح أهداف نموذجية</button>
+                            ${this.editingId ? `<button class="btn btn--ghost btn-sm btn-cancel-edit">${icon('i-x')} إلغاء</button>` : ''}
+                            <button class="btn btn--secondary btn-sm btn-suggest-goals">${icon('i-sparkle')} اقتراح أهداف نموذجية</button>
                         </div>
                     </div>
                     ${this.renderAddGoalForm()}
@@ -106,10 +109,10 @@ export class SmartGoals {
 
     renderGoalsByCategory(goals) {
         const categories = [
-            { key: 'financial', label: 'الأهداف المالية', icon: '💰', color: 'green' },
-            { key: 'operational', label: 'الأهداف التشغيلية', icon: '⚙️', color: 'blue' },
-            { key: 'market', label: 'أهداف السوق', icon: '📈', color: 'purple' },
-            { key: 'hr', label: 'أهداف الموارد البشرية', icon: '👥', color: 'orange' }
+            { key: 'financial', label: 'الأهداف المالية', icon: icon('i-bank'), color: 'green' },
+            { key: 'operational', label: 'الأهداف التشغيلية', icon: icon('i-settings'), color: 'blue' },
+            { key: 'market', label: 'أهداف السوق', icon: icon('i-chart'), color: 'purple' },
+            { key: 'hr', label: 'أهداف الموارد البشرية', icon: icon('i-users'), color: 'orange' }
         ];
 
         return categories.map(cat => {
@@ -164,7 +167,7 @@ export class SmartGoals {
                     </div>
                 </div>
                 <div class="goal-actions">
-                    <button class="btn btn--sm btn--ghost btn-edit-goal" data-idx="${idx}">✏️ تعديل</button>
+                    <button class="btn btn--sm btn--ghost btn-edit-goal" data-idx="${idx}">${icon('i-pen')} تعديل</button>
                     <button class="btn btn--sm btn--ghost btn-update-goal" data-idx="${idx}">تحديث الحالة</button>
                     <button class="btn btn--sm btn--ghost btn-remove-goal" data-idx="${idx}">حذف</button>
                 </div>
@@ -365,7 +368,7 @@ export class SmartGoals {
                         targetValue, currentValue
                     };
                     this.editingId = null; // Clear edit mode
-                    alert('تم تعديل الهدف بنجاح ✅');
+                    alert('تم تعديل الهدف بنجاح');
                 }
             } else {
                 // Create new
@@ -439,7 +442,7 @@ export class SmartGoals {
         try {
             const templates = DataService.getSmartGoalsTemplates();
             if (!templates || templates.length === 0) {
-                alert('⚠️ لا توجد أهداف نموذجية متاحة');
+                alert('لا توجد أهداف نموذجية متاحة');
                 return;
             }
 
@@ -460,7 +463,7 @@ export class SmartGoals {
             });
 
             if (newTemplates.length === 0) {
-                alert('ℹ️ جميع الأهداف النموذجية موجودة بالفعل');
+                alert('جميع الأهداف النموذجية موجودة بالفعل');
                 return;
             }
 
@@ -480,7 +483,7 @@ export class SmartGoals {
             this.render();
 
             // Show success message
-            toast.success(`✨ تم إضافة ${newGoals.length} هدف نموذجي! يمكنك تعديلها الآن.`);
+            toast.success(`تم إضافة ${newGoals.length} هدف نموذجي! يمكنك تعديلها الآن.`);
         } catch (e) {
             console.error('Error suggesting goals:', e);
             const errorMsg = e.message || 'حدث خطأ غير معروف';
