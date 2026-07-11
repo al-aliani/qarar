@@ -444,11 +444,17 @@ export class FinancialDashboard {
         scenarioSwitcher.render();
 
         // Listen for scenario changes to update dashboard (إن وُجد من مكوّن آخر)
-        window.addEventListener('scenarioChanged', (e) => {
-            if (!e?.detail?.results) return;
-            this.results = e.detail.results;
-            this.render();
-        });
+        // تدقيق 2026-07-11: كان يُضاف مستمع window مجهول في كل render() ولا يُزال أبداً
+        // (cleanup لا يُستدعى، ومستمعات window لا تُجمَع تلقائياً كعناصر DOM المُعاد إنشاؤها)
+        // فيتراكم وكلٌّ يستدعي render() → تضاعف الرسم. حارس idempotent يضيفه مرة واحدة فقط.
+        if (!this._scenarioChangedBound) {
+            this._scenarioChangedBound = (e) => {
+                if (!e?.detail?.results) return;
+                this.results = e.detail.results;
+                this.render();
+            };
+            window.addEventListener('scenarioChanged', this._scenarioChangedBound);
+        }
     }
 
     renderAdvisorInsights(results, inputs) {
@@ -680,7 +686,9 @@ export class FinancialDashboard {
                 askAnswer.innerHTML = `<strong>بناءً على سؤالك:</strong><br>${tips}<br><br><span class="text-gold"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> لاختبار «لو زاد الإيجار 20%؟» أو «لو انخفض الإيراد 10%؟» انتقل إلى <strong>لوحة القرار</strong> واستخدم منزلقات اختبار الضغط لتحديث NPV وهامش الربح فوراً.</span>`;
             };
             askBtn.addEventListener('click', askHandler);
-            this._eventListeners.push({ element: askBtn, event: 'click', askHandler });
+            // تدقيق 2026-07-11: كان المفتاح askHandler بدل handler، فيفكّكه cleanup كـundefined
+            // ولا يُزال المستمع أبداً. توحيد المفتاح مع بقية العناصر (handler).
+            this._eventListeners.push({ element: askBtn, event: 'click', handler: askHandler });
             if (askInput) {
                 const enterHandler = (e) => { if (e.key === 'Enter') askHandler(); };
                 askInput.addEventListener('keydown', enterHandler);

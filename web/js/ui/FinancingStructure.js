@@ -57,11 +57,8 @@ export class FinancingStructure {
                         </details>
                     </div>
                 <h2 class="section-title">💰 هيكل التمويل</h2>
-                <div class="alert alert-warning mb-3" style="font-size: 0.85rem;">
-                    <strong>رأس المال العامل حاسم</strong> — معظم أزمات السيولة ناتجة عن عدم تقديره. المبلغ اللازم قبل التشغيل (مخزون، رواتب أشهر، بنزين...) يجب أن يُموّل مسبقاً.
-                </div>
                 <div class="alert alert--info mb-3" style="font-size: 0.85rem;">
-                    <strong>قبل الاستقالة:</strong> مصروف بيت 6 أشهر + احتياطي المشروع 6 أشهر. <strong>فترة الدوران:</strong> انتبه لفترة دوران المخزون والذمم — بضاعة تمثل 30 شهر دوران = مشكلة سيولة.
+                    موّل رأس المال العامل (مخزون ورواتب 3–6 أشهر) مسبقاً — نقصه أشهر أسباب أزمات السيولة.
                 </div>
                 <div class="alert alert-info">
                     إجمالي رأس المال المطلوب (التكاليف الرأسمالية + التكاليف التشغيلية): <strong>${this.formatCurrency(totalCapex)}</strong>
@@ -338,7 +335,7 @@ export class FinancingStructure {
                         </label>
                         <input type="number" id="funding-investors-premoney" class="input investor-input" data-field="preMoneyValuation"
                                value="${investors.preMoneyValuation || 0}" min="0">
-                        <div class="text-xs text-muted mt-1">التقييم بعد الجولة: <strong>${this.formatCurrency((investors.preMoneyValuation || 0) + (investors.amount || 0))}</strong></div>
+                        <div class="text-xs text-muted mt-1">التقييم بعد الجولة: <strong class="investor-post-money">${this.formatCurrency((investors.preMoneyValuation || 0) + (investors.amount || 0))}</strong></div>
                     </div>
                 </div>
 
@@ -887,22 +884,21 @@ export class FinancingStructure {
             if (input) input.value = pct + '%';
         });
         this.renderFundingChart();
-        
-        // Update total capex display if we have it
-        const fundingTotalEl = this.container.querySelector('#funding-total-display');
-        if (fundingTotalEl) {
-            const totalFunded = srcKeys.reduce((sum, k) => sum + Number(financing.sources[k]?.amount || 0), 0);
-            fundingTotalEl.textContent = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(totalFunded);
-            
-            const reqInvEl = this.container.querySelector('#required-investment-display');
-            if (reqInvEl && totalCapex) {
-                reqInvEl.textContent = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(totalCapex);
-                if (Math.abs(totalFunded - totalCapex) > 1) {
-                    fundingTotalEl.classList.add('text-danger');
-                    reqInvEl.classList.add('text-danger');
-                } else {
-                    fundingTotalEl.classList.remove('text-danger');
-                    reqInvEl.classList.remove('text-danger');
+
+        // تحديث ملخّص «إجمالي التمويل / حالة الفجوة» حياً (تدقيق 2026-07-11): الكتلة
+        // السابقة كانت تستعلم عن #funding-total-display/#required-investment-display وهما
+        // غير مرسومين إطلاقاً (المعروض id=totalFunding داخل #fundingValidation) فلا يتحدّث
+        // التحذير بعد تعديل مبلغ مصدر. نعيد بناء بلوك التحقق في مكانه بالمعرّفات الصحيحة.
+        if (totalCapex) {
+            const validationEl = this.container.querySelector('#fundingValidation');
+            if (validationEl) {
+                const holder = document.createElement('div');
+                holder.innerHTML = this.renderFundingValidation(financing.sources, totalCapex).trim();
+                const fresh = holder.firstElementChild;
+                if (fresh) {
+                    validationEl.replaceWith(fresh);
+                    // زر «سدّ الفجوة» أُعيد إنشاؤه ضمن الاستبدال — أعِد ربطه.
+                    fresh.querySelector('#btnAutoBalanceFunding')?.addEventListener('click', () => this.autoBalanceFunding(totalCapex));
                 }
             }
         }

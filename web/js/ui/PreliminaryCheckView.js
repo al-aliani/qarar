@@ -306,5 +306,10 @@ export class PreliminaryCheckView {
                 this._updateResultCard();
             });
         });
+
+        // زر «قارن أفكاراً بديلة» يُرسَم في الرسم الأولي إن كانت النتيجة المحفوظة حمراء
+        // (تدقيق 2026-07-11): كان يُربَط فقط داخل _updateResultCard (بعد تغيير المستخدم لإجابة)
+        // فيبقى ميتاً عند العودة للخطوة بنتيجة سلبية محفوظة. نربطه هنا أيضاً.
+        this.container.querySelector('.btn-goto-alternatives')?.addEventListener('click', () => this._goToAlternatives());
     }
 }

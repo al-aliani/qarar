@@ -296,6 +296,10 @@
     font-size: 1rem;
     padding: 0 2px;
     line-height: 1;
+    /* تدقيق 2026-07-11: زر الحذف كان يرث opacity:0 من قاعدة .btn-delete-act الأساس
+       (المخصّصة لصفوف gantt التي تُظهره عند hover فقط) — لكن هذه القائمة ليست gantt،
+       فبقي الزر شفافاً رغم أن التلميح يطلب النقر عليه. نُظهره دائماً هنا. */
+    opacity: 1;
 }
 
 .timeline-phases-list .btn-delete-act:hover {
