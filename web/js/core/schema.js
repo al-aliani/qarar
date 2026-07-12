@@ -322,8 +322,14 @@ export function createEmptyStudy() {
             // ADMINISTRATIVE المجاورة التي حصلت على صف افتراضي ظاهر — صف افتراضي واحد
             // (monthly:0، لا رقم مُختلَق) يوضح للمستخدم المبتدئ ما يُتوقع إدخاله هنا
             // (توصيل/نقل مطعم) دون حقن أي تكلفة صامتة في المحرك.
+            // تدقيق دفعة 3 (اختبار عميل بقالة 2026-07-12): «كهرباء ومياه» كانت تُقترح فقط
+            // عبر زر التوليد الذكي (generateLogistics) دون أي صف افتراضي ظاهر عند فتح
+            // الخطوة أول مرة، رغم أنها أحد أكبر بنود التشغيل الثابتة لأي منشأة فعلية
+            // (تبريد/تكييف خصوصاً في تجزئة الأغذية) — صف ظاهر بلا رقم مُختلَق (monthly:0)
+            // يجعلها أول ما يُطلب تعبئته بدل أن يتخطاها المستخدم المبتدئ كلياً.
             logistics: [
-                { name: 'التوصيل والنقل (منصات التوصيل/نقل مبرّد)', monthly: 0, variablePercent: 0.5, notes: '' }
+                { name: 'التوصيل والنقل (منصات التوصيل/نقل مبرّد)', monthly: 0, variablePercent: 0.5, notes: '' },
+                { name: 'كهرباء ومياه (تبريد/تكييف)', monthly: 0, variablePercent: 0.30, notes: '' }
             ]
         },
 
@@ -867,12 +873,17 @@ export const TABLE_SCHEMAS = {
     products: {
         title: 'المنتجات',
         aiPrompt: 'suggest_products',
+        // تدقيق دفعة 3 (اختبار عميل بقالة 2026-07-12): «الخصائص الفريدة» و«القيمة
+        // المضافة» كانا عمودين متجاورين يطلبان عملياً نفس الإجابة لمنتج بسيط (خضار
+        // طازجة) — العميل التجريبي أعاد صياغة نفس الفكرة مرتين. دُمجا في عمود واحد؛
+        // sectionExporter.js/ReportGenerator.js يدمجان قيمتي valueAdded القديمة (إن
+        // وُجدت في دراسة محفوظة سابقاً) مع uniqueFeatures عرضاً فقط، فلا يضيع نص
+        // أُدخل قبل هذا التغيير.
         columns: [
             { key: 'type', label: 'النوع', type: 'select', options: [{ value: 'primary', label: 'أولي' }, { value: 'semi', label: 'نصف مصنع' }, { value: 'final', label: 'نهائي' }] },
             { key: 'name', label: 'اسم المنتج', type: 'text' },
             { key: 'description', label: 'الوصف', type: 'text' },
-            { key: 'uniqueFeatures', label: 'الخصائص الفريدة', type: 'text' },
-            { key: 'valueAdded', label: 'القيمة المضافة', type: 'text' },
+            { key: 'uniqueFeatures', label: 'الميزة الفريدة / القيمة المضافة', type: 'text', placeholder: 'ما يميزه عن المنافسين وقيمته الإضافية للعميل — مثال: خضار تُقطف يومياً من مزارع محلية بدل التبريد المستورد' },
             { key: 'customerBenefit', label: 'فائدة العميل', type: 'text' }
         ],
         showTotal: false
@@ -1159,11 +1170,24 @@ export const TABLE_SCHEMAS = {
         // ASSUMPTION (تدقيق 2026-07-08، ملاحظة عالية #22): افتراضي growthRate=7% تقدير
         // داخلي عام لا مصدر خارجي منشور له (بخلاف variableCostRate الموثَّق أعلاه) —
         // عدّله بحسب نمو قطاعك الفعلي، ولا تعتمد عليه كرقم مرجعي.
+        // تدقيق دفعة 3 (اختبار عميل بقالة 2026-07-12): «تكلفة متغيرة %» وحدها كانت
+        // تُجبر بائع تجزئة/بقالة على خلط الهدر والتلف وعمولة منصات التوصيل داخل رقم
+        // واحد بلا تفصيل. عمولة التوصيل تبقى مدموجة عمداً داخل variableCostRate
+        // للأنشطة التي وثّقتها قوالب الخبراء والاختبارات التراجعية بهذا الافتراض
+        // (regression.restaurant) — لا تُفصَل هنا. wasteRate/platformCommissionRate
+        // الجديدان اختياريان (افتراضهما صفر) لمن يريد تفصيلاً أدق دون كسر أي دراسة
+        // قائمة: المحرك يجمعهما فوق variableCostRate (revenue.js)، فلا يتغيّر شيء
+        // ما لم يملأهما المستخدم صراحة. نطاقات sectorBenchmarks.js القطاعية (خصوصاً
+        // تجزئة 55–75%) تقارَن بإجمالي التكلفة المتغيرة الفعلي شاملاً هذين العمودين
+        // — أدخل تفصيلاً واقعياً بدل تحميل كل شيء على variableCostRate وحده كي لا
+        // يظهر إنذار مضاعف زائف عند فصل الهدر/العمولة عن الرقم الإجمالي المعتاد.
         columns: [
             { key: 'service', label: 'الخدمة', type: 'text' },
             { key: 'customersPerMonth', label: 'العملاء/شهر', type: 'number' },
             { key: 'avgPrice', label: 'متوسط السعر', type: 'number' },
             { key: 'variableCostRate', label: 'تكلفة متغيرة %', type: 'number', default: 0.30 },
+            { key: 'wasteRate', label: 'تلف وهدر %', type: 'number', default: 0, placeholder: 'اختياري — بقالة/مطعم: نسبة البضاعة التالفة أو المهدرة من المبيعات' },
+            { key: 'platformCommissionRate', label: 'عمولة منصة %', type: 'number', default: 0, placeholder: 'اختياري — عمولة تطبيقات توصيل/بيع خارجية إن لم تكن مدموجة أعلاه' },
             { key: 'growthRate', label: 'نمو سنوي %', type: 'number', default: 0.07 },
             { key: 'year1', label: 'السنة 1', type: 'computed', formula: r => (r.customersPerMonth || 0) * 12 * (r.avgPrice || 0) }
         ],

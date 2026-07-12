@@ -560,15 +560,21 @@ export function handleProjectIntroSection(pi) {
 
     if (products.length > 0) {
         result.push(['المنتجات']);
-        result.push(['النوع', 'المنتج', 'الوصف', 'خصائص فريدة', 'قيمة مضافة', 'فائدة للعميل']);
+        // تدقيق دفعة 3 (2026-07-12): «خصائص فريدة» و«قيمة مضافة» دُمجا في عمود واحد
+        // (schema.js products.uniqueFeatures) — عمود valueAdded المنفصل لم يعد جزءاً
+        // من المخطط. يُدمج هنا مع uniqueFeatures عرضاً فقط لدراسات محفوظة قبل هذا
+        // التغيير كانت تملأ الحقلين منفصلين، فلا يضيع نص أُدخل سابقاً.
+        result.push(['النوع', 'المنتج', 'الوصف', 'الميزة الفريدة / القيمة المضافة', 'فائدة للعميل']);
         products.forEach((p) => {
             const typeLabel = p.type === 'primary' ? 'أولي' : p.type === 'semi' ? 'نصف مصنع' : 'نهائي';
+            const uniqueFeatures = [p.uniqueFeatures, p.valueAdded]
+                .filter((v) => v && String(v).trim())
+                .join(' — ');
             result.push([
                 typeLabel,
                 (p.name || '').toString(),
                 (p.description || '').toString(),
-                (p.uniqueFeatures || '').toString(),
-                (p.valueAdded || '').toString(),
+                uniqueFeatures,
                 (p.customerBenefit || '').toString()
             ]);
         });
