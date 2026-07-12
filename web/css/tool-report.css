@@ -1,0 +1,103 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * tool-report.css — خانة «إصدار تقرير» لكل أداة تحليلية + أنماط الطباعة.
+ * (تدقيق 2026-07-11). يرافق web/js/ui/components/ToolReport.js.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/* شريط الزر أسفل الأداة (على الشاشة) */
+.tool-report-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--c-border);
+}
+
+.tool-report-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.tool-report-btn svg {
+    flex-shrink: 0;
+}
+
+.tool-report-hint {
+    font-size: 0.78rem;
+    color: var(--c-text-muted);
+}
+
+/* ترويسة التقرير: مخفية على الشاشة، تظهر عند الطباعة فقط */
+.tool-report-print-header {
+    display: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * الطباعة: عند تفعيل body.is-printing-tool نُظهر هدف الطباعة وحده.
+ * نستخدم visibility (لا display) للهدف ومحتواه كي تبقى رسوم <canvas> ظاهرة،
+ * ونُخفي الحاويات الكبيرة الأخرى بـ display:none كي لا تُنتج صفحات فارغة.
+ * ───────────────────────────────────────────────────────────────────────────── */
+@media print {
+    @page {
+        margin: 12mm;
+    }
+
+    /* أخفِ هيكل التطبيق والأقسام الأخرى تماماً (يمنع الصفحات الفارغة) */
+    body.is-printing-tool .app-header,
+    body.is-printing-tool .sidebar,
+    body.is-printing-tool .sidebar-overlay,
+    body.is-printing-tool .breadcrumb-bar,
+    body.is-printing-tool #breadcrumbBar,
+    body.is-printing-tool .category-page__header,
+    body.is-printing-tool .category-toc,
+    body.is-printing-tool .category-page__nav,
+    body.is-printing-tool .category-step:not(.tool-print-target),
+    body.is-printing-tool .tool-report-bar {
+        display: none !important;
+    }
+
+    /* شبكة أمان: أخفِ ما تبقّى بصرياً ثم أظهر الهدف ومحتواه */
+    body.is-printing-tool .main-stage * {
+        visibility: hidden;
+    }
+
+    body.is-printing-tool .tool-print-target,
+    body.is-printing-tool .tool-print-target * {
+        visibility: visible;
+    }
+
+    body.is-printing-tool .tool-print-target {
+        position: absolute;
+        inset-inline: 0;
+        inset-block-start: 0;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* ترويسة التقرير عند الطباعة */
+    body.is-printing-tool .tool-report-print-header {
+        display: block;
+        visibility: visible;
+        margin-block-end: 8mm;
+        padding-block-end: 4mm;
+        border-block-end: 2px solid #0b6b4f;
+    }
+
+    .tool-report-print-brand {
+        font-size: 11pt;
+        font-weight: 700;
+        color: #0b6b4f;
+    }
+
+    .tool-report-print-title {
+        font-size: 20pt;
+        margin: 5pt 0 3pt;
+    }
+
+    .tool-report-print-meta {
+        font-size: 10pt;
+        color: #555;
+    }
+}

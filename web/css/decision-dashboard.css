@@ -2125,6 +2125,47 @@
     vertical-align: middle;
 }
 
+/* شارات نوع الخطوة في مسار الأدوات (تدقيق 2026-07-11): تحليل/إدخال/مختلط.
+   نصية لا تعتمد اللون وحده (a11y) — كل شارة تحمل تسميتها العربية صراحةً. */
+.dv-tag-type {
+    display: inline-block;
+    font-size: 0.56rem;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-inline-start: 6px;
+    vertical-align: middle;
+    line-height: 1.6;
+}
+.dv-tag-type.is-analysis {
+    color: var(--c-success);
+    background: var(--c-p-subtle);
+}
+.dv-tag-type.is-input {
+    color: var(--c-text-muted);
+    background: transparent;
+    border: 1px solid var(--c-border);
+}
+.dv-tag-type.is-mixed {
+    color: var(--c-warning);
+    background: var(--c-warning-subtle);
+}
+
+/* وسم «تقرير» — يميّز الأدوات التحليلية/المختلطة المرشّحة لإصدار تقرير خاص بها.
+   مملوء بلون العلامة ليبرز عن شارة النوع المجاورة. */
+.dv-tag-report {
+    display: inline-block;
+    font-size: 0.54rem;
+    font-weight: 700;
+    color: var(--c-p-contrast);
+    background: var(--c-p-600);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-inline-start: 5px;
+    vertical-align: middle;
+    line-height: 1.6;
+}
+
 .dv-quicktools__heading {
     margin: 22px 0 10px;
     font-size: 0.88rem;

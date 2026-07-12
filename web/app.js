@@ -5,6 +5,7 @@ import { STEPS, SECTIONS, SIDEBAR_SECTIONS, stepIndexById, STEPS_ABSORBED_IN_CAT
 import { Sidebar } from './js/ui/Sidebar.js';
 import { Wizard } from './js/ui/Wizard.js';
 import { renderStepComponent } from './js/ui/stepComponentRegistry.js';
+import { attachToolReport } from './js/ui/components/ToolReport.js';
 import { StudyJourney } from './js/ui/StudyJourney.js';
 import { StudyCategoryView } from './js/ui/StudyCategoryView.js';
 import { calculateStudy as runFullModel } from './js/core/engine.js';
@@ -874,6 +875,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       // جميع الشاشات، بما فيها المكونات المتخصصة والجداول، تحصل على شرح سياقي
       // موحّد لكل خانة. الاستدعاء آمن ومتكرر ولا يضاعف الأيقونات الموجودة.
       enhanceFieldHelp(document.getElementById(containerId));
+      // خانة «إصدار تقرير» للأدوات التحليلية/المختلطة (المسار القديم أحادي الخطوة).
+      attachToolReport(step, containerId, store);
       studyJourney?.update(targetIndex);
 
       // الانتقال بين الخطوات يعيد المستخدم إلى بدايتها دائماً، بدلاً من إبقائه عند

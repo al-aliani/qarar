@@ -15,6 +15,7 @@ import { ReadyStudiesView } from './ReadyStudiesView.js';
 import { HRFilesView } from './HRFilesView.js';
 import { DatabaseFilesView } from './DatabaseFilesView.js';
 import { STEPS, SIDEBAR_SECTIONS } from '../core/wizardSteps.js';
+import { stepReportType, stepCanReport, STEP_TYPE_BADGE } from '../core/stepReportType.js';
 import { DATA_SOURCE_CATALOG } from '../services/DataConnectors.js';
 
 const FOLDERS_STORAGE_KEY = 'feas_folders';
@@ -175,6 +176,8 @@ export class DashboardView {
             if (step.isRiskMatrix || step.id === 'legal') return 'shield';
             return 'list';
         };
+        // تصنيف نوع الخطوة (تحليل/إدخال/مختلط) وشاراتها موحَّدة في core/stepReportType.js
+        // — نفس المصدر يغذّي حقن زر «إصدار تقرير» في ToolReport، فلا ينحرف التصنيفان.
         const journeySections = SIDEBAR_SECTIONS.map((section, sectionIndex) => {
             const steps = STEPS.slice(section.range[0], section.range[1] + 1);
             return `
@@ -187,11 +190,13 @@ export class DashboardView {
                     <div class="dv-journey__steps">
                         ${steps.map((step, offset) => {
                             const stepIndex = section.range[0] + offset;
+                            const badge = STEP_TYPE_BADGE[stepReportType(step)];
+                            const canReport = stepCanReport(step);
                             return `
                                 <button type="button" class="dv-toolrow dv-toolrow--compact" data-journey-step="${stepIndex}">
                                     <span class="dv-toolrow__ic">${inlineIcon(stepIcon(step))}</span>
                                     <span class="dv-toolrow__body">
-                                        <span class="dv-toolrow__name">${step.label}</span>
+                                        <span class="dv-toolrow__name">${step.label}<span class="dv-tag-type ${badge.cls}">${badge.label}</span>${canReport ? '<span class="dv-tag-report">تقرير</span>' : ''}</span>
                                     </span>
                                     <span class="dv-toolrow__go">${inlineIcon('chev')}</span>
                                 </button>
