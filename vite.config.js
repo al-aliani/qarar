@@ -6,6 +6,35 @@ import fs from 'fs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const assetsDir = resolve(__dirname, 'assets');
 
+// build فقط: configureServer أعلاه يخدم /studies /databases /hr-files محلياً
+// في وضع dev فقط (middleware لا يعمل أثناء vite build) — بدونها كانت روابط
+// التحميل/العرض الثلاثة تُرجع 404 في الإنتاج (أو تُبتلع بواسطة SPA fallback في
+// netlify.toml/vercel.json فيُنزَّل index.html باسم .pdf). ننسخ فقط الملفات
+// المفهرسة فعلياً في كل JSON (لا نسخ كامل للمجلد) لتفادي تضخيم الحزمة بصور/أرشيفات مستبعدة.
+function copyCatalogFiles(catalogPath, sourceRoot, urlPrefix, distDir) {
+    if (!fs.existsSync(catalogPath)) return;
+    const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf-8'));
+    const urls = [];
+    if (Array.isArray(catalog.studies)) urls.push(...catalog.studies.map((s) => s.url));
+    if (Array.isArray(catalog.groups)) {
+        for (const group of catalog.groups) {
+            for (const file of group.files || []) urls.push(file.url);
+        }
+    }
+    let copied = 0;
+    for (const url of urls) {
+        if (!url.startsWith(urlPrefix + '/')) continue;
+        const relative = decodeURIComponent(url.slice(urlPrefix.length + 1));
+        const src = resolve(sourceRoot, relative);
+        const dest = resolve(distDir, relative);
+        if (!src.startsWith(sourceRoot) || !fs.existsSync(src)) continue;
+        fs.mkdirSync(dirname(dest), { recursive: true });
+        fs.copyFileSync(src, dest);
+        copied += 1;
+    }
+    console.log(`[copy-catalog-files] ${copied}/${urls.length} → ${distDir}`);
+}
+
 export default defineConfig({
     root: './web',
     publicDir: 'public',
@@ -146,6 +175,31 @@ export default defineConfig({
                 serveDir('/studies', 'درسات جدوى');
                 serveDir('/databases', 'ملفات قواعد البيانات');
                 serveDir('/hr-files', 'ملفات الموارد البشرية/الموارد البشرية');
+            }
+        },
+        {
+            name: 'copy-catalog-files',
+            apply: 'build',
+            closeBundle() {
+                const distDir = resolve(__dirname, 'web/dist');
+                copyCatalogFiles(
+                    resolve(__dirname, 'web/public/data/ready-studies.json'),
+                    resolve(__dirname, 'درسات جدوى'),
+                    '/studies',
+                    resolve(distDir, 'studies'),
+                );
+                copyCatalogFiles(
+                    resolve(__dirname, 'web/public/data/database-files.json'),
+                    resolve(__dirname, 'ملفات قواعد البيانات'),
+                    '/databases',
+                    resolve(distDir, 'databases'),
+                );
+                copyCatalogFiles(
+                    resolve(__dirname, 'web/public/data/hr-files.json'),
+                    resolve(__dirname, 'ملفات الموارد البشرية/الموارد البشرية'),
+                    '/hr-files',
+                    resolve(distDir, 'hr-files'),
+                );
             }
         }
     ],

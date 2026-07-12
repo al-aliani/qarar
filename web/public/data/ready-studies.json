@@ -2,7 +2,7 @@
   "version": 1,
   "generatedAt": "2026-07-11",
   "sourceFolder": "درسات جدوى",
-  "total": 465,
+  "total": 456,
   "categories": [
     {
       "id": "food",
@@ -16,7 +16,7 @@
       "label": "تجارة وخدمات متنوعة",
       "folder": "الحي",
       "description": "تجارة التجزئة والخدمات والمشروعات المتنوعة",
-      "count": 74
+      "count": 71
     },
     {
       "id": "mens",
@@ -37,7 +37,7 @@
       "label": "دراسات متنوعة",
       "folder": "دراسة الجدوى",
       "description": "نماذج ودراسات متنوعة متعددة القطاعات",
-      "count": 101
+      "count": 99
     },
     {
       "id": "education",
@@ -72,7 +72,7 @@
       "label": "تصنيع وزراعة وثروة حيوانية",
       "folder": "مصنع",
       "description": "مصانع وورش ومشروعات زراعية وحيوانية",
-      "count": 207
+      "count": 203
     },
     {
       "id": "construction",
@@ -92,19 +92,19 @@
   "tags": [
     {
       "label": "دراسة موسعة",
-      "count": 454
+      "count": 445
     },
     {
       "label": "عربي وإنجليزي",
-      "count": 351
+      "count": 350
     },
     {
       "label": "مشروعات إنتاجية",
-      "count": 207
+      "count": 203
     },
     {
       "label": "بالإنجليزية",
-      "count": 114
+      "count": 106
     },
     {
       "label": "تصنيع",
@@ -112,11 +112,11 @@
     },
     {
       "label": "مشروعات متنوعة",
-      "count": 101
+      "count": 99
     },
     {
       "label": "تجارة وخدمات",
-      "count": 74
+      "count": 71
     },
     {
       "label": "تجارة وتجزئة",
@@ -176,14 +176,14 @@
     },
     {
       "label": "تقنية ومكاتب",
-      "count": 10
-    },
-    {
-      "label": "ملخص إرشادي",
       "count": 9
     },
     {
       "label": "أكشاك وعربات متنقلة",
+      "count": 8
+    },
+    {
+      "label": "ملخص إرشادي",
       "count": 8
     },
     {
@@ -1137,28 +1137,6 @@
       "excerpt": "ملخص دراسة جدوى إستر شادية لمشروع إنتاج الخميرة الجافة النشطة فكرة المشروع يعتبر مشروع إنتاج الخميرة الجافة النشطة من المشناري المطلنو إقامتهنا وذلن لننررتها فن الأسنوا المصنرية بنالرم من ارتفاع التكلفة الأساسية للمعرات…"
     },
     {
-      "id": "b19185b580b6",
-      "title": "دراسة جدوى لتطوير اختبار حاسوبي متكيف للأطفال العمانيين",
-      "filename": "A Feasibility Study for Developing a Computerized Adaptive Form of Raven_s Colored Progressive Matrices Test for Omani Children Based on the Item Response Theory.pdf",
-      "category": "retail-services",
-      "categoryLabel": "تجارة وخدمات متنوعة",
-      "categoryDescription": "تجارة التجزئة والخدمات والمشروعات المتنوعة",
-      "tags": [
-        "تجارة وخدمات",
-        "تقنية ومكاتب",
-        "دراسة موسعة",
-        "بالإنجليزية"
-      ],
-      "url": "/studies/%D8%A7%D9%84%D8%AD%D9%8A/A%20Feasibility%20Study%20for%20Developing%20a%20Computerized%20Adaptive%20Form%20of%20Raven_s%20Colored%20Progressive%20Matrices%20Test%20for%20Omani%20Children%20Based%20on%20the%20Item%20Response%20Theory.pdf",
-      "format": "ملف",
-      "downloadName": "دراسة جدوى لتطوير اختبار حاسوبي متكيف للأطفال العمانيين.pdf",
-      "size": 2051217,
-      "sizeLabel": "2.0 ميجابايت",
-      "pages": 41,
-      "language": "en",
-      "excerpt": "دراسة جدوى جاهزة ضمن تصنيف تجارة وخدمات متنوعة."
-    },
-    {
       "id": "629be232c135",
       "title": "دراسة جدوى فندق وقاعة مؤتمرات",
       "filename": "hotel-feasibility-study-hotel-conference-3.12.pdf",
@@ -1198,49 +1176,6 @@
       "size": 4282515,
       "sizeLabel": "4.1 ميجابايت",
       "pages": 69,
-      "language": "en",
-      "excerpt": "دراسة جدوى جاهزة ضمن تصنيف تجارة وخدمات متنوعة."
-    },
-    {
-      "id": "2ee4f0e24ee8",
-      "title": "دراسة خدمات متنوعة",
-      "filename": "SDS-Study.pdf",
-      "category": "retail-services",
-      "categoryLabel": "تجارة وخدمات متنوعة",
-      "categoryDescription": "تجارة التجزئة والخدمات والمشروعات المتنوعة",
-      "tags": [
-        "تجارة وخدمات",
-        "دراسة موسعة",
-        "بالإنجليزية"
-      ],
-      "url": "/studies/%D8%A7%D9%84%D8%AD%D9%8A/SDS-Study.pdf",
-      "format": "ملف",
-      "downloadName": "دراسة خدمات متنوعة.pdf",
-      "size": 4794552,
-      "sizeLabel": "4.6 ميجابايت",
-      "pages": 57,
-      "language": "en",
-      "excerpt": "دراسة جدوى جاهزة ضمن تصنيف تجارة وخدمات متنوعة."
-    },
-    {
-      "id": "0899b8288dd5",
-      "title": "ملخص نتائج الدراسة",
-      "filename": "Summary_StudyFindings211.pdf",
-      "category": "retail-services",
-      "categoryLabel": "تجارة وخدمات متنوعة",
-      "categoryDescription": "تجارة التجزئة والخدمات والمشروعات المتنوعة",
-      "tags": [
-        "تجارة وخدمات",
-        "ملخص إرشادي",
-        "دراسة موسعة",
-        "بالإنجليزية"
-      ],
-      "url": "/studies/%D8%A7%D9%84%D8%AD%D9%8A/Summary_StudyFindings211.pdf",
-      "format": "ملف",
-      "downloadName": "ملخص نتائج الدراسة.pdf",
-      "size": 238043,
-      "sizeLabel": "232 كيلوبايت",
-      "pages": 11,
       "language": "en",
       "excerpt": "دراسة جدوى جاهزة ضمن تصنيف تجارة وخدمات متنوعة."
     },
@@ -3301,7 +3236,6 @@
       "categoryDescription": "نماذج ودراسات متنوعة متعددة القطاعات",
       "tags": [
         "مشروعات متنوعة",
-        "دراسة موسعة",
         "بالإنجليزية"
       ],
       "url": "/studies/%D8%AF%D8%B1%D8%A7%D8%B3%D8%A9%20%D8%A7%D9%84%D8%AC%D8%AF%D9%88%D9%89/BAC303.pdf",
@@ -3309,8 +3243,8 @@
       "downloadName": "دراسة جدوى رقم 303.pdf",
       "size": 4681113,
       "sizeLabel": "4.5 ميجابايت",
-      "pages": 205,
-      "language": "mixed",
+      "pages": 0,
+      "language": "en",
       "excerpt": "دراسة جدوى جاهزة ضمن تصنيف دراسات متنوعة."
     },
     {
@@ -3636,27 +3570,6 @@
       "excerpt": "دراسة جدوى جاهزة ضمن تصنيف دراسات متنوعة."
     },
     {
-      "id": "c6b08d4b1512",
-      "title": "الجدوى الاقتصادية لمشروعات التنمية",
-      "filename": "Economic-Feasibility-of-Development-Projects-Arabic.pdf",
-      "category": "misc",
-      "categoryLabel": "دراسات متنوعة",
-      "categoryDescription": "نماذج ودراسات متنوعة متعددة القطاعات",
-      "tags": [
-        "مشروعات متنوعة",
-        "دراسة موسعة",
-        "بالإنجليزية"
-      ],
-      "url": "/studies/%D8%AF%D8%B1%D8%A7%D8%B3%D8%A9%20%D8%A7%D9%84%D8%AC%D8%AF%D9%88%D9%89/Economic-Feasibility-of-Development-Projects-Arabic.pdf",
-      "format": "ملف",
-      "downloadName": "الجدوى الاقتصادية لمشروعات التنمية.pdf",
-      "size": 458742,
-      "sizeLabel": "448 كيلوبايت",
-      "pages": 67,
-      "language": "mixed",
-      "excerpt": "دراسة جدوى جاهزة ضمن تصنيف دراسات متنوعة."
-    },
-    {
       "id": "52bf02404449",
       "title": "مركز تسوق",
       "filename": "Establishing-a-Mall-in-Mafraq.pdf",
@@ -3936,27 +3849,6 @@
       "pages": 51,
       "language": "mixed",
       "excerpt": "دراسة جدوى إقتصادية أولية لإنشاء مجمع حرفي في بلدية معاذ بن جبل كانون الثاني 2018"
-    },
-    {
-      "id": "522f47a70f0d",
-      "title": "2019 2019 النمو من خلال التنوع وكفاية الطاقة إنتاجية الطاقة في المملكة العربية السعودية",
-      "filename": "KS-2019-DP54-KS-2019-DP54-النمو-من-خلال-التنوع-وكفاية-الطاقة-إنتاجية-الطاقة-في-المملكة-العربية-السعودية.pdf",
-      "category": "misc",
-      "categoryLabel": "دراسات متنوعة",
-      "categoryDescription": "نماذج ودراسات متنوعة متعددة القطاعات",
-      "tags": [
-        "مشروعات متنوعة",
-        "دراسة موسعة",
-        "عربي وإنجليزي"
-      ],
-      "url": "/studies/%D8%AF%D8%B1%D8%A7%D8%B3%D8%A9%20%D8%A7%D9%84%D8%AC%D8%AF%D9%88%D9%89/KS-2019-DP54-KS-2019-DP54-%D8%A7%D9%84%D9%86%D9%85%D9%88-%D9%85%D9%86-%D8%AE%D9%84%D8%A7%D9%84-%D8%A7%D9%84%D8%AA%D9%86%D9%88%D8%B9-%D9%88%D9%83%D9%81%D8%A7%D9%8A%D8%A9-%D8%A7%D9%84%D8%B7%D8%A7%D9%82%D8%A9-%D8%A5%D9%86%D8%AA%D8%A7%D8%AC%D9%8A%D8%A9-%D8%A7%D9%84%D8%B7%D8%A7%D9%82%D8%A9-%D9%81%D9%8A-%D8%A7%D9%84%D9%85%D9%85%D9%84%D9%83%D8%A9-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9.pdf",
-      "format": "ملف",
-      "downloadName": "2019 2019 النمو من خلال التنوع وكفاية الطاقة إنتاجية الطاقة في المملكة العربية السعودية.pdf",
-      "size": 932219,
-      "sizeLabel": "910 كيلوبايت",
-      "pages": 32,
-      "language": "mixed",
-      "excerpt": "دراسة جدوى جاهزة ضمن تصنيف دراسات متنوعة."
     },
     {
       "id": "cad5603b2143",
@@ -6621,89 +6513,6 @@
       "size": 6781153,
       "sizeLabel": "6.5 ميجابايت",
       "pages": 56,
-      "language": "en",
-      "excerpt": "دراسة جدوى جاهزة ضمن تصنيف تصنيع وزراعة وثروة حيوانية."
-    },
-    {
-      "id": "921e13d87bf3",
-      "title": "دراسة جدوى السكك الحديدية",
-      "filename": "Rail railways.pdf",
-      "category": "manufacturing-agriculture",
-      "categoryLabel": "تصنيع وزراعة وثروة حيوانية",
-      "categoryDescription": "مصانع وورش ومشروعات زراعية وحيوانية",
-      "tags": [
-        "مشروعات إنتاجية",
-        "بالإنجليزية"
-      ],
-      "url": "/studies/%D9%85%D8%B5%D9%86%D8%B9/Rail%20railways.pdf",
-      "format": "ملف",
-      "downloadName": "دراسة جدوى السكك الحديدية.pdf",
-      "size": 2176248,
-      "sizeLabel": "2.1 ميجابايت",
-      "pages": 24,
-      "language": "en",
-      "excerpt": "دراسة جدوى جاهزة ضمن تصنيف تصنيع وزراعة وثروة حيوانية."
-    },
-    {
-      "id": "a6946838fe9f",
-      "title": "كتيب التقارير والوثائق للخدمات المالية",
-      "filename": "Reports and Documents_2052021000_EG_Financial_Services_CRR_Booklet.pdf",
-      "category": "manufacturing-agriculture",
-      "categoryLabel": "تصنيع وزراعة وثروة حيوانية",
-      "categoryDescription": "مصانع وورش ومشروعات زراعية وحيوانية",
-      "tags": [
-        "مشروعات إنتاجية",
-        "دراسة موسعة",
-        "بالإنجليزية"
-      ],
-      "url": "/studies/%D9%85%D8%B5%D9%86%D8%B9/Reports%20and%20Documents_2052021000_EG_Financial_Services_CRR_Booklet.pdf",
-      "format": "ملف",
-      "downloadName": "كتيب التقارير والوثائق للخدمات المالية.pdf",
-      "size": 2392965,
-      "sizeLabel": "2.3 ميجابايت",
-      "pages": 34,
-      "language": "en",
-      "excerpt": "دراسة جدوى جاهزة ضمن تصنيف تصنيع وزراعة وثروة حيوانية."
-    },
-    {
-      "id": "0fd0e35b8683",
-      "title": "دراسة جدوى هيئة سكك روكي ماونتن",
-      "filename": "Rocky Mountain Rail Authority Rail Feasibility Study.pdf",
-      "category": "manufacturing-agriculture",
-      "categoryLabel": "تصنيع وزراعة وثروة حيوانية",
-      "categoryDescription": "مصانع وورش ومشروعات زراعية وحيوانية",
-      "tags": [
-        "مشروعات إنتاجية",
-        "دراسة موسعة",
-        "بالإنجليزية"
-      ],
-      "url": "/studies/%D9%85%D8%B5%D9%86%D8%B9/Rocky%20Mountain%20Rail%20Authority%20Rail%20Feasibility%20Study.pdf",
-      "format": "ملف",
-      "downloadName": "دراسة جدوى هيئة سكك روكي ماونتن.pdf",
-      "size": 876148,
-      "sizeLabel": "856 كيلوبايت",
-      "pages": 74,
-      "language": "en",
-      "excerpt": "دراسة جدوى جاهزة ضمن تصنيف تصنيع وزراعة وثروة حيوانية."
-    },
-    {
-      "id": "1599891a3307",
-      "title": "منحنى تطور الشركات الناشئة",
-      "filename": "Startup-Evolution-Curve_Excerpt-2017-05-31.pdf",
-      "category": "manufacturing-agriculture",
-      "categoryLabel": "تصنيع وزراعة وثروة حيوانية",
-      "categoryDescription": "مصانع وورش ومشروعات زراعية وحيوانية",
-      "tags": [
-        "مشروعات إنتاجية",
-        "دراسة موسعة",
-        "بالإنجليزية"
-      ],
-      "url": "/studies/%D9%85%D8%B5%D9%86%D8%B9/Startup-Evolution-Curve_Excerpt-2017-05-31.pdf",
-      "format": "ملف",
-      "downloadName": "منحنى تطور الشركات الناشئة.pdf",
-      "size": 9692465,
-      "sizeLabel": "9.2 ميجابايت",
-      "pages": 109,
       "language": "en",
       "excerpt": "دراسة جدوى جاهزة ضمن تصنيف تصنيع وزراعة وثروة حيوانية."
     },

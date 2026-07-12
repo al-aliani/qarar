@@ -38,6 +38,13 @@ FORMAT_META = {
     ".pdf": ("وثيقة", "وثيقة"),
 }
 
+# مجلدات وُجدت أثناء التدقيق ضمن مجلد المصدر لكن محتواها ليس قاعدة بيانات
+# منشآت/شركات مثل بقية المجلدات — تُستبعد من الفهرس دون حذفها من المصدر.
+SKIP_FOLDERS = {
+    # كتيّب "إعادة بيع اشتراكات رقمية" (نتفلكس/أوفيس...)، وليس قاعدة بيانات منشآت
+    "أسرار الإشتراكات الرقمية",
+}
+
 EXCLUDED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".mp4", ".gif"}
 
 
@@ -77,6 +84,8 @@ def build_catalog() -> dict:
     groups = []
     total_files = 0
     for folder in sorted((path for path in SOURCE_ROOT.iterdir() if path.is_dir()), key=lambda item: item.name.casefold()):
+        if folder.name in SKIP_FOLDERS:
+            continue
         group_label, description = GROUP_META.get(folder.name, (folder.name, "ملفات وقواعد بيانات جاهزة للتحميل."))
         files = []
         image_ordinal = 0

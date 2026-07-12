@@ -2,15 +2,15 @@
   "version": 1,
   "generatedAt": "2026-07-11",
   "sourceFolder": "الموارد البشرية",
-  "totalFiles": 127,
-  "totalGroups": 14,
+  "totalFiles": 122,
+  "totalGroups": 13,
   "groups": [
     {
       "id": "dfe2db74975e",
       "label": "ملفات عامة متنوعة",
       "sourceFolder": "",
       "description": "ملفات عامة للموارد البشرية والتوظيف.",
-      "count": 7,
+      "count": 4,
       "files": [
         {
           "id": "aa6b907273d3",
@@ -46,39 +46,6 @@
           "isSample": false
         },
         {
-          "id": "acd5cae26824",
-          "title": "الموارد البشرية",
-          "filename": "الموارد البشرية.rar",
-          "format": "أرشيف",
-          "formatLabel": "ملف مضغوط",
-          "url": "/hr-files/%D8%A7%D9%84%D9%85%D9%88%D8%A7%D8%B1%D8%AF%20%D8%A7%D9%84%D8%A8%D8%B4%D8%B1%D9%8A%D8%A9.rar",
-          "downloadName": "الموارد البشرية.rar",
-          "sizeLabel": "49.9 ميجابايت",
-          "isSample": false
-        },
-        {
-          "id": "e00e287efc8f",
-          "title": "ملف الموارد البشرية ",
-          "filename": "ملف الموارد البشرية .rar",
-          "format": "أرشيف",
-          "formatLabel": "ملف مضغوط",
-          "url": "/hr-files/%D9%85%D9%84%D9%81%20%D8%A7%D9%84%D9%85%D9%88%D8%A7%D8%B1%D8%AF%20%D8%A7%D9%84%D8%A8%D8%B4%D8%B1%D9%8A%D8%A9%20.rar",
-          "downloadName": "ملف الموارد البشرية .rar",
-          "sizeLabel": "52.8 ميجابايت",
-          "isSample": false
-        },
-        {
-          "id": "ee1e77ee4441",
-          "title": "نماذج-وصف-وظيفي",
-          "filename": "نماذج-وصف-وظيفي.rar",
-          "format": "أرشيف",
-          "formatLabel": "ملف مضغوط",
-          "url": "/hr-files/%D9%86%D9%85%D8%A7%D8%B0%D8%AC-%D9%88%D8%B5%D9%81-%D9%88%D8%B8%D9%8A%D9%81%D9%8A.rar",
-          "downloadName": "نماذج-وصف-وظيفي.rar",
-          "sizeLabel": "628 كيلوبايت",
-          "isSample": false
-        },
-        {
           "id": "761d6981cb27",
           "title": "نموذج-استقدام-أفراد-غير-سعوديين",
           "filename": "نموذج-استقدام-أفراد-غير-سعوديين.docx",
@@ -93,9 +60,9 @@
     },
     {
       "id": "4c1deb87b147",
-      "label": "Anuual_Leave_",
+      "label": "الإجازات السنوية",
       "sourceFolder": "Anuual_Leave_",
-      "description": "نماذج وملفات تتعلق بـ Anuual_Leave_",
+      "description": "نماذج وملفات تتعلق بـ الإجازات السنوية",
       "count": 2,
       "files": [
         {
@@ -124,9 +91,9 @@
     },
     {
       "id": "d5271a02c107",
-      "label": "JOB DESCRIPTION",
+      "label": "الوصف الوظيفي",
       "sourceFolder": "JOB DESCRIPTION",
-      "description": "نماذج وملفات تتعلق بـ JOB DESCRIPTION",
+      "description": "نماذج وملفات تتعلق بـ الوصف الوظيفي",
       "count": 3,
       "files": [
         {
@@ -166,9 +133,9 @@
     },
     {
       "id": "e9af895ae443",
-      "label": "kpi & kpa",
+      "label": "مؤشرات الأداء (KPI)",
       "sourceFolder": "kpi & kpa",
-      "description": "نماذج وملفات تتعلق بـ kpi & kpa",
+      "description": "نماذج وملفات تتعلق بـ مؤشرات الأداء (KPI)",
       "count": 5,
       "files": [
         {
@@ -230,9 +197,9 @@
     },
     {
       "id": "dd30e7a45f24",
-      "label": "Organizational Chart",
+      "label": "الهيكل التنظيمي",
       "sourceFolder": "Organizational Chart",
-      "description": "نماذج وملفات تتعلق بـ Organizational Chart",
+      "description": "نماذج وملفات تتعلق بـ الهيكل التنظيمي",
       "count": 4,
       "files": [
         {
@@ -283,9 +250,9 @@
     },
     {
       "id": "4de4727ba004",
-      "label": "payroll",
+      "label": "الرواتب",
       "sourceFolder": "payroll",
-      "description": "نماذج وملفات تتعلق بـ payroll",
+      "description": "نماذج وملفات تتعلق بـ الرواتب",
       "count": 4,
       "files": [
         {
@@ -336,10 +303,10 @@
     },
     {
       "id": "f8ab3e921c47",
-      "label": "Planing",
+      "label": "التخطيط الاستراتيجي",
       "sourceFolder": "Planing",
-      "description": "نماذج وملفات تتعلق بـ Planing",
-      "count": 8,
+      "description": "نماذج وملفات تتعلق بـ التخطيط الاستراتيجي",
+      "count": 7,
       "files": [
         {
           "id": "6d01e4b59009",
@@ -386,17 +353,6 @@
           "isSample": false
         },
         {
-          "id": "5ea02c3771d4",
-          "title": "شهادات تقدير PSD",
-          "filename": "شهادات تقدير PSD.rar",
-          "format": "أرشيف",
-          "formatLabel": "ملف مضغوط",
-          "url": "/hr-files/Planing/%D8%B4%D9%87%D8%A7%D8%AF%D8%A7%D8%AA%20%D8%AA%D9%82%D8%AF%D9%8A%D8%B1%20PSD.rar",
-          "downloadName": "شهادات تقدير PSD.rar",
-          "sizeLabel": "14.8 ميجابايت",
-          "isSample": false
-        },
-        {
           "id": "e5ce72b02a15",
           "title": "عملية تخطيط الموارد البشرية",
           "filename": "عملية تخطيط الموارد البشرية.ppt",
@@ -433,9 +389,9 @@
     },
     {
       "id": "ee45c30326b7",
-      "label": "Report",
+      "label": "التقارير",
       "sourceFolder": "Report",
-      "description": "نماذج وملفات تتعلق بـ Report",
+      "description": "نماذج وملفات تتعلق بـ التقارير",
       "count": 7,
       "files": [
         {
@@ -519,9 +475,9 @@
     },
     {
       "id": "7c4ece52634c",
-      "label": "salary scale",
+      "label": "سلم الرواتب",
       "sourceFolder": "salary scale",
-      "description": "نماذج وملفات تتعلق بـ salary scale",
+      "description": "نماذج وملفات تتعلق بـ سلم الرواتب",
       "count": 2,
       "files": [
         {
@@ -550,9 +506,9 @@
     },
     {
       "id": "d3dbbc48d499",
-      "label": "SWOT Analysis",
+      "label": "التحليل الرباعي (SWOT)",
       "sourceFolder": "SWOT Analysis",
-      "description": "نماذج وملفات تتعلق بـ SWOT Analysis",
+      "description": "نماذج وملفات تتعلق بـ التحليل الرباعي (SWOT)",
       "count": 4,
       "files": [
         {
@@ -1055,26 +1011,6 @@
           "url": "/hr-files/%D8%B4%D8%A4%D9%88%D9%86%20%D8%B9%D8%A7%D9%85%D9%84%D9%8A%D9%86/%D9%86%D9%85%D9%88%D8%B0%D8%AC-%D8%B7%D9%84%D8%A8-%D8%B5%D8%B1%D9%81-%D8%A7%D9%84%D8%B3%D9%84%D9%81%D8%A9.docx",
           "downloadName": "نموذج-طلب-صرف-السلفة.docx",
           "sizeLabel": "14 كيلوبايت",
-          "isSample": false
-        }
-      ]
-    },
-    {
-      "id": "fa349fce1748",
-      "label": "قوانين العمل",
-      "sourceFolder": "قوانين العمل",
-      "description": "نماذج وملفات تتعلق بـ قوانين العمل",
-      "count": 1,
-      "files": [
-        {
-          "id": "1b995b017389",
-          "title": "قانون-العمل-السعودي",
-          "filename": "قانون-العمل-السعودي.pdf",
-          "format": "وثيقة",
-          "formatLabel": "وثيقة",
-          "url": "/hr-files/%D9%82%D9%88%D8%A7%D9%86%D9%8A%D9%86%20%D8%A7%D9%84%D8%B9%D9%85%D9%84/%D9%82%D8%A7%D9%86%D9%88%D9%86-%D8%A7%D9%84%D8%B9%D9%85%D9%84-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A.pdf",
-          "downloadName": "قانون-العمل-السعودي.pdf",
-          "sizeLabel": "1.5 ميجابايت",
           "isSample": false
         }
       ]

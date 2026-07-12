@@ -2,8 +2,8 @@
   "version": 1,
   "generatedAt": "2026-07-11",
   "sourceFolder": "ملفات قواعد البيانات",
-  "totalFiles": 23,
-  "totalGroups": 13,
+  "totalFiles": 22,
+  "totalGroups": 12,
   "groups": [
     {
       "id": "0eaf79b3f04a",
@@ -32,26 +32,6 @@
           "url": "/databases/%D8%A3%D8%AC%D9%87%D8%B2%D8%A9%20%D8%B7%D8%A8%D9%8A%D8%A9/%D8%A3%D8%AC%D9%87%D8%B2%D8%A9-%D8%B7%D8%A8%D9%8A%D8%A9.xlsx",
           "downloadName": "أجهزة طبية.xlsx",
           "sizeLabel": "416 كيلوبايت",
-          "isSample": false
-        }
-      ]
-    },
-    {
-      "id": "5a9edd4ff272",
-      "label": "الاشتراكات الرقمية",
-      "sourceFolder": "أسرار الإشتراكات الرقمية",
-      "description": "مادة مرجعية عن الاشتراكات والخدمات الرقمية.",
-      "count": 1,
-      "files": [
-        {
-          "id": "28047607ceb3",
-          "title": "أسرار الإشتراكات الرقمية",
-          "filename": "أسرار الإشتراكات الرقمية .pdf",
-          "format": "وثيقة",
-          "formatLabel": "وثيقة",
-          "url": "/databases/%D8%A3%D8%B3%D8%B1%D8%A7%D8%B1%20%D8%A7%D9%84%D8%A5%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%D8%A7%D8%AA%20%D8%A7%D9%84%D8%B1%D9%82%D9%85%D9%8A%D8%A9/%D8%A3%D8%B3%D8%B1%D8%A7%D8%B1%20%D8%A7%D9%84%D8%A5%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%D8%A7%D8%AA%20%D8%A7%D9%84%D8%B1%D9%82%D9%85%D9%8A%D8%A9%20.pdf",
-          "downloadName": "أسرار الإشتراكات الرقمية.pdf",
-          "sizeLabel": "991 كيلوبايت",
           "isSample": false
         }
       ]

@@ -27,6 +27,29 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = ROOT / "درسات جدوى"
 OUTPUT = ROOT / "web" / "public" / "data" / "ready-studies.json"
 
+# ملفات وُجدت أثناء التدقيق ضمن مجلدات المصدر لكنها ليست دراسات جدوى لمشروع
+# تجاري يفيد عميلاً سعودياً (أوراق أكاديمية/بحثية، تقارير حكومية أجنبية عامة،
+# أو مواد نظرية عامة). تُستبعد من الفهرس دون حذفها من المصدر.
+SKIP_FILES = {
+    # ورقة بحث أكاديمية عن اختبار ذكاء للأطفال العُمانيين، وليست دراسة مشروع
+    "الحي/A Feasibility Study for Developing a Computerized Adaptive Form of Raven_s Colored Progressive Matrices Test for Omani Children Based on the Item Response Theory.pdf",
+    # دراسة جدوى سكن طلابي لكلية أمريكية (Bellevue College) — غير ذات صلة
+    "الحي/SDS-Study.pdf",
+    # دراسة توسعة مركز مؤتمرات واشنطن (مشروع حكومي أمريكي ضخم) — غير ذات صلة
+    "الحي/Summary_StudyFindings211.pdf",
+    # كتاب نظري عام عن الجدوى الاقتصادية، وليس دراسة لمشروع فعلي
+    "دراسة الجدوى/Economic-Feasibility-of-Development-Projects-Arabic.pdf",
+    # ورقة بحثية من KAPSARC عن سياسات الطاقة الكلية بالسعودية، وليست دراسة جدوى لمشروع
+    "دراسة الجدوى/KS-2019-DP54-KS-2019-DP54-النمو-من-خلال-التنوع-وكفاية-الطاقة-إنتاجية-الطاقة-في-المملكة-العربية-السعودية.pdf",
+    # دراسة جدوى سكة حديد حكومية (لا علاقة بمصنع أو مشروع صغير)
+    "مصنع/Rail railways.pdf",
+    "مصنع/Rocky Mountain Rail Authority Rail Feasibility Study.pdf",
+    # كتيّب تقارير خدمات مالية مصري، وليس دراسة جدوى مشروع
+    "مصنع/Reports and Documents_2052021000_EG_Financial_Services_CRR_Booklet.pdf",
+    # مقتطف نظري عام عن مراحل تطور الشركات الناشئة، وليس دراسة مشروع محدد
+    "مصنع/Startup-Evolution-Curve_Excerpt-2017-05-31.pdf",
+}
+
 CATEGORY_META = {
     "أكل": ("food", "أطعمة ومشروبات", "مطاعم، مقاهٍ، حلويات، ومشاريع غذائية"),
     "الحي": ("retail-services", "تجارة وخدمات متنوعة", "تجارة التجزئة والخدمات والمشروعات المتنوعة"),
@@ -404,10 +427,13 @@ def build_catalog() -> dict:
         if not path.is_file():
             continue
         try:
-            folder = path.relative_to(SOURCE_ROOT).parts[0]
+            relative_parts = path.relative_to(SOURCE_ROOT)
+            folder = relative_parts.parts[0]
         except ValueError:
             continue
         if folder not in CATEGORY_META:
+            continue
+        if relative_parts.as_posix() in SKIP_FILES:
             continue
         category_id, category_label, category_description = CATEGORY_META[folder]
         excerpt, page_count = extract_first_page(path)

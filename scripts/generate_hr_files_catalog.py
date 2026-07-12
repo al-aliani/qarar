@@ -28,7 +28,27 @@ FORMAT_META = {
     ".zip": ("ملف مضغوط", "أرشيف"),
 }
 
-EXCLUDED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".mp4", ".gif"}
+EXCLUDED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".mp4", ".gif", ".rar", ".zip"}
+
+# أسماء المجلدات الفرعية إنجليزية خام (وبعضها بها أخطاء إملائية مثل
+# "Anuual_Leave_"/"Planing") — تُترجم هنا بدل تسريبها حرفياً لواجهة عربية.
+LABEL_OVERRIDES = {
+    "Anuual_Leave_": "الإجازات السنوية",
+    "JOB DESCRIPTION": "الوصف الوظيفي",
+    "Organizational Chart": "الهيكل التنظيمي",
+    "Planing": "التخطيط الاستراتيجي",
+    "Report": "التقارير",
+    # يبقى الاختصار بين قوسين بعد المصطلح العربي — نمط web/app.js:87 المحمي من
+    # معرِّب الواجهة العام (وإلا يتحول "تحليل SWOT" إلى "تحليل التحليل الرباعي").
+    "SWOT Analysis": "التحليل الرباعي (SWOT)",
+    "kpi & kpa": "مؤشرات الأداء (KPI)",
+    "payroll": "الرواتب",
+    "salary scale": "سلم الرواتب",
+}
+
+# مجلد بملف واحد مكرر بالكامل ومحتواه موجود أصلاً داخل مجلد "شؤون عاملين" —
+# يُستبعد لتفادي ظهور مجموعة كاملة لملف واحد مكرر.
+SKIP_FOLDERS = {"قوانين العمل"}
 
 def size_label(size: int) -> str:
     if size >= 1024 * 1024:
@@ -82,6 +102,8 @@ def build_catalog() -> dict:
         })
 
     for folder in sorted((path for path in SOURCE_ROOT.iterdir() if path.is_dir()), key=lambda item: item.name.casefold()):
+        if folder.name in SKIP_FOLDERS:
+            continue
         files = []
         for path in sorted(folder.rglob("*"), key=lambda item: str(item.relative_to(folder)).casefold()):
             if not path.is_file() or path.name.startswith("~$"):
@@ -107,11 +129,12 @@ def build_catalog() -> dict:
         if not files:
             continue
         total_files += len(files)
+        label = LABEL_OVERRIDES.get(folder.name, folder.name)
         groups.append({
             "id": hashlib.sha1(folder.name.encode("utf-8")).hexdigest()[:12],
-            "label": folder.name,
+            "label": label,
             "sourceFolder": folder.name,
-            "description": f"نماذج وملفات تتعلق بـ {folder.name}",
+            "description": f"نماذج وملفات تتعلق بـ {label}",
             "count": len(files),
             "files": files,
         })
