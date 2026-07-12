@@ -79,3 +79,36 @@ export async function getOrderStatus(orderId) {
     if (error || !data) return null;
     return data.status;
 }
+
+/**
+ * حالة مراجعة الخبير لهذه الدراسة (إن وُجد طلب tier='reviewed' لها) — تُستخدم
+ * لعرض ReviewStatusBadge للعميل بدل تركه ينتظر بلا أي مؤشّر داخل الموقع.
+ * أحدث طلب "مراجَع بخبير" لهذه الدراسة فقط (قد تتكرر الدراسة بين عدة طلبات
+ * قديمة/ملغاة، فنعرض الأحدث حسب created_at).
+ * @param {string} studyId
+ * @returns {Promise<{reviewStatus: string, certificateId: string|null, reviewedAt: string|null}|null>}
+ */
+export async function getReviewStatus(studyId) {
+    if (!studyId) return null;
+    const { supabase, ok } = await getSupabaseClient();
+    if (!ok || !supabase) return null;
+
+    const { user } = await getAuthUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+        .from('orders')
+        .select('review_status, certificate_id, reviewed_at')
+        .eq('study_id', studyId)
+        .eq('tier', 'reviewed')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error || !data) return null;
+    return {
+        reviewStatus: data.review_status,
+        certificateId: data.certificate_id,
+        reviewedAt: data.reviewed_at,
+    };
+}

@@ -57,6 +57,16 @@ Deno.serve(async (req: Request) => {
   }
   if (!data || data.length === 0) {
     console.log('[webhook-stripe] no matching pending order (already processed or unknown ref):', providerRef);
+  } else if (status === 'paid') {
+    // إدخال طلبات "مراجَع بخبير" المدفوعة حديثاً إلى طابور المراجعين تلقائياً —
+    // شرط review_status='none' يمنع إعادة إدخال طلب سبق أن دخل السير (استقبال
+    // مكرر للحدث بعد الدفع لا يجب أن يعيد طلباً مُعتمَداً/قيد المراجعة إلى الطابور.
+    await adminClient
+      .from('orders')
+      .update({ review_status: 'queued' })
+      .in('id', data.map((row: { id: string }) => row.id))
+      .eq('tier', 'reviewed')
+      .eq('review_status', 'none');
   }
 
   return new Response('ok', { status: 200 });

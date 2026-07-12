@@ -14,6 +14,7 @@ class AuthGuardClass {
         this.isConfigured = false;
         this.listeners = [];
         this.initialized = false;
+        this._reviewerCache = null; // { userId, value } — يُبطَل عند أي تغيّر بحالة المصادقة
     }
 
     /**
@@ -85,6 +86,7 @@ class AuthGuardClass {
             const previousUser = this.currentUser;
             this.currentUser = session?.user || null;
             this.isAuthenticated = !!this.currentUser;
+            this._reviewerCache = null; // هوية مختلفة (أو خروج) = ذاكرة isReviewer() القديمة غير صالحة
 
             if (event === 'SIGNED_IN') {
                 auditLog(ACTIONS.LOGIN, { email: this.currentUser?.email });
@@ -237,6 +239,33 @@ class AuthGuardClass {
      */
     getSubscriptionTier() {
         return this.currentUser?.app_metadata?.subscription_tier || 'free';
+    }
+
+    /**
+     * هل المستخدم الحالي مراجع نشط (جدول reviewers)؟ بخلاف getSubscriptionTier
+     * هذه ليست مضمَّنة في JWT، فتحتاج استعلاماً فعلياً — تُخزَّن النتيجة مؤقتاً
+     * لهوية المستخدم الحالية فقط وتُبطَل تلقائياً عند أي SIGNED_IN/SIGNED_OUT
+     * (انظر subscribeToAuthChanges أعلاه) لتفادي استعلام متكرر عند كل نداء.
+     */
+    async isReviewer() {
+        if (!this.currentUser) return false;
+
+        if (this._reviewerCache && this._reviewerCache.userId === this.currentUser.id) {
+            return this._reviewerCache.value;
+        }
+
+        const { supabase } = await getSupabaseClient();
+        if (!supabase) return false;
+
+        const { data, error } = await supabase
+            .from('reviewers')
+            .select('active')
+            .eq('id', this.currentUser.id)
+            .maybeSingle();
+
+        const value = !error && !!data?.active;
+        this._reviewerCache = { userId: this.currentUser.id, value };
+        return value;
     }
 
     /**
