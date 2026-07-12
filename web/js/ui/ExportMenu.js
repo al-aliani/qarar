@@ -360,6 +360,14 @@ export class ExportMenu {
                             </div>
                         </button>
 
+                        <button type="button" class="export-card" data-type="share_link" aria-label="مشاركة الدراسة برابط فعلي بصلاحية عرض">
+                            <div class="icon">🔗</div>
+                            <div class="info">
+                                <h4>مشاركة الدراسة</h4>
+                                <p>رابط عرض حقيقي (بلا حاجة حساب للطرف الآخر) — قابل للإلغاء لاحقاً</p>
+                            </div>
+                        </button>
+
                         <button type="button" class="export-card export-card-consultation" data-type="consultation" aria-label="احجز استشارة Zoom مع خبير">
                             <div class="icon">📞</div>
                             <div class="info">
@@ -461,6 +469,13 @@ export class ExportMenu {
                     this.close();
                     const modal = new ConsultationModal('consultationModalOverlay', this.store);
                     modal.open();
+                    return;
+                }
+                if (type === 'share_link') {
+                    this.close();
+                    const { ShareModal } = await import('./ShareModal.js');
+                    const modal = new ShareModal('shareModalOverlay', this.store);
+                    await modal.open();
                     return;
                 }
                 await this.handleExport(type, btn);

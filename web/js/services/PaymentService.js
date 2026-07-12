@@ -37,7 +37,7 @@ export async function hasActivePayment(studyId) {
 /**
  * بدء جلسة دفع فعلية عبر Edge Function (create-checkout) — يعيد رابط دفع
  * حقيقياً من المزوّد (Moyasar أو Stripe) يجب توجيه المتصفح إليه.
- * @param {{tier: 'self'|'reviewed'|'full', studyId: string, provider: 'moyasar'|'stripe'}} params
+ * @param {{tier: 'self'|'reviewed'|'full', studyId: string, provider: 'moyasar'|'stripe'|'tamara'}} params
  * @returns {Promise<{ok: boolean, checkoutUrl?: string, orderId?: string, error?: string}>}
  */
 export async function startCheckout({ tier, studyId, provider }) {

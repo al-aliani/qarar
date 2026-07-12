@@ -77,6 +77,9 @@ export class PaywallModal {
                     <button type="button" class="btn btn--primary btn-block btn-pay-now" data-package="${pkg.id}" data-provider="moyasar">
                         ادفع الآن (مدى / Apple Pay / STC Pay)
                     </button>
+                    <button type="button" class="btn btn--outline btn-block btn-pay-now" data-package="${pkg.id}" data-provider="tamara">
+                        قسّطها مع تمارا
+                    </button>
                     <button type="button" class="btn btn--outline btn-block btn-pay-now" data-package="${pkg.id}" data-provider="stripe">
                         ادفع ببطاقة دولية
                     </button>

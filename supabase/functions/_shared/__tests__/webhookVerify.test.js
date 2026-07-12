@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import {
   verifyStripeSignature,
   verifyMoyasarSecretToken,
+  verifyTamaraNotificationToken,
   hmacSha256Hex,
 } from '../webhookVerify.ts';
 
@@ -80,5 +81,24 @@ describe('verifyMoyasarSecretToken', () => {
     const result = verifyMoyasarSecretToken({ id: 'pay_123' }, 'moy_secret_abc');
     expect(result.ok).toBe(false);
     expect(result.reason).toBe('missing_secret_token');
+  });
+});
+
+describe('verifyTamaraNotificationToken', () => {
+  it('يقبل رأس Bearer مطابقاً', () => {
+    const result = verifyTamaraNotificationToken('Bearer tam_notify_abc', 'tam_notify_abc');
+    expect(result.ok).toBe(true);
+  });
+
+  it('يرفض توكن مختلفاً', () => {
+    const result = verifyTamaraNotificationToken('Bearer wrong', 'tam_notify_abc');
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('notification_token_mismatch');
+  });
+
+  it('يرفض غياب رأس Authorization كلياً', () => {
+    const result = verifyTamaraNotificationToken(null, 'tam_notify_abc');
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('missing_authorization_header');
   });
 });

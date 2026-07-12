@@ -250,6 +250,7 @@
     .hero .lede { color: rgba(255,255,255,.86); font-size: clamp(16px, 1.7vw, 19px); max-width: 56ch; line-height: 1.72; }
     .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
     .hero-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 40px; max-width: 760px; }
+    .hero-facts[hidden] { display: none; }
     .hero-fact { border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.07); border-radius: var(--r); padding: 15px 15px; backdrop-filter: blur(8px); transition: border-color .22s ease, background .22s ease, transform .22s cubic-bezier(.2,.7,.2,1); }
     .hero-fact:hover { border-color: rgba(215,170,74,.5); background: rgba(255,255,255,.1); transform: translateY(-2px); }
     .hero-fact b { display: block; font-size: 19px; color: var(--on-color-text); line-height: 1.15; font-weight: 700; }
@@ -612,6 +613,11 @@
           <div class="hero-cta">
             <a href="./index.html?cta=hero" class="btn btn-light">ابدأ دراستك الآن</a>
             <a href="#sample" class="btn btn-ghost">شاهد نموذج تقرير أولاً</a>
+          </div>
+          <div class="hero-facts" id="heroUsageStats" hidden>
+            <div class="hero-fact is-num"><b id="statTotalStudies">-</b><span>دراسة أُعِدَّت على المنصة</span></div>
+            <div class="hero-fact is-num"><b id="statPaidStudies">-</b><span>دراسة مدفوعة فعلياً</span></div>
+            <div class="hero-fact is-num"><b id="statCertifiedStudies">-</b><span>دراسة معتمدة من خبير</span></div>
           </div>
         </div>
 
@@ -1052,6 +1058,28 @@
         trackEvent('whatsapp_cta_click', { package: a.getAttribute('data-pkg') || 'استفسار عام' });
       });
     });
+  </script>
+
+  <!-- عدّاد استخدام حقيقي (2026-07-14) — رقم معدود فعلياً من قاعدة البيانات عبر
+       get_public_usage_stats (RPC بصلاحية security definer، آمن للقراءة العامة
+       بلا مصادقة). لا رقم مصطنع هنا؛ يظهر حتى لو صفراً، ويختفي بصمت عند أي فشل
+       بدل عرض بيانات فارغة أو خاطئة. -->
+  <script type="module">
+    import { getSupabaseClient } from './supabaseClient.js';
+    (async () => {
+      try {
+        const { supabase, ok } = await getSupabaseClient();
+        if (!ok || !supabase) return;
+        const { data, error } = await supabase.rpc('get_public_usage_stats').single();
+        if (error || !data) return;
+        document.getElementById('statTotalStudies').textContent = Number(data.total_studies || 0).toLocaleString('ar-SA');
+        document.getElementById('statPaidStudies').textContent = Number(data.paid_studies || 0).toLocaleString('ar-SA');
+        document.getElementById('statCertifiedStudies').textContent = Number(data.certified_studies || 0).toLocaleString('ar-SA');
+        document.getElementById('heroUsageStats').hidden = false;
+      } catch (e) {
+        console.warn('[قرار] تعذّر تحميل عدّاد الاستخدام؛ يبقى القسم مخفياً.', e);
+      }
+    })();
   </script>
 </body>
 </html>

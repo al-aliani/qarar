@@ -18,6 +18,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getPackage } from '../_shared/pricing.ts';
 import { createMoyasarCheckout } from '../_shared/providers/moyasar.ts';
 import { createStripeCheckout } from '../_shared/providers/stripe.ts';
+import { createTamaraCheckout } from '../_shared/providers/tamara.ts';
 
 const APP_ORIGIN = Deno.env.get('APP_ORIGIN') || 'http://localhost:5173';
 
@@ -57,7 +58,7 @@ Deno.serve(async (req: Request) => {
   const pkg = getPackage(body.tier || '');
   if (!pkg) return jsonResponse({ error: 'invalid_tier' }, 400);
 
-  const provider = body.provider === 'stripe' ? 'stripe' : body.provider === 'moyasar' ? 'moyasar' : null;
+  const provider = body.provider === 'stripe' ? 'stripe' : body.provider === 'moyasar' ? 'moyasar' : body.provider === 'tamara' ? 'tamara' : null;
   if (!provider) return jsonResponse({ error: 'invalid_provider' }, 400);
 
   // عميل بصلاحية service_role — الوحيد المسموح له بالكتابة في orders (RLS لا يسمح
@@ -92,6 +93,16 @@ Deno.serve(async (req: Request) => {
     if (provider === 'moyasar') {
       const secretKey = Deno.env.get('MOYASAR_SECRET_KEY')!;
       const result = await createMoyasarCheckout(secretKey, {
+        amountSar: pkg.price,
+        description: `قرار — باقة ${pkg.name}`,
+        callbackUrl: returnUrl,
+        metadata: { orderId, tier: pkg.id, userId },
+      });
+      checkoutUrl = result.checkoutUrl;
+      providerRef = result.providerRef;
+    } else if (provider === 'tamara') {
+      const apiToken = Deno.env.get('TAMARA_API_TOKEN')!;
+      const result = await createTamaraCheckout(apiToken, {
         amountSar: pkg.price,
         description: `قرار — باقة ${pkg.name}`,
         callbackUrl: returnUrl,

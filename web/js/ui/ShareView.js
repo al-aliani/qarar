@@ -2,8 +2,15 @@
  * Investor Share View
  * A read-only, premium "Pitch Deck" style view for sharing with stakeholders.
  * Hides editing controls, focuses on "The Story" (Problem -> Solution -> Market -> Financials).
+ *
+ * تدقيق 2026-07-14: كان render(projectId) يتجاهل المعامل كلياً ويعرض حالة
+ * المتصفح الحالية (this.store.getState()) — أي رابط مشاركة لا يُظهر فعلياً
+ * دراسة الطرف الآخر. الآن يُعامَل المعامل كرمز مشاركة فعلي (share_token) عبر
+ * ShareService.getSharedStudy، بصلاحية 'view' فقط (انظر migration
+ * 20260714020000_share_tokens.sql).
  */
 import { generateExecutiveSummary } from '../services/InternalAIGenerator.js'; // Re-use summary logic
+import { getSharedStudy } from '../services/ShareService.js';
 import { toast } from '../utils/toast.js';
 
 export class ShareView {
@@ -13,14 +20,14 @@ export class ShareView {
         this.onNavigate = onNavigate;
     }
 
-    async render(projectId) {
-        // 1. Load Project Data
-        const state = this.store.getState();
+    async render(shareToken) {
+        const shared = shareToken ? await getSharedStudy(shareToken) : null;
+        if (!shared) {
+            this._renderInvalidLink();
+            return;
+        }
 
-        // If viewing specific project (in a real backend scenario, we'd fetch by ID). 
-        // For local, we assume the store determines the current project or we load it.
-        // Here we assume 'state' is already the target project or we just use current state.
-
+        const state = shared.data || {};
         const pi = state.projectInfo || {};
         const revenue = state.revenue || {};
         const costs = state.costs || {};
@@ -146,6 +153,16 @@ export class ShareView {
         `;
 
         this.bindEvents();
+    }
+
+    _renderInvalidLink() {
+        this.container.innerHTML = `
+            <div class="share-view-invalid" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;">
+                <h1 style="font-size:1.5rem;margin-bottom:12px;">هذا الرابط غير صالح أو منتهي</h1>
+                <p style="color:var(--c-text-muted,#94a3b8);margin-bottom:20px;">قد يكون صاحب الدراسة ألغى المشاركة، أو انتهت صلاحية الرابط.</p>
+                <a href="./" class="btn btn--primary">الذهاب للصفحة الرئيسية</a>
+            </div>
+        `;
     }
 
     bindEvents() {

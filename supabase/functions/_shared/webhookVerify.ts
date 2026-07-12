@@ -81,4 +81,21 @@ export function verifyMoyasarSecretToken(
   return { ok: true };
 }
 
+/**
+ * Tamara: ترسل رأس Authorization بصيغة "Bearer <notification_token>" مع كل
+ * webhook — التوكن نفسه يُضبَط عند تسجيل عنوان الإشعارات في لوحة تحكم تمارا
+ * (ليس توقيع HMAC محسوباً). تحقّق من هذا مقابل التوثيق الفعلي الحيّ عند الربط
+ * بمفاتيح Sandbox حقيقية — هذا التنفيذ مبنيّ على الصيغة الموثّقة عاماً.
+ */
+export function verifyTamaraNotificationToken(
+  authorizationHeader: string | null,
+  configuredToken: string
+): { ok: boolean; reason?: string } {
+  if (!authorizationHeader) return { ok: false, reason: 'missing_authorization_header' };
+  const token = authorizationHeader.replace(/^Bearer\s+/i, '');
+  if (!token) return { ok: false, reason: 'missing_notification_token' };
+  if (!timingSafeEqual(token, configuredToken)) return { ok: false, reason: 'notification_token_mismatch' };
+  return { ok: true };
+}
+
 export { hmacSha256Hex, timingSafeEqual };
