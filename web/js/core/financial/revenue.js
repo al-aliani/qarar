@@ -36,10 +36,22 @@ export function buildRevenueModel(ctx) {
         
         const rawVCR = Number(stream.variableCostRate ?? 0.30);
         const vcr = rawVCR > 1 ? rawVCR / 100 : rawVCR;
-        
+
+        // تدقيق دفعة 3 (2026-07-12): wasteRate (تلف وهدر) وplatformCommissionRate
+        // (عمولة منصة) عمودان اختياريان جديدان في جدول الإيرادات — كلاهما كسر (0–1)
+        // مثل variableCostRate تماماً (مسجَّلان في DynamicTable.isFractionPercentColumn)،
+        // وكلاهما افتراضهما صفر فلا يغيّران شيئاً في الدراسات القديمة التي لا تملأهما.
+        // نفس تسامح ">1 يُعامَل كنسبة مئوية خام" المطبَّق على variableCostRate أعلاه —
+        // دفاعاً عن نفس فخّ ×100 الموثَّق لو أُدخلا خطأً كرقم مئوي خام (30 بدل 0.30).
+        const rawWaste = Number(stream.wasteRate ?? 0);
+        const wasteRate = rawWaste > 1 ? rawWaste / 100 : rawWaste;
+        const rawCommission = Number(stream.platformCommissionRate ?? 0);
+        const commissionRate = rawCommission > 1 ? rawCommission / 100 : rawCommission;
+        const totalVcr = vcr + wasteRate + commissionRate;
+
         revenueSources.push({
             rev1: revenue,
-            vc1: type === 'operating' ? revenue * vcr : 0,
+            vc1: type === 'operating' ? revenue * totalVcr : 0,
             units1: annualCust,
             growth: Number(stream.growthRate ?? defaultGrowth),
             operating: type === 'operating'

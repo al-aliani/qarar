@@ -1159,6 +1159,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     db.render();
   });
 
+  // قفزة من قائمة تحذيرات فحص الجودة قبل التصدير (ExportMenu.js، دفعة 3 2026-07-12)
+  // إلى الخطوة المسؤولة عن التحذير — navigateTo() تحسم فئة/فهرس الخطوة داخلياً.
+  window.addEventListener('feasibility:navigateToStep', (e) => {
+    const stepIndex = e?.detail?.stepIndex;
+    if (Number.isInteger(stepIndex) && stepIndex >= 0) navigateTo(stepIndex);
+  });
+
   // اختصارات لوحة المفاتيح
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {

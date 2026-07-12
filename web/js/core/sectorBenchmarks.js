@@ -35,7 +35,14 @@ export const SECTOR_BENCHMARKS = {
     retail: {
         label: 'تجزئة',
         test: /تجزئة|بقالة|متجر|سوبرماركت|بيع بالتجزئة/i,
-        variableCostRate: [0.55, 0.75],   // تكلفة البضاعة المباعة
+        // النطاق 55-75% يشمل ضمنياً هدر/تلف البضاعة (خصوصاً منتجات طازجة كالخضار
+        // والفواكه) لا تكلفة الشراء وحدها — تدقيق دفعة 3 (2026-07-12): revenueStreams
+        // اكتسب عمودي wasteRate/platformCommissionRate الاختياريين اللذين يجمعهما
+        // المحرك فوق variableCostRate (financial/revenue.js)، وهذا الفحص (checkDriversAgainstBenchmarks)
+        // يقارن النسبة الفعلية الكاملة (بعد الجمع) بهذا النطاق نفسه — فلا يوجد ازدواج
+        // ولا حاجة لنطاق منفصل للهدر: من يُفصِّل الهدر والعمولة في أعمدتهما الجديدة
+        // ثم يُدخل variableCostRate الأساسي وحده (بلا الهدر) يظل ضمن نفس النطاق المتوقع.
+        variableCostRate: [0.55, 0.75],   // تكلفة البضاعة المباعة (شاملة الهدر إن أُدخل)
         rentToRevenue: [0.05, 0.12],
         laborToRevenue: [0.08, 0.18],
         marketingToRevenue: [0.02, 0.06],

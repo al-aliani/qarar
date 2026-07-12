@@ -21,6 +21,10 @@ export class OperationalSim {
         // SECTIONS/createEmptyStudy (schema.js) — الاحتياطي هنا فقط لدراسات محفوظة
         // قبل هذا التسجيل.
         const operational = state.operational || { arrivalRate: 30, serviceTime: 5, servers: 2 };
+        // تدقيق دفعة 3 (2026-07-12): peakFactor حقل اختياري جديد — لم يُضَف لتعريف
+        // createEmptyStudy الافتراضي عمداً (كي لا يكسر operationalSection.schema.test.js
+        // الذي يثبّت شكل القسم الافتراضي بدقة)؛ الاحتياطي هنا فقط لدراسات بلا القيمة.
+        const peakFactor = Number(operational.peakFactor) || 1.5;
 
         this.container.innerHTML = `
             <div class="operational-sim animate-entry">
@@ -44,10 +48,17 @@ export class OperationalSim {
                             <div class="flex-between text-sm text-gold"><span id="serviceVal">${operational.serviceTime}</span> دقيقة</div>
                         </div>
 
-                        <div class="form-group mb-6">
+                        <div class="form-group mb-4">
                             <label>عدد نقاط الخدمة/الموظفين</label>
                             <input type="range" class="input-range" id="servers" min="1" max="20" value="${operational.servers}">
                             <div class="flex-between text-sm text-gold"><span id="serversVal">${operational.servers}</span> موظف</div>
+                        </div>
+
+                        <div class="form-group mb-6">
+                            <label>معامل ذروة الطلب (مقابل المتوسط)</label>
+                            <input type="range" class="input-range" id="peakFactor" min="1" max="3" step="0.1" value="${peakFactor}">
+                            <div class="flex-between text-sm text-gold"><span id="peakFactorVal">${peakFactor.toFixed(1)}</span>×</div>
+                            <p class="text-xs text-muted mt-1">مثال: 1.5× يعني ساعة الذروة تستقبل ضعف ونصف عدد عملاء الساعة العادية — النتائج أدناه تعرض المتوسط والذروة معاً.</p>
                         </div>
 
                         <button class="btn btn--primary w-full" id="btnRunSim">${icon('i-play')} تشغيل المحاكاة</button>
@@ -63,8 +74,9 @@ export class OperationalSim {
                     </div>
                 </div>
 
-                <!-- Results -->
-                <div class="results-grid mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" id="simResults" style="opacity:0.5; pointer-events:none;">
+                <!-- Results: المتوسط -->
+                <p class="text-sm text-muted mt-6 mb-2" id="simResultsAvgLabel">في ساعة عادية (متوسط الطلب):</p>
+                <div class="results-grid grid grid-cols-1 md:grid-cols-3 gap-4" id="simResults" style="opacity:0.5; pointer-events:none;">
                     <div class="kpi-card">
                         <div class="kpi-label">معدل وقت الانتظار</div>
                         <div class="kpi-value" id="resWaitTime">-- دقيقة</div>
@@ -76,6 +88,23 @@ export class OperationalSim {
                     <div class="kpi-card">
                         <div class="kpi-label">ضغط الموظفين (نسبة الانشغال)</div>
                         <div class="kpi-value" id="resUtil">--%</div>
+                    </div>
+                </div>
+
+                <!-- Results: الذروة -->
+                <p class="text-sm text-muted mt-4 mb-2" id="simResultsPeakLabel">في ساعة الذروة (<span id="peakFactorLabelVal">${peakFactor.toFixed(1)}</span>× المتوسط):</p>
+                <div class="results-grid grid grid-cols-1 md:grid-cols-3 gap-4" id="simResultsPeak" style="opacity:0.5; pointer-events:none;">
+                    <div class="kpi-card">
+                        <div class="kpi-label">وقت الانتظار وقت الذروة</div>
+                        <div class="kpi-value" id="resPeakWaitTime">-- دقيقة</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">طول الطابور وقت الذروة</div>
+                        <div class="kpi-value" id="resPeakQueueLen">-- عميل</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">ضغط الموظفين وقت الذروة</div>
+                        <div class="kpi-value" id="resPeakUtil">--%</div>
                     </div>
                 </div>
 
@@ -103,6 +132,7 @@ export class OperationalSim {
         const arrivalInput = this.container.querySelector('#arrivalRate');
         const serviceInput = this.container.querySelector('#serviceTime');
         const serversInput = this.container.querySelector('#servers');
+        const peakFactorInput = this.container.querySelector('#peakFactor');
 
         [arrivalInput, serviceInput, serversInput].forEach(inp => {
             inp.addEventListener('input', (e) => {
@@ -111,11 +141,22 @@ export class OperationalSim {
             });
         });
 
+        // تدقيق دفعة 3 (2026-07-12): يحدّث نص التسمية أعلى بطاقات نتائج الذروة أيضاً
+        // (رقمان منفصلان في الصفحة يعرضان نفس القيمة) كي لا يتناقضا أثناء السحب.
+        peakFactorInput?.addEventListener('input', (e) => {
+            const v = parseFloat(e.target.value).toFixed(1);
+            const valEl = this.container.querySelector('#peakFactorVal');
+            const labelEl = this.container.querySelector('#peakFactorLabelVal');
+            if (valEl) valEl.textContent = v;
+            if (labelEl) labelEl.textContent = v;
+        });
+
         this.container.querySelector('#btnRunSim').addEventListener('click', () => {
             const params = {
                 arrivalRate: parseInt(arrivalInput.value),
                 serviceTime: parseInt(serviceInput.value),
-                servers: parseInt(serversInput.value)
+                servers: parseInt(serversInput.value),
+                peakFactor: peakFactorInput ? parseFloat(peakFactorInput.value) : 1.5
             };
             this.runSimulation(params);
         });
@@ -129,12 +170,44 @@ export class OperationalSim {
         });
     }
 
+    /**
+     * إحصاءات الطابور (Erlang-C) لمعدل وصول معيّن — مستخرجة من runSimulation كي
+     * تُستدعى مرتين دون تكرار الصيغة (متوسط الطلب + ذروته)، تدقيق دفعة 3 (2026-07-12).
+     * @returns {{ rho:number, waitTime:number|'infinite', queueLen:number|'infinite' }}
+     */
+    computeQueueStats(arrivalRate, serviceTime, servers) {
+        const m = servers;
+        const lambda = arrivalRate / 60; // per minute
+        const mu = 1 / serviceTime;      // per minute (capacity per server)
+        const rho = lambda / (m * mu);   // Utilization
+
+        if (rho >= 1) {
+            return { rho, waitTime: 'infinite', queueLen: 'infinite' };
+        }
+
+        // Erlang-C Probability of Waiting P(W) — C(m, lambda/mu)
+        const trafficIntensity = lambda / mu; // u (or A)
+        let sum = 0;
+        for (let k = 0; k < m; k++) {
+            sum += (Math.pow(trafficIntensity, k) / this.factorial(k));
+        }
+        const numerator = (Math.pow(trafficIntensity, m) / this.factorial(m)) * (m / (m - trafficIntensity));
+        const probabilityWait = numerator / (sum + numerator);
+
+        const waitTime = (probabilityWait * serviceTime) / (m * (1 - rho)); // E(W)
+        const queueLen = waitTime * lambda; // Little's Law: Lq = lambda * Wq
+        return { rho, waitTime, queueLen };
+    }
+
     runSimulation(params) {
-        // Exact Erlang-C Formula
-        const m = params.servers;
-        const lambda = params.arrivalRate / 60; // per minute
-        const mu = 1 / params.serviceTime;      // per minute (capacity per server)
-        const rho = lambda / (m * mu);          // Utilization
+        const avg = this.computeQueueStats(params.arrivalRate, params.serviceTime, params.servers);
+
+        // تدقيق دفعة 3 (2026-07-12، اختبار عميل بقالة): معدل الوصول وحده لا يعكس ضغط
+        // ساعة الذروة (رمضان/نهاية الأسبوع...) — نحسب ونعرض سيناريو الذروة (معدل×معامل
+        // الذروة) جنباً إلى جنب مع المتوسط، دون أن يغيّر ذلك منطق تنبيه/اقتراح التوظيف
+        // أدناه (يبقى مبنياً على المتوسط كسابقاً — الذروة معلومة إضافية استرشادية فقط).
+        const peakFactor = Number(params.peakFactor) > 0 ? Number(params.peakFactor) : 1.5;
+        const peak = this.computeQueueStats(params.arrivalRate * peakFactor, params.serviceTime, params.servers);
 
         // Display visuals... (keep as is)
         const canvas = document.getElementById('simCanvas');
@@ -145,6 +218,9 @@ export class OperationalSim {
         this.animateDots(canvas, params);
 
         document.getElementById('simResults').style.opacity = '1';
+        document.getElementById('simResultsPeak').style.opacity = '1';
+        this.showResults(avg.waitTime, avg.queueLen, avg.rho);
+        this.showPeakResults(peak.waitTime, peak.queueLen, peak.rho);
 
         // بند 1.1 (دفعة 1): نحسب عدد نقاط الخدمة الأمثل دوماً (لا فقط عند تجاوز 5 دقائق)
         // كي يُخزَّن في lastResult ويقرأه جدول الرواتب كاقتراح اختياري — لا علاقة له
@@ -153,27 +229,13 @@ export class OperationalSim {
         let avgWaitTimeResult = null;
 
         // Calculation
-        if (rho >= 1) {
-            this.showResults('infinite', 'infinite', rho);
+        if (avg.rho >= 1) {
             this.showAlert('danger', '<strong>نظام غير مستقر:</strong> نسبة الانشغال وصلت إلى 100% أو أكثر؛ يجب زيادة عدد الموظفين فوراً.');
         } else {
-            // Erlang-C Probability of Waiting P(W)
-            // C(m, lambda/mu)
-            const trafficIntensity = lambda / mu; // u (or A)
-
-            let sum = 0;
-            for (let k = 0; k < m; k++) {
-                sum += (Math.pow(trafficIntensity, k) / this.factorial(k));
-            }
-
-            const numerator = (Math.pow(trafficIntensity, m) / this.factorial(m)) * (m / (m - trafficIntensity));
-            const probabilityWait = numerator / (sum + numerator);
-
-            const avgWaitTime = (probabilityWait * params.serviceTime) / (m * (1 - rho)); // E(W)
-            const avgQueueLen = avgWaitTime * lambda; // Little's Law: Lq = lambda * Wq
+            // computeQueueStats (دفعة 3) يحسب avg.waitTime بالفعل أعلى الدالة؛ showResults
+            // استُدعيت مسبقاً أعلاه غير مشروطة — لا داعي لتكرار حساب Erlang-C يدوياً هنا.
+            const avgWaitTime = avg.waitTime;
             avgWaitTimeResult = avgWaitTime;
-
-            this.showResults(avgWaitTime, avgQueueLen, rho);
 
             if (avgWaitTime > 5) {
                 this.showAlert('warning', `وقت الانتظار مرتفع (${Math.round(avgWaitTime)} د). للحفاظ على أقل من 5 دقائق، نقترح تعيين <strong>${optimal}</strong> موظفين في نقاط الخدمة هنا (محاكاة استرشادية — لا تُطبَّق تلقائياً على خطة التوظيف الفعلية). <button class="btn-xs btn--text underline" id="btnApplyOptim">جرّب هذا الرقم هنا</button>`);
@@ -199,7 +261,7 @@ export class OperationalSim {
             ...params,
             lastResult: {
                 recommendedServers: optimal,
-                utilization: rho,
+                utilization: avg.rho,
                 avgWaitTime: avgWaitTimeResult
             }
         });
@@ -214,6 +276,18 @@ export class OperationalSim {
         const utilEl = document.getElementById('resUtil');
         utilEl.textContent = utilPercent;
         utilEl.className = `kpi-value ${rho > 0.85 ? 'text-danger' : 'text-success'}`;
+    }
+
+    /** بطاقات نتائج ساعة الذروة — نفس منطق showResults على عناصر resPeak* المنفصلة (دفعة 3، 2026-07-12). */
+    showPeakResults(wait, queue, rho) {
+        const utilPercent = (rho * 100).toFixed(1) + '%';
+
+        document.getElementById('resPeakWaitTime').textContent = wait === 'infinite' ? '∞' : (wait.toFixed(1) + ' دقيقة');
+        document.getElementById('resPeakQueueLen').textContent = queue === 'infinite' ? '∞' : (queue.toFixed(1) + ' عميل');
+
+        const utilEl = document.getElementById('resPeakUtil');
+        utilEl.textContent = utilPercent;
+        utilEl.className = `kpi-value ${rho >= 1 || rho > 0.85 ? 'text-danger' : 'text-success'}`;
     }
 
     /**

@@ -18,19 +18,21 @@ import { generateIntroSuggestions, generateLicenses, generateSWOT } from '../Int
 import { handleProjectIntroSection } from '../../utils/sectionExporter.js';
 
 describe('batch6 — إصلاح أسماء حقول المنتج + تصريح شفاط المطبخ + فرص SWOT ديناميكية', () => {
-    it('generateIntroSuggestions ينتج منتجات بمفاتيح uniqueFeatures/valueAdded لا الأسماء القديمة', () => {
+    it('generateIntroSuggestions ينتج منتجات بمفتاح uniqueFeatures لا الأسماء القديمة', () => {
+        // تدقيق دفعة 3 (2026-07-12): valueAdded دُمج داخل uniqueFeatures في schema.js
+        // (products.uniqueFeatures) — لم يعد عمود schema مستقلاً؛ التحقق هنا يقتصر على
+        // uniqueFeatures ولا يفترض وجود valueAdded كمفتاح منفصل بعد الآن.
         // فرع القهوة (منتج مُفصَّل يدوياً بالكامل)
         const coffeeState = { projectInfo: { concept: 'قهوة مختصة', city: 'الرياض', name: 'مقهى تجربة' } };
         const coffeeOut = generateIntroSuggestions(coffeeState);
         expect(coffeeOut.products.length).toBeGreaterThan(0);
         coffeeOut.products.forEach(p => {
             expect(p).toHaveProperty('uniqueFeatures');
-            expect(p).toHaveProperty('valueAdded');
             expect(p).not.toHaveProperty('uniqueCharacteristics');
             expect(p).not.toHaveProperty('addedValue');
         });
         expect(coffeeOut.products[0].uniqueFeatures).toMatch(/مذاق مميز/);
-        expect(coffeeOut.products[0].valueAdded).toMatch(/الطعم المر/);
+        expect(coffeeOut.products[0].uniqueFeatures).toMatch(/الطعم المر/);
 
         // الفرع العام (concept لا يطابق نمط القهوة)
         const genericState = { projectInfo: { concept: 'خدمات تنظيف مكاتب', city: 'جدة', name: 'مشروع عام' } };
@@ -38,13 +40,12 @@ describe('batch6 — إصلاح أسماء حقول المنتج + تصريح ش
         expect(genericOut.products.length).toBeGreaterThan(0);
         genericOut.products.forEach(p => {
             expect(p).toHaveProperty('uniqueFeatures');
-            expect(p).toHaveProperty('valueAdded');
             expect(p).not.toHaveProperty('uniqueCharacteristics');
             expect(p).not.toHaveProperty('addedValue');
         });
     });
 
-    it('sectionExporter.handleProjectIntroSection يقرأ uniqueFeatures/valueAdded ويُدرجهما فعلياً في الإخراج (لا فارغين)', () => {
+    it('sectionExporter.handleProjectIntroSection يقرأ uniqueFeatures ويدرجه فعلياً في الإخراج (لا فارغاً)، ويدمج valueAdded القديم إن وُجد في دراسة محفوظة سابقاً', () => {
         const pi = {
             products: [
                 {
@@ -52,20 +53,17 @@ describe('batch6 — إصلاح أسماء حقول المنتج + تصريح ش
                     name: 'قهوة مختصة',
                     description: 'وصف المنتج',
                     uniqueFeatures: 'تحميص محلي حسب الطلب',
+                    // valueAdded: حقل قديم قد يبقى في دراسات محفوظة قبل الدمج (دفعة 3) —
+                    // يُدمج عرضاً فقط مع uniqueFeatures بدل أن يضيع صامتاً.
                     valueAdded: 'هامش ربح أعلى من المنافسين',
                     customerBenefit: 'طعم مميز'
                 }
             ]
         };
         const rows = handleProjectIntroSection(pi);
-        const productRow = rows.find(r => Array.isArray(r) && r.includes('تحميص محلي حسب الطلب'));
+        const productRow = rows.find(r => Array.isArray(r) && r.some(cell => String(cell).includes('تحميص محلي حسب الطلب')));
         expect(productRow).toBeTruthy();
-        expect(productRow).toContain('هامش ربح أعلى من المنافسين');
-
-        // تأكيد أن القيم القديمة (لو أُدخلت خطأً) لا تُقرأ من الحقول الجديدة الفارغة
-        const flatCells = rows.flat();
-        expect(flatCells).toContain('تحميص محلي حسب الطلب');
-        expect(flatCells).toContain('هامش ربح أعلى من المنافسين');
+        expect(productRow.join(' | ')).toContain('هامش ربح أعلى من المنافسين');
     });
 
     it('generateLicenses لمشروع مطاعم يتضمن تصريح شفاط المطبخ/التهوية', () => {

@@ -15,7 +15,10 @@ export class DynamicTable {
         // تدقيق 2026-07-08 (ملاحظة عالية #38): variablePercent (عمود «% متغير» باللوجستيات)
         // كان غائباً عن هذه القائمة رغم مطابقة اسمه ووسمه لبقية أعمدة الكسر (variableCostRate)
         // — فيُعرض/يُحرَّر كرقم خام بلا تحويل، ويتناقض مع قوالب الخبراء التي تُخزّنه ككسر (0.7).
-        return ['growthRate', 'variableCostRate', 'amortizationRate', 'depreciationRate', 'rate', 'utilizationRate', 'variablePercent'].includes(colKey);
+        // تدقيق دفعة 3 (2026-07-12): wasteRate/platformCommissionRate (جدول مصادر الإيرادات)
+        // عمودان كسريان جديدان — غيابهما هنا يعني تحويل إدخال 30 إلى 3000% كما حدث سابقاً
+        // مع variablePercent (فخّ وحدة الكسر الموثَّق).
+        return ['growthRate', 'variableCostRate', 'amortizationRate', 'depreciationRate', 'rate', 'utilizationRate', 'variablePercent', 'wasteRate', 'platformCommissionRate'].includes(colKey);
     }
 
     /**
@@ -174,7 +177,13 @@ export class DynamicTable {
     
     // Helper to determine if a column should be hidden in quick mode by default
     isAdvancedColumn(key) {
-        const advancedKeys = ['notes', 'description', 'uniqueFeatures', 'valueAdded', 'customerBenefit', 'qualifications', 'mitigation', 'owner'];
+        // valueAdded أُزيل من هنا (دفعة 3، 2026-07-12): لم يعد عمود schema مستقلاً —
+        // دُمج داخل uniqueFeatures (جدول المنتجات). أُبقي المفتاح خارج القائمة عمداً
+        // فقط تنظيفاً؛ لا أثر وظيفياً لأن لا عمود يحمل هذا المفتاح بعد الآن.
+        // wasteRate/platformCommissionRate (دفعة 3، 2026-07-12): عمودان اختياريان
+        // لتفصيل الهدر/العمولة عن التكلفة المتغيرة الإجمالية — تنقيح دقيق لا يحتاجه
+        // كل مستخدم في الوضع السريع؛ يظهران عبر مفتاح «عرض التفاصيل» كبقية الأعمدة هنا.
+        const advancedKeys = ['notes', 'description', 'uniqueFeatures', 'customerBenefit', 'qualifications', 'mitigation', 'owner', 'wasteRate', 'platformCommissionRate'];
         return advancedKeys.includes(key);
     }
 

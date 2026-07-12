@@ -9,6 +9,8 @@ import { MonshaatReportGenerator } from '../../export/MonshaatReportGenerator.js
 import { sanitizeFilename, exportDateISO, downloadBlob, selectExcelExportPath } from '../../export/utils.js';
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { runQAChecks } from '../utils/qaChecks.js';
+import { resolveQaStepIndex } from '../utils/qaStepMapper.js';
+import { escapeHtml } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
 import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
 import { APP_CONFIG, BANK_COMPLIANCE_SENTENCE } from '../config.js';
@@ -59,7 +61,7 @@ export class ExportMenu {
         this.pdfGenerator = new PDFGenerator(store);
     }
 
-    open() {
+    async open() {
         this.render();
         this.overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
@@ -69,26 +71,66 @@ export class ExportMenu {
         const first = this.overlay.querySelector('.export-card');
         if (first) setTimeout(() => first.focus(), 0);
 
-        (async () => {
-            const state = this.store.getState();
-            let results = null;
-            try { results = runFullModel(state); } catch (_) { }
-            const qa = await runQAChecks(state, results);
-            const el = this.overlay?.querySelector('#export-qa-badge');
-            if (el) {
-                if (qa.hardErrors.length > 0) el.innerHTML = '<span class="text-danger">❌ أخطاء حرجة: ' + qa.hardErrors.length + ' — راجع لوحة القرار.</span>';
-                else if (qa.softWarnings.length > 0) el.innerHTML = '<span class="text-warning">⚠️ تحذيرات: ' + qa.softWarnings.length + '</span>';
-                else el.innerHTML = '<span class="text-success">✅ اجتازت فحص الجودة (QA)</span>';
-            }
+        const state = this.store.getState();
+        let results = null;
+        try { results = runFullModel(state); } catch (_) { }
+        const qa = await runQAChecks(state, results);
+        const el = this.overlay?.querySelector('#export-qa-badge');
+        if (el) this._renderQaSummary(el, qa);
 
-            const studyId = state.projectInfo?.id || state.id || null;
-            const reviewEl = this.overlay?.querySelector('#export-review-status-badge');
-            if (reviewEl && studyId) {
-                try {
-                    reviewEl.innerHTML = await renderReviewStatusBadge(studyId);
-                } catch (_) { /* لا داعٍ لإيقاف بقية القائمة إن فشلت الشارة */ }
+        const studyId = state.projectInfo?.id || state.id || null;
+        const reviewEl = this.overlay?.querySelector('#export-review-status-badge');
+        if (reviewEl && studyId) {
+            try {
+                reviewEl.innerHTML = await renderReviewStatusBadge(studyId);
+            } catch (_) { /* لا داعٍ لإيقاف بقية القائمة إن فشلت الشارة */ }
+        }
+    }
+
+    /**
+     * يجمّع كل عناصر qaChecks.js (hardErrors/softWarnings/validationErrors/
+     * validationWarnings) في قائمة مفصّلة قابلة للنقر تحت الشارة الملخّصة، بدل عدد
+     * مجرّد بلا تفصيل («تحذيرات: 6»). تدقيق دفعة 3 (2026-07-12، اختبار عميل بقالة).
+     * @param {HTMLElement} el - حاوية `#export-qa-badge`
+     * @param {{hardErrors:Array, softWarnings:Array, validationErrors:Array, validationWarnings:Array}} qa
+     */
+    _renderQaSummary(el, qa) {
+        const msg = (x) => (typeof x === 'string' ? x : (x && (x.message || x.code)) || '');
+        const items = [
+            ...(qa.hardErrors || []).map((x) => ({ text: msg(x), stepIndex: resolveQaStepIndex(x), hard: true })),
+            ...(qa.validationErrors || []).map((x) => ({ text: msg(x), stepIndex: resolveQaStepIndex(x), hard: true })),
+            ...(qa.softWarnings || []).map((x) => ({ text: msg(x), stepIndex: resolveQaStepIndex(x), hard: false })),
+            ...(qa.validationWarnings || []).map((x) => ({ text: msg(x), stepIndex: resolveQaStepIndex(x), hard: false })),
+        ].filter((it) => it.text);
+
+        const hardCount = items.filter((it) => it.hard).length;
+        const softCount = items.length - hardCount;
+
+        let summaryHtml;
+        if (hardCount > 0) summaryHtml = `<span class="text-danger">❌ أخطاء حرجة: ${hardCount}${softCount ? ` — وتنبيهات: ${softCount}` : ''}</span>`;
+        else if (softCount > 0) summaryHtml = `<span class="text-warning">⚠️ تحذيرات: ${softCount}</span>`;
+        else summaryHtml = '<span class="text-success">✅ اجتازت فحص الجودة (QA)</span>';
+
+        if (items.length === 0) {
+            el.innerHTML = summaryHtml;
+            return;
+        }
+
+        const li = (it) => {
+            const cls = it.hard ? 'qa-detail-item qa-detail-item--hard' : 'qa-detail-item qa-detail-item--soft';
+            if (it.stepIndex != null) {
+                return `<li><button type="button" class="${cls}" data-step-index="${it.stepIndex}">${escapeHtml(it.text)}</button></li>`;
             }
-        })();
+            return `<li class="${cls} qa-detail-item--static">${escapeHtml(it.text)}</li>`;
+        };
+
+        el.innerHTML = `
+            ${summaryHtml}
+            <details class="qa-detail-list" ${hardCount > 0 ? 'open' : ''}>
+                <summary>عرض تفاصيل فحص الجودة (${items.length})</summary>
+                <ul>${items.map(li).join('')}</ul>
+            </details>
+        `;
     }
 
     close() {
@@ -98,6 +140,17 @@ export class ExportMenu {
             document.removeEventListener('keydown', this._onEscape);
             this._onEscape = null;
         }
+    }
+
+    /**
+     * يقفز لخطوة المعالج المسؤولة عن تحذير فحص جودة (دفعة 3، 2026-07-12) — عبر حدث
+     * مخصّص (نفس نمط 'feasibility:showInvestorDashboard' الموجود) لأن app.js يملك
+     * navigateTo() الفعلية داخل نطاقه الخاص ولا يُصدِّرها لوحدات أخرى.
+     */
+    _navigateToStep(stepIndex) {
+        if (!Number.isInteger(stepIndex) || stepIndex < 0) return;
+        this.close();
+        window.dispatchEvent(new CustomEvent('feasibility:navigateToStep', { detail: { stepIndex } }));
     }
 
     render() {
@@ -339,6 +392,13 @@ export class ExportMenu {
 
         this.overlay.addEventListener('click', (e) => {
             if (e.target === this.overlay) this.close();
+        });
+
+        // قائمة تحذيرات فحص الجودة المفصّلة (دفعة 3، 2026-07-12) — تفويض الحدث لأن
+        // القائمة تُحقن لاحقاً (بعد runQAChecks غير المتزامن) لا وقت bindEvents.
+        this.overlay.addEventListener('click', (e) => {
+            const btn = e.target.closest('.qa-detail-item[data-step-index]');
+            if (btn) this._navigateToStep(Number(btn.dataset.stepIndex));
         });
 
         // Enloop: توليد النصوص تلقائياً (الملخص، السوق، المخاطر)
@@ -841,16 +901,24 @@ export class ExportMenu {
      */
     _qaGate(qa, hasHard) {
         return new Promise((resolve) => {
-            const esc = (s) => String(s == null ? '' : s)
-                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-            const msgs = (arr) => (arr || [])
-                .map((x) => (typeof x === 'string' ? x : (x && (x.message || x.code)) || ''))
-                .filter(Boolean);
-            const hard = msgs(qa.hardErrors);
-            const soft = [...msgs(qa.softWarnings), ...msgs(qa.validationErrors), ...msgs(qa.validationWarnings)];
+            const esc = escapeHtml;
+            // تدقيق دفعة 3 (2026-07-12): كل بند أصبح قابلاً للنقر يقفز لخطوته (نفس
+            // resolveQaStepIndex المستخدم في شارة #export-qa-badge) بدل نص ثابت فقط.
+            const objs = (arr) => (arr || [])
+                .map((x) => ({
+                    text: (typeof x === 'string' ? x : (x && (x.message || x.code)) || ''),
+                    stepIndex: resolveQaStepIndex(typeof x === 'string' ? {} : x)
+                }))
+                .filter((it) => it.text);
+            const hard = objs(qa.hardErrors);
+            const soft = [...objs(qa.softWarnings), ...objs(qa.validationErrors), ...objs(qa.validationWarnings)];
 
-            const li = (items, color) => items.map((m) =>
-                `<li style="position:relative;padding:8px 20px 8px 0;font-size:14px;line-height:1.6;color:#3B463F;border-bottom:1px solid #ECEBE2;"><span style="position:absolute;right:0;top:12px;width:7px;height:7px;border-radius:2px;background:${color};"></span>${esc(m)}</li>`).join('');
+            const li = (items, color) => items.map((it) => {
+                const clickable = it.stepIndex != null;
+                const dataAttr = clickable ? ` data-step-index="${it.stepIndex}"` : '';
+                const hint = clickable ? ' <span style="opacity:.6;font-size:12px;">(انقر للانتقال إلى القسم)</span>' : '';
+                return `<li${dataAttr} style="position:relative;padding:8px 20px 8px 0;font-size:14px;line-height:1.6;color:#3B463F;border-bottom:1px solid #ECEBE2;${clickable ? 'cursor:pointer;' : ''}"><span style="position:absolute;right:0;top:12px;width:7px;height:7px;border-radius:2px;background:${color};"></span>${esc(it.text)}${hint}</li>`;
+            }).join('');
 
             const sections = [];
             if (hard.length) sections.push(
@@ -889,6 +957,13 @@ export class ExportMenu {
             ov.addEventListener('click', (e) => { if (e.target === ov) done(false); });
             ov.querySelectorAll('button[data-act]').forEach((b) => {
                 b.addEventListener('click', () => done(b.dataset.act === 'proceed'));
+            });
+            ov.querySelectorAll('li[data-step-index]').forEach((liEl) => {
+                liEl.addEventListener('click', () => {
+                    const stepIndex = Number(liEl.dataset.stepIndex);
+                    done(false);
+                    this._navigateToStep(stepIndex);
+                });
             });
             const focusBtn = ov.querySelector('button[data-act="proceed"]') || ov.querySelector('button[data-act="cancel"]');
             if (focusBtn) setTimeout(() => focusBtn.focus(), 0);

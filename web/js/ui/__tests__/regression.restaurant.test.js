@@ -70,7 +70,10 @@ describe('InternalAIGenerator — أزرار اقتراح المنتجات/ال�
         const rows = InternalAIGenerator.generateProducts(restaurant);
         expect(Array.isArray(rows)).toBe(true);
         expect(rows.length).toBeGreaterThan(0);
-        for (const k of ['type', 'name', 'description', 'uniqueFeatures', 'valueAdded', 'customerBenefit']) {
+        // تدقيق دفعة 3 (2026-07-12): valueAdded دُمج داخل uniqueFeatures في schema.js
+        // (products.uniqueFeatures) — لم يعد عمود schema مستقلاً، فحُذف من قائمة
+        // المفاتيح المتوقعة هنا كي يبقى هذا الحارس متوافقاً مع مخطط الجدول الفعلي.
+        for (const k of ['type', 'name', 'description', 'uniqueFeatures', 'customerBenefit']) {
             expect(Object.keys(rows[0])).toContain(k);
         }
         expect(['primary', 'semi', 'final']).toContain(rows[0].type);

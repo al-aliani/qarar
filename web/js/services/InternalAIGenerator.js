@@ -490,8 +490,8 @@ export function generateIntroSuggestions(state) {
             type: 'final',
             name: 'القهوة السعودية',
             description: 'منتج يُستخرج من شجرة البن على شكل حبيبات تتدرج ألوانها من الأخضر إلى الأصفر إلى البني الفاتح أو الغامق. يُحمّص حسب المعيار حتى يكون جاهزاً للاستخدام.',
-            uniqueFeatures: 'مذاق مميز يعتمد على نوع البن وطريقة التحميص ودرجة المرارة المطلوبة.',
-            valueAdded: 'الطعم المر المميز للقهوة العربية نتيجة لنوع البن وطريقة التحميص. يهدف للوصول لدرجة المرارة التي يرغب بها العميل.',
+            // دُمج مع valueAdded السابق (دفعة 3، 2026-07-12) — كانا يكرران نفس الفكرة (المذاق/التحميص/المرارة).
+            uniqueFeatures: 'مذاق مميز يعتمد على نوع البن وطريقة التحميص ودرجة المرارة المطلوبة — يمنح الطعم المر المميز للقهوة العربية الأصيلة الذي يبحث عنه العميل.',
             customerBenefit: 'جودة عالية وبسعر مناسب.'
         }];
         introServices = [
@@ -503,7 +503,7 @@ export function generateIntroSuggestions(state) {
             { customerType: 'الأسر المنتجة (مستهلك غير مباشر)', customerNeed: 'شراء قهوة لتحويلها لمنتج نهائي', valueWeProvide: 'مواد أولية بجودة تسمح بإنتاج قيمة مضافة' }
         ];
     } else {
-        products = [{ type: 'final', name: concept, description: `منتج أو خدمة ${concept} بمواصفات تلبي احتياجات السوق المستهدف.`, uniqueFeatures: '', valueAdded: '', customerBenefit: '' }];
+        products = [{ type: 'final', name: concept, description: `منتج أو خدمة ${concept} بمواصفات تلبي احتياجات السوق المستهدف.`, uniqueFeatures: '', customerBenefit: '' }];
         introServices = [{ name: 'التوزيع أو التوصيل', type: 'supportive', description: `خدمة وصول ${concept} للعميل.` }];
         customerValues = [
             { customerType: 'العميل المستهدف', customerNeed: 'تلبية احتياج محدد', valueWeProvide: `قيمة متميزة في ${concept}` }
@@ -758,7 +758,8 @@ export function generateRisks(state) {
 
 /**
  * توليد منتجات مقترحة للجدول (داخلي، بدون API)
- * الأعمدة مطابقة لـ TABLE_SCHEMAS.products: type, name, description, uniqueFeatures, valueAdded, customerBenefit
+ * الأعمدة مطابقة لـ TABLE_SCHEMAS.products: type, name, description, uniqueFeatures, customerBenefit
+ * (uniqueFeatures يدمج «الميزة الفريدة» و«القيمة المضافة» في نص واحد — دفعة 3، 2026-07-12)
  * type: select من primary | semi | final
  */
 export function generateProducts(state) {
@@ -773,23 +774,23 @@ export function generateProducts(state) {
 
     if (isCafe) {
         return [
-            { type: 'final', name: 'المشروبات المختصة (ساخنة وباردة)', description: 'قهوة مختصة ومشروبات ساخنة وباردة (اسبريسو، فلتر، مشروبات موسمية) تُحضّر بمعايير احترافية.', uniqueFeatures: 'حبوب بن منتقاة وطرق تحضير متخصصة تمنح مذاقاً مختلفاً عن المقاهي التقليدية.', valueAdded: 'تجربة قهوة مختصة تبرر متوسط فاتورة أعلى من الكافيهات العادية.', customerBenefit: 'مشروب عالي الجودة بخبرة تحضير احترافية وثبات في الطعم.' },
-            { type: 'semi', name: 'المخبوزات والحلويات الخفيفة', description: 'كرواسان وكيك وحلويات خفيفة تُورَّد جاهزة أو شبه جاهزة وتُقدَّم طازجة دون الحاجة لمطبخ كامل.', uniqueFeatures: 'تشكيلة تدور دورياً وتقديم بصري جذاب.', valueAdded: 'يرفع متوسط قيمة الفاتورة بهامش مرتفع دون استثمار في مطبخ طهي كامل.', customerBenefit: 'خيار تحلية طازج يرافق المشروب.' },
-            { type: 'final', name: 'حبوب بن للبيع (Retail)', description: 'أكياس حبوب بن محمصة تُباع للاستهلاك المنزلي بعلامة المقهى.', uniqueFeatures: 'تحميص مميز أو منتقى من محمصة موثوقة يصعب إيجاده في السوبرماركت.', valueAdded: 'مصدر إيراد إضافي بهامش مرتفع ويعزز ولاء العميل للعلامة.', customerBenefit: 'إعادة تجربة المقهى في المنزل.' }
+            { type: 'final', name: 'المشروبات المختصة (ساخنة وباردة)', description: 'قهوة مختصة ومشروبات ساخنة وباردة (اسبريسو، فلتر، مشروبات موسمية) تُحضّر بمعايير احترافية.', uniqueFeatures: 'حبوب بن منتقاة وطرق تحضير متخصصة تمنح مذاقاً مختلفاً عن المقاهي التقليدية، وتبرر متوسط فاتورة أعلى من الكافيهات العادية.', customerBenefit: 'مشروب عالي الجودة بخبرة تحضير احترافية وثبات في الطعم.' },
+            { type: 'semi', name: 'المخبوزات والحلويات الخفيفة', description: 'كرواسان وكيك وحلويات خفيفة تُورَّد جاهزة أو شبه جاهزة وتُقدَّم طازجة دون الحاجة لمطبخ كامل.', uniqueFeatures: 'تشكيلة تدور دورياً وتقديم بصري جذاب — يرفع متوسط قيمة الفاتورة بهامش مرتفع دون استثمار في مطبخ طهي كامل.', customerBenefit: 'خيار تحلية طازج يرافق المشروب.' },
+            { type: 'final', name: 'حبوب بن للبيع (Retail)', description: 'أكياس حبوب بن محمصة تُباع للاستهلاك المنزلي بعلامة المقهى.', uniqueFeatures: 'تحميص مميز أو منتقى من محمصة موثوقة يصعب إيجاده في السوبرماركت — مصدر إيراد إضافي بهامش مرتفع يعزز ولاء العميل للعلامة.', customerBenefit: 'إعادة تجربة المقهى في المنزل.' }
         ];
     }
 
     if (isFandB) {
         return [
-            { type: 'final', name: 'الأطباق الرئيسية', description: 'قائمة أطباق رئيسية متنوعة تُحضّر طازجة حسب الطلب بمعايير جودة ثابتة.', uniqueFeatures: 'وصفات مميزة ومكونات منتقاة تمنح نكهة مختلفة عن السوق.', valueAdded: 'تجربة طعام متكاملة تجمع الجودة والسرعة والتقديم المميز.', customerBenefit: 'وجبة عالية الجودة بسعر مناسب وخدمة سريعة.' },
-            { type: 'final', name: 'المشروبات الساخنة والباردة', description: 'قهوة ومشروبات متنوعة تُحضّر باحترافية لمرافقة الوجبات أو الاستهلاك المستقل.', uniqueFeatures: 'مذاق مميز وثبات في الجودة عبر معايير تحضير موحّدة.', valueAdded: 'تنويع مصادر الإيراد ورفع متوسط قيمة الفاتورة.', customerBenefit: 'خيارات مشروبات تناسب مختلف الأذواق والأوقات.' },
-            { type: 'semi', name: 'الحلويات والمخبوزات', description: 'أصناف حلويات ومخبوزات تُعدّ داخلياً أو تُجهّز جزئياً وتُكمَّل عند الطلب.', uniqueFeatures: 'تنوّع موسمي وتقديم بصري جذّاب.', valueAdded: 'منتج إضافي مرتفع الهامش يعزّز الربحية.', customerBenefit: 'خيارات تحلية طازجة تكمّل التجربة.' }
+            { type: 'final', name: 'الأطباق الرئيسية', description: 'قائمة أطباق رئيسية متنوعة تُحضّر طازجة حسب الطلب بمعايير جودة ثابتة.', uniqueFeatures: 'وصفات مميزة ومكونات منتقاة تمنح نكهة مختلفة عن السوق ضمن تجربة طعام متكاملة تجمع الجودة والسرعة والتقديم المميز.', customerBenefit: 'وجبة عالية الجودة بسعر مناسب وخدمة سريعة.' },
+            { type: 'final', name: 'المشروبات الساخنة والباردة', description: 'قهوة ومشروبات متنوعة تُحضّر باحترافية لمرافقة الوجبات أو الاستهلاك المستقل.', uniqueFeatures: 'مذاق مميز وثبات في الجودة عبر معايير تحضير موحّدة — ينوّع مصادر الإيراد ويرفع متوسط قيمة الفاتورة.', customerBenefit: 'خيارات مشروبات تناسب مختلف الأذواق والأوقات.' },
+            { type: 'semi', name: 'الحلويات والمخبوزات', description: 'أصناف حلويات ومخبوزات تُعدّ داخلياً أو تُجهّز جزئياً وتُكمَّل عند الطلب.', uniqueFeatures: 'تنوّع موسمي وتقديم بصري جذّاب — منتج إضافي مرتفع الهامش يعزّز الربحية.', customerBenefit: 'خيارات تحلية طازجة تكمّل التجربة.' }
         ];
     }
 
     return [
-        { type: 'final', name: `المنتج/الخدمة الأساسية (${concept})`, description: `المنتج أو الخدمة الرئيسية في نشاط ${concept} بمواصفات تلبي احتياجات الشريحة المستهدفة.`, uniqueFeatures: 'ميزة تنافسية في الجودة أو التجربة تميّزه عن المنافسين.', valueAdded: 'قيمة مضافة واضحة للعميل تبرّر السعر وتبني الولاء.', customerBenefit: 'تلبية احتياج فعلي بجودة عالية وسعر مناسب.' },
-        { type: 'final', name: 'منتج/خدمة مكمّلة', description: `عرض مكمّل يرفع متوسط قيمة الطلب في نشاط ${concept}.`, uniqueFeatures: 'يكمّل العرض الأساسي ويزيد فرص البيع المتقاطع.', valueAdded: 'تنويع مصادر الإيراد وتقليل الاعتماد على منتج واحد.', customerBenefit: 'حلّ أشمل من مصدر واحد موثوق.' }
+        { type: 'final', name: `المنتج/الخدمة الأساسية (${concept})`, description: `المنتج أو الخدمة الرئيسية في نشاط ${concept} بمواصفات تلبي احتياجات الشريحة المستهدفة.`, uniqueFeatures: 'ميزة تنافسية في الجودة أو التجربة تميّزه عن المنافسين، بقيمة مضافة واضحة للعميل تبرّر السعر وتبني الولاء.', customerBenefit: 'تلبية احتياج فعلي بجودة عالية وسعر مناسب.' },
+        { type: 'final', name: 'منتج/خدمة مكمّلة', description: `عرض مكمّل يرفع متوسط قيمة الطلب في نشاط ${concept}.`, uniqueFeatures: 'يكمّل العرض الأساسي ويزيد فرص البيع المتقاطع، وينوّع مصادر الإيراد ويقلّل الاعتماد على منتج واحد.', customerBenefit: 'حلّ أشمل من مصدر واحد موثوق.' }
     ];
 }
 
@@ -1174,13 +1175,23 @@ export function generateAdministrative(state) {
     const isEducation = /تعليم|مدرسة|جامعة|تدريب|أكاديم/i.test(sector);
     const isLogistics = /لوجستي|شحن|نقل|تخزين|توزيع/i.test(sector);
     const isIndustrial = /صناع|مصنع|إنتاج|تصنيع/i.test(sector);
+    // تدقيق دفعة 3 (اختبار عميل بقالة 2026-07-12): areaSize كان معرَّفاً في المخطط
+    // (projectInfo.areaSize) وغير مقروء في أي مولّد — بند «أمن وحراسة» الثابت (1500
+    // ريال/شهر) كان يُقترح لأي نشاط بصرف النظر عن حجمه، رغم أن محلاً صغيراً (<150م²)
+    // نادراً ما يستأجر حارساً مستقلاً (يُغطّى عادة بأمن المول/المبنى أو كاميرات فقط).
+    const areaSize = Number(p.areaSize) || 0;
+    const isSmallPremises = areaSize > 0 && areaSize < 150;
 
     const base = [
         { name: 'محاسبة ومراجعة', monthly: 800, notes: 'محاسب خارجي أو برامج محاسبة' },
         { name: 'صيانة ودعم فني', monthly: 500, notes: 'أجهزة ونظم' },
-        { name: 'أمن وحراسة', monthly: 1500, notes: 'حسب الموقع والحاجة' },
-        { name: 'اتصالات وإنترنت', monthly: 400, notes: '' }
+        { name: 'اتصالات وإنترنت', monthly: 400, notes: '' },
+        // تدقيق دفعة 3: «تأمين تجاري» (حريق/سرقة/مسؤولية عامة عن المنشأة) كان غائباً
+        // عن القائمة المقترحة رغم كونه بنداً شبه قياسي لأي منشأة تجارية مؤجَّرة —
+        // منفصل عن «تأمين بضائع ومسؤولية» الخاص باللوجستيات أدناه (نطاق أضيق).
+        { name: 'تأمين تجاري (حريق وسرقة ومسؤولية عامة)', monthly: 350, notes: 'وثيقة تأمين تجاري أساسية للمنشأة' }
     ];
+    if (!isSmallPremises) base.push({ name: 'أمن وحراسة', monthly: 1500, notes: 'حسب الموقع والحاجة' });
     if (isHealth) base.push({ name: 'أرشفة وملفات مرضى (ورقي/إلكتروني)', monthly: 350, notes: 'التزام تنظيمي' });
     if (isEducation) base.push({ name: 'منصات وبرامج إدارية للطلاب', monthly: 600, notes: 'حضور، شهادات' });
     if (isLogistics) base.push({ name: 'تأمين بضائع ومسؤولية', monthly: 1200, notes: '' });
@@ -1641,6 +1652,10 @@ export function generateRevenueStreams(state) {
     // مقهى واقعي (مشروب + إضافة خفيفة)، ما يُفسد NPV/IRR مباشرة.
     const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|قهوة|فود|طعام/i.test(sector);
+    // تدقيق دفعة 3 (اختبار عميل بقالة 2026-07-12): isGrocery يجب أن يُختبر قبل isRetail
+    // (نمط الأخير يطابق «بقالة» أيضاً) — نفس سابقة isCafe قبل isFandB أعلاه — وإلا
+    // تُصنَّف بقالة الخضار كتجزئة عامة بصف واحد بلا تفصيل هدر/عمولة توصيل.
+    const isGrocery = /خضار|فواكه|بقالة|تموينات/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر/i.test(sector);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
     const isEducation = /تعليم|مدرسة|جامعة|تدريب|أكاديم|دورات/i.test(sector);
@@ -1657,6 +1672,15 @@ export function generateRevenueStreams(state) {
         return [
             { service: 'مبيعات المأكولات والمشروبات', customersPerMonth: 1200, avgPrice: 45, growthRate: 0.07 },
             { service: 'توصيل وطلبات أونلاين', customersPerMonth: 200, avgPrice: 55, growthRate: 0.12 }
+        ];
+    }
+    if (isGrocery) {
+        return [
+            // wasteRate هنا يمثّل تلف/هدر المنتجات الطازجة الفعلي — مفصول عن variableCostRate
+            // (تكلفة البضاعة المباعة نفسها) كي لا يُخلط الاثنان في رقم واحد (أعمدة جديدة، دفعة 3).
+            { service: 'خضار وفواكه طازجة', customersPerMonth: 2200, avgPrice: 32, growthRate: 0.05, variableCostRate: 0.62, wasteRate: 0.08 },
+            { service: 'مواد غذائية وتموينات جافة', customersPerMonth: 1100, avgPrice: 55, growthRate: 0.04, variableCostRate: 0.68, wasteRate: 0.01 },
+            { service: 'طلبات توصيل عبر التطبيقات', customersPerMonth: 200, avgPrice: 60, growthRate: 0.15, variableCostRate: 0.62, wasteRate: 0.04, platformCommissionRate: 0.20 }
         ];
     }
     if (isRetail) return [{ service: 'مبيعات التجزئة', customersPerMonth: 800, avgPrice: 85, growthRate: 0.06 }];
