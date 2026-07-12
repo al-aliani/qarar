@@ -33,7 +33,7 @@
     font-weight: 600;
     box-shadow: var(--shadow-lg);
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, padding 0.2s ease, gap 0.2s ease;
 }
 .ai-chat-fab .ic {
     width: 20px;
@@ -47,6 +47,22 @@
 .ai-chat-fab:focus-visible {
     outline: 2px solid var(--c-gold-deco);
     outline-offset: 2px;
+}
+
+/* تدقيق اختبار عميل 2026-07-12: تصغير الزر لدائرة أثناء التمرير (لا يغطي عرضاً
+   أفقياً كبيراً من آخر صفوف الجداول)، وإخفاته أثناء التركيز على أي حقل إدخال
+   (منع النقر الخاطئ عليه أثناء تعبئة خلية قريبة منه في نهاية الصفحة). */
+.ai-chat-fab.is-compact {
+    padding: 12px;
+    gap: 0;
+}
+.ai-chat-fab.is-compact .ai-chat-fab-label {
+    display: none;
+}
+.ai-chat-fab.is-editing {
+    opacity: .25;
+    pointer-events: none;
+    transform: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
     .ai-chat-fab { transition: none; }

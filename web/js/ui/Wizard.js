@@ -15,6 +15,7 @@ import { getFieldOptionSpec } from '../core/fieldOptions.js';
 import { getFieldHelp } from '../core/fieldHelpTexts.js';
 import { fieldHelp } from './components/FieldHelp.js';
 import { escapeHtml } from '../utils/escape.js';
+import { describeRevenueRampGap } from '../core/engine.js';
 
 // أيقونة sprite + تجريد إيموجي من التسميات القادمة من schema (smartFill.label تحوي 🪄)
 // — تدقيق تنظيف 2026-07-11: تُنظَّف عند العرض بلا لمس ملف schema المشترك.
@@ -321,6 +322,12 @@ export class Wizard {
         // Add table containers
         tablesToRender.forEach(tableKey => {
             html += `<div id="table-${tableKey}" class="mt-4"></div>`;
+            // تدقيق اختبار عميل 2026-07-12: إجمالي هذا الجدول (بلا تصاعد) يختلف عمداً
+            // عن رقم «السنة الأولى» في القوائم المالية (بعد rampUpMonths) — كان يُقرأ
+            // خطأً كخلل حسابي عند تغيير السعر. راجع _wireRevenueReconciliationNote.
+            if (tableKey === 'revenueStreams') {
+                html += `<p id="revenue-reconciliation-note" class="text-muted mt-2" style="font-size:.85em"></p>`;
+            }
         });
         if (optionalTablesToRender.length) {
             html += `
@@ -445,6 +452,28 @@ export class Wizard {
         [...tablesToRender, ...optionalTablesToRender].forEach(tableKey => {
             this.renderTable(stepId, tableKey, freshStudyData);
         });
+        if ([...tablesToRender, ...optionalTablesToRender].includes('revenueStreams')) {
+            this._wireRevenueReconciliationNote();
+        }
+    }
+
+    /** يحدّث ملاحظة مطابقة إجمالي جدول الإيرادات مع رقم السنة الأولى بعد كل تعديل. */
+    _updateRevenueReconciliationNote() {
+        const note = this.container.querySelector('#revenue-reconciliation-note');
+        if (!note) return;
+        const state = this.store.get();
+        note.textContent = describeRevenueRampGap(state?.revenue?.streams, state?.assumptions?.rampUpMonths);
+    }
+
+    _wireRevenueReconciliationNote() {
+        const table = this.tables?.revenueStreams;
+        if (!table) return;
+        const originalOnChange = table.onChange;
+        table.onChange = (newData) => {
+            originalOnChange(newData);
+            this._updateRevenueReconciliationNote();
+        };
+        this._updateRevenueReconciliationNote();
     }
 
     bindNavigationEvents() {

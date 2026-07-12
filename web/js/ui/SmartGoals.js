@@ -351,7 +351,7 @@ export class SmartGoals {
             const currentValue = parseFloat(document.getElementById('goalCurrentValue')?.value) || 0;
 
             if (!specific) {
-                alert('يرجى إدخال الهدف');
+                toast.error('يرجى إدخال الهدف');
                 return;
             }
 
@@ -368,7 +368,9 @@ export class SmartGoals {
                         targetValue, currentValue
                     };
                     this.editingId = null; // Clear edit mode
-                    alert('تم تعديل الهدف بنجاح');
+                    // تدقيق اختبار عميل 2026-07-12: alert() يحجب الخيط الرئيسي حتى
+                    // يضغط المستخدم «موافق» — كان يُقرأ كـ«تجمّد» طويل بعد «حفظ التعديلات».
+                    toast.success('تم تعديل الهدف بنجاح');
                 }
             } else {
                 // Create new
@@ -391,7 +393,7 @@ export class SmartGoals {
             this.render();
         } catch (e) {
             console.error('Error adding goal:', e);
-            alert('حدث خطأ أثناء إضافة الهدف');
+            toast.error('حدث خطأ أثناء إضافة الهدف');
         }
     }
 
@@ -442,7 +444,7 @@ export class SmartGoals {
         try {
             const templates = DataService.getSmartGoalsTemplates();
             if (!templates || templates.length === 0) {
-                alert('لا توجد أهداف نموذجية متاحة');
+                toast.info('لا توجد أهداف نموذجية متاحة');
                 return;
             }
 
@@ -463,7 +465,7 @@ export class SmartGoals {
             });
 
             if (newTemplates.length === 0) {
-                alert('جميع الأهداف النموذجية موجودة بالفعل');
+                toast.info('جميع الأهداف النموذجية موجودة بالفعل');
                 return;
             }
 

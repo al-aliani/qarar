@@ -35,6 +35,38 @@ export function rateOrDefault(v, dflt) {
 }
 
 /**
+ * معامل تصاعد الإيراد للسنة الأولى (Ramp-Up): متوسط منحنى خطي يبلغ 100% عند شهر
+ * rampUpMonths. مُصدَّرة (لا محلية داخل calculateStudy) كي تستهلكها شاشات إدخال
+ * الإيرادات (OfferingView.js) لعرض مطابقة سريعة بين إجمالي جدول الإيرادات (بلا
+ * تصاعد) ورقم السنة الأولى في القوائم المالية (بعد تصاعد) — دون تشغيل المحرك
+ * الكامل (calculateStudy) على كل تعديل خلية فقط لعرض ملاحظة تفسيرية.
+ * تدقيق اختبار عميل 2026-07-12: فجوة الرقمين هذه بلا شرح كانت تُقرأ خطأً كخلل حسابي.
+ */
+export function calculateRampFactorY1(rampUpMonths) {
+    const months = Math.max(0, Math.min(24, Number(rampUpMonths || 0)));
+    if (months <= 1) return 1;
+    let s = 0;
+    for (let m = 1; m <= 12; m++) s += Math.min(1, m / months);
+    return s / 12;
+}
+
+/**
+ * نص المطابقة بين إجمالي جدول مصادر الإيرادات (بلا تصاعد) وإيراد السنة الأولى في
+ * القوائم المالية (بعد تصاعد) — مصدر واحد يستهلكه كل موضع يعرض جدول الإيرادات
+ * (Wizard.js للمسار العام، OfferingView.js لمسار «ماذا تبيع وبكم») كي لا يتكرر
+ * الحساب بصيغتين قد تتباعدان. يعيد '' إن لم تكن هناك فجوة تستحق الشرح.
+ */
+export function describeRevenueRampGap(streams, rampUpMonths) {
+    const list = Array.isArray(streams) ? streams : [];
+    const tableTotal = list.reduce((sum, r) => sum + (Number(r?.customersPerMonth) || 0) * 12 * (Number(r?.avgPrice) || 0), 0);
+    const rampFactor = calculateRampFactorY1(rampUpMonths);
+    if (!tableTotal || rampFactor >= 1) return '';
+    const ramped = Math.round(tableTotal * rampFactor);
+    const fmt = (n) => n.toLocaleString('ar-SA');
+    return `إجمالي خطة سنة كاملة: ${fmt(tableTotal)} ريال — بعد فترة التصاعد (${Number(rampUpMonths) || 0} شهر) يظهر إيراد السنة الأولى في القوائم المالية كـ ${fmt(ramped)} ريال تقريباً. هذا فرق تصميم متوقّع، لا خطأ حسابي.`;
+}
+
+/**
  * Feasibility Study Calculation Engine (v5.0)
  * مصدر الحقيقة الوحيد لكل الأرقام في المنصة — كل الشاشات والمصدّرات تقرأ منه.
  *
@@ -325,12 +357,7 @@ export function calculateStudy(study, overrides) {
     // منحنى التصاعد (Ramp-Up): الإيراد لا يقفز لكامل الخطة من الشهر الأول —
     // معامل السنة الأولى = متوسط منحنى خطي يبلغ 100% عند شهر rampUpMonths
     const rampUpMonths = Math.max(0, Math.min(24, Number(study.assumptions?.rampUpMonths || 0)));
-    let rampFactorY1 = 1;
-    if (rampUpMonths > 1) {
-        let s = 0;
-        for (let m = 1; m <= 12; m++) s += Math.min(1, m / rampUpMonths);
-        rampFactorY1 = s / 12;
-    }
+    const rampFactorY1 = calculateRampFactorY1(rampUpMonths);
 
     // ═══════════════════════════════════════════════════════════
     // 4. رأس المال العامل: دورة نقدية فعلية (DSO/DIO/DPO) إن حُددت،

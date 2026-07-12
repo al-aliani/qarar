@@ -19,6 +19,28 @@ export class DynamicTable {
     }
 
     /**
+     * محلّل أرقام متسامح: يطبّع الأرقام الهندية العربية (٠-٩) والفارسية (۰-۹)، والفاصلة
+     * العشرية العربية «٫»، وفواصل الآلاف (عربية «٬» وغربية ,)، قبل التحويل لرقم.
+     * تدقيق اختبار عميل 2026-07-12: type="number" الأصلي يُفرغ value بصمت (badInput)
+     * عند الكتابة بلوحة مفاتيح عربية فتُخزَّن 0 دون أي إشعار — هذا المحلّل يمنع ذلك
+     * لأن الحقول أصبحت type="text" (القيمة الخام تصل دوماً، لا حالة badInput ممكنة).
+     * @returns {number|null} الرقم المُطبَّع، أو null إن تعذّر التحليل (نص فارغ/غير رقمي)
+     */
+    static parseLenientNumber(raw) {
+        if (raw === null || raw === undefined) return null;
+        let s = String(raw).trim();
+        if (s === '') return null;
+        s = s.replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x0660));
+        s = s.replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 0x06F0));
+        s = s.replace(/٫/g, '.'); // فاصلة عشرية عربية
+        s = s.replace(/[٬,]/g, ''); // فواصل آلاف عربية/غربية
+        s = s.replace(/\s+/g, '');
+        if (s === '' || s === '-' || s === '.') return null;
+        const n = Number(s);
+        return Number.isFinite(n) ? n : null;
+    }
+
+    /**
      * تقدير استرشادي نقي (قابل للاختبار) لقيمة خلية بناءً على المفتاح واسم البند.
      * ⚠️ الأعمدة الكسرية (growthRate/variableCostRate/amortizationRate) تُعاد ككسر (0–1)
      * لا كنسبة مئوية خام — لتفادي خطأ ×100 الذي يجعل 55% تُخزَّن 55 وتُعرض 5500% فتدمّر الدراسة.
@@ -156,7 +178,32 @@ export class DynamicTable {
         return advancedKeys.includes(key);
     }
 
+    /** يلتقط حقل الإدخال المُركَّز حالياً (إن كان داخل هذا الجدول) قبل هدم DOM بإعادة الرسم. */
+    _captureFocus() {
+        const el = document.activeElement;
+        if (!el || !this.container.contains(el) || !el.dataset) return null;
+        const { row, col } = el.dataset;
+        if (row === undefined || col === undefined) return null;
+        return {
+            row, col,
+            selStart: typeof el.selectionStart === 'number' ? el.selectionStart : null,
+            selEnd: typeof el.selectionEnd === 'number' ? el.selectionEnd : null,
+        };
+    }
+
+    /** يعيد التركيز (وموضع المؤشر) لنفس الخلية بعد إعادة الرسم — يمنع سقوط التركيز على body. */
+    _restoreFocus(snapshot) {
+        if (!snapshot) return;
+        const el = this.container.querySelector(`[data-row="${snapshot.row}"][data-col="${snapshot.col}"]`);
+        if (!el) return;
+        el.focus();
+        if (snapshot.selStart !== null && typeof el.setSelectionRange === 'function') {
+            try { el.setSelectionRange(snapshot.selStart, snapshot.selEnd ?? snapshot.selStart); } catch (_) { /* بعض الأنواع (select) لا تدعم النطاق */ }
+        }
+    }
+
     render() {
+        const focusSnapshot = this._captureFocus();
         const { title, columns, showTotal, totalColumn } = this.config || {};
         const rows = Array.isArray(this.data) ? this.data : [];
         const cols = Array.isArray(columns) ? columns : [];
@@ -227,7 +274,7 @@ export class DynamicTable {
             html += `
                 <div class="table-footer d-flex justify-between items-center mt-2">
                     <span class="text-muted">الإجمالي:</span>
-                    <span class="text-gold text-mono">${grandTotal.toLocaleString('ar-SA')} ريال</span>
+                    <span class="text-gold text-mono" data-grand-total>${grandTotal.toLocaleString('ar-SA')} ريال</span>
                 </div>
             `;
         }
@@ -236,6 +283,49 @@ export class DynamicTable {
 
         this.container.innerHTML = html;
         this.bindEvents();
+        this._restoreFocus(focusSnapshot);
+    }
+
+    /**
+     * تحديث موضعي بعد تعديل خلية: يحدّث الأعمدة المحسوبة في نفس الصف + سطر الإجمالي
+     * فقط، دون هدم بقية DOM بإعادة رسم كاملة — يمنع سقوط تركيز المستخدم عند الانتقال
+     * لخلية مجاورة (تدقيق اختبار عميل 2026-07-12).
+     */
+    _applyRowUpdate(rowIndex) {
+        const { columns, showTotal, totalColumn } = this.config || {};
+        const cols = Array.isArray(columns) ? columns : [];
+        const row = this.data[rowIndex];
+        const tr = this.container.querySelector(`tr[data-row-index="${rowIndex}"]`);
+
+        if (row && tr) {
+            cols.forEach((col, i) => {
+                if (col.type === 'computed' && col.formula) {
+                    const td = tr.children[i + 1]; // +1: أول عمود هو رقم الصف
+                    if (td) {
+                        const val = col.formula(row, this.config?.context) || 0;
+                        td.textContent = val.toLocaleString('ar-SA');
+                    }
+                } else if (col.type === 'number') {
+                    const cellInput = tr.querySelector(`.table-input[data-col="${col.key}"]`);
+                    const magicBtn = cellInput?.parentElement?.querySelector('.btn-magic-cell');
+                    if (magicBtn && row[col.key] && row[col.key] != 0) {
+                        magicBtn.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        if (showTotal && totalColumn) {
+            const totalCol = cols.find(c => c.key === totalColumn);
+            const grandTotal = this.data.reduce((sum, r) => {
+                if (totalCol && totalCol.type === 'computed' && totalCol.formula) {
+                    return sum + (totalCol.formula(r, this.config?.context) || 0);
+                }
+                return sum + (parseFloat(r[totalColumn]) || 0);
+            }, 0);
+            const footerEl = this.container.querySelector('[data-grand-total]');
+            if (footerEl) footerEl.textContent = `${grandTotal.toLocaleString('ar-SA')} ريال`;
+        }
     }
 
     renderRow(row, rowIndex, columns) {
@@ -279,32 +369,34 @@ export class DynamicTable {
                 </td>`;
             } else {
                 const isFractionPct = DynamicTable.isFractionPercentColumn(col.key);
+                const isNumberCol = col.type === 'number';
                 let val = row[col.key] ?? '';
                 // نسب النمو/الحصص المخزنة ككسر (0.07) تُعرض وتُحرَّر كنسبة مئوية (7)
                 // — كان المستخدم يرى «نمو سنوي (كسر)» فيكتب 7 ويحصل على 700%
                 if (isFractionPct && typeof val === 'number') {
                     val = Math.round(val * 10000) / 100;
                 }
-                const inputType = col.type === 'number' ? 'number' : 'text';
-                // أسعار ورواتب وكميات سالبة لا معنى لها — تمرّ للمحرك وتفسد النتائج
-                const minAttr = col.type === 'number' && col.allowNegative !== true ? 'min="0"' : '';
-                const maxAttr = isFractionPct || /marketShare|share|percent/i.test(col.key) ? 'max="100"' : '';
-                const stepAttr = col.type === 'number' ? 'step="any"' : '';
+                // تدقيق اختبار عميل 2026-07-12: الحقول الرقمية type="number" كانت تُفرغ
+                // قيمتها بصمت (badInput) عند الكتابة بأرقام هندية عربية أو فاصلة عشرية
+                // عربية «٫» فتُخزَّن 0 دون أي إشعار. التحويل لـtype="text" مع
+                // inputmode="decimal" يزيل حالة badInput كلياً (القيمة الخام تصل دوماً)؛
+                // التحقق (سالب/سقف 100/تحويل كسر) انتقل لمعالج change عبر parseLenientNumber.
+                const inputAttrs = isNumberCol ? 'inputmode="decimal" autocomplete="off"' : '';
 
                 // Magic Wand for empty numbers (متاح في الوضعين السريع والمفصل)
                 let magicBtn = '';
-                if (col.type === 'number' && (!val || val == 0)) {
+                if (isNumberCol && (!val || val == 0)) {
                    magicBtn = `<button type="button" class="btn-magic-cell" data-row="${rowIndex}" data-col="${col.key}" title="تقدير تلقائي" aria-label="تقدير تلقائي للقيمة">${icon('i-sparkle')}</button>`;
                 }
 
                 html += `<td class="${isHidden ? 'hidden col-advanced' : ''} relative">
                     <div class="flex items-center gap-1">
-                        <input type="${inputType}"
+                        <input type="text"
                                class="table-input ${magicBtn ? 'pr-8' : ''}"
                                data-row="${rowIndex}"
                                data-col="${col.key}"
                                value="${escapeHtml(val)}"
-                               ${stepAttr} ${minAttr} ${maxAttr}>
+                               ${inputAttrs}>
                         ${isFractionPct ? '<span class="text-muted" aria-hidden="true">٪</span>' : ''}
                         ${magicBtn}
                     </div>
@@ -371,36 +463,59 @@ export class DynamicTable {
             this._eventListeners.push({ element: btn, event: 'click', handler });
         });
 
-        // Input Changes
+        // Live typing (بلا onChange وبلا رسم) — يحفظ القيمة الخام فوراً في this.data محلياً
+        // كي لا تضيع لو تسبّب إجراء آخر (تقدير تلقائي في خلية مجاورة، إضافة صف) بإعادة رسم
+        // منتصف الكتابة. التحقق/التطبيع الفعلي يحدث عند change (blur/Enter) أدناه.
+        this.container.querySelectorAll('input.table-input[type="text"]').forEach(input => {
+            const inputHandler = (e) => {
+                const rowIndex = parseInt(e.target.dataset.row, 10);
+                const colKey = e.target.dataset.col;
+                if (this.data[rowIndex]) this.data[rowIndex][colKey] = e.target.value;
+            };
+            input.addEventListener('input', inputHandler);
+            this._eventListeners.push({ element: input, event: 'input', handler: inputHandler });
+
+            // Enter تُثبّت القيمة فوراً (blur يُطلق change) بدل انتظار النقر خارج الحقل
+            const enterHandler = (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+            };
+            input.addEventListener('keydown', enterHandler);
+            this._eventListeners.push({ element: input, event: 'keydown', handler: enterHandler });
+        });
+
+        // Commit on change (blur/Enter): تحقق وتطبيع نهائيان + التزام للمخزن + تحديث موضعي
         this.container.querySelectorAll('.table-input').forEach(input => {
             const handler = (e) => {
-                const rowIndex = parseInt(e.target.dataset.row);
+                const rowIndex = parseInt(e.target.dataset.row, 10);
                 const colKey = e.target.dataset.col;
-                let value = e.target.value;
+                if (!this.data[rowIndex]) return;
+                const colDef = (this.config.columns || []).find(c => c.key === colKey);
+                let value;
 
-                if (e.target.type === 'number') {
-                    value = parseFloat(value) || 0;
+                if (e.target.type === 'checkbox') {
+                    value = e.target.checked;
+                } else if (colDef?.type === 'number') {
+                    const parsed = DynamicTable.parseLenientNumber(e.target.value);
+                    value = parsed === null ? 0 : parsed;
                     // القيم السالبة تُقص عند الصفر (أسعار/رواتب/كميات سالبة تفسد المحرك)
-                    const colDef = (this.config.columns || []).find(c => c.key === colKey);
-                    if (value < 0 && colDef?.allowNegative !== true) {
-                        value = 0;
-                        e.target.value = 0;
-                    }
+                    if (value < 0 && colDef?.allowNegative !== true) value = 0;
                     // أعمدة النسب المعروضة كنسبة مئوية تُخزَّن ككسر (7 → 0.07)
                     if (DynamicTable.isFractionPercentColumn(colKey)) {
                         value = Math.min(value, 100) / 100;
                     }
-                } else if (e.target.type === 'checkbox') {
-                    value = e.target.checked;
+                    // إعادة عرض القيمة نظيفة بأرقام غربية بعد التطبيع — يزيل أي التباس
+                    // بصري لو كتب المستخدم بأرقام هندية أو فاصلة عشرية عربية
+                    e.target.value = DynamicTable.isFractionPercentColumn(colKey)
+                        ? Math.round(value * 10000) / 100
+                        : value;
+                } else {
+                    value = e.target.value;
                 }
 
-                // Immutable update: copy, modify, replace — avoid mutating this.data before notify
-                const next = JSON.parse(JSON.stringify(this.data));
-                if (next[rowIndex]) next[rowIndex][colKey] = value;
-                this.data = next;
+                this.data[rowIndex][colKey] = value;
                 console.debug(`[DynamicTable:${this.config.id}] Cell change, rows: ${this.data.length}`);
-                this.onChange(JSON.parse(JSON.stringify(next)));
-                this.render(); // Re-render to update computed columns
+                this.onChange(JSON.parse(JSON.stringify(this.data)));
+                this._applyRowUpdate(rowIndex); // تحديث موضعي — لا render() كامل يهدم التركيز
             };
             input.addEventListener('change', handler);
             this._eventListeners.push({ element: input, event: 'change', handler });
@@ -421,18 +536,23 @@ export class DynamicTable {
         btn.classList.add('animate-pulse');
 
         setTimeout(() => {
-            const next = JSON.parse(JSON.stringify(this.data));
-            if (next[rowIndex]) next[rowIndex][colKey] = estimatedValue;
-            this.data = next;
-            this.onChange(JSON.parse(JSON.stringify(next)));
-            this.render();
-            
+            if (!this.data[rowIndex]) return; // الصف قد يكون حُذف أثناء الانتظار
+            this.data[rowIndex][colKey] = estimatedValue;
+            this.onChange(JSON.parse(JSON.stringify(this.data)));
+
+            // تحديث الحقل مباشرة بدل render() كامل — يحافظ على أي كتابة جارية في خلايا
+            // أخرى أثناء تأخير 600ms هذا (تدقيق اختبار عميل 2026-07-12)
+            const cellInput = this.container.querySelector(`.table-input[data-row="${rowIndex}"][data-col="${colKey}"]`);
+            if (cellInput) {
+                cellInput.value = isFractionPct ? Math.round(estimatedValue * 10000) / 100 : estimatedValue;
+            }
+            btn.style.display = 'none';
+            this._applyRowUpdate(rowIndex);
+
             // Show Toast feedback — نوضّح صراحةً أنه تقدير استرشادي قابل للتعديل (شفافية + بناء ثقة)
             // أعمدة الكسور تُعرض كنسبة مئوية في الإشعار لتطابق ما يراه المستخدم في الحقل (لا 0.35)
             const shownValue = isFractionPct ? `${Math.round(estimatedValue * 100)}%` : estimatedValue.toLocaleString('ar-SA');
             toast.show(`تقدير استرشادي لـ«${getLabel(colKey)}»: ${shownValue} — راجعه وعدّله حسب واقعك.`, 'magic', 3500);
-            
-            // Reset button after render (though render recreates it, if we kept reference)
         }, 600);
     }
 

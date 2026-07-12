@@ -231,13 +231,22 @@ export class Sidebar {
             return;
         }
 
+        // تدقيق اختبار عميل 2026-07-12: الشريط الجانبي مخفي نهائياً (main.css:
+        // `.sidebar { display:none !important }` — نموذج التنقل الحالي بديل داخل
+        // الصفحة). كان render() يبني HTML كاملاً ويشغّل calculateIdeaScore (الذي
+        // يستدعي المحرك المالي كاملاً، 17 تشغيلة) بعد كل حفظة رغم أن لا شيء يُرى —
+        // مساهم رئيسي في تجمّد الواجهة. نتخطى البناء المكلف إن كان مخفياً فعلياً؛
+        // getComputedStyle يعيد القيمة الافتراضية (لا 'none') في اختبارات jsdom
+        // التي لا تُحمِّل CSS الإنتاج، فلا تتأثر الاختبارات القائمة بهذا الحارس.
+        const sidebarEl = this.container.closest('.sidebar');
+        if (sidebarEl && typeof getComputedStyle === 'function' && getComputedStyle(sidebarEl).display === 'none') {
+            return;
+        }
+
         // Ensure container is visible
         if (this.container.style.display === 'none') {
             this.container.style.display = '';
         }
-
-        // Ensure parent sidebar is visible on desktop
-        const sidebarEl = this.container.closest('.sidebar');
         if (sidebarEl && window.innerWidth > 768) {
             if (sidebarEl.style.display === 'none') {
                 sidebarEl.style.display = 'flex';

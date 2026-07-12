@@ -1,4 +1,5 @@
 import { toast } from '../utils/toast.js';
+import { describeRevenueRampGap } from '../core/engine.js';
 
 /**
  * OfferingView — «ماذا تبيع وبكم» (دمج بصري + ربط اقتصادي)
@@ -72,6 +73,7 @@ export class OfferingView {
                         <button type="button" id="btnImportOfferings" class="btn btn--sm btn--secondary">استورد منتجاتك وخدماتك كمصادر إيراد</button>
                     </div>
                     <div id="table-revenueStreams" class="mt-3"></div>
+                    <p id="revenue-reconciliation-note" class="text-muted mt-2" style="font-size:.85em"></p>
                 </div>
                 <!-- شريط التنقّل يضيفه app.js عبر wizard.appendNav() بعد الرسم. -->
             </div>
@@ -84,8 +86,36 @@ export class OfferingView {
         });
         // revenueStreams: stepId='revenue' → المسار revenue.streams (getTableDataPath)
         this.wizard.renderTable('revenue', 'revenueStreams', data);
+        this._wireReconciliationNote();
 
         this._bindImport();
+    }
+
+    /**
+     * تدقيق اختبار عميل 2026-07-12: إجمالي جدول مصادر الإيرادات (بلا تصاعد) ورقم
+     * «السنة الأولى» في القوائم المالية (بعد تطبيق فترة التصاعد rampUpMonths) رقمان
+     * مختلفان بالتصميم — كانا يُقرآن خطأً كخلل حسابي (قفزة غير منطقية) عند تغيير
+     * السعر. نعرض مطابقة صريحة بينهما بدل ترك المستخدم يقارن رقمين متباعدين بصمت.
+     * نستخدم calculateRampFactorY1 المُصدَّرة (حساب صغير نقي) لا calculateStudy
+     * الكاملة — تفادياً لتشغيل المحرك المالي على كل تعديل خلية.
+     */
+    _updateReconciliationNote() {
+        const note = this.container.querySelector('#revenue-reconciliation-note');
+        if (!note) return;
+        const state = this.store.get();
+        note.textContent = describeRevenueRampGap(state?.revenue?.streams, state?.assumptions?.rampUpMonths);
+    }
+
+    /** يربط تحديث ملاحظة المطابقة بكل تعديل في جدول الإيرادات دون لمس Wizard.renderTable العام. */
+    _wireReconciliationNote() {
+        const table = this.wizard.tables?.revenueStreams;
+        if (!table) return;
+        const originalOnChange = table.onChange;
+        table.onChange = (newData) => {
+            originalOnChange(newData);
+            this._updateReconciliationNote();
+        };
+        this._updateReconciliationNote();
     }
 
     _bindImport() {
@@ -120,6 +150,7 @@ export class OfferingView {
             // كتابة عبر نفس مسار DynamicTable (revenue.streams) ثم إعادة رسم الجدول.
             this.store.updatePath('revenue', 'streams', streams);
             this.wizard.renderTable('revenue', 'revenueStreams', this.store.get());
+            this._wireReconciliationNote(); // renderTable ينشئ DynamicTable جديداً فيفقد الربط السابق
             toast.success(`أُضيف ${added} مصدر إيراد — أكمل الكميات والأسعار.`);
         });
     }

@@ -313,13 +313,16 @@ class StudyStore {
         this._saveInProgress = true;
 
         try {
-            // Deep clone before saving
-            let stateToSave = JSON.parse(JSON.stringify(this.state));
+            // تدقيق اختبار عميل 2026-07-12: استنساخان عميقان منفصلان (JSON.stringify+parse
+            // مرتين) على كل حفظة كانا يساهمان في تجمّد محسوس مع نمو حجم الدراسة. لا شيء
+            // يُعدِّل stateToSave أو نسخة سجل الإصدارات بعد إنشائها — فاستنساخ واحد يكفي
+            // للاثنين معاً، وstructuredClone أسرع من الجولة النصية عبر JSON.
+            const stateToSave = structuredClone(this.state);
 
             // Version history (آخر N نسخ)
             this._versionHistory.push({
                 timestamp: new Date().toISOString(),
-                state: JSON.parse(JSON.stringify(this.state))
+                state: stateToSave
             });
             if (this._versionHistory.length > this._versionHistoryMax) {
                 this._versionHistory = this._versionHistory.slice(-this._versionHistoryMax);

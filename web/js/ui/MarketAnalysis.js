@@ -649,7 +649,7 @@ export class MarketAnalysis {
                 }
             } catch (err) {
                 console.error('AI Segments Error', err);
-                alert('حدث خطأ أثناء الاتصال بالذكاء الاصطناعي');
+                toast.error('حدث خطأ أثناء الاتصال بالذكاء الاصطناعي');
             } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;
@@ -704,7 +704,7 @@ export class MarketAnalysis {
                 }
             } catch (err) {
                 console.error('AI Competitors Error', err);
-                alert('حدث خطأ أثناء الاتصال بالذكاء الاصطناعي');
+                toast.error('حدث خطأ أثناء الاتصال بالذكاء الاصطناعي');
             } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;

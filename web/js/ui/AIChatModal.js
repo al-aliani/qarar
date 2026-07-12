@@ -43,6 +43,7 @@ export class AIChatModal {
         this.fab.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.6 0-3.1-.4-4.4-1.2L3 20.5l1.7-4.9A8.5 8.5 0 1 1 21 11.5Z"/></svg><span class="ai-chat-fab-label">المستشار الذكي</span>';
         this.fab.addEventListener('click', () => this.toggle());
         document.body.appendChild(this.fab);
+        this._bindFabAvoidance();
 
         // Panel container
         this.container = document.createElement('div');
@@ -72,6 +73,47 @@ export class AIChatModal {
         document.body.appendChild(this.container);
 
         this.render();
+    }
+
+    /**
+     * تدقيق اختبار عميل 2026-07-12: الزر العائم (حبة عريضة ~170px) كان يتداخل مع
+     * صفوف جداول الإدخال أسفل الشاشة على سطح المكتب فيُنقر بالخطأ بدل الخلية
+     * المطلوبة. نصغّره لدائرة أثناء التمرير، ونخفت/نعطّل نقره أثناء التركيز على أي
+     * حقل إدخال — دون المساس بمسار الجوال (مخفي أصلاً بـCSS) أو openWithPrompt.
+     */
+    _bindFabAvoidance() {
+        let rafPending = false;
+        // body { overflow:hidden } — التمرير الفعلي داخل حاويات فرعية (.main-stage
+        // وأمثالها) لا على window (تحقّق حي 2026-07-12: window.scrollY يبقى 0 دوماً).
+        // حدث scroll لا يصعد (bubble) فنستمع في طور الالتقاط (capture) على document
+        // ليصلنا من أي عنصر تمرير فرعي دون معرفة اسم الحاوية سلفاً.
+        const onScroll = (e) => {
+            if (rafPending) return;
+            rafPending = true;
+            const scrollTop = e.target === document ? (window.scrollY || document.documentElement.scrollTop) : (e.target.scrollTop || 0);
+            requestAnimationFrame(() => {
+                this.fab.classList.toggle('is-compact', scrollTop > 200);
+                rafPending = false;
+            });
+        };
+        document.addEventListener('scroll', onScroll, { passive: true, capture: true });
+
+        let blurTimer = null;
+        const isFormField = (el) => el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName);
+        const onFocusIn = (e) => {
+            if (!isFormField(e.target) || e.target === this.fab) return;
+            if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; }
+            this.fab.classList.add('is-editing');
+        };
+        const onFocusOut = (e) => {
+            if (!isFormField(e.target)) return;
+            // تأخير قصير كي لا يومض الزر أثناء التنقل بـTab بين خلايا الجدول
+            blurTimer = setTimeout(() => {
+                if (!isFormField(document.activeElement)) this.fab.classList.remove('is-editing');
+            }, 150);
+        };
+        document.addEventListener('focusin', onFocusIn);
+        document.addEventListener('focusout', onFocusOut);
     }
 
     toggle() {
