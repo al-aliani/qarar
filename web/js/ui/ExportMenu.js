@@ -16,6 +16,8 @@ import { ConsultationModal } from './ConsultationModal.js';
 import { PaywallModal } from './PaywallModal.js';
 import { generatePitchScript } from '../services/AIConnector.js';
 import { hasActivePayment } from '../services/PaymentService.js';
+import { getCertificationForStudy } from '../services/ReviewerService.js';
+import { renderReviewStatusBadge } from './components/ReviewStatusBadge.js';
 
 // تدقيق 2026-07-08 (ملاحظة عالية #39): صيغ التقرير النهائي الاحترافي (قرار المالك:
 // قفلها فعلياً، لا مجرد رسائل تسويقية) — الأدوات الخام/المشاركة (JSON/CSV/Sheets/
@@ -78,6 +80,14 @@ export class ExportMenu {
                 else if (qa.softWarnings.length > 0) el.innerHTML = '<span class="text-warning">⚠️ تحذيرات: ' + qa.softWarnings.length + '</span>';
                 else el.innerHTML = '<span class="text-success">✅ اجتازت فحص الجودة (QA)</span>';
             }
+
+            const studyId = state.projectInfo?.id || state.id || null;
+            const reviewEl = this.overlay?.querySelector('#export-review-status-badge');
+            if (reviewEl && studyId) {
+                try {
+                    reviewEl.innerHTML = await renderReviewStatusBadge(studyId);
+                } catch (_) { /* لا داعٍ لإيقاف بقية القائمة إن فشلت الشارة */ }
+            }
         })();
     }
 
@@ -99,6 +109,7 @@ export class ExportMenu {
                 </div>
                 <div class="modal-body">
                     <div id="export-qa-badge" class="mb-4 text-sm text-muted">جاري فحص الجودة...</div>
+                    <div id="export-review-status-badge" class="mb-4 text-sm"></div>
                     <div id="export-auto-text-bar" class="mb-4 p-3 rounded-lg border border-white/10 bg-white/5">
                         <p class="text-xs text-muted mb-2">عند حفظ أو قبل التصدير: المنصة يمكنها توليد نصوص الأقسام (الملخص، السوق، المخاطر) من المدخلات تلقائياً. يمكنك مراجعتها وتعديلها بعد التوليد.</p>
                         <button type="button" id="btnExportAutoGenerateText" class="btn btn--sm btn--secondary">✨ توليد النصوص تلقائياً</button>
