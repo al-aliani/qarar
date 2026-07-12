@@ -63,6 +63,7 @@ export class StrategicAnalysis {
                             <h3 class="card-title">مصفوفة الاستراتيجيات (TOWS)</h3>
                             <p class="text-muted text-sm mb-3">حوِّل SWOT إلى استراتيجيات عملية: كل ربع يربط بين محورين. اكتب بنداً إجرائياً واحداً على الأقل في كل مربع.</p>
                         </div>
+                        <button type="button" class="btn-xs btn-magic btn-generate-tows" title="تعبئة الأرباع الفارغة من بنود SWOT الفعلية (بدون اتصال خارجي، لا يستبدل ما كتبته)">${icon('i-sparkle')} توليد من SWOT</button>
                     </div>
                     ${this.renderTOWS((state.marketing && state.marketing.towsMatrix) || {})}
                 </div>
@@ -308,6 +309,42 @@ export class StrategicAnalysis {
                 toast.success('تم توليد التحليل الرباعي (SWOT) من بيانات المشروع.');
             } catch (e) {
                 console.error('generateSWOT error:', e);
+                toast.error('فشل التوليد: ' + (e?.message || 'خطأ'));
+            }
+        });
+
+        // توليد تلقائي لمصفوفة TOWS من بنود SWOT الفعلية (داخلي، بدون API) — بند 2.4.
+        // تحذيرا الخطة: القراءة من strategic.swot (المصدر الغني)، والكتابة النهائية في
+        // marketing.towsMatrix (قسم مختلف عمداً)؛ وتُعبَّأ الأرباع الفارغة فقط — لا يُستبدل
+        // أي نص كتبه المستخدم يدوياً، وبلا window.confirm (لا يحمي نص المستخدم أصلاً).
+        this.container.querySelector('.btn-generate-tows')?.addEventListener('click', () => {
+            try {
+                const state = this.store.getState();
+                const swot = state.strategic?.swot || {};
+                if (!(swot.strengths?.length || swot.weaknesses?.length || swot.opportunities?.length || swot.threats?.length)) {
+                    toast.error('أنشئ التحليل الرباعي (SWOT) أولاً — لا توجد بنود لتحويلها إلى استراتيجيات.');
+                    return;
+                }
+                const generated = InternalAIGenerator.generateTOWS(state);
+                const existing = state.marketing?.towsMatrix || {};
+                const isBlank = (v) => !v || !String(v).trim();
+                const merged = { ...existing };
+                let filledCount = 0;
+                ['so', 'wo', 'st', 'wt'].forEach(key => {
+                    if (isBlank(existing[key]) && generated[key]) {
+                        merged[key] = generated[key];
+                        filledCount++;
+                    }
+                });
+                if (filledCount === 0) {
+                    toast.error('كل أرباع TOWS مكتوبة مسبقاً — لا شيء لتعبئته دون استبدال ما كتبته.');
+                    return;
+                }
+                this.store.update('marketing', { ...(state.marketing || {}), towsMatrix: merged });
+                this.render();
+                toast.success(`تم تعبئة ${filledCount} من أرباع TOWS من بنود SWOT (الأرباع المكتوبة سابقاً لم تُمس).`);
+            } catch (e) {
+                console.error('generateTOWS error:', e);
                 toast.error('فشل التوليد: ' + (e?.message || 'خطأ'));
             }
         });

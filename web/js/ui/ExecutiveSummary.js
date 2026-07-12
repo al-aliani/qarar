@@ -11,6 +11,7 @@ import { aiConnector } from '../services/AIConnector.js'; // Updated: use unifie
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
+import { indicatorHelp } from '../utils/glossary.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -243,10 +244,10 @@ export class ExecutiveSummary {
 
         const highlights = [
             { label: 'إجمالي الاستثمار', value: this.formatCurrency(inv), icon: icon('i-bank') },
-            { label: 'صافي القيمة الحالية', value: this.formatCurrency(ind.npv ?? 0), icon: icon('i-chart'), positive: (ind.npv ?? 0) > 0 },
-            { label: 'معدل العائد الداخلي', value: `${((ind.irr ?? 0) * 100).toFixed(1)}%`, icon: icon('i-chart') },
-            { label: 'فترة الاسترداد', value: (payback != null && Number.isFinite(payback) && payback > 0 && payback < 900) ? `${payback.toFixed(1)} سنة` : 'غير محقق', icon: icon('i-clock') },
-            { label: 'العائد على الاستثمار', value: `${((ind.roi ?? 0) * 100).toFixed(0)}%`, icon: icon('i-chart') }
+            { label: 'صافي القيمة الحالية', value: this.formatCurrency(ind.npv ?? 0), icon: icon('i-chart'), positive: (ind.npv ?? 0) > 0, term: 'NPV' },
+            { label: 'معدل العائد الداخلي', value: `${((ind.irr ?? 0) * 100).toFixed(1)}%`, icon: icon('i-chart'), term: 'IRR' },
+            { label: 'فترة الاسترداد', value: (payback != null && Number.isFinite(payback) && payback > 0 && payback < 900) ? `${payback.toFixed(1)} سنة` : 'غير محقق', icon: icon('i-clock'), term: 'PAYBACK' },
+            { label: 'العائد على الاستثمار', value: `${((ind.roi ?? 0) * 100).toFixed(0)}%`, icon: icon('i-chart'), term: 'ROI' }
         ];
 
         return `
@@ -255,7 +256,7 @@ export class ExecutiveSummary {
                     <div class="highlight-card ${h.positive === false ? 'negative' : h.positive === true ? 'positive' : ''}">
                         <span class="highlight-icon">${h.icon}</span>
                         <span class="highlight-value">${h.value}</span>
-                        <span class="highlight-label">${h.label}</span>
+                        <span class="highlight-label">${h.label}${h.term ? ` ${indicatorHelp(h.term)}` : ''}</span>
                     </div>
                 `).join('')}
             </div>

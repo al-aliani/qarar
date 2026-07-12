@@ -303,6 +303,44 @@ export function generateSWOT(state) {
 }
 
 /**
+ * توليد مصفوفة TOWS (استراتيجيات SO/WO/ST/WT) من بنود SWOT الفعلية — لا تُنشئ SWOT
+ * جديداً، فقط تُزاوج بنوده الحقيقية المخزَّنة في state.strategic.swot (المصدر الغني).
+ * تحذير تصميمي (خطة الدفعة 2، بند 2.4): القراءة من strategic.swot، لكن التخزين
+ * النهائي في المستدعي (StrategicAnalysis.js) يذهب إلى marketing.towsMatrix — قسمان
+ * مختلفان عمداً في المخطط، لا تُوحَّد الكتابة بينهما.
+ * النص الناتج مبني بالكامل من بنود SWOT الحقيقية لهذا المشروع (لا قوالب ثابتة متطابقة
+ * بين المشاريع) — إن كان محور ما فارغاً في SWOT يبقى ربع TOWS المقابل فارغاً بدل نص وهمي.
+ * @param {object} state
+ * @returns {{ so: string, wo: string, st: string, wt: string }}
+ */
+export function generateTOWS(state) {
+    const swot = state?.strategic?.swot || {};
+    const strengths = (swot.strengths || []).filter(Boolean);
+    const weaknesses = (swot.weaknesses || []).filter(Boolean);
+    const opportunities = (swot.opportunities || []).filter(Boolean);
+    const threats = (swot.threats || []).filter(Boolean);
+
+    // يُزاوج حتى بندين من كل محور (إن وُجدا) بدل بند واحد فقط — النص بالكامل من بنود
+    // SWOT الحقيقية لهذا المشروع تحديداً، فيختلف تلقائياً بين مشروعين مختلفين.
+    const join = (items) => items.slice(0, 2).join('، و');
+
+    return {
+        so: (strengths.length && opportunities.length)
+            ? `استغلال ${join(strengths)} لاقتناص ${join(opportunities)}.`
+            : '',
+        wo: (weaknesses.length && opportunities.length)
+            ? `معالجة ${join(weaknesses)} أولاً حتى يمكن الاستفادة من ${join(opportunities)}.`
+            : '',
+        st: (strengths.length && threats.length)
+            ? `استخدام ${join(strengths)} لمواجهة ${join(threats)}.`
+            : '',
+        wt: (weaknesses.length && threats.length)
+            ? `تقليل الأثر بمعالجة ${join(weaknesses)} قبل أن يتفاقم أثر ${join(threats)}.`
+            : ''
+    };
+}
+
+/**
  * توليد شرائح عملاء مقترحة من بيانات الدراسة (داخلي، بدون API)
  * @param {object} state
  * @returns {Array<{ name, demographics, needs, size, priority }>}
@@ -1741,6 +1779,7 @@ export const InternalAIGenerator = {
     generateMarketDescriptions,
     generateMarketAnalysisSummary,
     generateSWOT,
+    generateTOWS,
     generateSegments,
     generateCompetitors,
     generateCompetitorBenchmark,

@@ -3,6 +3,8 @@
  * Provides definitions and explanations for financial terms
  */
 
+import { fieldHelp } from '../ui/components/FieldHelp.js';
+
 export const FINANCIAL_TERMS = {
     NPV: {
         term: 'صافي القيمة الحالية',
@@ -36,7 +38,9 @@ export const FINANCIAL_TERMS = {
         abbr: 'DSCR',
         definition: 'مقياس قدرة المشروع على تسديد أقساط القرض من التدفقات النقدية التشغيلية.',
         formula: 'DSCR = التدفق النقدي التشغيلي / خدمة الدين (أصل + فائدة)',
-        interpretation: 'يجب أن يكون DSCR ≥ 1.2 لضمان القدرة على السداد.',
+        // تدقيق 2026-07-12: كانت 1.2 هنا احتياطية مختلفة عن 1.25 الفعلية المستخدمة في محرك
+        // القرار وكل شاشات التمويل (targetDSCR الافتراضي وحدّ البنوك المعتاد) — توحيد الرقم.
+        interpretation: 'يجب أن يكون DSCR ≥ 1.25 لضمان القدرة على السداد (الحد الائتماني المعتاد لدى البنوك).',
         example: 'DSCR = 1.5 يعني لديك 50% فائض بعد سداد القرض'
     },
 
@@ -123,6 +127,17 @@ export const FINANCIAL_TERMS = {
         formula: 'ROI = (صافي الربح / الاستثمار الإجمالي) × 100',
         interpretation: 'كلما زادت النسبة، كلما كانت كفاءة استثمار الأموال أعلى.',
         example: 'ROI = 20% يعني أن كل 100 ريال مستثمرة تحقق ربحاً قدره 20 ريال.'
+    },
+
+    // تدقيق 2026-07-12: كانت مستدعاة من ZakatView عبر createTooltip('ZAKAT_BASE') وغير
+    // معرَّفة هنا إطلاقاً، فتظهر أيقونة «؟» فارغة بلا محتوى بجانب صف الوعاء الزكوي.
+    ZAKAT_BASE: {
+        term: 'الوعاء الزكوي',
+        abbr: 'Zakat Base',
+        definition: 'الأساس الذي تُحسب عليه الزكاة، وهو الأعلى بين مصادر الأموال (حقوق الملكية والمخصصات طويلة الأجل ناقص الأصول الثابتة وما في حكمها) والربح المعدَّل زكوياً.',
+        formula: 'الزكاة المستحقة = الوعاء الزكوي × 2.5% × نسبة الملكية السعودية',
+        interpretation: 'يُحسب على الوعاء الزكوي وليس على الربح فقط — لذلك قد تُستحق الزكاة حتى في سنة خسارة إن كان مصدر الأموال موجباً.',
+        example: 'وعاء زكوي 800,000 ريال بملكية سعودية 100% → زكاة السنة = 20,000 ريال'
     }
 };
 
@@ -175,4 +190,22 @@ export function wrapWithTooltip(text, term, variant = 'info') {
       </span>
     </span>
   `;
+}
+
+/**
+ * أيقونة شرح مؤشر مالي موحّدة على نمط FieldHelp الوصولي (زر حقيقي + popover، aria،
+ * يعمل باللمس والفأرة ولوحة المفاتيح) — بديل createTooltip/wrapWithTooltip القائمين
+ * على :hover فقط (span غير قابل للتركيز، لا يعملان بنقرة واحدة على شاشة لمس).
+ * تُستخدم في لوحة القرار والملخص التنفيذي واللوحة المالية الحية (تدقيق 2026-07-12).
+ */
+export function indicatorHelp(term) {
+    const glossary = FINANCIAL_TERMS[term];
+    if (!glossary) {
+        console.warn(`Term "${term}" not found in glossary`);
+        return '';
+    }
+    const parts = [`${glossary.term} (${glossary.abbr})`, glossary.definition];
+    if (glossary.formula) parts.push(glossary.formula);
+    if (glossary.interpretation) parts.push(glossary.interpretation);
+    return fieldHelp(parts.join(' — '), glossary.example || '');
 }

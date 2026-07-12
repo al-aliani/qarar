@@ -152,7 +152,9 @@ export function explainDecisionBreakers(study = {}, results = {}) {
                 threshold: 0.15,
                 path: 'indicators.breakEvenPointValue',
                 title: 'هامش أمان نقطة التعادل ضعيف',
-                tooltipKey: 'BEP',
+                // تدقيق 2026-07-12: كانت 'BEP' هنا ولا مصطلح بهذا المفتاح في glossary.js
+                // (المفتاح الصحيح BREAKEVEN) — فتظهر أيقونة «؟» فارغة بلا محتوى.
+                tooltipKey: 'BREAKEVEN',
                 explanation: bepRatio > 1
                     ? `نقطة التعادل (${money(breakEvenValue)}) تتجاوز إيراد السنة الأولى المتوقع (${money(year1Revenue)}) — التعادل غير قابل للتحقيق بالافتراضات الحالية.`
                     : `هامش الأمان قبل الوصول لنقطة التعادل ${pct(bepSafetyMargin)} فقط (نقطة التعادل ${money(breakEvenValue)} مقابل إيراد سنة أولى ${money(year1Revenue)}).`,

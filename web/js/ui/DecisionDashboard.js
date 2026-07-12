@@ -1,4 +1,4 @@
-import { createTooltip } from '../utils/glossary.js';
+import { createTooltip, indicatorHelp } from '../utils/glossary.js';
 /**
  * Decision Dashboard Component
  * The "Boardroom" view for investors to see if the project is ready
@@ -313,7 +313,8 @@ export class DecisionDashboard {
                             <!-- تدقيق 2026-07-12: كانت شبكة المؤشرات هذه (NPV/IRR/الاسترداد/العائد) تكرّر حرفياً
                             شبكة fullKpiGrid في FinancialDashboard.js، وفجوة التمويل وDSCR مكرّرتان أيضاً مع
                             بطاقة renderFinancingGate أعلى هذه الصفحة — ثلاث نسخ لنفس الأرقام. FinancialDashboard
-                            الآن لوحة الأرقام الكاملة الوحيدة؛ هنا شريط ملخّص نصّي + رابط بدل الشبكة المكرَّرة. -->
+                            الآن لوحة الأرقام الكاملة الوحيدة (وفيها إيضاحات indicatorHelp لكل مصطلح)؛ هنا شريط
+                            ملخّص نصّي + رابط بدل الشبكة المكرَّرة. -->
                             <h4 class="card-title flex justify-between items-center">
                                 <span>ملخّص المؤشرات المالية</span>
                                 <button type="button" id="btnGoFinancialDashboard" class="btn btn--ghost btn--sm" title="القوائم المالية، الرسوم البيانية، والتوقعات الكاملة">
@@ -331,7 +332,7 @@ export class DecisionDashboard {
                             </p>
                             <div class="kpi-grid-decision dd-risk-kpis" aria-label="مؤشرات هامش الأمان والمخاطر">
                                 ${this.renderKPIItem('احتمالية نجاح مونت كارلو', mcProbability, 'probability')}
-                                ${this.renderKPIItem('هامش الأمان لنقطة التعادل', breakEvenMargin, 'percent')}
+                                ${this.renderKPIItem('هامش الأمان لنقطة التعادل', breakEvenMargin, 'percent', 1, 'BREAKEVEN')}
                                 ${this.renderKPIItem('أقصى انخفاض بالإيراد قبل NPV السالب', npvSafetyMargin, 'percent')}
                                 ${this.renderKPIItem('أدنى تدفق نقدي تراكمي', minCumulativeCash, 'currency')}
                             </div>
@@ -1190,7 +1191,7 @@ export class DecisionDashboard {
         return 'متوازن';
     }
 
-    renderKPIItem(label, value, type, threshold = 1) {
+    renderKPIItem(label, value, type, threshold = 1, term = null) {
         const n = Number(value);
         const explanations = {
             currency: 'القيمة الحالية بعد خصم التدفقات النقدية وفق معدل الخصم المدخل.',
@@ -1232,9 +1233,10 @@ export class DecisionDashboard {
             status = Number.isFinite(n) && n > 0 ? 'positive' : 'negative';
         }
 
+        const labelHtml = term ? `${label} ${indicatorHelp(term)}` : label;
         return `
                 <div class="kpi-mini-card ${status}" title="${explanation}">
-                <span class="mini-label">${label}</span>
+                <span class="mini-label">${labelHtml}</span>
                 <span class="mini-value">${formatted}</span>
             </div>
         `;
