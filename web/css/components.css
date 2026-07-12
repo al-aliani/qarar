@@ -2132,6 +2132,17 @@ textarea.input {
     gap: var(--s-2);
 }
 
+/* تنبيه «القيمة اليدوية القديمة تختلف عن المحسوبة» (خطة 2026-07-12، بند 1.1) —
+   يمتد على عرض الشبكة كاملاً بدل احتلال خانة عمود واحد وكسر تخطيط visual/inputs. */
+.saudization-stale-warning {
+    grid-column: 1 / -1;
+    margin-bottom: var(--s-2);
+}
+
+.saudization-stale-warning button {
+    margin-inline-start: var(--s-2);
+}
+
 .input-group {
     display: flex;
     flex-direction: column;
@@ -2287,10 +2298,49 @@ textarea.input {
     gap: var(--s-2);
 }
 
+/* شارة انحراف الهدف المالي عن الإيراد المحسوب (خطة 2026-07-12، بند 1.2) */
+.goal-financial-flag {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    margin-bottom: var(--s-2);
+}
+
+.goal-financial-flag .ic {
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+}
+
+.goal-financial-flag button {
+    margin-inline-start: auto;
+    flex-shrink: 0;
+}
+
 .add-goal-form {
     display: flex;
     flex-direction: column;
     gap: var(--s-3);
+}
+
+/* تلميح الإيراد المحسوب أعلى «القيمة المستهدفة» لهدف مالي (خطة 2026-07-12، بند 1.2) */
+.financial-goal-hint {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    grid-column: 1 / -1;
+}
+
+.financial-goal-hint .ic {
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+}
+
+.financial-goal-hint button {
+    margin-inline-start: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .form-row {

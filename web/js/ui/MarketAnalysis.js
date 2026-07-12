@@ -12,6 +12,7 @@ import '../services/connectors/OverpassConnector.js'; // يسجّل 'market.comp
 import { toast } from '../utils/toast.js';
 import { SAUDI_REGIONS } from '../data/SaudiCityStats.js';
 import { fieldHelp } from './components/FieldHelp.js';
+import { deriveRevenueFromStreams } from '../core/engine.js';
 
 // أيقونات من الـsprite الموحّد (index.html) بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id, cls = '') => `<svg class="ic${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -44,6 +45,9 @@ export class MarketAnalysis {
         const state = this.store.getState();
         const marketSizing = state.marketSizing || {};
         const marketing = state.marketing || {};
+        // بند 1.2 (خطة 2026-07-12): مشتق خفيف من جدول الإيرادات (نفس صيغة عمود year1 حرفياً)
+        // لعرضه بجوار حقل SOM فوراً — بلا تشغيل المحرك الكامل على كل كتابة.
+        this._derivedRevenue = deriveRevenueFromStreams(state.revenue?.streams);
 
         this.container.innerHTML = `
             <div class="market-analysis">
@@ -318,14 +322,46 @@ export class MarketAnalysis {
                             <span title="النسبة من السوق المتاح التي تتوقع الاستحواذ عليها خلال 3-5 سنوات">(SOM)</span>
                             ${fieldHelp('حصة السوق المستهدفة: النسبة من SAM التي تستطيع الاستحواذ عليها فعلياً خلال 3-5 سنوات.', 'مثال: 2% من سوق المطاعم في المدينة')}
                         </label>
-                        <input type="number" id="market-som" class="input som-value" data-field="som" 
+                        <input type="number" id="market-som" class="input som-value" data-field="som"
                                value="${som.value || 0}" placeholder="بالريال">
                         <input type="text" class="input input--sm" data-field="som" data-subfield="description" aria-label="وصف الحصة المستهدفة"
                                value="${som.description || ''}" placeholder="وصف الحصة المستهدفة...">
+                        <p class="text-xs som-revenue-hint mt-1" id="som-revenue-hint" data-year1-revenue="${Math.round(this._derivedRevenue?.year1Revenue || 0)}">
+                            ${this._renderSomRevenueHintText(som.value)}
+                        </p>
                     </div>
                 </div>
             </div>
         `;
+    }
+
+    /**
+     * نص تلميح فوري ملوّن بجوار حقل SOM: الإيراد المخطَّط لسنة كاملة من جدول الإيرادات
+     * (نفس رقم عمود year1) مقارَناً بحصة السوق المستهدفة (SOM، بالريال). أخضر ضمن SOM
+     * بأمان، أصفر قريب من الحد، أحمر يتجاوزه — يطابق سماحية 120% في REVENUE_EXCEEDS_SOM
+     * (SaudiMarketEngine.js) دون تكرار فحص كامل هنا (بند 1.2، خطة 2026-07-12).
+     */
+    _renderSomRevenueHintText(somValue) {
+        const year1Revenue = this._derivedRevenue?.year1Revenue || 0;
+        if (!year1Revenue) return '';
+        const fmt = (n) => Math.round(n).toLocaleString('ar-SA');
+        const som = Number(somValue) || 0;
+        let colorClass = 'text-muted';
+        let tail = '';
+        if (som > 0) {
+            const ratio = year1Revenue / som;
+            if (ratio > 1.2) {
+                colorClass = 'text-danger';
+                tail = ` — يتجاوز حصتك المستهدفة (SOM) بنحو ${Math.round((ratio - 1) * 100)}%؛ راجع توقع العملاء/السعر أو ارفع SOM.`;
+            } else if (ratio > 0.9) {
+                colorClass = 'text-warning';
+                tail = ' — قريب جداً من حصتك المستهدفة (SOM)، بلا هامش يُذكر للنمو.';
+            } else {
+                colorClass = 'text-success';
+                tail = ' — ضمن حصتك المستهدفة (SOM) بأمان.';
+            }
+        }
+        return `<span class="${colorClass}">الإيراد المخطَّط لسنة كاملة من جدول الإيرادات: ${fmt(year1Revenue)} ريال${tail}</span>`;
     }
 
     renderSegments(segments) {
@@ -546,6 +582,13 @@ export class MarketAnalysis {
         // TAM-SAM-SOM inputs (قيم وأوصاف)
         this.container.querySelectorAll('.tam-value, .sam-value, .som-value').forEach(input => {
             input.addEventListener('change', (e) => this.updateMarketSize(e));
+        });
+        // تلميح فوري (بند 1.2، خطة 2026-07-12): تحديث موضعي لنص المقارنة أثناء الكتابة في
+        // SOM بلا render() كامل ولا كتابة للمخزن على كل ضغطة (يمنع سقوط التركيز — نفس فخ
+        // الجداول الديناميكية المُصلح في الدفعة 0؛ الحفظ الفعلي يبقى على change/blur أعلاه).
+        this.container.querySelector('#market-som')?.addEventListener('input', (e) => {
+            const hintEl = this.container.querySelector('#som-revenue-hint');
+            if (hintEl) hintEl.innerHTML = this._renderSomRevenueHintText(e.target.value);
         });
         this.container.querySelectorAll('input[data-subfield="description"]').forEach(input => {
             input.addEventListener('change', (e) => this.updateMarketSizeDesc(e));

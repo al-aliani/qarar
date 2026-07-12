@@ -16,6 +16,9 @@ describe('قسم operational مسجَّل رسمياً في المخطط (#26)',
     const study = createEmptyStudy();
     expect(study.operational).toBeDefined();
     expect(typeof study.operational).toBe('object');
-    expect(study.operational).toEqual({ arrivalRate: 30, serviceTime: 5, servers: 2 });
+    // خطة الاستفادة 2026-07-12 (بند 1.1): أُضيف lastResult:null كحقل افتراضي — يُملأ
+    // بعد أول تشغيل لمحاكاة التشغيل (OperationalSim.js) ليقرأه جدول الرواتب كاقتراح
+    // اختياري بزر صريح، بلا كتابة صامتة (راجع batch6.operationalSimDisclosure.test.js).
+    expect(study.operational).toEqual({ arrivalRate: 30, serviceTime: 5, servers: 2, lastResult: null });
   });
 });

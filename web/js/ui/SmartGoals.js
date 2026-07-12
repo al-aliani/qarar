@@ -7,6 +7,7 @@ import { DataService } from '../services/DataService.js';
 import { toast } from '../utils/toast.js';
 import { fieldHelp } from './components/FieldHelp.js';
 import { escapeHtml } from '../utils/escape.js';
+import { deriveRevenueFromStreams } from '../core/engine.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -53,12 +54,20 @@ export class SmartGoals {
         this.onNavigate = onNavigate;
         this.editingId = null;
         this.stepIndex = 0;
+        // بند 1.2 (خطة 2026-07-12): يتتبّع مصدر آخر قيمة كُتبت في حقل «القيمة المستهدفة»
+        // ضمن نموذج الإضافة/التعديل الحالي — 'computed' فقط إن ضُغط زر «استخدم القيمة
+        // المحسوبة»، وإلا 'manual' بمجرد كتابة المستخدم يدوياً. يُصفَّر مع كل render() جديد.
+        this._targetValueSource = null;
     }
 
     render(stepIndex) {
         if (typeof stepIndex === 'number') this.stepIndex = stepIndex;
         const state = this.store.getState();
         const smartGoals = state.smartGoals || {};
+        // مشتقات الإيراد من جدول الإيرادات (بند 1.2) — تُستهلك في تلميح نموذج الإضافة
+        // وشارة الانحراف على بطاقات الأهداف المالية. لا تشغّل المحرك الكامل، حساب خفيف.
+        this._derivedRevenue = deriveRevenueFromStreams(state.revenue?.streams);
+        this._targetValueSource = null;
 
         this.container.innerHTML = `
             <div class="smart-goals">
@@ -105,6 +114,7 @@ export class SmartGoals {
         `;
 
         this.bindEvents();
+        this._syncFinancialHintVisibility();
     }
 
     renderGoalsByCategory(goals) {
@@ -166,11 +176,45 @@ export class SmartGoals {
                         <span>من ${this.formatValue(goal.targetValue)}</span>
                     </div>
                 </div>
+                ${this.renderFinancialGoalDeviation(goal, idx)}
                 <div class="goal-actions">
                     <button class="btn btn--sm btn--ghost btn-edit-goal" data-idx="${idx}">${icon('i-pen')} تعديل</button>
                     <button class="btn btn--sm btn--ghost btn-update-goal" data-idx="${idx}">تحديث الحالة</button>
                     <button class="btn btn--sm btn--ghost btn-remove-goal" data-idx="${idx}">حذف</button>
                 </div>
+            </div>
+        `;
+    }
+
+    /**
+     * شارة انحراف الهدف المالي عن الإيراد المحسوب من جدول الإيرادات (بند 1.2، خطة
+     * 2026-07-12) — لا تظهر إلا لهدف من فئة «مالي» بقيمة مستهدفة وانحراف > 10%.
+     * التلوين/اللهجة يعتمدان على manualOverride: false = كان متزامناً وانحرف (يستحق
+     * إعادة مزامنة بزر مباشر)، true = قيمة يدوية واعية (طموح مقصود) فملاحظة محايدة فقط.
+     */
+    renderFinancialGoalDeviation(goal, idx) {
+        if (goal.category !== 'financial') return '';
+        const year1Revenue = this._derivedRevenue?.year1Revenue || 0;
+        const target = Number(goal.targetValue) || 0;
+        if (!year1Revenue || !target) return '';
+        const deviation = Math.abs(target - year1Revenue) / year1Revenue;
+        if (deviation <= 0.10) return '';
+        const pct = Math.round(deviation * 100);
+        const revenueStr = Math.round(year1Revenue).toLocaleString('ar-SA');
+
+        if (goal.manualOverride === false) {
+            return `
+                <div class="goal-financial-flag alert alert--warning">
+                    ${icon('i-warning')}
+                    <span>لم يعد يطابق الإيراد المحسوب حالياً من جدول الإيرادات (${revenueStr} ريال) — فارق ${pct}%.</span>
+                    <button type="button" class="btn btn--sm btn--ghost btn-sync-financial-goal" data-idx="${idx}">إعادة المزامنة</button>
+                </div>
+            `;
+        }
+        return `
+            <div class="goal-financial-flag text-xs text-muted">
+                ${icon('i-info')}
+                <span>ملاحظة: يختلف عن الإيراد المحسوب من جدول الإيرادات (${revenueStr} ريال) بنسبة ${pct}% — إن لم يكن هذا مقصوداً، افتح «تعديل» واستخدم القيمة المحسوبة.</span>
             </div>
         `;
     }
@@ -207,6 +251,13 @@ export class SmartGoals {
                     <div class="form-group">
                         <label for="goalCurrentValue">القيمة الحالية</label>
                         <input type="number" class="input" id="goalCurrentValue" placeholder="0">
+                    </div>
+                </div>
+                <div class="form-row" id="goalFinancialHintRow">
+                    <div class="form-group financial-goal-hint alert alert--info">
+                        ${icon('i-info')}
+                        <span>الإيراد المخطَّط لسنة كاملة من جدول الإيرادات: <strong>${Math.round(this._derivedRevenue?.year1Revenue || 0).toLocaleString('ar-SA')}</strong> ريال — اقتراح بداية للهدف المالي، قابل للتعديل بالكامل.</span>
+                        <button type="button" class="btn btn--sm btn--ghost" id="btnUseComputedRevenue">استخدم هذه القيمة</button>
                     </div>
                 </div>
                 <div class="form-row">
@@ -323,6 +374,23 @@ export class SmartGoals {
         // Suggest goals
         this.container.querySelector('.btn-suggest-goals')?.addEventListener('click', () => this.suggestGoals());
 
+        // بند 1.2 (خطة 2026-07-12): تلميح الهدف المالي (اقتراح بنقرة — لا تعبئة تلقائية صامتة)
+        this.container.querySelector('#goalCategory')?.addEventListener('change', () => this._syncFinancialHintVisibility());
+        this.container.querySelector('#goalTargetValue')?.addEventListener('input', () => {
+            this._targetValueSource = 'manual';
+        });
+        this.container.querySelector('#btnUseComputedRevenue')?.addEventListener('click', () => {
+            const targetInput = this.container.querySelector('#goalTargetValue');
+            if (!targetInput) return;
+            targetInput.value = Math.round(this._derivedRevenue?.year1Revenue || 0);
+            this._targetValueSource = 'computed';
+            toast.success('عُبّئت القيمة المستهدفة من الإيراد المحسوب — يمكنك تعديلها كما تريد.');
+        });
+        // «إعادة المزامنة» على بطاقة هدف مالي منحرف بالفعل (بلا فتح نموذج التعديل)
+        this.container.querySelectorAll('.btn-sync-financial-goal').forEach(btn => {
+            btn.addEventListener('click', (e) => this.syncFinancialGoal(e));
+        });
+
         // Navigation
         this.container.querySelector('.btn-prev-step')?.addEventListener('click', () => {
             if (this.onNavigate) this.onNavigate(this.stepIndex - 1);
@@ -334,6 +402,29 @@ export class SmartGoals {
 
     generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    /** يُظهر/يُخفي شريط تلميح الإيراد المحسوب حسب الفئة المختارة حالياً في النموذج (financial فقط). */
+    _syncFinancialHintVisibility() {
+        const row = this.container.querySelector('#goalFinancialHintRow');
+        const category = this.container.querySelector('#goalCategory')?.value;
+        if (row) row.style.display = category === 'financial' ? '' : 'none';
+    }
+
+    /**
+     * إعادة مزامنة هدف مالي منحرف مباشرة من بطاقته (بلا فتح نموذج التعديل) — يعيد
+     * targetValue إلى الإيراد المحسوب حالياً ويضبط manualOverride=false مجدداً.
+     */
+    syncFinancialGoal(e) {
+        const idx = parseInt(e.target.dataset.idx, 10);
+        const state = this.store.getState();
+        const goals = [...(state.smartGoals?.goals || [])];
+        if (!goals[idx]) return;
+        const year1Revenue = Math.round(this._derivedRevenue?.year1Revenue || 0);
+        goals[idx] = { ...goals[idx], targetValue: year1Revenue, manualOverride: false };
+        this.store.update('smartGoals', { ...state.smartGoals, goals });
+        this.render();
+        toast.success('أُعيدت مزامنة الهدف المالي مع الإيراد المحسوب.');
     }
 
     addGoal() {
@@ -358,6 +449,21 @@ export class SmartGoals {
             const state = this.store.getState();
             const goals = [...(state?.smartGoals?.goals || [])];
 
+            // بند 1.2 (خطة 2026-07-12): manualOverride يميّز هدفاً مالياً متزامناً مع الإيراد
+            // المحسوب (زر «استخدم هذه القيمة» ⇒ false) عن قيمة يدوية واعية (طموح مختلف عمداً
+            // ⇒ true). إن لم يُلمس الحقل في هذا الحفظ نحتفظ بالعلم السابق للهدف عند التعديل.
+            const existingGoal = this.editingId ? goals.find(g => g.id === this.editingId) : null;
+            let manualOverride;
+            if (category !== 'financial') {
+                manualOverride = undefined;
+            } else if (this._targetValueSource === 'computed') {
+                manualOverride = false;
+            } else if (this._targetValueSource === 'manual') {
+                manualOverride = true;
+            } else {
+                manualOverride = typeof existingGoal?.manualOverride === 'boolean' ? existingGoal.manualOverride : true;
+            }
+
             if (this.editingId) {
                 // Update existing
                 const index = goals.findIndex(g => g.id === this.editingId);
@@ -365,7 +471,7 @@ export class SmartGoals {
                     goals[index] = {
                         ...goals[index],
                         specific, measurable, achievable, relevant, startDate, timeBound, category,
-                        targetValue, currentValue
+                        targetValue, currentValue, manualOverride
                     };
                     this.editingId = null; // Clear edit mode
                     // تدقيق اختبار عميل 2026-07-12: alert() يحجب الخيط الرئيسي حتى
@@ -385,6 +491,7 @@ export class SmartGoals {
                     category,
                     targetValue,
                     currentValue,
+                    manualOverride,
                     status: 'pending'
                 });
             }
@@ -429,6 +536,10 @@ export class SmartGoals {
                 setValue('goalCategory', goal.category);
                 setValue('goalTargetValue', goal.targetValue);
                 setValue('goalCurrentValue', goal.currentValue);
+                // القيمة معبّأة من الهدف المحفوظ لا من زر «استخدم القيمة المحسوبة» —
+                // لا نغيّر this._targetValueSource هنا (يبقى null حتى يلمس المستخدم الحقل
+                // فعلياً)، كي يُحتفظ بعلم manualOverride السابق للهدف عند الحفظ دون لمس.
+                this._syncFinancialHintVisibility();
 
                 document.getElementById('goalSpecific')?.focus();
             }, 50);

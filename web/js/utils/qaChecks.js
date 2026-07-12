@@ -6,6 +6,7 @@
  */
 import { validateInputs } from '../../../lib/calc/validateInputs.js';
 import { checkDriversAgainstBenchmarks } from '../core/sectorBenchmarks.js';
+import { deriveRevenueFromStreams } from '../core/engine.js';
 
 export async function runQAChecks(state, results) {
     const qaResults = {
@@ -378,17 +379,22 @@ export async function runQAChecks(state, results) {
             // 10) مصالحة الطاقة — سقف مادي للمبيعات (أول سؤال يطرحه مدقق SIDF)
             {
                 const cc = results?.capacityCheck;
+                // خطة 2026-07-12 (بند 1.2): capacityCheck قد يأتي الآن من annualCapacity (السعة
+                // السنوية العامة) لا فقط capacityModel (مقاعد/دورات) — الرسالة/المسار يوجّهان
+                // المستخدم للحقل الفعلي الذي بُني عليه الفحص بدل الإيحاء دائماً بـ«مقاعد ودورات».
+                const capacitySourceLabel = cc?.source === 'annualCapacity' ? 'السعة السنوية' : 'مقاعد/دورات/أيام';
+                const capacitySourcePath = cc?.source === 'annualCapacity' ? 'technical.productionCapacity.annualCapacity' : 'technical.capacityModel';
                 if (cc && cc.exceeded) {
                     qaResults.hardErrors.push({
                         code: 'CAPACITY_EXCEEDED',
-                        message: `مبيعات مستحيلة مادياً: الخطة تتطلب ${cc.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميلاً/شهرياً بينما طاقتك القصوى ${cc.maxUnitsPerMonth.toLocaleString('ar-SA')} (${Math.round(cc.utilizationOfMax * 100)}% من الطاقة). خفّض توقعات المبيعات أو وسّع الطاقة (مقاعد/دورات/أيام).`,
-                        path: 'technical.capacityModel'
+                        message: `مبيعات مستحيلة مادياً: الخطة تتطلب ${cc.plannedUnitsPerMonth.toLocaleString('ar-SA')} عميلاً/شهرياً بينما طاقتك القصوى ${cc.maxUnitsPerMonth.toLocaleString('ar-SA')} (${Math.round(cc.utilizationOfMax * 100)}% من الطاقة). خفّض توقعات المبيعات أو وسّع الطاقة (${capacitySourceLabel}).`,
+                        path: capacitySourcePath
                     });
                 } else if (cc && cc.utilizationOfMax > 0.85) {
                     qaResults.softWarnings.push({
                         code: 'CAPACITY_TIGHT',
                         message: `الخطة تستهلك ${Math.round(cc.utilizationOfMax * 100)}% من الطاقة القصوى منذ السنة الأولى — لا هامش لذروة الطلب أو النمو؛ المدقق سيعتبرها متفائلة.`,
-                        path: 'technical.capacityModel'
+                        path: capacitySourcePath
                     });
                 }
                 // مشروع بمبيعات كبيرة بلا نموذج طاقة أصلاً — لا يمكن إثبات القابلية للتحقيق
@@ -420,7 +426,32 @@ export async function runQAChecks(state, results) {
                 }
             }
 
-            // 12) معايير «السائقين» القطاعية (تكلفة متغيرة، إيجار/مبيعات، عمالة/مبيعات)
+            // 12) الهدف المالي الذكي المتزامن خرج عن مزامنته مع جدول الإيرادات (بند 1.2،
+            // خطة 2026-07-12): manualOverride=false يعني أن المستخدم اختار تتبّع الإيراد
+            // المحسوب تلقائياً (زر «استخدم القيمة المحسوبة» في SmartGoals.js) — إن تغيّر
+            // جدول الإيرادات بعدها وابتعد الهدف بأكثر من 10% فهذا انحراف حقيقي يستحق تنبيهاً.
+            // أهداف مالية بقيمة يدوية واعية (manualOverride=true، كطموح أعلى من الخطة
+            // الحالية) لا تُنبَّه عمداً — وإلا صار الفحص عقاباً على طموح مشروع لا خللاً فعلياً.
+            {
+                const goals = state?.smartGoals?.goals || [];
+                const { year1Revenue } = deriveRevenueFromStreams(state?.revenue?.streams);
+                if (year1Revenue > 0) {
+                    goals
+                        .filter(g => g.category === 'financial' && g.manualOverride === false && Number(g.targetValue) > 0)
+                        .forEach(g => {
+                            const deviation = Math.abs(Number(g.targetValue) - year1Revenue) / year1Revenue;
+                            if (deviation > 0.10) {
+                                qaResults.softWarnings.push({
+                                    code: 'SMART_GOAL_INCONSISTENT',
+                                    message: `الهدف المالي «${g.specific || 'هدف مالي'}» (${Number(g.targetValue).toLocaleString('ar-SA')} ريال) لم يعد يطابق الإيراد المحسوب حالياً من جدول الإيرادات (${Math.round(year1Revenue).toLocaleString('ar-SA')} ريال) — فارق ${Math.round(deviation * 100)}%. أعد المزامنة أو راجع الهدف.`,
+                                    path: 'smartGoals.goals'
+                                });
+                            }
+                        });
+                }
+            }
+
+            // 13) معايير «السائقين» القطاعية (تكلفة متغيرة، إيجار/مبيعات، عمالة/مبيعات)
             try {
                 checkDriversAgainstBenchmarks(state, results).forEach(w => qaResults.softWarnings.push(w));
             } catch (benchErr) {

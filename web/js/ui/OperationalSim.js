@@ -146,6 +146,12 @@ export class OperationalSim {
 
         document.getElementById('simResults').style.opacity = '1';
 
+        // بند 1.1 (دفعة 1): نحسب عدد نقاط الخدمة الأمثل دوماً (لا فقط عند تجاوز 5 دقائق)
+        // كي يُخزَّن في lastResult ويقرأه جدول الرواتب كاقتراح اختياري — لا علاقة له
+        // بزر «جرّب هذا الرقم هنا» المحلي أدناه (يبقى محلياً بالكامل لهذه الشاشة).
+        const optimal = this.findOptimalStaffing(params.arrivalRate, params.serviceTime, 5);
+        let avgWaitTimeResult = null;
+
         // Calculation
         if (rho >= 1) {
             this.showResults('infinite', 'infinite', rho);
@@ -165,11 +171,11 @@ export class OperationalSim {
 
             const avgWaitTime = (probabilityWait * params.serviceTime) / (m * (1 - rho)); // E(W)
             const avgQueueLen = avgWaitTime * lambda; // Little's Law: Lq = lambda * Wq
+            avgWaitTimeResult = avgWaitTime;
 
             this.showResults(avgWaitTime, avgQueueLen, rho);
 
             if (avgWaitTime > 5) {
-                const optimal = this.findOptimalStaffing(params.arrivalRate, params.serviceTime, 5);
                 this.showAlert('warning', `وقت الانتظار مرتفع (${Math.round(avgWaitTime)} د). للحفاظ على أقل من 5 دقائق، نقترح تعيين <strong>${optimal}</strong> موظفين في نقاط الخدمة هنا (محاكاة استرشادية — لا تُطبَّق تلقائياً على خطة التوظيف الفعلية). <button class="btn-xs btn--text underline" id="btnApplyOptim">جرّب هذا الرقم هنا</button>`);
 
                 // Bind apply button
@@ -185,8 +191,18 @@ export class OperationalSim {
             }
         }
 
-        // Save to store
-        this.store.update('operational', params);
+        // Save to store — نضيف lastResult (اقتراح نقاط الخدمة الأمثل) بجانب معاملات
+        // المحاكاة نفسها. هذا لا يزال محلياً بالكامل لقسم operational ولا يكتب لأي
+        // مكان آخر في الدراسة (hr.positions تبقى بمنأى — راجع batch6.operationalSimDisclosure).
+        // جدول الرواتب (OrgStructure/Wizard) يقرأ lastResult ويعرضه كاقتراح بزر صريح فقط.
+        this.store.update('operational', {
+            ...params,
+            lastResult: {
+                recommendedServers: optimal,
+                utilization: rho,
+                avgWaitTime: avgWaitTimeResult
+            }
+        });
     }
 
     showResults(wait, queue, rho) {
