@@ -1258,6 +1258,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+  // بوابة المراجعين (2026-07-13) — عرض مغمور بلا شريط جانبي، مقصور على
+  // مستخدمين مُدرَجين فعلياً بجدول reviewers (التحقق داخل ReviewerDashboardView
+  // نفسها عبر AuthGuard.isReviewer؛ هذا الفرع فقط يهيّئ الحاوية ويستورد الملف).
+  const renderReviewerRoute = async () => {
+    const sidebarEl = document.querySelector('.sidebar');
+    const stepperNavEl = document.getElementById('stepperNav');
+    const breadcrumbBar = document.getElementById('breadcrumbBar');
+    if (sidebarEl) sidebarEl.style.display = 'none';
+    if (stepperNavEl) stepperNavEl.style.display = 'none';
+    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+    try {
+      const { ReviewerDashboardView } = await import('./js/ui/ReviewerDashboardView.js');
+      await new ReviewerDashboardView('wizardContainer').render();
+    } catch (e) {
+      console.error('ReviewerDashboardView load failed:', e);
+      toast.error('تعذر فتح بوابة المراجعين');
+    }
+  };
+
   // رسم الواجهة المطابقة للعنوان — بدون كتابة تاريخ جديد (يُستدعى عند الرجوع/التقديم)
   const routeToView = async (route) => {
     _isRestoring = true;
@@ -1276,6 +1295,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         else await showLandingDashboard();
       } else if (route.startsWith('share/')) {
         await renderShareRoute(route.slice(6));
+      } else if (route.startsWith('reviewer')) {
+        await renderReviewerRoute();
       } else if (route.startsWith('payment-return')) {
         // Moyasar/Stripe يُعيدان توجيه المتصفح هنا بعد الدفع (انظر create-checkout
         // Edge Function: returnUrl يبني هذا الرابط تحديداً بمعامل order=<orderId>).

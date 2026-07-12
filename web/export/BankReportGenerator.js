@@ -19,12 +19,29 @@ const BANK_SECTION_IDS = [
     'market_evidence',
     'financial_kpis',
     'financing_structure',
+    'collateral',
     'income_statement',
     'loan_schedule',
     'legal_readiness',
     'risks',
     'recommendation'
 ];
+
+/** تسمية جهة التمويل على غلاف التقرير حسب البنك المختار في هيكل التمويل. */
+const BANK_VARIANT_LABELS = {
+    rajhi: 'مصرف الراجحي',
+    ncb: 'البنك الأهلي السعودي (SNB)',
+    riyad: 'بنك الرياض',
+    other: 'جهة التمويل',
+};
+
+const GUARANTEE_TYPE_LABELS = {
+    mortgage: 'رهن عقار/معدات',
+    personal: 'كفالة شخصية',
+    kafalah: 'كفالة صندوق الكفالة',
+    salaryAssignment: 'تحويل راتب',
+    other: 'أخرى',
+};
 
 function bankEsc(value) {
     return String(value ?? '')
@@ -95,11 +112,21 @@ export class BankReportGenerator {
         </div>`;
     }
 
-    static generateHTML(store) {
+    /**
+     * @param {object} store - Store instance
+     * @param {{ certification?: {reviewerName: string, certificateId: string, certifiedAt: string}, bankVariant?: 'rajhi'|'ncb'|'riyad'|'other' }} [options]
+     *   certification: تمرَّر فقط إن وُجد طلب "مراجَع بخبير" معتمَد فعلياً لهذه الدراسة
+     *   (انظر ReviewerService.getCertificationForStudy) — بدونها تُعرض خانة الاعتماد فارغة.
+     *   bankVariant: افتراضياً من state.financing.sources.bankLoan.bank إن لم يُمرَّر صراحة.
+     */
+    static generateHTML(store, options = {}) {
         const state = store.getState ? store.getState() : store.get();
         const info = state.projectInfo || {};
         const studyTypeLabel = getOptionLabel('studyType', info.studyType);
         const studyRecipientLabel = getOptionLabel('studyRecipientType', info.studyRecipientType);
+        const { certification = null } = options;
+        const bankVariant = options.bankVariant || state.financing?.sources?.bankLoan?.bank || 'other';
+        const bankLabel = BANK_VARIANT_LABELS[bankVariant] || BANK_VARIANT_LABELS.other;
 
         let results;
         try {
@@ -183,12 +210,14 @@ export class BankReportGenerator {
             ${(info.clientName || '').trim() ? `<p style="margin-top:8px;font-size:12pt;">أُعدت هذه الدراسة لصالح: <strong>${String(info.clientName).replace(/</g, '&lt;')}</strong></p>` : ''}
             ${(info.preparedBy || '').trim() ? `<p style="margin-top:2px;font-size:10pt;color:#718096;">إعداد: ${String(info.preparedBy).replace(/</g, '&lt;')}</p>` : ''}
             <p style="margin-top:8px;font-size:10pt;color:#4a5568;">نوع الدراسة: <strong>${studyTypeLabel || 'غير محدد'}</strong> | لمن تُعد: <strong>${studyRecipientLabel || 'غير محدد'}</strong></p>
-            <p style="margin-top:12px;font-size:10pt;color:#718096;">أُعدّ باتباع الهيكل الاسترشادي لجهات التمويل المحلية (بنك التنمية الاجتماعية، منشآت) | ${date}</p>
+            <p style="margin-top:12px;font-size:10pt;color:#718096;">أُعدّ باتباع الهيكل الاسترشادي لجهات التمويل المحلية (${bankLabel}، منشآت) | ${date}</p>
             <p style="margin-top:6px;font-size:9pt;color:#4a5568;">بنية التقرير مناسبة للإقراض: ملخص تنفيذي، استخدام التمويل، القوائم المالية، الضمانات.</p>
         </div>
         ${validationNotice}
 
         ${sectionsHtml}
+
+        ${this._renderCertificationBlock(certification)}
 
         <!-- تذييل -->
         <div class="bank-footer">
@@ -201,6 +230,26 @@ export class BankReportGenerator {
     </div>
 </body>
 </html>`;
+    }
+
+    /** خانة توثيق/اعتماد — فارغة افتراضياً؛ تُملأ فقط عند تمرير certification فعلي. */
+    static _renderCertificationBlock(certification) {
+        if (!certification || !certification.certificateId) {
+            return `<div class="bank-section" style="border:1px dashed #cbd5e0;padding:16px;text-align:center;color:#a0aec0;">
+                <p>لم تتم مراجعة هذه الدراسة من خبير معتمد بعد.</p>
+            </div>`;
+        }
+        const certifiedDate = certification.certifiedAt
+            ? new Date(certification.certifiedAt).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
+            : '-';
+        return `<div class="bank-section" style="border:2px solid var(--sdb-green,#276749);border-radius:8px;padding:16px;background:#f0fff4;">
+            <div class="bank-section-title" style="color:var(--sdb-green,#276749);border-bottom-color:var(--sdb-green,#276749);">✓ معتمدة من مراجع خبير</div>
+            <table class="bank-table">
+                <tr><th>المراجع</th><td>${bankEsc(certification.reviewerName || 'مراجع معتمد')}</td></tr>
+                <tr><th>رقم الشهادة</th><td>${bankEsc(certification.certificateId)}</td></tr>
+                <tr><th>تاريخ الاعتماد</th><td>${bankEsc(certifiedDate)}</td></tr>
+            </table>
+        </div>`;
     }
 
     /** ترتيب أقسام تقرير البنك: يتبع reportSectionOrder إن وُجد، مع إلحاق أي قسم بنكي غير مذكور. */
@@ -287,6 +336,8 @@ export class BankReportGenerator {
                 <tr class="total-row"><td>الإجمالي</td><td>${_fmt(cap.total || financing.totalInvestment || 0)}</td><td>100%</td></tr>
             </table>
         </div>`;
+            case 'collateral':
+                return this._renderCollateralSection(state, results, _fmt, n);
             case 'income_statement':
                 if (!incomeY1) return '';
                 return `<div class="bank-section">
@@ -374,6 +425,30 @@ export class BankReportGenerator {
             default:
                 return '';
         }
+    }
+
+    /** قسم الضمانات — يقرأ state.financing.guarantees (موجودة أصلاً عبر FinancingStructure.js)
+     *  ويحسب "نسبة تغطية الضمانات" = مجموع قيم الضمانات ÷ مبلغ القرض المطلوب. */
+    static _renderCollateralSection(state, results, _fmt, n) {
+        const financing = state?.financing || {};
+        const guarantees = Array.isArray(financing.guarantees) ? financing.guarantees : [];
+        if (!guarantees.length) return '';
+
+        const loanAmount = Number(financing.sources?.bankLoan?.amount || results?.loanSchedule?.loanAmount || 0);
+        const totalGuaranteeValue = guarantees.reduce((sum, g) => sum + (Number(g.value) || 0), 0);
+        const coverageRatio = loanAmount > 0 ? totalGuaranteeValue / loanAmount : null;
+        const coverageText = coverageRatio == null ? 'غير قابل للحساب (لا يوجد مبلغ قرض)' : `${(coverageRatio * 100).toFixed(0)}%`;
+        const coverageNote = coverageRatio == null ? '' : coverageRatio >= 1 ? 'تغطية كاملة أو أعلى من قيمة القرض' : 'تغطية جزئية — دون قيمة القرض المطلوب';
+
+        return `<div class="bank-section">
+            <div class="bank-section-title">${n}. الضمانات المقدَّمة</div>
+            <table class="bank-table">
+                <tr><th>نوع الضمان</th><th>الوصف</th><th>القيمة (ريال)</th></tr>
+                ${guarantees.map(g => `<tr><td>${bankEsc(GUARANTEE_TYPE_LABELS[g.type] || GUARANTEE_TYPE_LABELS.other)}</td><td>${bankEsc(g.description || '-')}</td><td>${_fmt(Number(g.value) || 0)}</td></tr>`).join('')}
+                <tr class="total-row"><td colspan="2">الإجمالي</td><td>${_fmt(totalGuaranteeValue)}</td></tr>
+            </table>
+            <p style="margin-top:8px;"><strong>نسبة تغطية الضمانات لمبلغ القرض:</strong> ${coverageText} ${coverageNote ? `— ${coverageNote}` : ''}</p>
+        </div>`;
     }
 
     static _renderFinancingRows(financing, capTotal) {

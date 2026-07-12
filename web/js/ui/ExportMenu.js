@@ -528,7 +528,8 @@ export class ExportMenu {
                 }
 
                 case 'bank': {
-                    const html = BankReportGenerator.generateHTML(this.store);
+                    const certification = await getCertificationForStudy(state.projectInfo?.id || state.id || null);
+                    const html = BankReportGenerator.generateHTML(this.store, { certification });
                     const win = window.open('', '_blank');
                     if (win) {
                         win.document.write(html);
@@ -545,7 +546,8 @@ export class ExportMenu {
                 }
 
                 case 'financier': {
-                    const finHtml = BankReportGenerator.generateHTML(this.store);
+                    const financierCertification = await getCertificationForStudy(state.projectInfo?.id || state.id || null);
+                    const finHtml = BankReportGenerator.generateHTML(this.store, { certification: financierCertification });
                     const finWin = window.open('', '_blank');
                     if (finWin) {
                         finWin.document.write(finHtml);
@@ -560,7 +562,8 @@ export class ExportMenu {
                 }
 
                 case 'review_copy': {
-                    const baseHtml = BankReportGenerator.generateHTML(this.store);
+                    const reviewCopyCertification = await getCertificationForStudy(state.projectInfo?.id || state.id || null);
+                    const baseHtml = BankReportGenerator.generateHTML(this.store, { certification: reviewCopyCertification });
                     const reviewBanner = '<div style="background:#f0f4f8;border:1px solid #2c5282;padding:10px 20px;margin:0 0 16px;text-align:center;font-weight:600;font-size:11pt;">نسخة للمراجعة — للمراجعة من قبل استشاري. تاريخ التصدير: ' + new Date().toLocaleDateString('ar-SA', { dateStyle: 'long' }) + '</div>';
                     const reviewHtml = baseHtml.replace(/<body([^>]*)>/i, '<body$1>' + reviewBanner);
                     const reviewWin = window.open('', '_blank');

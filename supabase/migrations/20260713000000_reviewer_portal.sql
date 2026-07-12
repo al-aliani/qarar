@@ -75,9 +75,10 @@ create index if not exists orders_review_status_reviewed_idx
   on public.orders (review_status)
   where tier = 'reviewed';
 
--- طلب "مراجَع بخبير" يدخل الطابور تلقائياً عند تمام الدفع (status='paid')؛
--- تُحدَّث review_status إلى 'queued' من webhook الدفع مستقبلاً أو يدوياً عبر
--- Edge Function منفصلة — هذا الترحيل يقتصر على البنية، لا منطق التفعيل.
+-- طلب "مراجَع بخبير" يدخل الطابور تلقائياً عند تمام الدفع (status='paid') —
+-- webhook-moyasar/webhook-stripe يحدّثان review_status إلى 'queued' فور
+-- نجاح الدفع (شرط tier='reviewed' AND review_status='none' لمنع إعادة
+-- إدخال طلب سبق أن دخل السير عند استقبال حدث webhook مكرر).
 
 create sequence if not exists public.cert_seq;
 
