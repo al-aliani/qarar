@@ -177,6 +177,13 @@ export class DecisionDashboard {
                     </div>
 
                      <div class="dd-verdict__actions">
+                        <!-- تدقيق خطة 2026-07-12 (الدفعة 4، البند 1): زر مباشر من نقطة اتخاذ القرار
+                        نفسها إلى لوحة الافتراضات المركزية — أكبر إحباط وثّقه اختبار العميل الحقيقي
+                        كان التنقل بين 41 قسماً لمعايرة أرقام مترابطة (سعر/عملاء/موظفين/تمويل) بعد
+                        رؤية توصية REVISE هنا، ثم العودة لهذه الشاشة لرؤية الأثر — تكراراً وتكراراً. -->
+                        <button id="btnOpenAssumptionsPanel" class="btn ${evaluation.recommendation !== 'go' ? 'btn--primary' : 'btn--secondary'} dd-verdict__cta" title="عدّل الأرقام الجوهرية في شاشة واحدة وشاهد الأثر فوراً">
+                            <svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg> معايرة سريعة
+                        </button>
                         <button id="btnExecutiveSummary" class="btn btn--primary dd-verdict__cta" title="يعمل بدون مفتاح API">
                             <svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> الملخص التنفيذي
                         </button>
@@ -558,6 +565,16 @@ export class DecisionDashboard {
     }
 
     bindEvents(state, results) {
+        // «معايرة سريعة» — يفتح لوحة الافتراضات المركزية (حدث عام يلتقطه app.js؛ نفس
+        // نمط feasibility:navigateToStep الموجود أصلاً، يحفظ خطوة المعالج الحالية ويستعيدها
+        // عند الخروج بلا حاجة لتمرير onNavigate خاص بهذه الشاشة تحديداً).
+        const btnOpenAssumptionsPanel = this.container.querySelector('#btnOpenAssumptionsPanel');
+        if (btnOpenAssumptionsPanel) {
+            const handler = () => window.dispatchEvent(new CustomEvent('feasibility:openAssumptionsPanel'));
+            btnOpenAssumptionsPanel.addEventListener('click', handler);
+            this._eventListeners.push({ element: btnOpenAssumptionsPanel, event: 'click', handler });
+        }
+
         // «التفاصيل الكاملة» — قفز إلى خطوة لوحة المؤشرات المالية (المصدر الوحيد لشبكة
         // NPV/IRR/الاسترداد/العائد الكاملة بعد إزالة الشبكة المكرَّرة من هذه اللوحة).
         const btnGoFinancialDashboard = this.container.querySelector('#btnGoFinancialDashboard');

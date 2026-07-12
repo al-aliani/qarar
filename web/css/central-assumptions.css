@@ -1,0 +1,135 @@
+/**
+ * لوحة الافتراضات المركزية — خطة 2026-07-12، الدفعة 4، البند 1.
+ * يعتمد على متغيرات variables.css (يتبع الثيم الفاتح/الداكن تلقائياً)، ويعيد
+ * استخدام أصناف .card/.btn/.input الموجودة أصلاً بدل إعادة تعريفها.
+ */
+.central-assumptions {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-bottom: var(--s-6);
+}
+
+.ca-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.ca-header__eyebrow {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-gold-500);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: var(--s-1);
+}
+
+.ca-header h2 {
+  margin: 0 0 var(--s-1);
+}
+
+/* شريط ملخّص الأثر — لاصق أعلى الصفحة كي يبقى مرئياً أثناء التمرير بين المجموعات */
+.ca-impact {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-4);
+  background: var(--c-bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.ca-impact__badge {
+  font-weight: 800;
+  font-size: 0.85rem;
+  padding: 0.3em 0.9em;
+  border-radius: var(--r-pill);
+  letter-spacing: 0.02em;
+}
+.ca-impact__badge--success { background: var(--c-p-subtle); color: var(--c-success); }
+.ca-impact__badge--warning { background: var(--c-warning-subtle); color: var(--c-warning); }
+.ca-impact__badge--danger { background: var(--c-danger-subtle); color: var(--c-danger); }
+
+.ca-impact__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8rem;
+}
+.ca-impact__metric span { color: var(--c-text-muted); }
+.ca-impact__metric strong { font-size: 1rem; font-variant-numeric: tabular-nums; }
+
+.ca-impact__note {
+  flex-basis: 100%;
+  margin: var(--s-1) 0 0;
+}
+
+.ca-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--s-4);
+}
+
+.ca-group__title {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  margin: 0 0 var(--s-1);
+}
+
+.ca-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
+.ca-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-surface-2);
+}
+
+.ca-row__label {
+  flex: 1 1 100%;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ca-row__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--c-text-muted);
+  flex: 1 1 130px;
+}
+
+.ca-row__field .ca-input {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .ca-header { flex-direction: column; }
+  .ca-impact { position: static; }
+}

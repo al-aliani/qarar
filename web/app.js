@@ -1162,6 +1162,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     db.render();
   });
 
+  // لوحة الافتراضات المركزية (خطة 2026-07-12، الدفعة 4، البند 1): شاشة واحدة تجمع
+  // الأرقام الجوهرية (إيرادات/فريق/تمويل/افتراضات) بلا تنقّل بين 41 قسماً — تُفتح من
+  // زر «معايرة سريعة» في ترويسة العمل أو من لوحة القرار. نفس نمط
+  // feasibility:showInvestorDashboard: يحفظ خطوة المعالج الحالية ويستعيدها عند الخروج.
+  window.addEventListener('feasibility:openAssumptionsPanel', async () => {
+    const savedStepIndex = wizard.currentStepIndex;
+    const sidebarEl = document.querySelector('.sidebar');
+    const stepperNavEl = document.getElementById('stepperNav');
+    if (sidebarEl) sidebarEl.style.display = 'none';
+    if (stepperNavEl) stepperNavEl.style.display = 'none';
+
+    const { CentralAssumptionsView } = await import('./js/ui/CentralAssumptionsView.js');
+    const view = new CentralAssumptionsView(wizardContainer, store, {
+      onExit: () => {
+        view.cleanup();
+        if (sidebarEl) sidebarEl.style.removeProperty('display');
+        if (stepperNavEl) stepperNavEl.style.removeProperty('display');
+        navigateTo(savedStepIndex);
+      },
+      onNavigateToStep: (sectionId) => {
+        const idx = stepIndexById(sectionId);
+        if (idx >= 0) {
+          view.cleanup();
+          if (sidebarEl) sidebarEl.style.removeProperty('display');
+          if (stepperNavEl) stepperNavEl.style.removeProperty('display');
+          navigateTo(idx);
+        }
+      }
+    });
+    view.render();
+  });
+
   // قفزة من قائمة تحذيرات فحص الجودة قبل التصدير (ExportMenu.js، دفعة 3 2026-07-12)
   // إلى الخطوة المسؤولة عن التحذير — navigateTo() تحسم فئة/فهرس الخطوة داخلياً.
   window.addEventListener('feasibility:navigateToStep', (e) => {
@@ -1688,6 +1720,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const headerSaveStudy = document.getElementById('headerSaveStudy');
   if (headerSaveStudy) headerSaveStudy.addEventListener('click', performSaveStudy);
+
+  // «معايرة سريعة» — زر ترويسة دائم (مرئي من أي خطوة) يفتح لوحة الافتراضات المركزية
+  // (خطة 2026-07-12، الدفعة 4، البند 1): يعالج مباشرة أكبر إحباط وثّقه اختبار العميل
+  // الحقيقي (التنقل بين 41 قسماً لمعايرة أرقام مترابطة أثناء محاولة الوصول لـGO).
+  const headerAssumptionsPanel = document.getElementById('headerAssumptionsPanel');
+  if (headerAssumptionsPanel) {
+    headerAssumptionsPanel.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('feasibility:openAssumptionsPanel'));
+    });
+  }
 
   const headerGoHome = document.getElementById('headerGoHome');
   if (headerGoHome) headerGoHome.addEventListener('click', () => showLandingDashboard());

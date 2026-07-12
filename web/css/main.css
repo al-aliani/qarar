@@ -6,6 +6,7 @@
 @import './animations.css';
 @import './decision-dashboard.css';
 @import './tool-report.css';
+@import './central-assumptions.css';
 
 /* header-toolbar: مدمج هنا لتجنب طلب منفصل (ERR_CONNECTION_REFUSED) */
 .app-shell { grid-template-rows: auto 1fr; }
