@@ -113,7 +113,7 @@ export async function renderStepComponent(step, containerId, index, ctx) {
     }
     if (step.isDecisionDashboard) {
         const { DecisionDashboard } = await import('./DecisionDashboard.js');
-        const instance = get('decisionDashboard', DecisionDashboard, containerId, store);
+        const instance = get('decisionDashboard', DecisionDashboard, containerId, store, onNavigate);
         let rendered = true;
         try {
             rendered = await instance.render({ isCurrent: isCurrent || (() => true) });

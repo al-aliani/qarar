@@ -76,18 +76,41 @@ export function calculateProjectScore(state, results) {
         details.push({ category: 'financial', label: 'فترة الاسترداد غير محققة', score: 0, max: 25, issue: true });
     }
 
-    // هامش الربح / العائد (حتى 15) — الأوزان تجمع 100 بالضبط: مالية 90 + بيانات 10
+    // هامش الربح / العائد (حتى 5) — تدقيق 2026-07-12: كانت 15 (مالية 90 + بيانات 10)؛
+    // خُفِّضت إلى 5 لإفساح مكوّن مخاطر/مونت كارلو جديد (10 نقاط) دون المساس بالبنود
+    // المالية الثلاثة الكبرى (NPV/IRR/استرداد) المختبرة بالفعل بقيمها الحرفية.
+    // الأوزان تجمع 100 بالضبط الآن: مالية 80 (25+25+25+5) + مخاطر 10 + بيانات 10.
     if (roi >= minROI || (minROI <= 0 && margin > 0.1)) {
-        score += 15;
-        details.push({ category: 'financial', label: 'العائد على الاستثمار أو هامش الربح مقبول', score: 15, max: 15 });
+        score += 5;
+        details.push({ category: 'financial', label: 'العائد على الاستثمار أو هامش الربح مقبول', score: 5, max: 5 });
     } else if (margin > 0 || roi > 0) {
-        score += 6;
-        details.push({ category: 'financial', label: 'ربحية منخفضة', score: 6, max: 15, issue: true });
+        score += 2;
+        details.push({ category: 'financial', label: 'ربحية منخفضة', score: 2, max: 5, issue: true });
     } else {
-        details.push({ category: 'financial', label: 'الربحية غير محققة', score: 0, max: 15, issue: true });
+        details.push({ category: 'financial', label: 'الربحية غير محققة', score: 0, max: 5, issue: true });
     }
 
-    // اكتمال البيانات (10 نقاط) — تُضاف للدرجة كي تساوي الدرجة مجموع التفاصيل (مالية 90 + بيانات 10 = 100)
+    // مخاطر / مونت كارلو (حتى 10) — تدقيق 2026-07-12: الدرجة كانت خالية من أي مكوّن
+    // مخاطر رغم وجود محاكاة مونت كارلو كاملة في المحرك (نفس البيانات التي تُخفّض القرار
+    // من GO إلى REVISE في engine.js عند احتمالية < 50%) — درجة 100/100 كانت ممكنة لمشروع
+    // هش لا يصمد أمام التذبذب. نفس عتبتَي 0.4/0.7 المستخدمتَين في عرض بطاقة الاحتمالية
+    // بلوحة القرار (اتساق لغة المنتج). غياب تشغيل سابق محايد (5 لا صفر) — نفس فلسفة بوابة
+    // القرار في المحرك: المحاكاة استشارية اختيارية، غيابها ليس خللاً مؤكَّداً في المشروع.
+    const mcProbability = Number(state?.monteCarlo?.lastRun?.successProbability);
+    if (!Number.isFinite(mcProbability)) {
+        score += 5;
+        details.push({ category: 'risk', label: 'لم يُشغَّل تحليل مونت كارلو بعد — نقاط محايدة', score: 5, max: 10 });
+    } else if (mcProbability >= 0.7) {
+        score += 10;
+        details.push({ category: 'risk', label: 'احتمالية نجاح مونت كارلو مرتفعة (صامدة تحت التذبذب)', score: 10, max: 10 });
+    } else if (mcProbability >= 0.4) {
+        score += 5;
+        details.push({ category: 'risk', label: 'احتمالية نجاح مونت كارلو متوسطة', score: 5, max: 10, issue: true });
+    } else {
+        details.push({ category: 'risk', label: 'احتمالية نجاح مونت كارلو منخفضة — راجع هامش الأمان', score: 0, max: 10, issue: true });
+    }
+
+    // اكتمال البيانات (10 نقاط) — تُضاف للدرجة كي تساوي الدرجة مجموع التفاصيل (مالية 80 + مخاطر 10 + بيانات 10 = 100)
     if (state) {
         if ((state.marketSizing?.som?.value ?? state.marketSizing?.tam?.value) > 0) {
             score += 5;
@@ -108,7 +131,7 @@ export function calculateProjectScore(state, results) {
 
     // تجميع التفاصيل في فئات — مصدر واحد للدرجة يستهلكه كلٌّ من لوحة القرار والملخص التنفيذي
     // (كان لكلٍّ خوارزمية مستقلة فتظهر درجات متضاربة لنفس المشروع).
-    const CATEGORY_LABELS = { financial: 'الجدوى المالية', data: 'اكتمال البيانات' };
+    const CATEGORY_LABELS = { financial: 'الجدوى المالية', risk: 'المخاطر ومونت كارلو', data: 'اكتمال البيانات' };
     const breakdown = {};
     for (const item of details) {
         const cat = item.category || 'other';

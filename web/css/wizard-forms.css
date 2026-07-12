@@ -92,6 +92,11 @@
 .alert a { color: var(--c-p-500); font-weight: 500; }
 .alert-info, .alert--info { border-inline-start-color: var(--c-p-500); }
 .alert-warning, .alert--warning { border-inline-start-color: var(--c-gold-deco); background: color-mix(in srgb, var(--c-gold-subtle) 45%, var(--c-bg-card)); }
+/* تدقيق 2026-07-12: alert-success/alert-danger لم يكونا معرَّفين إطلاقاً رغم استخدامهما
+   في FinancingStructure.js (renderLoanReadinessWarning) — فكانت البطاقة "الناجحة" تُعرض
+   بلون المحايد الافتراضي (accent-blue) بدل الأخضر، بلا أي إشارة بصرية للحالة الحرجة (أحمر). */
+.alert-success, .alert--success { border-inline-start-color: var(--c-success); background: color-mix(in srgb, var(--c-success) 12%, var(--c-bg-card)); }
+.alert-danger, .alert--danger { border-inline-start-color: var(--c-danger); background: var(--c-danger-subtle, color-mix(in srgb, var(--c-danger) 12%, var(--c-bg-card))); }
 /* المتتاليات تتراص بإيقاع خفيف بدل فجوات 1.5rem */
 .step-content .alert.mb-4 { margin-bottom: var(--s-2); }
 

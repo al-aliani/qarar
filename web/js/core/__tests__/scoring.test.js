@@ -83,20 +83,53 @@ describe('calculateProjectScore — بند فترة الاسترداد (25 نق�
     });
 });
 
-describe('calculateProjectScore — بند الربحية (15 نقطة)', () => {
-    it('ROI ≥ الحد الأدنى (20% افتراضياً) يمنح 15 كاملة', () => {
+describe('calculateProjectScore — بند الربحية (5 نقاط، خُفِّضت من 15 تدقيق 2026-07-12 لإفساح مكوّن المخاطر)', () => {
+    it('ROI ≥ الحد الأدنى (20% افتراضياً) يمنح 5 كاملة', () => {
         const r = calculateProjectScore({}, { indicators: ind({ roi: 0.25 }) });
-        expect(r.details.find(d => d.label === 'العائد على الاستثمار أو هامش الربح مقبول')?.score).toBe(15);
+        expect(r.details.find(d => d.label === 'العائد على الاستثمار أو هامش الربح مقبول')?.score).toBe(5);
     });
 
-    it('ربحية موجبة لكن دون الحد يمنح 6 جزئية', () => {
+    it('ربحية موجبة لكن دون الحد يمنح 2 جزئية', () => {
         const r = calculateProjectScore({}, { indicators: ind({ roi: 0.05, profitMargin: 0.03 }) });
-        expect(r.details.find(d => d.label === 'ربحية منخفضة')?.score).toBe(6);
+        expect(r.details.find(d => d.label === 'ربحية منخفضة')?.score).toBe(2);
     });
 
     it('لا ربحية إطلاقاً يمنح صفراً', () => {
         const r = calculateProjectScore({}, { indicators: ind({ roi: 0, profitMargin: -0.1 }) });
         expect(r.details.find(d => d.label === 'الربحية غير محققة')?.score).toBe(0);
+    });
+});
+
+describe('calculateProjectScore — بند المخاطر/مونت كارلو (10 نقاط، جديد تدقيق 2026-07-12)', () => {
+    it('لا تشغيل مونت كارلو محفوظ إطلاقاً: نقاط محايدة (5) لا صفر — المحاكاة استشارية اختيارية', () => {
+        const r = calculateProjectScore({}, { indicators: ind() });
+        const d = r.details.find(d => d.category === 'risk');
+        expect(d?.score).toBe(5);
+        expect(d?.max).toBe(10);
+    });
+
+    it('احتمالية نجاح مرتفعة (≥ 70%) تمنح 10 كاملة', () => {
+        const state = { monteCarlo: { lastRun: { successProbability: 0.85 } } };
+        const r = calculateProjectScore(state, { indicators: ind() });
+        const d = r.details.find(d => d.category === 'risk');
+        expect(d?.score).toBe(10);
+        expect(d?.issue).toBeUndefined();
+    });
+
+    it('احتمالية نجاح متوسطة (40%–70%) تمنح 5 جزئية معلَّمة issue', () => {
+        const state = { monteCarlo: { lastRun: { successProbability: 0.55 } } };
+        const r = calculateProjectScore(state, { indicators: ind() });
+        const d = r.details.find(d => d.category === 'risk');
+        expect(d?.score).toBe(5);
+        expect(d?.issue).toBe(true);
+    });
+
+    it('احتمالية نجاح منخفضة (< 40%) تمنح صفراً — نفس عتبة تخفيض القرار في المحرك تقريباً', () => {
+        const state = { monteCarlo: { lastRun: { successProbability: 0.2 } } };
+        const r = calculateProjectScore(state, { indicators: ind() });
+        const d = r.details.find(d => d.category === 'risk');
+        expect(d?.score).toBe(0);
+        expect(d?.issue).toBe(true);
     });
 });
 
@@ -118,15 +151,20 @@ describe('calculateProjectScore — اكتمال البيانات (10 نقاط)'
 });
 
 describe('calculateProjectScore — سقف 100 ودرجات التقدير (rating)', () => {
-    it('كل البنود مثالية ⇒ الدرجة 100 والتقدير A+', () => {
-        const state = { marketSizing: { som: { value: 1 } }, hr: { positions: [{ salary: 1 }] } };
+    it('كل البنود مثالية (شاملة احتمالية مونت كارلو مرتفعة) ⇒ الدرجة 100 والتقدير A+', () => {
+        const state = {
+            marketSizing: { som: { value: 1 } },
+            hr: { positions: [{ salary: 1 }] },
+            monteCarlo: { lastRun: { successProbability: 0.9 } } // بلا هذا: 95 كحد أقصى (مخاطر محايدة 5/10 لا 10/10)
+        };
         const r = calculateProjectScore(state, { indicators: ind({ npv: 999999, irr: 0.5, paybackPeriod: 1, roi: 0.5 }) });
         expect(r.score).toBe(100);
         expect(r.rating).toBe('A+');
     });
 
-    it('كل البنود صفرية ⇒ الدرجة 0 والتقدير F', () => {
-        const r = calculateProjectScore({}, { indicators: ind({ npv: -1, irr: 0, paybackPeriod: 999, roi: 0, profitMargin: -1 }) });
+    it('كل البنود صفرية (شاملة احتمالية مونت كارلو منخفضة) ⇒ الدرجة 0 والتقدير F', () => {
+        const state = { monteCarlo: { lastRun: { successProbability: 0.1 } } }; // بلا هذا: 5 لا صفر (مخاطر محايدة لغياب تشغيل)
+        const r = calculateProjectScore(state, { indicators: ind({ npv: -1, irr: 0, paybackPeriod: 999, roi: 0, profitMargin: -1 }) });
         expect(r.score).toBe(0);
         expect(r.rating).toBe('F');
     });
@@ -134,7 +172,8 @@ describe('calculateProjectScore — سقف 100 ودرجات التقدير (rati
     it.each([
         [90, 'A+'], [80, 'A'], [70, 'B'], [60, 'C'], [50, 'D'], [40, 'F'],
     ])('درجة %i تُصنَّف %s', (targetScore, expectedRating) => {
-        // نبني مؤشرات تعطي تقريباً الدرجة المطلوبة عبر تفعيل/تعطيل بنود كاملة (25+25+25+15+10=100)
+        // نبني مؤشرات تعطي تقريباً الدرجة المطلوبة عبر تفعيل/تعطيل بنود كاملة
+        // (25+25+25+5 مالية + 5 مخاطر محايدة (بلا تشغيل مونت كارلو) + 10 بيانات = حتى 95 هنا)
         const state = targetScore >= 90 ? { marketSizing: { som: { value: 1 } }, hr: { positions: [{ salary: 1 }] } } : {};
         let overrides;
         if (targetScore >= 90) overrides = { npv: 1, irr: 0.5, paybackPeriod: 1, roi: 0.5 }; // 100
@@ -176,9 +215,10 @@ describe('calculateProjectScore — التوصية (recommendation) من قرا�
 });
 
 describe('calculateProjectScore — تجميع breakdown حسب الفئة', () => {
-    it('فئة المالية تجمع أقصى 90 نقطة وفئة البيانات 10 (المجموع 100)', () => {
+    it('فئة المالية تجمع أقصى 80 وفئة المخاطر 10 وفئة البيانات 10 (المجموع 100، تدقيق 2026-07-12)', () => {
         const r = calculateProjectScore({}, { indicators: ind() });
-        expect(r.breakdown.financial.max).toBe(90);
+        expect(r.breakdown.financial.max).toBe(80);
+        expect(r.breakdown.risk.max).toBe(10);
         expect(r.breakdown.data.max).toBe(10);
     });
 });

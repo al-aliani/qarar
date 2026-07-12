@@ -120,6 +120,19 @@ describe('بوابة القرار — محاكاة مونت كارلو (آخر �
         expect(results.decision).toBe('GO');
         expect(results.decisionReasons.some(r => r.includes('مونت كارلو'))).toBe(false);
     });
+
+    // تدقيق 2026-07-12: كان سبب «احتمالية منخفضة» يُضاف فقط حين القرار GO أصلاً (نفس شرط
+    // تخفيضه) — فمشروع REVISE من سبب آخر (هنا: اختبار التحمل) لا يُظهر هذا السبب رغم صحته،
+    // فيبدو التقرير ناقص الشفافية عن مشروع يحمل خطرين حقيقيين لا خطراً واحداً.
+    it('احتمالية نجاح منخفضة على مشروع REVISE أصلاً بسبب آخر: السبب يُضاف رغم أن القرار لم يتغيّر (يبقى REVISE)', () => {
+        const study = marginalGrowthStudy({ workingCapitalMonths: 0.02 }); // REVISE مؤكَّد أعلاه (اختبار التحمل)
+        study[SECTIONS.MONTE_CARLO] = { lastRun: { successProbability: 0.25 } };
+        const results = calculateStudy(study);
+
+        expect(results.decision).toBe('REVISE');
+        expect(results.decisionReasons.some(r => r.includes('أزمة حادة'))).toBe(true);
+        expect(results.decisionReasons.some(r => r.includes('مونت كارلو') && r.includes('25%'))).toBe(true);
+    });
 });
 
 describe('بوابة القرار — سجل المخاطر (خطر حرج بلا خطة مواجهة)', () => {

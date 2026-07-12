@@ -4,7 +4,7 @@
  * Based on UNIDO and Monsha'at requirements
  */
 
-import { calculateStudy as runFullModel, rateOrDefault } from '../core/engine.js';
+import { calculateStudy as runFullModel, rateOrDefault, resolveDecisionThresholds } from '../core/engine.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -31,6 +31,12 @@ export class FinancingStructure {
         if (financing.totalInvestment !== totalCapex) {
             this.store.update('financing', { ...financing, totalInvestment: totalCapex });
         }
+
+        // تدقيق 2026-07-12: «تفاصيل القرض البنكي» و«الضمانات وتغطية خدمة الدين» كانتا ظاهرتين
+        // دوماً بتعليق صريح رغم أنهما بلا معنى بلا قرض — نفس شرط إخفاء بطاقة جدول السداد
+        // أدناه (financing.sources.bankLoan.amount > 0)، دون مسح القيم المخزَّنة (تبقى لو
+        // رجع المستخدم وأدخل مبلغاً لاحقاً، ويقرأها WACC والدراسات المحفوظة القديمة كما هي).
+        const loanAmount = Number(financing.sources?.bankLoan?.amount || 0);
 
         this.container.innerHTML = `
             <div class="financing-structure">
@@ -107,12 +113,14 @@ export class FinancingStructure {
                     ${this.renderFundingSources(financing, totalCapex)}
                 </div>
 
-                <!-- تفاصيل القرض البنكي: نسبة الفائدة ومدة السداد (ظاهرة دوماً) -->
-                <div class="card analysis-card">
+                <!-- تفاصيل القرض البنكي: نسبة الفائدة ومدة السداد — تدقيق 2026-07-12: كانت
+                ظاهرة دوماً بتعليق صريح رغم أنها بلا معنى بلا قرض؛ الآن نفس شرط إخفاء بطاقة جدول
+                السداد أدناه (مبلغ القرض > 0)، بلا مسح القيم المخزَّنة (WACC والدراسات المحفوظة تقرآنها). -->
+                <div class="card analysis-card" id="loanDetailsCard" style="${loanAmount > 0 ? '' : 'display:none'}">
                     <h3 class="card-title">تفاصيل القرض البنكي</h3>
                     <p class="text-muted text-sm mb-3">حدّد معدل الفائدة ومدة القرض إنْ وُجد تمويل بنكي. تُستخدم في جدول السداد والمحرك المالي.</p>
                     ${this.renderLoanDetails(financing)}
-                    ${this.renderLoanReadinessWarning(state)}
+                    <div id="loanReadinessWarningSlot">${this.renderLoanReadinessWarning(state)}</div>
                 </div>
 
                 <!-- WACC -->
@@ -122,13 +130,14 @@ export class FinancingStructure {
                 </div>
 
                 <!-- Loan Schedule -->
-                <div class="card analysis-card" id="loanScheduleCard" style="${(financing.sources?.bankLoan?.amount || 0) > 0 ? '' : 'display:none'}">
+                <div class="card analysis-card" id="loanScheduleCard" style="${loanAmount > 0 ? '' : 'display:none'}">
                     <h3 class="card-title">جدول سداد القرض</h3>
                     ${this.renderLoanSchedule(state)}
                 </div>
 
-                <!-- Guarantees & DSCR -->
-                <div class="card analysis-card">
+                <!-- Guarantees & DSCR — تدقيق 2026-07-12: نفس شرط الإخفاء عند غياب القرض (الضمانات
+                وعتبة DSCR المستهدفة بلا معنى بلا قرض)؛ القيم المخزَّنة تبقى كما هي. -->
+                <div class="card analysis-card" id="guaranteesCard" style="${loanAmount > 0 ? '' : 'display:none'}">
                     <h3 class="card-title">${icon('i-shield')} الضمانات وتغطية خدمة الدين</h3>
                     <p class="text-muted text-sm mb-3">البنوك تطلب ضمانات مقابل القرض ونسبة تغطية كافية لخدمة الدين. حدّدها لتقوية ملف التمويل.</p>
                     ${this.renderGuaranteesAndDSCR(financing)}
@@ -407,10 +416,16 @@ export class FinancingStructure {
         const financing = state?.financing || {};
         const loan = financing.sources?.bankLoan || {};
         const loanAmount = Number(loan.amount || 0);
-        const targetDSCR = Number.isFinite(Number(financing.targetDSCR)) ? Number(financing.targetDSCR) : 1.25;
+        // تدقيق 2026-07-12: كان الاحتياطي 1.25 هنا رقماً محلياً مستقلاً عن resolveDecisionThresholds
+        // الموحّدة في engine.js — نفس القيمة صدفةً اليوم، لكن أي تعديل مستقبلي على الافتراضي
+        // الموحّد كان سيُفلت من هذه الشاشة تحديداً. القيمة الصريحة المُدخَلة (financing.targetDSCR)
+        // تبقى لها الأولوية دائماً؛ التغيير فقط في مصدر الاحتياطي.
+        const targetDSCR = Number.isFinite(Number(financing.targetDSCR))
+            ? Number(financing.targetDSCR)
+            : resolveDecisionThresholds(state?.assumptions?.thresholds, financing).targetDSCR;
 
         if (loanAmount <= 0) {
-            return { loanAmount, targetDSCR, alerts: [] };
+            return { loanAmount, targetDSCR, alerts: [], severity: 'success' };
         }
 
         try {
@@ -438,7 +453,13 @@ export class FinancingStructure {
                 alerts.push('EBITDA السنة الأولى سالب أو صفري؛ هذا مناسب أحياناً لمستثمر تقني لكنه ضعيف للبنك دون إثبات اشتراكات مبكرة أو ضمانات أقوى.');
             }
 
-            return { loanAmount, targetDSCR, dscr, fundingGap, fundingGapThreshold, y1Ebitda, alerts };
+            // تلوين ثلاثي (تدقيق 2026-07-12): كانت الحالة ثنائية فقط (تحذير أصفر/نجاح أخضر)
+            // فتتساوى بصرياً DSCR=1.24 (قريب من الهدف) مع DSCR=0.3 (خطر حقيقي). «حرج» الآن
+            // يستهدف تحديداً العجز الكبير أو استحالة الحساب (EBITDA سالبة)، لا أي انحراف بسيط.
+            const dscrCritical = dscr == null || dscr < targetDSCR * 0.75;
+            const severity = alerts.length === 0 ? 'success' : (dscrCritical ? 'danger' : 'warning');
+
+            return { loanAmount, targetDSCR, dscr, fundingGap, fundingGapThreshold, y1Ebitda, alerts, severity };
         } catch (err) {
             return {
                 loanAmount,
@@ -446,7 +467,8 @@ export class FinancingStructure {
                 dscr: null,
                 fundingGap: NaN,
                 y1Ebitda: NaN,
-                alerts: ['تعذر تشغيل المحرك المالي للتحقق من DSCR. أكمل بيانات الإيرادات والتكاليف ثم أعد فتح خطوة التمويل.']
+                alerts: ['تعذر تشغيل المحرك المالي للتحقق من DSCR. أكمل بيانات الإيرادات والتكاليف ثم أعد فتح خطوة التمويل.'],
+                severity: 'danger'
             };
         }
     }
@@ -461,12 +483,15 @@ export class FinancingStructure {
             ? (Math.abs(d.fundingGap) <= (d.fundingGapThreshold ?? 1) ? 'متوازن' : this.formatCurrency(d.fundingGap))
             : 'غير محسوبة';
         const ebitdaText = Number.isFinite(d.y1Ebitda) ? this.formatCurrency(d.y1Ebitda) : 'غير متاح';
-        const title = hasAlerts
-            ? 'تحقق ائتماني مطلوب قبل رفع الملف للبنك'
-            : 'القرض يبدو قابلاً للمراجعة البنكية مبدئياً';
+        const alertClass = { success: 'alert-success', warning: 'alert-warning', danger: 'alert-danger' }[d.severity] || 'alert-warning';
+        const title = d.severity === 'success'
+            ? 'القرض يبدو قابلاً للمراجعة البنكية مبدئياً'
+            : d.severity === 'warning'
+                ? 'يحتاج تحسينات طفيفة قبل رفع الملف للبنك'
+                : 'تحقق ائتماني مطلوب قبل رفع الملف للبنك';
 
         return `
-            <div class="alert ${hasAlerts ? 'alert-warning' : 'alert-success'} mb-3" data-loan-readiness-warning>
+            <div class="alert ${alertClass} mb-3" data-loan-readiness-warning data-severity="${d.severity}">
                 <strong>${title}</strong>
                 <div class="text-sm mt-2">
                     القرض: ${this.formatCurrency(d.loanAmount)} · DSCR: ${dscrText} / المستهدف ${d.targetDSCR.toFixed(2)}x · فجوة التمويل: ${gapText} · EBITDA سنة 1: ${ebitdaText}
@@ -759,6 +784,74 @@ export class FinancingStructure {
         `;
     }
 
+    /**
+     * حالة مؤقتة (لا تُكتب للمخزن) تعكس قيم حقول القرض/الفائدة/DSCR المستهدف الحالية في
+     * الـDOM حتى لو لم تُحفَظ بعد (قبل blur) — تُستهلك فقط لإعادة حساب تشخيص جاهزية القرض
+     * حياً أثناء الكتابة، لا لأي غرض آخر.
+     */
+    buildLiveFinancingState() {
+        const state = this.store.getState();
+        const financing = { ...(state.financing || {}) };
+        financing.sources = { ...(financing.sources || {}) };
+        const bankLoan = { ...(financing.sources.bankLoan || {}) };
+
+        const amountEl = this.container.querySelector('.funding-amount[data-source="bankLoan"]');
+        if (amountEl) {
+            const v = parseFloat(amountEl.value);
+            bankLoan.amount = Number.isFinite(v) ? v : 0;
+        }
+        const rateEl = this.container.querySelector('#loan-interestRate');
+        if (rateEl) {
+            const v = parseFloat(rateEl.value);
+            if (Number.isFinite(v)) bankLoan.interestRate = v / 100;
+        }
+        const termEl = this.container.querySelector('#loan-termYears');
+        if (termEl) {
+            const v = parseInt(termEl.value, 10);
+            if (Number.isFinite(v)) bankLoan.termYears = v;
+        }
+        const graceEl = this.container.querySelector('#loan-graceMonths');
+        if (graceEl) {
+            const v = parseInt(graceEl.value, 10);
+            if (Number.isFinite(v)) bankLoan.gracePeriodMonths = v;
+        }
+        financing.sources.bankLoan = bankLoan;
+
+        const dscrEl = this.container.querySelector('#financing-targetDSCR');
+        if (dscrEl) {
+            const v = parseFloat(dscrEl.value);
+            if (Number.isFinite(v)) financing.targetDSCR = v;
+        }
+
+        return { ...state, financing };
+    }
+
+    /** يعيد رسم بلوك تحذير جاهزية القرض فقط (بلا render كاملة) من الحالة المؤقتة الحية. */
+    refreshLoanReadinessWarning() {
+        const slot = this.container.querySelector('#loanReadinessWarningSlot');
+        if (!slot) return;
+        slot.innerHTML = this.renderLoanReadinessWarning(this.buildLiveFinancingState());
+    }
+
+    /** مستمع input بخنق 350ms على حقول مبلغ القرض/الفائدة/فترة السماح/مدته وDSCR المستهدف. */
+    bindLoanReadinessLiveUpdate() {
+        const watched = [
+            this.container.querySelector('.funding-amount[data-source="bankLoan"]'),
+            this.container.querySelector('#loan-interestRate'),
+            this.container.querySelector('#loan-termYears'),
+            this.container.querySelector('#loan-graceMonths'),
+            this.container.querySelector('#financing-targetDSCR')
+        ].filter(Boolean);
+        if (!watched.length) return;
+
+        let debounceTimer = null;
+        const scheduleRefresh = () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => this.refreshLoanReadinessWarning(), 350);
+        };
+        watched.forEach(input => input.addEventListener('input', scheduleRefresh));
+    }
+
     formatCurrency(n) {
         return new Intl.NumberFormat('ar-SA', {
             style: 'currency',
@@ -785,6 +878,12 @@ export class FinancingStructure {
         this.container.querySelectorAll('.loan-input').forEach(input => {
             input.addEventListener('change', (e) => this.updateLoanDetails(e));
         });
+
+        // تحذير جاهزية القرض حياً أثناء الكتابة — تدقيق 2026-07-12 (الفجوة كانت توقيتاً لا
+        // منطقاً: التشخيص نفسه موجود فعلاً في getLoanReadinessDiagnostics، لكنه كان يُرسم فقط
+        // عند render() الكاملة؛ updateFundingSource/updateLoanDetails أعلاه يتجنبان render
+        // كاملة عمداً (Blur Bug) فيبقى بلوك التحذير على قيمة قديمة طوال الكتابة).
+        this.bindLoanReadinessLiveUpdate();
 
         // Investor equity / valuation changes
         this.container.querySelectorAll('.investor-input').forEach(input => {
