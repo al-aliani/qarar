@@ -204,10 +204,10 @@ export class DynamicTable {
 
     render() {
         const focusSnapshot = this._captureFocus();
-        const { title, columns, showTotal, totalColumn } = this.config || {};
+        const { title, columns, showTotal, totalColumn, hintHtml } = this.config || {};
         const rows = Array.isArray(this.data) ? this.data : [];
         const cols = Array.isArray(columns) ? columns : [];
-        
+
         let html = `
             <div class="dynamic-table ${this.isQuickMode ? 'quick-mode' : ''}" data-table-id="${this.config?.id || 'table'}">
                 <div class="table-header d-flex justify-between items-center">
@@ -223,6 +223,7 @@ export class DynamicTable {
                         <button type="button" class="btn btn--ghost btn-add-row">+ إضافة بند</button>
                     </div>
                 </div>
+                ${hintHtml ? `<div class="table-hint alert alert--info mb-2" data-table-hint>${hintHtml}</div>` : ''}
                 <div class="table-wrapper" style="overflow-x:auto">
                     <table class="w-full">
                         <thead>
@@ -412,6 +413,19 @@ export class DynamicTable {
     bindEvents() {
         // Cleanup previous listeners first
         this.cleanup();
+
+        // شريط التلميح فوق الجدول (hintHtml) — تفويض حدث واحد على الحاوية بدل ربط كل زر
+        // بمفرده، كي يستمر العمل بعد أي إعادة رسم لاحقة بلا إعادة ربط يدوية من المستدعي.
+        const hintEl = this.container.querySelector('[data-table-hint]');
+        if (hintEl && typeof this.config?.onHintAction === 'function') {
+            const handler = (e) => {
+                const btn = e.target.closest('[data-hint-action]');
+                if (!btn) return;
+                this.config.onHintAction(btn.dataset.hintAction, btn);
+            };
+            hintEl.addEventListener('click', handler);
+            this._eventListeners.push({ element: hintEl, event: 'click', handler });
+        }
 
         // Toggle Advanced Columns
         const toggle = this.container.querySelector('.toggle-advanced-cols');

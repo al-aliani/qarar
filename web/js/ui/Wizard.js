@@ -202,7 +202,14 @@ export class Wizard {
                 `;
             })()}
                 ${stepId === 'assumptions' ? `<div class="alert alert--warning mb-4"><strong>قبل الاعتماد:</strong> وثّق افتراضاتك وموّل 3–6 أشهر من التشغيل كرأس مال عامل.</div>` : ''}
-                ${stepId === 'technical' ? `<div class="alert alert--info mb-4"><strong>تجنّب التكرار:</strong> صنّف ما يلزم التشغيل كأصل، وسجّل الأثاث في جدوله المنفصل.</div>` : ''}
+                ${stepId === 'technical' ? `<div class="alert alert--info mb-4"><strong>تجنّب التكرار:</strong> صنّف ما يلزم التشغيل كأصل، وسجّل الأثاث في جدوله المنفصل.</div>
+                <div class="card mb-4" id="productionCapacitySuggestCard">
+                    <div class="flex-between items-center gap-2 flex-wrap">
+                        <p class="text-sm text-muted mb-0" style="flex:1; min-width:220px;">لديك جدول إيرادات أو خدمات مُعبَّأ بالفعل؟ استخرج مقترح «سعة سنوية» منه بدل تعبئتها يدوياً من الصفر.</p>
+                        <button type="button" class="btn btn--secondary btn-sm" id="btnSuggestProductionCapacity">${icon('i-sparkle')} اقتراح السعة من الإيرادات</button>
+                    </div>
+                    <div id="productionCapacitySuggestResult" class="hidden mt-2"></div>
+                </div>` : ''}
                 ${stepId === 'marketing' ? `<div class="alert alert--info mb-4"><strong>اعتمد الدليل:</strong> استخدم بيانات موثقة للطلب والمنافسة، لا الانطباع الشخصي.</div>` : ''}
                 ${stepId === 'revenue' ? `<div class="alert alert--warning mb-4"><strong>تقدير المبيعات:</strong> ابنِ الكمية والسعر على نتائج السوق والمنافسين.</div>` : ''}
         `;
@@ -455,6 +462,54 @@ export class Wizard {
         if ([...tablesToRender, ...optionalTablesToRender].includes('revenueStreams')) {
             this._wireRevenueReconciliationNote();
         }
+        if (stepId === 'technical') {
+            this._wireProductionCapacitySuggestion(stepId, metadata, stepIndex);
+        }
+    }
+
+    /**
+     * زر «اقتراح السعة من الإيرادات» في خطوة الأصول والتجهيزات (بند 1.2، خطة 2026-07-12):
+     * generateProductionCapacity كانت دالة مكتوبة أصلاً وغير موصولة بأي زر. اقتراح بنقرتين
+     * (اعرض ثم طبّق) لا تعبئة صامتة — وإلا صار فحص الطاقة دائرياً (يشتق سقفه من نفس الرقم
+     * الذي يفترض قياسه).
+     */
+    _wireProductionCapacitySuggestion(stepId, metadata, stepIndex) {
+        const btn = this.container.querySelector('#btnSuggestProductionCapacity');
+        const resultBox = this.container.querySelector('#productionCapacitySuggestResult');
+        if (!btn || !resultBox) return;
+
+        btn.addEventListener('click', () => {
+            if (btn.disabled) return;
+            try {
+                const state = this.store.get();
+                const suggestion = InternalAIGenerator.generateProductionCapacity(state);
+                if (!suggestion?.annualCapacity) {
+                    toast.info('لا تتوفر بيانات كافية في جدول الإيرادات/الخدمات لاشتقاق سعة سنوية بعد.');
+                    return;
+                }
+                resultBox.classList.remove('hidden');
+                resultBox.innerHTML = `
+                    <div class="alert alert--info">
+                        <span>مقترح: <strong>${suggestion.annualCapacity.toLocaleString('ar-SA')}</strong> ${escapeHtml(suggestion.unitOrMeasure)} — مشتق من جدول الإيرادات/الخدمات الحالي.</span>
+                        <button type="button" class="btn btn--sm btn--primary" id="btnApplyProductionCapacity">تطبيق على «السعة السنوية»</button>
+                    </div>
+                `;
+                resultBox.querySelector('#btnApplyProductionCapacity')?.addEventListener('click', () => {
+                    const current = this.store.get();
+                    this.store.updatePath(stepId, 'productionCapacity', {
+                        ...(current[stepId]?.productionCapacity || {}),
+                        annualCapacity: suggestion.annualCapacity,
+                        unitOrMeasure: suggestion.unitOrMeasure,
+                        marketShareLink: suggestion.marketShareLink
+                    });
+                    toast.success('طُبِّق اقتراح السعة السنوية — راجعه وعدّله حسب واقعك.');
+                    this.renderStep(stepId, metadata, stepIndex);
+                });
+            } catch (err) {
+                console.error('generateProductionCapacity error:', err);
+                toast.error('تعذّر توليد اقتراح السعة');
+            }
+        });
     }
 
     /** يحدّث ملاحظة مطابقة إجمالي جدول الإيرادات مع رقم السنة الأولى بعد كل تعديل. */
@@ -685,11 +740,21 @@ export class Wizard {
             }
         } : null);
 
+        // بند 1.1 (خطة 2026-07-12): جدول الرواتب (positions) يعرض شريط تلميح اختياري
+        // من آخر نتيجة لمحاكاة التشغيل والازدحام (operational.lastResult) — اقتراح
+        // بنقرة لا تطبيق تلقائي صامت (يحترم القرار الموثّق ضد الكتابة التلقائية
+        // + اختبار batch6.operationalSimDisclosure).
+        const hintHtml = tableKey === 'positions' ? this._buildStaffingSuggestionHint(studyData) : null;
+
         const table = new DynamicTable(containerId, {
             ...schema,
             id: tableKey,
             initialData: Array.isArray(tableData) ? tableData : [],
             onSuggest, // Inject suggestions
+            hintHtml,
+            onHintAction: tableKey === 'positions'
+                ? (action) => this._applyStaffingSuggestion(action, tableKey)
+                : undefined,
             onChange: (newData) => {
                 this.store.updatePath(stepId, this.getRelativePath(tableKey), newData);
             }
@@ -698,6 +763,41 @@ export class Wizard {
         table.container = container;
         table.render();
         this.tables[tableKey] = table;
+    }
+
+    /**
+     * يبني شريط تلميح اختياري أعلى جدول الرواتب من آخر نتيجة لمحاكاة التشغيل
+     * (state.operational.lastResult) — لا يظهر إطلاقاً قبل أول تشغيل للمحاكاة،
+     * ولا يكتب أي شيء بنفسه (راجع _applyStaffingSuggestion للفعل الفعلي بنقرة).
+     */
+    _buildStaffingSuggestionHint(studyData) {
+        const lastResult = studyData?.operational?.lastResult;
+        const n = lastResult?.recommendedServers;
+        if (!n || !Number.isFinite(n) || n <= 0) return null;
+        return `${icon('i-info')} <strong>محاكاة التشغيل والازدحام</strong> تقترح <strong>${n}</strong> ${n === 1 ? 'موظف خدمة واحد' : 'موظفي خدمة'} لتغطية الذروة بانتظار أقل من 5 دقائق — رقم استرشادي لنقاط الخدمة فقط (لا يشمل الإدارة/المحاسبة)، ولا يُطبَّق تلقائياً على هذا الجدول. <button type="button" class="btn btn--sm btn--ghost" data-hint-action="insert-suggested-staff">${icon('i-plus')} إدراج كصف مقترح</button>`;
+    }
+
+    /** إدراج صف عادي قابل للتعديل بعدد الموظفين المقترح — لا استبدال ولا كتابة صامتة لبقية الجدول. */
+    _applyStaffingSuggestion(action, tableKey) {
+        if (action !== 'insert-suggested-staff') return;
+        const state = this.store.get();
+        const n = state.operational?.lastResult?.recommendedServers;
+        if (!n) return;
+        const table = this.tables[tableKey];
+        if (!table) return;
+
+        const newRow = {
+            position: 'موظف خدمة (مقترح من محاكاة التشغيل)',
+            nationality: 'expat',
+            count: n,
+            salary: 0,
+            months: 12,
+            isVariable: false
+        };
+        table.data = [...table.data, newRow];
+        table.onChange(JSON.parse(JSON.stringify(table.data)));
+        table.render();
+        toast.success(`أُدرج صف مقترح بـ${n} ${n === 1 ? 'موظف خدمة' : 'موظفي خدمة'} — عدّل الراتب والجنسية والعدد حسب واقعك الفعلي.`);
     }
 
     getTableDataPath(stepId, tableKey) {

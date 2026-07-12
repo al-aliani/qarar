@@ -273,9 +273,14 @@ export class OrgStructure {
         const saudiEmployees = positions.reduce((sum, p) => sum + (p.nationality === 'saudi' ? (Number(p.count) || 0) : 0), 0);
         // النسبة الفعلية محسوبة من جدول الرواتب (الجنسيات) — لا رقم يدوي منفصل عن الواقع
         const computedPct = totalEmployees > 0 ? Math.round((saudiEmployees / totalEmployees) * 100) : 0;
-        const currentPct = saudization.currentPercentage != null && saudization.currentPercentage !== ''
-            ? Number(saudization.currentPercentage) : computedPct;
+        const hasManualOverride = saudization.currentPercentage != null && saudization.currentPercentage !== '';
+        const currentPct = hasManualOverride ? Number(saudization.currentPercentage) : computedPct;
         const targetPct = saudization.targetPercentage || 0;
+        // خطة الاستفادة 2026-07-12 (بند 1.1): قيمة يدوية مُدخلة سابقاً قد "تطغى" بصمت على
+        // المحسوبة الفعلية لو عدّل المستخدم جدول الرواتب بعدها (مثال: أضاف موظفين سعوديين
+        // فارتفعت النسبة الحقيقية لكن الحقل ما زال يعرض الرقم القديم اليدوي) — تنبيه + زر
+        // «استخدم المحسوبة» بدل صمت تام؛ لا مسح تلقائي للقيمة اليدوية بلا فعل المستخدم.
+        const isStaleOverride = hasManualOverride && Math.abs(currentPct - computedPct) >= 1;
 
         // نطاقات (نطاقات الموزون): النطاق «الأصفر» أُلغي رسمياً في ديسمبر 2021.
         // النطاقات الحالية: أحمر ثم أخضر (منخفض/متوسط/مرتفع) ثم بلاتيني.
@@ -289,6 +294,13 @@ export class OrgStructure {
 
         return `
             <div class="saudization-container">
+                ${isStaleOverride ? `
+                <div class="alert alert--warning saudization-stale-warning">
+                    <strong>القيمة المُدخلة (${currentPct}%) لم تعد تطابق نسبة السعودة المحسوبة من جدول الرواتب الحالي (${computedPct}%).</strong>
+                    غالباً لأن جدول الرواتب تغيّر بعد إدخال هذه النسبة يدوياً.
+                    <button type="button" class="btn btn--sm btn--ghost" id="btn-use-computed-saudization">استخدم المحسوبة (${computedPct}%)</button>
+                </div>
+                ` : ''}
                 <div class="saudization-visual">
                     <div class="nitaqat-indicator nitaqat-${nitaqatColor}">
                         <div class="nitaqat-label">نطاقات</div>
@@ -375,6 +387,15 @@ export class OrgStructure {
         // Saudization fields
         this.container.querySelectorAll('.saudization-field').forEach(input => {
             input.addEventListener('change', (e) => this.updateSaudization(e));
+        });
+
+        // «استخدم المحسوبة» — يمسح القيمة اليدوية القديمة كي يعود الحقل لتتبّع النسبة
+        // المحسوبة تلقائياً من جدول الرواتب دون أي فعل خفي (المستخدم يضغط الزر بنفسه).
+        this.container.querySelector('#btn-use-computed-saudization')?.addEventListener('click', () => {
+            const state = this.store.getState();
+            const saudization = { ...state.orgStructure?.saudization, currentPercentage: null };
+            this.store.update('orgStructure', { ...state.orgStructure, saudization });
+            this.render();
         });
     }
 

@@ -6,6 +6,8 @@
 import { DynamicTable } from './DynamicTable.js';
 import { TABLE_SCHEMAS } from '../core/schema.js';
 import { SECTIONS } from '../core/schema.js';
+import { toast } from '../utils/toast.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class AppendicesView {
     constructor(containerId, store, onNavigate) {
@@ -28,9 +30,12 @@ export class AppendicesView {
                 <p class="text-muted text-sm mb-4">وثّق الأرقام المهمة بمصدر أو عرض سعر أو نتيجة استبيان. لا تضف شرحاً نظرياً؛ أضف دليلاً يمكن مراجعته.</p>
 
                 <div class="card analysis-card">
-                    <h3 class="card-title">نبذة عن المستثمر</h3>
-                    <p class="text-muted text-sm mb-3">سيرة ذاتية أو ملف تعريفي للمستثمر/الشركة</p>
-                    <textarea id="appendices-investorProfile" class="input" rows="4" placeholder="نبذة عن المستثمر أو الشركة...">${(appendices.investorProfile || '').replace(/</g, '&lt;')}</textarea>
+                    <div class="flex-between items-center gap-2 flex-wrap mb-1">
+                        <h3 class="card-title mb-0">نبذة عن المستثمر</h3>
+                        <button type="button" class="btn btn--sm btn--ghost" id="btn-generate-investor-profile">توليد من بيانات الفريق</button>
+                    </div>
+                    <p class="text-muted text-sm mb-3">سيرة ذاتية أو ملف تعريفي للمستثمر/الشركة — أو اضغط «توليد من بيانات الفريق» لبداية سريعة من أول شخص رئيسي (اسم/دور/خبرة/مؤهلات)، ثم عدّلها كما تريد.</p>
+                    <textarea id="appendices-investorProfile" class="input" rows="4" placeholder="نبذة عن المستثمر أو الشركة...">${escapeHtml(appendices.investorProfile || '')}</textarea>
                 </div>
 
                 <div class="card analysis-card">
@@ -123,6 +128,29 @@ export class AppendicesView {
             });
         }
 
+        // بند 1.3 (خطة 2026-07-12): توليد نبذة المستثمر من أول شخص رئيسي في خطوة
+        // «الأشخاص الرئيسون» (keyPeople) — نقطة بداية قابلة للتعديل، لا كتابة صامتة
+        // تستبدل نصاً موجوداً بالفعل (نفس نمط زر «العصا السحرية» في Wizard.js: تأكيد
+        // صريح فقط عند وجود نص حقيقي مسبقاً).
+        this.container.querySelector('#btn-generate-investor-profile')?.addEventListener('click', () => {
+            const state = this.store.getState();
+            const person = (state.keyPeople?.keyPeople || [])[0];
+            if (!person || !(person.name || '').trim()) {
+                toast.info('أضف شخصاً رئيسياً واحداً على الأقل (الاسم على الأقل) في خطوة «الأشخاص الرئيسون» أولاً.');
+                return;
+            }
+            const generated = this._composeInvestorProfileFromPerson(person);
+            if (!investorEl) return;
+            const current = investorEl.value.trim();
+            if (current.length > 0 &&
+                !confirm('سيستبدل هذا النص المولَّد من بيانات الفريق النصَّ الحالي في «نبذة عن المستثمر». هل تريد المتابعة؟')) {
+                return;
+            }
+            investorEl.value = generated;
+            this.store.update('appendices', { ...state.appendices, investorProfile: generated });
+            toast.success('عُبّئت نبذة المستثمر من بيانات الشخص الرئيسي الأول — عدّلها كما تريد.');
+        });
+
         const surveysEl = this.container.querySelector('#appendices-surveys');
         if (surveysEl) {
             surveysEl.addEventListener('change', () => {
@@ -138,5 +166,24 @@ export class AppendicesView {
                 this.store.update('appendices', { ...this.store.getState().appendices, priceQuotes: val ? val.split('\n').filter(Boolean) : [] });
             });
         }
+    }
+
+    /**
+     * يركّب نص نبذة مستثمر مبدئي من صف «شخص رئيسي» واحد (name/role/experience/qualifications
+     * — أعمدة keyPeople في schema.js) — نقطة بداية نصية قابلة للتعديل الكامل، وليست الصيغة
+     * النهائية (بند 1.3، خطة 2026-07-12).
+     */
+    _composeInvestorProfileFromPerson(person) {
+        const headParts = [person.name, person.role].map(s => (s || '').trim()).filter(Boolean);
+        let text = headParts.join(' — ');
+        const detailParts = [];
+        if ((person.experience || '').trim()) detailParts.push(`الخبرة: ${person.experience.trim()}`);
+        if ((person.qualifications || '').trim()) detailParts.push(`المؤهلات: ${person.qualifications.trim()}`);
+        if (detailParts.length) {
+            text += (text ? '. ' : '') + detailParts.join('. ') + '.';
+        } else if (text) {
+            text += '.';
+        }
+        return text;
     }
 }

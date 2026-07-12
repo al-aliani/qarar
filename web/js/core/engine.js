@@ -51,14 +51,30 @@ export function calculateRampFactorY1(rampUpMonths) {
 }
 
 /**
+ * مشتقات موحّدة من جدول مصادر الإيرادات (revenue.streams) بنفس صيغة عمود year1 حرفياً
+ * (customersPerMonth × 12 × avgPrice) — بلا معامل تصاعد (rampFactorY1) وبلا تشغيل المحرك
+ * الكامل (calculateStudy). مصدر واحد يستهلكه أي عرض خفيف يحتاج «الإيراد المخطَّط لسنة
+ * كاملة» أو «عدد العملاء السنوي» فوراً أثناء الكتابة (الهدف المالي الذكي SmartGoals.js،
+ * حقل SOM في MarketAnalysis.js) دون تكرار الصيغة بنسخ قد تتباعد لاحقاً.
+ * خطة الاستفادة 2026-07-12 (بند 1.2).
+ * @param {Array} streams state.revenue.streams
+ * @returns {{ year1Revenue: number, annualCustomers: number }}
+ */
+export function deriveRevenueFromStreams(streams) {
+    const list = Array.isArray(streams) ? streams : [];
+    const year1Revenue = list.reduce((sum, r) => sum + (Number(r?.customersPerMonth) || 0) * 12 * (Number(r?.avgPrice) || 0), 0);
+    const annualCustomers = list.reduce((sum, r) => sum + (Number(r?.customersPerMonth) || 0) * 12, 0);
+    return { year1Revenue, annualCustomers };
+}
+
+/**
  * نص المطابقة بين إجمالي جدول مصادر الإيرادات (بلا تصاعد) وإيراد السنة الأولى في
  * القوائم المالية (بعد تصاعد) — مصدر واحد يستهلكه كل موضع يعرض جدول الإيرادات
  * (Wizard.js للمسار العام، OfferingView.js لمسار «ماذا تبيع وبكم») كي لا يتكرر
  * الحساب بصيغتين قد تتباعدان. يعيد '' إن لم تكن هناك فجوة تستحق الشرح.
  */
 export function describeRevenueRampGap(streams, rampUpMonths) {
-    const list = Array.isArray(streams) ? streams : [];
-    const tableTotal = list.reduce((sum, r) => sum + (Number(r?.customersPerMonth) || 0) * 12 * (Number(r?.avgPrice) || 0), 0);
+    const { year1Revenue: tableTotal } = deriveRevenueFromStreams(streams);
     const rampFactor = calculateRampFactorY1(rampUpMonths);
     if (!tableTotal || rampFactor >= 1) return '';
     const ramped = Math.round(tableTotal * rampFactor);
@@ -339,18 +355,27 @@ export function calculateStudy(study, overrides) {
     let capacityCheck = null;
     {
         const capRow = toArray(technical.capacityModel)[0];
-        if (capRow) {
-            const maxMonthly = Number(capRow.maxUnitsPerMonth) ||
-                (Number(capRow.seats || 0) * Number(capRow.turnsPerDay || 0) * Number(capRow.daysPerMonth || 26));
-            if (maxMonthly > 0) {
-                const plannedMonthly = year1Units / 12;
-                capacityCheck = {
-                    maxUnitsPerMonth: Math.round(maxMonthly),
-                    plannedUnitsPerMonth: Math.round(plannedMonthly),
-                    utilizationOfMax: maxMonthly > 0 ? plannedMonthly / maxMonthly : null,
-                    exceeded: plannedMonthly > maxMonthly
-                };
-            }
+        const modelMaxMonthly = capRow
+            ? (Number(capRow.maxUnitsPerMonth) ||
+                (Number(capRow.seats || 0) * Number(capRow.turnsPerDay || 0) * Number(capRow.daysPerMonth || 26)))
+            : 0;
+        // خطة الاستفادة 2026-07-12 (بند 1.2): كان الفحص يقرأ capacityModel (مقاعد/دورات) فقط
+        // ويتجاهل بصمت حقل «السعة السنوية» العام productionCapacity.annualCapacity الذي يملؤه
+        // العميل من خطوة «الأصول والتجهيزات» — فيمر تخطيط مبيعات مستحيل مادياً بلا تحذير إن لم
+        // يملأ العميل نموذج المقاعد تحديداً. عند توفر الاثنين معاً يُستخدم الأدنى (الأكثر تقييداً)
+        // كسقف فعلي؛ عند توفر أحدهما فقط يُستخدم وحده.
+        const annualCapacityMonthly = Number(technical.productionCapacity?.annualCapacity || 0) / 12;
+        const capacityCandidates = [modelMaxMonthly, annualCapacityMonthly].filter(v => v > 0);
+        const maxMonthly = capacityCandidates.length > 0 ? Math.min(...capacityCandidates) : 0;
+        if (maxMonthly > 0) {
+            const plannedMonthly = year1Units / 12;
+            capacityCheck = {
+                maxUnitsPerMonth: Math.round(maxMonthly),
+                plannedUnitsPerMonth: Math.round(plannedMonthly),
+                utilizationOfMax: maxMonthly > 0 ? plannedMonthly / maxMonthly : null,
+                exceeded: plannedMonthly > maxMonthly,
+                source: capacityCandidates.length === 2 ? 'both' : (modelMaxMonthly > 0 ? 'capacityModel' : 'annualCapacity')
+            };
         }
     }
 
