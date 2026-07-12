@@ -763,6 +763,30 @@ export class Wizard {
         table.container = container;
         table.render();
         this.tables[tableKey] = table;
+
+        if (tableKey === 'positions') {
+            this._bindLiveStaffingHint(table);
+        }
+    }
+
+    /**
+     * تدقيق اختبار قبول 2026-07-12: شريط تلميح جدول الرواتب كان يُبنى مرة واحدة فقط
+     * عند renderTable — لو أُعيد تشغيل محاكاة التشغيل لاحقاً بنفس زيارة صفحة التصنيف
+     * (StudyCategoryView لا يعيد رسم الخطوات عند تغيّر قسم آخر)، يبقى النص المعروض
+     * عالقاً على أول نتيجة بينما زر «إدراج» يُدرج الرقم الصحيح الحديث فعلياً — تناقض
+     * مباشر بين ما يقرأه العميل وما يحدث عند الضغط (مُثبَت حياً وتكرّر). اشتراك خفيف
+     * يحدّث نص الشريط فقط دون render() كامل.
+     */
+    _bindLiveStaffingHint(table) {
+        if (!this.store?.subscribe) return;
+        this.store.subscribe((state, changedSection) => {
+            if (!table.container?.isConnected) return;
+            if (changedSection && changedSection !== 'operational') return;
+            const hintEl = table.container.querySelector('[data-table-hint]');
+            if (!hintEl) return;
+            const newHint = this._buildStaffingSuggestionHint(state);
+            if (newHint) hintEl.innerHTML = newHint;
+        });
     }
 
     /**

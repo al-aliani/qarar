@@ -58,6 +58,28 @@ export class SmartGoals {
         // ضمن نموذج الإضافة/التعديل الحالي — 'computed' فقط إن ضُغط زر «استخدم القيمة
         // المحسوبة»، وإلا 'manual' بمجرد كتابة المستخدم يدوياً. يُصفَّر مع كل render() جديد.
         this._targetValueSource = null;
+        this._bindLiveRevenueHint();
+    }
+
+    /**
+     * تدقيق اختبار قبول 2026-07-12: هذا المكوّن يُبنى مرة واحدة فقط لكل زيارة صفحة
+     * تصنيف (StudyCategoryView لا يعيد رسمه عند تغيّر قسم آخر بنفس الصفحة) — تلميح
+     * «الإيراد المخطَّط» في نموذج الهدف المالي كان يتجمّد على قيمته لحظة التركيب،
+     * فيظهر «٠ ريال» رغم تعبئة جدول الإيرادات لحظات قبله بنفس الزيارة (تحقّق حياً
+     * وتكرّر). اشتراك خفيف يحدّث النص المعروض فقط دون render() كامل — لا يمسّ أي شيء
+     * يكتبه المستخدم حالياً في النموذج.
+     */
+    _bindLiveRevenueHint() {
+        if (!this.store?.subscribe) return;
+        this.store.subscribe((state, changedSection) => {
+            if (!this.container?.isConnected) return;
+            if (changedSection && changedSection !== 'revenue') return;
+            this._derivedRevenue = deriveRevenueFromStreams(state.revenue?.streams);
+            const strongEl = this.container.querySelector('#goalFinancialHintRow .financial-goal-hint strong');
+            if (strongEl) {
+                strongEl.textContent = Math.round(this._derivedRevenue?.year1Revenue || 0).toLocaleString('ar-SA');
+            }
+        });
     }
 
     render(stepIndex) {

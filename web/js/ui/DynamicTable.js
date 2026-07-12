@@ -155,7 +155,13 @@ export class DynamicTable {
     constructor(containerId, config) {
         this.container = document.getElementById(containerId) || document.createElement('div');
         this.config = config;
-        this.data = config.initialData || [];
+        // تدقيق اختبار قبول 2026-07-12: store.get()/getState() تعيدان this.state الحي
+        // بالمرجع (لا نسخة) — وWizard.renderTable يمرر tableData المُستخرج منها مباشرة
+        // كـinitialData بلا استنساخ. بدون هذا الاستنساخ، مستمع input (الذي يُفترض أنه
+        // "محلي بلا onChange" عمداً) كان في الواقع يُحوِّر مصفوفة المخزون الحيّة مباشرة
+        // مع كل ضغطة مفتاح — فقيمة خام غير مطبَّعة (بالأرقام الهندية العربية مثلاً) تصير
+        // مرئية لأي قارئ لـgetState() (بما فيها الحفظ التلقائي الدوري) قبل أي blur/تحقق.
+        this.data = JSON.parse(JSON.stringify(config.initialData || []));
         this.onChange = config.onChange || (() => { });
         this.onSuggest = config.onSuggest || null;
         this.isQuickMode = localStorage.getItem('study_mode_preference') === 'quick';
@@ -399,6 +405,13 @@ export class DynamicTable {
                    magicBtn = `<button type="button" class="btn-magic-cell" data-row="${rowIndex}" data-col="${col.key}" title="تقدير تلقائي" aria-label="تقدير تلقائي للقيمة">${icon('i-sparkle')}</button>`;
                 }
 
+                // تدقيق اختبار قبول 2026-07-12: نص إرشادي («[اذكر خبرتك...]») كان يُكتب
+                // كقيمة value فعلية (لا placeholder حقيقي) في بعض الاقتراحات الاحتياطية
+                // (keyPeople) — أي نقرة تحرير عادية بلا تحديد الكل تُدرج كتابة المستخدم
+                // في منتصف النص فينتج محتوى مشوَّهاً. col.placeholder اختياري يتيح نص
+                // إرشاد حقيقياً بخاصية placeholder، والقيمة تبقى فارغة حتى يكتب المستخدم.
+                const placeholderAttr = col.placeholder ? `placeholder="${escapeHtml(col.placeholder)}"` : '';
+
                 html += `<td class="${isHidden ? 'hidden col-advanced' : ''} relative">
                     <div class="flex items-center gap-1">
                         <input type="text"
@@ -406,6 +419,7 @@ export class DynamicTable {
                                data-row="${rowIndex}"
                                data-col="${col.key}"
                                value="${escapeHtml(val)}"
+                               ${placeholderAttr}
                                ${inputAttrs}>
                         ${isFractionPct ? '<span class="text-muted" aria-hidden="true">٪</span>' : ''}
                         ${magicBtn}

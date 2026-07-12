@@ -1364,8 +1364,11 @@ export function generatePositions(state) {
 /**
  * سقالة الأشخاص الرئيسين (الفريق المؤسس) — schema.js يعلن aiPrompt: 'suggest_key_people' لكن
  * لا يوجد أي معالج له في AIConnector.js فيرجع "اقتراح بنود" بلا أثر بصمت (تدقيق 2026-07-09،
- * اختبار عميل حي: دراسة مقهى). لا يمكن اختلاق اسم أو خبرة شخص حقيقي — الحقل name يبقى فارغاً
- * عمداً ليملأه المستخدم، والحقول الأخرى نص إرشادي بين قوسين يوضّح المطلوب توثيقه فقط.
+ * اختبار عميل حي: دراسة مقهى). لا يمكن اختلاق اسم أو خبرة شخص حقيقي — كل الحقول تبقى فارغة
+ * عمداً ليملأها المستخدم؛ الإرشاد حول المطلوب توثيقه ينتقل لـplaceholder حقيقي في عمودي
+ * experience/qualifications بمخطط keyPeople (schema.js) بدل كتابته كقيمة فعلية — تدقيق
+ * اختبار قبول 2026-07-12: كان نصاً بين قوسين يُكتب كـvalue فيتشوّه عند التحرير العادي
+ * (بلا تحديد الكل) لأن كتابة المستخدم تُدرَج في منتصفه.
  * @param {object} state - { projectInfo, hr }
  * @returns {Array<{ name, role, experience, qualifications }>}
  */
@@ -1374,7 +1377,7 @@ export function generateKeyPeople(state) {
     const managerPos = positions.find(x => /مدير|مديرة/i.test(x?.position || ''));
     const role = managerPos ? managerPos.position : 'المؤسس / المدير العام';
     return [
-        { name: '', role, experience: '[اذكر سنوات خبرتك الفعلية في هذا النشاط أو نشاط مشابه]', qualifications: '[اذكر مؤهلاتك أو شهاداتك ذات الصلة، إن وُجدت]' }
+        { name: '', role, experience: '', qualifications: '' }
     ];
 }
 

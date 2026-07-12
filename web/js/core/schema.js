@@ -869,8 +869,10 @@ export const TABLE_SCHEMAS = {
         columns: [
             { key: 'name', label: 'الاسم', type: 'text' },
             { key: 'role', label: 'الدور/المسمى', type: 'text' },
-            { key: 'experience', label: 'الخبرة (سنوات أو وصف)', type: 'text' },
-            { key: 'qualifications', label: 'المؤهلات', type: 'text' }
+            // placeholder حقيقي (لا قيمة مكتوبة) — تدقيق اختبار قبول 2026-07-12: النص
+            // الإرشادي كان يُكتب كقيمة فعلية فيتشوّه عند التحرير بلا تحديد الكل أولاً.
+            { key: 'experience', label: 'الخبرة (سنوات أو وصف)', type: 'text', placeholder: 'اذكر سنوات خبرتك الفعلية في هذا النشاط أو نشاط مشابه' },
+            { key: 'qualifications', label: 'المؤهلات', type: 'text', placeholder: 'اذكر مؤهلاتك أو شهاداتك ذات الصلة، إن وُجدت' }
         ],
         showTotal: false
     },
