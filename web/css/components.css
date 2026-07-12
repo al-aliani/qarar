@@ -2793,6 +2793,12 @@ textarea.input {
     color: var(--c-danger);
 }
 
+/* تدقيق 2026-07-12: بطاقة الاحتمالية (type='probability') تحتاج حالة وسطى (أصفر) بين
+   الأخضر/الأحمر الثنائيين — كانت أي نسبة ≥5% تُصنَّف positive زوراً (فرع percent القديم). */
+.kpi-mini-card.warning .mini-value {
+    color: var(--c-warning);
+}
+
 .mini-label {
     font-size: 0.75rem;
     color: var(--c-text-muted);

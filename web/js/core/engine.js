@@ -1130,9 +1130,14 @@ export function calculateStudy(study, overrides) {
             // مونت كارلو: تُقرأ من آخر تشغيل محفوظ فعلياً (لا نعيد تشغيل 1000 تكرار هنا —
             // مكلف حسابياً وقد يجمّد كل شاشة تستدعي calculateStudy). استشارية فقط: غياب
             // تشغيل سابق لا يخفّض القرار (المستخدم لم يفتح الشاشة بعد، لا خلل في المشروع).
+            // تدقيق 2026-07-12: كان شرط إضافة السبب نفسه معلَّقاً على d.decision === 'GO'
+            // (مطابقاً لشرط تخفيض القرار) — فمشروع REVISE أصلاً بسبب آخر (فجوة تمويل، DSCR...)
+            // لا يُظهر سبب الاحتمالية المنخفضة إطلاقاً رغم صحته، فيبدو التقرير ناقصاً. نفس
+            // نمط بقية البوابات أعلاه: تخفيض القرار يبقى مشروطاً بـGO (لا داعي لتخفيض REVISE/NO-GO
+            // أصلاً)، لكن إضافة السبب للشفافية غير مشروطة بحالة القرار الحالية.
             const mcLastRun = study[SECTIONS.MONTE_CARLO]?.lastRun;
-            if (d.decision === 'GO' && mcLastRun && Number.isFinite(mcLastRun.successProbability) && mcLastRun.successProbability < 0.5) {
-                d.decision = 'REVISE';
+            if (mcLastRun && Number.isFinite(mcLastRun.successProbability) && mcLastRun.successProbability < 0.5) {
+                if (d.decision === 'GO') d.decision = 'REVISE';
                 d.decisionReasons.unshift(
                     `احتمالية النجاح في محاكاة مونت كارلو (آخر تشغيل: ${Math.round(mcLastRun.successProbability * 100)}%) أقل من 50% — نصف السيناريوهات العشوائية المعقولة تخسر`
                 );

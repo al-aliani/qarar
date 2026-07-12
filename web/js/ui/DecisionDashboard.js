@@ -4,6 +4,7 @@ import { createTooltip } from '../utils/glossary.js';
  * The "Boardroom" view for investors to see if the project is ready
  */
 import { SECTIONS } from '../core/schema.js';
+import { STEPS } from '../core/wizardSteps.js';
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { calculateProjectScore } from '../core/scoring.js';
 import { ReportGenerator } from '../services/ReportGenerator.js';
@@ -20,9 +21,14 @@ import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQ
 import { toast } from '../utils/toast.js';
 
 export class DecisionDashboard {
-    constructor(containerId, store) {
+    // onNavigate اختياري (تدقيق 2026-07-12): يمرَّره stepComponentRegistry.js — نفس دالة
+    // التنقّل المشتركة (navigateTo في app.js أو navigateFromChild في StudyCategoryView) التي
+    // تستقبلها كل مكوّنات الخطوات الأخرى. نستخدمها لزر «التفاصيل الكاملة» الذي يقفز إلى
+    // خطوة لوحة المؤشرات المالية بدل تكرار شبكة أرقامها هنا.
+    constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
         this.store = store;
+        this.onNavigate = typeof onNavigate === 'function' ? onNavigate : null;
         this._eventListeners = [];
     }
 
@@ -156,8 +162,14 @@ export class DecisionDashboard {
                             ${evaluation.recommendationLabel}
                         </h2>
                         <p class="dd-verdict__desc">
-                            بناءً على تحليل ${evaluation.details.length} معايير تشمل الجدوى المالية، اكتمال البيانات، وجاهزية السوق.
-                            ${evaluation.score >= 100 && evaluation.recommendation !== 'go' ? '<br><span class="dd-verdict__flag dd-verdict__flag--warning">الدرجة تقيس اكتمال/جودة المدخلات، أما التوصية فتضيف اختبارات المخاطر والتمويل؛ لذلك قد تكون الدرجة 100/100 مع بقاء القرار «يحتاج مراجعة».</span>' : ''}
+                            بناءً على تحليل ${evaluation.details.length} معايير تشمل الجدوى المالية، المخاطر/مونت كارلو، اكتمال البيانات، وجاهزية السوق.
+                            <!-- تدقيق 2026-07-12: كانت العتبة score >= 100 (حرفياً 100/100) لا تتحقق عملياً إلا
+                            نادراً فلا تظهر الفقرة تقريباً أبداً — score >= 80 يطابق نفس عتبة استنتاج "go" الاحتياطية
+                            في scoring.js فتبقى الفقرة قابلة للظهور فعلياً حين تتناقض الدرجة مع التوصية. -->
+                            ${evaluation.score >= 80 && evaluation.recommendation !== 'go' ? '<br><span class="dd-verdict__flag dd-verdict__flag--warning">الدرجة تقيس اكتمال/جودة المدخلات، أما التوصية فتضيف اختبارات المخاطر والتمويل؛ لذلك قد تكون الدرجة مرتفعة مع بقاء القرار «يحتاج مراجعة».</span>' : ''}
+                            <!-- دمج مونت كارلو في الدرجة (تدقيق 2026-07-12): فقرة سردية تلقائية تظهر كلما وُجد
+                            تشغيل مونت كارلو سابق — لا تشترط درجة معينة كي لا تختفي كسابقتها. -->
+                            ${mcProbability !== null ? `<br><span class="dd-verdict__flag dd-verdict__flag--${mcProbability >= 0.7 ? 'success' : mcProbability >= 0.4 ? 'warning' : 'danger'}">الدرجة (${evaluation.score}/100) تقيس جودة الحالة الأساسية للمشروع، بينما احتمالية نجاح مونت كارلو (${Math.round(mcProbability * 100)}%) تقيس مدى صموده تحت التذبذب العشوائي في الإيرادات والتكاليف — مكمّلتان لا مترادفتان، وقد تختلفان بوضوح لنفس المشروع.</span>` : ''}
                             ${qaResults.hardErrors.length > 0 ? '<br><span class="dd-verdict__flag dd-verdict__flag--danger">توجد أخطاء حرجة يجب إصلاحها قبل اتخاذ القرار.</span>' : ''}
                             ${cleanPass ? '<br><span class="dd-verdict__flag dd-verdict__flag--success">الدراسة اجتازت معايير الجودة.</span>' : ''}
                             ${!cleanPass && qaResults.hardErrors.length === 0 && hasSoftIssues ? '<br><span class="dd-verdict__flag dd-verdict__flag--warning">اجتازت الأخطاء الحرجة، لكن توجد تحذيرات مهمة — راجعها قبل القرار.</span>' : ''}
@@ -298,21 +310,32 @@ export class DecisionDashboard {
                     <!-- Left Column: Metrics -->
                     <div class="dashboard-col">
                         <div class="card glass-card">
-                            <h4 class="card-title">المؤشرات المالية الحاسمة</h4>
-                            <div class="kpi-grid-decision">
-                                ${this.renderKPIItem('صافي القيمة الحالية', results?.indicators?.npv, 'currency')}
-                                ${this.renderKPIItem('معدل العائد الداخلي', results?.indicators?.irr, 'percent')}
-                                ${this.renderKPIItem('فترة الاسترداد', results?.indicators?.paybackPeriod, 'years')}
-                                ${this.renderKPIItem('العائد على الاستثمار', results?.indicators?.roi, 'percent')}
-                                ${this.renderKPIItem('فجوة التمويل', financingDiagnostics.fundingGap, 'fundingGap', financingDiagnostics.fundingGapThreshold)}
-                                ${this.renderKPIItem('DSCR السنة الأولى', financingDiagnostics.dscr, 'dscr')}
-                            </div>
+                            <!-- تدقيق 2026-07-12: كانت شبكة المؤشرات هذه (NPV/IRR/الاسترداد/العائد) تكرّر حرفياً
+                            شبكة fullKpiGrid في FinancialDashboard.js، وفجوة التمويل وDSCR مكرّرتان أيضاً مع
+                            بطاقة renderFinancingGate أعلى هذه الصفحة — ثلاث نسخ لنفس الأرقام. FinancialDashboard
+                            الآن لوحة الأرقام الكاملة الوحيدة؛ هنا شريط ملخّص نصّي + رابط بدل الشبكة المكرَّرة. -->
+                            <h4 class="card-title flex justify-between items-center">
+                                <span>ملخّص المؤشرات المالية</span>
+                                <button type="button" id="btnGoFinancialDashboard" class="btn btn--ghost btn--sm" title="القوائم المالية، الرسوم البيانية، والتوقعات الكاملة">
+                                    <svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> التفاصيل الكاملة
+                                </button>
+                            </h4>
+                            <p class="text-sm text-muted dd-kpi-summary" style="line-height:1.9;">
+                                صافي القيمة الحالية <strong class="${(results?.indicators?.npv ?? 0) >= 0 ? 'text-success' : 'text-danger'}">${this.formatCurrency(results?.indicators?.npv)}</strong> ·
+                                العائد الداخلي <strong>${this.formatPercent(results?.indicators?.irr)}</strong> ·
+                                الاسترداد <strong>${Number.isFinite(results?.indicators?.paybackPeriod) && results.indicators.paybackPeriod > 0 ? (Math.round(results.indicators.paybackPeriod * 10) / 10) + ' سنة' : 'غير محقق'}</strong> ·
+                                العائد على الاستثمار <strong>${this.formatPercent(results?.indicators?.roi)}</strong> ·
+                                فجوة التمويل <strong>${this.formatFundingGapLabel(financingDiagnostics.fundingGap, financingDiagnostics.fundingGapThreshold)}</strong> ·
+                                DSCR <strong>${Number.isFinite(financingDiagnostics.dscr) ? Number(financingDiagnostics.dscr).toFixed(2) + 'x' : 'غير قابل للحساب'}</strong>
+                                — التفاصيل الكاملة (قوائم الدخل، الرسوم، التوقعات 5-7 سنوات) في لوحة المؤشرات المالية.
+                            </p>
                             <div class="kpi-grid-decision dd-risk-kpis" aria-label="مؤشرات هامش الأمان والمخاطر">
-                                ${this.renderKPIItem('احتمالية نجاح مونت كارلو', mcProbability, 'percent')}
+                                ${this.renderKPIItem('احتمالية نجاح مونت كارلو', mcProbability, 'probability')}
                                 ${this.renderKPIItem('هامش الأمان لنقطة التعادل', breakEvenMargin, 'percent')}
                                 ${this.renderKPIItem('أقصى انخفاض بالإيراد قبل NPV السالب', npvSafetyMargin, 'percent')}
                                 ${this.renderKPIItem('أدنى تدفق نقدي تراكمي', minCumulativeCash, 'currency')}
                             </div>
+                            ${mcProbability === null ? '<p class="text-xs text-muted mt-2">لم يُشغَّل تحليل مونت كارلو بعد — افتحه لإضافة مكوّن المخاطر إلى الدرجة (10 نقاط) ولرؤية احتمالية النجاح هنا.</p>' : ''}
                         </div>
 
                         <!-- اختبار الضغط (Stress Test / ماذا لو — Upmetrics) -->
@@ -534,6 +557,22 @@ export class DecisionDashboard {
     }
 
     bindEvents(state, results) {
+        // «التفاصيل الكاملة» — قفز إلى خطوة لوحة المؤشرات المالية (المصدر الوحيد لشبكة
+        // NPV/IRR/الاسترداد/العائد الكاملة بعد إزالة الشبكة المكرَّرة من هذه اللوحة).
+        const btnGoFinancialDashboard = this.container.querySelector('#btnGoFinancialDashboard');
+        if (btnGoFinancialDashboard) {
+            const handler = () => {
+                if (!this.onNavigate) {
+                    toast.info('افتح «لوحة المؤشرات المالية» من قائمة أقسام الدراسة لعرض التفاصيل الكاملة.');
+                    return;
+                }
+                const dashboardIndex = STEPS.findIndex(s => s.isDashboard);
+                if (dashboardIndex >= 0) this.onNavigate(dashboardIndex);
+            };
+            btnGoFinancialDashboard.addEventListener('click', handler);
+            this._eventListeners.push({ element: btnGoFinancialDashboard, event: 'click', handler });
+        }
+
         // Executive Summary Button
         const btnExec = this.container.querySelector('#btnExecutiveSummary');
         if (btnExec) {
@@ -1142,11 +1181,21 @@ export class DecisionDashboard {
         return { desc: readiness.recommendation?.desc || '', reasons, nextSteps: uniqueSteps, positives };
     }
 
+    /** نص فجوة/توازن التمويل الموحَّد — يستهلكه renderKPIItem وشريط ملخّص المؤشرات معاً. */
+    formatFundingGapLabel(value, threshold = 1) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return '--';
+        if (n > threshold) return this.formatCurrency(n);
+        if (n < -threshold) return `فائض ${this.formatCurrency(Math.abs(n))}`;
+        return 'متوازن';
+    }
+
     renderKPIItem(label, value, type, threshold = 1) {
         const n = Number(value);
         const explanations = {
             currency: 'القيمة الحالية بعد خصم التدفقات النقدية وفق معدل الخصم المدخل.',
             percent: 'النسبة محسوبة من مخرجات النموذج للسنة الأولى أو سيناريو المحاكاة.',
+            probability: 'نسبة السيناريوهات العشوائية الناجحة (NPV موجب) من 1000 تكرار مونت كارلو — تختلف عن الدرجة لأنها تقيس الصمود تحت التذبذب لا الحالة الأساسية فقط.',
             years: 'عدد السنوات حتى استرداد الاستثمار وفق التدفق النقدي التراكمي.',
             dscr: 'قدرة التدفق النقدي التشغيلي على تغطية خدمة الدين.',
             fundingGap: 'إجمالي الاستثمار المطلوب ناقص مصادر التمويل المدخلة.'
@@ -1159,7 +1208,7 @@ export class DecisionDashboard {
             status = n < 0 ? 'negative' : 'positive';
         }
         if (type === 'fundingGap') {
-            formatted = !Number.isFinite(n) ? '--' : n > threshold ? this.formatCurrency(n) : n < -threshold ? `فائض ${this.formatCurrency(Math.abs(n))}` : 'متوازن';
+            formatted = this.formatFundingGapLabel(n, threshold);
             status = n > threshold ? 'negative' : 'positive';
         }
         if (type === 'dscr') {
@@ -1169,6 +1218,14 @@ export class DecisionDashboard {
         if (type === 'percent') {
             formatted = Number.isFinite(n) ? (n * 100).toFixed(1) + '%' : '--';
             status = n < 0.05 ? 'negative' : 'positive';
+        }
+        // تدقيق 2026-07-12: كانت بطاقة «احتمالية نجاح مونت كارلو» تمرّ عبر type='percent'
+        // الذي يخضّر أي قيمة ≥ 5% — فتظهر 28.8% خضراء بجوار درجة تقييم حمراء 45/100 (تناقض
+        // بصري مباشر). عتبتان 0.4/0.7 مطابقتان لبند المخاطر الجديد في scoring.js (اتساق
+        // لغة المنتج بين الدرجة وبطاقات لوحة القرار)، مع حالة وسطى (warning) لا ثنائية.
+        if (type === 'probability') {
+            formatted = Number.isFinite(n) ? (n * 100).toFixed(1) + '%' : 'لم يُشغَّل بعد';
+            status = !Number.isFinite(n) ? 'negative' : n >= 0.7 ? 'positive' : n >= 0.4 ? 'warning' : 'negative';
         }
         if (type === 'years') {
             formatted = Number.isFinite(n) && n > 0 ? (Math.round(n * 10) / 10) + ' سنة' : 'غير محقق';
