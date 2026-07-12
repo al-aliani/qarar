@@ -830,7 +830,20 @@ export class FinancingStructure {
     refreshLoanReadinessWarning() {
         const slot = this.container.querySelector('#loanReadinessWarningSlot');
         if (!slot) return;
-        slot.innerHTML = this.renderLoanReadinessWarning(this.buildLiveFinancingState());
+        const liveState = this.buildLiveFinancingState();
+        slot.innerHTML = this.renderLoanReadinessWarning(liveState);
+
+        // تدقيق تحقّق حي 2026-07-12: هذه الدالة كانت تُحدِّث نص التحذير فقط — بطاقتا
+        // «تفاصيل القرض البنكي» و«الضمانات وتغطية خدمة الدين» كانتا تُخفيان/تُظهران عند
+        // render() الكاملة فقط، فتبقيان مخفيتين للمستخدم لحظة إدخال أول مبلغ قرض حتى
+        // يغادر الخطوة ويعود إليها. نبدّل ظهورهما حياً هنا أيضاً بلا أي render كاملة.
+        const loanAmount = Number(liveState.financing?.sources?.bankLoan?.amount || 0);
+        const loanDetailsCard = this.container.querySelector('#loanDetailsCard');
+        const guaranteesCard = this.container.querySelector('#guaranteesCard');
+        const loanScheduleCard = this.container.querySelector('#loanScheduleCard');
+        if (loanDetailsCard) loanDetailsCard.style.display = loanAmount > 0 ? '' : 'none';
+        if (guaranteesCard) guaranteesCard.style.display = loanAmount > 0 ? '' : 'none';
+        if (loanScheduleCard) loanScheduleCard.style.display = loanAmount > 0 ? '' : 'none';
     }
 
     /** مستمع input بخنق 350ms على حقول مبلغ القرض/الفائدة/فترة السماح/مدته وDSCR المستهدف. */
