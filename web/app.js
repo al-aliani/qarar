@@ -1164,10 +1164,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // لوحة الافتراضات المركزية (خطة 2026-07-12، الدفعة 4، البند 1): شاشة واحدة تجمع
   // الأرقام الجوهرية (إيرادات/فريق/تمويل/افتراضات) بلا تنقّل بين 41 قسماً — تُفتح من
-  // زر «معايرة سريعة» في ترويسة العمل أو من لوحة القرار. نفس نمط
-  // feasibility:showInvestorDashboard: يحفظ خطوة المعالج الحالية ويستعيدها عند الخروج.
+  // زر «معايرة سريعة» في ترويسة العمل أو من لوحة القرار. تحفظ خطوة المعالج الحالية
+  // وتستعيدها عند الخروج.
+  // تدقيق تحقّق حي 2026-07-12: نمط savedStepIndex=wizard.currentStepIndex (مستخدَم في
+  // 4 معالجات أخرى مشابهة: showUserProfile/showIntegrations/showTrash/showInvestorDashboard)
+  // خاطئ فعلياً مع مسار التنقّل الأساسي الحالي (StudyCategoryView) — navigateTo() يفوّض
+  // بالكامل لـnavigateToCategory وTypeScript لا يمسّ متغيّر wizard العالمي إطلاقاً، فيبقى
+  // wizard.currentStepIndex مجمَّداً عند 0 (قيمة المُنشئ) بصرف النظر عن موضع المستخدم
+  // الفعلي — زر «رجوع» كان سيُعيده دوماً لأول تصنيف بدل خطوته الحقيقية (اكتُشف بتحقق حي
+  // فعلي، ثبَّتها تفادياً لهذه الشاشة الجديدة تحديداً؛ الأربعة الأخرى خارج نطاق هذه المهمة).
+  // latestRequestedStepIndex (معرَّف أعلى الملف) يتحدث فعلياً مع كل تنقّل حقيقي — المصدر الصحيح.
   window.addEventListener('feasibility:openAssumptionsPanel', async () => {
-    const savedStepIndex = wizard.currentStepIndex;
+    const savedStepIndex = latestRequestedStepIndex;
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     if (sidebarEl) sidebarEl.style.display = 'none';
