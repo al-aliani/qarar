@@ -9,7 +9,7 @@ import { calculateStudy as runFullModel } from '../core/engine.js';
 import { DEFAULT_SCENARIOS } from '../core/schema.js';
 import { SmartAdvisor } from '../services/SmartAdvisor.js';
 import { aiConnector } from '../services/AIConnector.js';
-import { createTooltip, wrapWithTooltip } from '../utils/glossary.js';
+import { indicatorHelp } from '../utils/glossary.js';
 import { ScenarioSwitcher } from './ScenarioSwitcher.js';
 import { PresentationView } from './PresentationView.js';
 import { renderBenchmarkingSection } from './BenchmarkingView.js'; // المهمة 4 — هل أرقامي منطقية؟
@@ -241,10 +241,10 @@ export class FinancialDashboard {
 
             <!-- Key Indicators Grid (مخفى في العرض المبسّط) -->
             <div id="fullKpiGrid" class="indicators-grid ${isSimpleView ? 'hidden' : ''}">
-                ${this.renderKPICard('صافي القيمة الحالية', 'صافي القيمة الحالية', this.formatCurrency(indicators.npv), indicators.npv >= 0 ? 'positive' : 'negative')}
-                ${this.renderKPICard('معدل العائد الداخلي', 'معدل العائد الداخلي', this.formatPercent(indicators.irr), indicators.irr >= decisionThresholds.minIRR ? 'positive' : 'negative')}
-                ${this.renderKPICard('فترة الاسترداد', 'فترة الاسترداد', (indicators.paybackPeriod != null && Number.isFinite(indicators.paybackPeriod)) ? indicators.paybackPeriod.toFixed(1) + ' سنة' : 'غير قابل للاسترداد خلال فترة الدراسة', 'neutral')}
-                ${this.renderKPICard('العائد على الاستثمار', 'العائد على الاستثمار', this.formatPercent(indicators.roi), indicators.roi >= decisionThresholds.minROI ? 'positive' : 'negative')}
+                ${this.renderKPICard('NPV', 'صافي القيمة الحالية', this.formatCurrency(indicators.npv), indicators.npv >= 0 ? 'positive' : 'negative')}
+                ${this.renderKPICard('IRR', 'معدل العائد الداخلي', this.formatPercent(indicators.irr), indicators.irr >= decisionThresholds.minIRR ? 'positive' : 'negative')}
+                ${this.renderKPICard('PAYBACK', 'فترة الاسترداد', (indicators.paybackPeriod != null && Number.isFinite(indicators.paybackPeriod)) ? indicators.paybackPeriod.toFixed(1) + ' سنة' : 'غير قابل للاسترداد خلال فترة الدراسة', 'neutral')}
+                ${this.renderKPICard('ROI', 'العائد على الاستثمار', this.formatPercent(indicators.roi), indicators.roi >= decisionThresholds.minROI ? 'positive' : 'negative')}
             </div>
 
             <!-- لوحة مؤشرات القرار (تعادل، عائد، DSCR) - مدارج -->
@@ -798,7 +798,12 @@ export class FinancialDashboard {
         const statusClass = status === 'positive' ? 'kpi-positive' : status === 'negative' ? 'kpi-negative' : '';
         const statusText = status === 'positive' ? 'ضمن النطاق' : status === 'negative' ? 'يحتاج مراجعة' : '';
         const statusIcon = status === 'positive' ? icon('i-check') : status === 'negative' ? icon('i-warning') : '';
-        const labelWithTooltip = term ? wrapWithTooltip(label, term) : label;
+        // تدقيق 2026-07-12: كان يُمرَّر التسمية العربية كمفتاح بحث في القاموس (مثال:
+        // 'صافي القيمة الحالية' بدل 'NPV') فيفشل createTooltip/wrapWithTooltip بصمت ولا
+        // تظهر أي أيقونة شرح. المستدعي الآن يمرر مفاتيح القاموس الصحيحة (NPV/IRR/...)،
+        // والعرض تحوّل إلى indicatorHelp الوصولي (زر + popover) بدل wrapWithTooltip القائم
+        // على :hover فقط.
+        const labelWithTooltip = term ? `${label} ${indicatorHelp(term)}` : label;
 
         return `
             <div class="kpi-card ${statusClass}">

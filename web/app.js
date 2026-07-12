@@ -793,7 +793,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         steps: STEPS,
         categories: SIDEBAR_SECTIONS,
         onNavigateCategory: navigateToCategory,
-        onGoHome: showLandingDashboard
+        onGoHome: showLandingDashboard,
+        // عدّاد «أنجزت X من Y» داخل .category-toc (بند 2.3) — نفس progressTracker
+        // الحي المحدَّث من refreshCompletion() عبر كل تغيير في المخزن، لا نسخة منفصلة.
+        progressTracker
       });
     }
     categoryView.setVisibleStepIndexes(categoryVisibleStepIndexes());

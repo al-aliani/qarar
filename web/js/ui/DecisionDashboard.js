@@ -1,4 +1,4 @@
-import { createTooltip } from '../utils/glossary.js';
+import { createTooltip, indicatorHelp } from '../utils/glossary.js';
 /**
  * Decision Dashboard Component
  * The "Boardroom" view for investors to see if the project is ready
@@ -300,16 +300,16 @@ export class DecisionDashboard {
                         <div class="card glass-card">
                             <h4 class="card-title">المؤشرات المالية الحاسمة</h4>
                             <div class="kpi-grid-decision">
-                                ${this.renderKPIItem('صافي القيمة الحالية', results?.indicators?.npv, 'currency')}
-                                ${this.renderKPIItem('معدل العائد الداخلي', results?.indicators?.irr, 'percent')}
-                                ${this.renderKPIItem('فترة الاسترداد', results?.indicators?.paybackPeriod, 'years')}
-                                ${this.renderKPIItem('العائد على الاستثمار', results?.indicators?.roi, 'percent')}
+                                ${this.renderKPIItem('صافي القيمة الحالية', results?.indicators?.npv, 'currency', 1, 'NPV')}
+                                ${this.renderKPIItem('معدل العائد الداخلي', results?.indicators?.irr, 'percent', 1, 'IRR')}
+                                ${this.renderKPIItem('فترة الاسترداد', results?.indicators?.paybackPeriod, 'years', 1, 'PAYBACK')}
+                                ${this.renderKPIItem('العائد على الاستثمار', results?.indicators?.roi, 'percent', 1, 'ROI')}
                                 ${this.renderKPIItem('فجوة التمويل', financingDiagnostics.fundingGap, 'fundingGap', financingDiagnostics.fundingGapThreshold)}
-                                ${this.renderKPIItem('DSCR السنة الأولى', financingDiagnostics.dscr, 'dscr')}
+                                ${this.renderKPIItem('DSCR السنة الأولى', financingDiagnostics.dscr, 'dscr', 1, 'DSCR')}
                             </div>
                             <div class="kpi-grid-decision dd-risk-kpis" aria-label="مؤشرات هامش الأمان والمخاطر">
                                 ${this.renderKPIItem('احتمالية نجاح مونت كارلو', mcProbability, 'percent')}
-                                ${this.renderKPIItem('هامش الأمان لنقطة التعادل', breakEvenMargin, 'percent')}
+                                ${this.renderKPIItem('هامش الأمان لنقطة التعادل', breakEvenMargin, 'percent', 1, 'BREAKEVEN')}
                                 ${this.renderKPIItem('أقصى انخفاض بالإيراد قبل NPV السالب', npvSafetyMargin, 'percent')}
                                 ${this.renderKPIItem('أدنى تدفق نقدي تراكمي', minCumulativeCash, 'currency')}
                             </div>
@@ -1142,7 +1142,7 @@ export class DecisionDashboard {
         return { desc: readiness.recommendation?.desc || '', reasons, nextSteps: uniqueSteps, positives };
     }
 
-    renderKPIItem(label, value, type, threshold = 1) {
+    renderKPIItem(label, value, type, threshold = 1, term = null) {
         const n = Number(value);
         const explanations = {
             currency: 'القيمة الحالية بعد خصم التدفقات النقدية وفق معدل الخصم المدخل.',
@@ -1175,9 +1175,10 @@ export class DecisionDashboard {
             status = Number.isFinite(n) && n > 0 ? 'positive' : 'negative';
         }
 
+        const labelHtml = term ? `${label} ${indicatorHelp(term)}` : label;
         return `
                 <div class="kpi-mini-card ${status}" title="${explanation}">
-                <span class="mini-label">${label}</span>
+                <span class="mini-label">${labelHtml}</span>
                 <span class="mini-value">${formatted}</span>
             </div>
         `;
