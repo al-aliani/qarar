@@ -21,23 +21,9 @@
   <link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts/fonts.css" />
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="./css/main.css" />
-  <!-- طبقة التلميع العالمية (:where() خصوصية صفرية) — أساس يمكن للأسطح تجاوزه -->
-  <link rel="stylesheet" href="./css/polish.css" />
-  <link rel="stylesheet" href="./css/ai.css" />
-  <link rel="stylesheet" href="./css/simple-mode.css" />
-  <link rel="stylesheet" href="./css/timeline.css" />
-  <link rel="stylesheet" href="./css/toast.css" />
-  <link rel="stylesheet" href="./css/tooltip.css" />
-  <link rel="stylesheet" href="./css/scenario-switcher.css" />
-  <!-- طبقة أناقة المعالج والنماذج — يجب أن تبقى الأخيرة لتتغلب تجاوزاتها -->
-  <link rel="stylesheet" href="./css/wizard-forms.css" />
-  <!-- طبقات تطوير الواجهة (تُحمّل بعد wizard-forms لتتغلب تجاوزاتها عند الحاجة) -->
-  <link rel="stylesheet" href="./css/dashboard-home.css" />
-  <link rel="stylesheet" href="./css/ready-studies.css" />
-  <link rel="stylesheet" href="./css/onboarding-polish.css" />
-  <link rel="stylesheet" href="./css/wizard-inline.css" />
+  <!-- Styles: حزمة موحّدة — 13 ملف CSS دُمجت في bundle.css (يُدمجها Vite وقت البناء
+       بنفس الترتيب) لتقليل الطلبات الحاجبة للعرض. الترتيب داخل css/bundle.css. -->
+  <link rel="stylesheet" href="./css/bundle.css" />
   <style>
     :root {
       --font-ui: 'IBM Plex Sans Arabic', 'Inter', system-ui, sans-serif;

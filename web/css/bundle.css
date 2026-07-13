@@ -1,0 +1,18 @@
+/* حزمة CSS موحّدة — تقلّل 13 طلب CSS حاجب للعرض إلى ملف واحد مبصوم.
+ * Vite يُدمج @import محلياً وقت البناء (postcss-import) فيصبح ملفاً واحداً
+ * بنفس ترتيب التتالي بالضبط — لا تغيير سلوكي، فقط أقل طلبات (PageSpeed).
+ * الترتيب أدناه مطابق تماماً لترتيب <link> السابق في index.html؛ لا تُغيّره:
+ * wizard-forms قبل طبقات تطوير الواجهة، وطبقات التطوير في الأخير لتتغلّب. */
+@import './main.css';
+@import './polish.css';
+@import './ai.css';
+@import './simple-mode.css';
+@import './timeline.css';
+@import './toast.css';
+@import './tooltip.css';
+@import './scenario-switcher.css';
+@import './wizard-forms.css';
+@import './dashboard-home.css';
+@import './ready-studies.css';
+@import './onboarding-polish.css';
+@import './wizard-inline.css';
