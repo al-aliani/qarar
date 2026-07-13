@@ -1,0 +1,13 @@
+# robots.txt — منصة قرار
+# ملاحظة: بدّل النطاق أدناه إلى النطاق الفعلي عند النشر.
+
+User-agent: *
+Allow: /
+
+# صفحات لا قيمة لها في الفهرسة
+Disallow: /smoke_test.html
+Disallow: /coverage/
+Disallow: /report/
+Disallow: /export/
+
+Sitemap: https://qarar.sa/sitemap.xml

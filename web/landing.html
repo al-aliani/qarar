@@ -19,6 +19,65 @@
        الصفحة (الذهب، الرمادي، نصف الأقطار، الظلال) بقيت خاصة بـlanding عمداً لأنها مضبوطة
        لسياق مختلف (نص ذهبي على خلفيات داكنة، ظلال أعمق) لا يوجد له مكافئ آمن في variables.css. -->
   <link rel="stylesheet" href="/css/variables.css" />
+
+  <!-- بيانات منظّمة (Schema.org / JSON-LD) — تحسين الظهور في النتائج الغنية.
+       بدّل النطاق (qarar.sa) إلى النطاق الفعلي عند النشر. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://qarar.sa/#organization",
+        "name": "قرار",
+        "url": "https://qarar.sa/",
+        "description": "منصة دراسة الجدوى الذكية للمطاعم والمقاهي والأنشطة التجارية في السعودية.",
+        "areaServed": { "@type": "Country", "name": "SA" }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://qarar.sa/#website",
+        "url": "https://qarar.sa/",
+        "name": "قرار | منصة دراسة الجدوى الذكية",
+        "inLanguage": "ar-SA",
+        "publisher": { "@id": "https://qarar.sa/#organization" }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "قرار — محاكي دراسة الجدوى الذكية",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "inLanguage": "ar-SA",
+        "url": "https://qarar.sa/",
+        "publisher": { "@id": "https://qarar.sa/#organization" },
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "ذاتية",
+            "price": "249",
+            "priceCurrency": "SAR",
+            "description": "المحرك والأدوات لتبني دراستك بنفسك."
+          },
+          {
+            "@type": "Offer",
+            "name": "مراجَع بخبير",
+            "price": "990",
+            "priceCurrency": "SAR",
+            "description": "مراجعة مختص لافتراضاتك وتوصياته قبل التسليم."
+          },
+          {
+            "@type": "Offer",
+            "name": "الخدمة الكاملة",
+            "price": "2900",
+            "priceCurrency": "SAR",
+            "description": "جمع البيانات وبناء الدراسة ومراجعتها مع جلسة شرح للنتائج."
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
   <style>
     :root {
       /* الألوان — الأخضر هو الأساس، الذهب لهجة نادرة */

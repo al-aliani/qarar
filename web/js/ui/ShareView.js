@@ -52,7 +52,8 @@ export class ShareView {
 
                 <!-- Hero Section (Cover Slide) -->
                 <header class="min-h-[80vh] flex flex-col justify-center items-center text-center p-10 bg-gradient-to-br from-slate-900 to-slate-800 text-white relative overflow-hidden">
-                    <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                    <!-- نقش زخرفي مضمّن (data-URI) بدل طلب خارجي — أسرع وأأمن (يسمح بتضييق CSP img-src) -->
+                    <div class="absolute inset-0 opacity-10" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 0h40v40H0z' fill='none'/%3E%3Cpath d='M0 20h40M20 0v40' stroke='%23ffffff' stroke-width='1' opacity='0.5'/%3E%3C/svg%3E&quot;);"></div>
                     <div class="z-10 max-w-4xl animate-fade-in-up">
                         <h1 class="text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-gold to-yellow-200">${pi.name || 'اسم المشروع'}</h1>
                         <p class="text-2xl text-gray-300 font-light mb-8">${pi.concept || 'فكرة المشروع'}</p>
