@@ -10,6 +10,12 @@
  * نفس ملف JSON المستورد وقت البناء، لا نسخة منفصلة قد تنحرف عنه صامتة.
  */
 import demographicsJson from '../../data/SaudiDemographics.json';
+import {
+    detectSectorKey,
+    resolveSectorShare,
+    sizingRatesFor,
+    deriveMarketSizing
+} from '../core/marketSizingModel.js';
 
 let _cache = null;
 
@@ -55,19 +61,6 @@ export async function getCityData(city) {
 }
 
 /**
- * نسبة استهلاك القطاع من الدخل (لحساب TAM)
- */
-function getSectorShare(sector, shares) {
-    if (!sector || !shares) return shares?.default ?? 0.02;
-    const s = (sector || '').trim();
-    for (const [key, val] of Object.entries(shares)) {
-        if (key === 'default') continue;
-        if (s.includes(key)) return Number(val) ?? 0.02;
-    }
-    return shares.default ?? 0.02;
-}
-
-/**
  * اقتراح TAM (وSAM، SOM) بناءً على المدينة والقطاع — عدد السكان × نسبة الاستهلاك للقطاع، مع المصدر
  * @param {string} city - المدينة المستهدفة
  * @param {string} sector - القطاع أو النشاط (مثلاً مطعم، قهوة، تجزئة)
@@ -89,19 +82,22 @@ export async function getTAMSuggestion(city, sector) {
         };
     }
 
-    // افتراضات (ليست بيانات مصدرية) — موحّدة منهجياً مع SaudiMarketEngine:
-    // SAM = نسبة من TAM (الشريحة القابلة للخدمة)، وSOM = نسبة من SAM (لا من TAM).
-    // كان SOM = 8% من TAM يعطي ≈907 مليون ريال لمطعم واحد بالرياض (فرق ×48 عن منهجية المحرك).
-    const SAM_OF_TAM = 0.10;  // الشريحة القابلة للخدمة من السوق الكلي
-    const SOM_OF_SAM = 0.05;  // ما يمكن لمنشأة جديدة واحدة التقاطه من السوق القابل للخدمة (تقدير مبكر)
-
+    // الحساب كله عبر marketSizingModel — نفس الاشتقاق الذي تستخدمه لوحة القرار
+    // (analyzeSaudiMarket) حرفياً، فلا يمكن أن يرى العميل رقمين مختلفين لنفس
+    // المدينة والقطاع. النِّسب قطاعية من جدول SECTOR_SIZING_RATES الموحّد
+    // (كانت هنا 10%/5% ثابتة والمحرك يستخدم جدولاً آخر — مصدر التناقض).
     const data = await loadDemographics();
-    const share = getSectorShare(sector, data.sectorConsumptionShare);
+    const share = resolveSectorShare(sector, data.sectorConsumptionShare);
+    const rates = sizingRatesFor(detectSectorKey(sector));
     const pop = cityData.population;
     const income = cityData.perCapitaIncomeSAR;
-    const tam = Math.round(pop * income * share);
-    const sam = Math.round(tam * SAM_OF_TAM);
-    const som = Math.round(sam * SOM_OF_SAM); // نسبة من SAM لا TAM
+    const { tam, sam, som } = deriveMarketSizing({
+        population: pop,
+        incomeSAR: income,
+        sectorShare: share,
+        samRate: rates.samRate,
+        somRate: rates.somRate
+    });
 
     const cityName = (city || '').trim() || 'المدينة';
     const description = `السوق الكلي (TAM) المقدر لـ ${cityName}: عدد السكان ${pop.toLocaleString('ar-SA')} نسمة (مصدر رسمي: ${cityData.populationSource}) × متوسط دخل الفرد ${income.toLocaleString('ar-SA')} ريال/سنوياً (تقديري — ${cityData.incomeSource}) × نسبة استهلاك القطاع (${(share * 100).toFixed(1)}% — تقديرية) ≈ ${tam.toLocaleString('ar-SA')} ريال سنوياً. راجع الأرقام التقديرية وعدّلها بمصدر عند توفره.`;

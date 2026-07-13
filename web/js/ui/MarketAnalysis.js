@@ -7,6 +7,7 @@ import { AIWriter } from '../services/AIWriter.js';
 import { generateTableSuggestions } from '../services/AIConnector.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { getTAMSuggestion } from '../services/SaudiDemographicsService.js';
+import { buildSectorText } from '../core/marketSizingModel.js';
 import { suggest, isUsable } from '../services/DataConnectors.js';
 import '../services/connectors/OverpassConnector.js'; // يسجّل 'market.competitors' ذاتياً عند التحميل
 import { CITY_CENTROIDS } from '../services/connectors/OverpassConnector.js';
@@ -987,7 +988,8 @@ export class MarketAnalysis {
         if (!box) return;
         const state = this.store.getState();
         const city = state.projectInfo?.city || state.projectInfo?.location || '';
-        const sector = state.projectInfo?.concept || state.projectInfo?.activity || state.marketSizing?.sectorAnalysis || '';
+        // نفس النص الموحّد الذي يستخدمه analyzeSaudiMarket — كشف قطاع واحد للمسارين
+        const sector = buildSectorText(state.projectInfo || {}, state.marketSizing || {});
 
         if (!city || city === 'أخرى') {
             box.innerHTML = '<p class="text-muted text-sm">اختر مدينة في <strong>بيانات المشروع</strong> لرؤية اقتراح TAM من بيانات هيئة الإحصاء.</p>';

@@ -8,7 +8,8 @@
  *                          أمّا دخل الفرد (perCapitaIncomeSAR) فتقدير داخلي لا تنشره الهيئة،
  *                          فيُعلَن صراحةً ضمن assumptionFields ولا يُنسب لـ GASTAT.
  *  - 'market.tam'        → TAM محسوب (سكان × دخل × نسبة) فمصدره مُشتقّ (PROVENANCE.DERIVED)،
- *                          وعوامل SAM=40% وSOM=8% افتراضات مُعلنة لا بيانات.
+ *                          ونِسب SAM/SOM قطاعية من جدول SECTOR_SIZING_RATES الموحّد
+ *                          (core/marketSizingModel.js) — افتراضات مُعلنة لا بيانات.
  *
  * دفاعي: SaudiDemographicsService يحرس typeof window ويرجع FALLBACK_DATA عند التعذّر،
  * لكن أي throw هنا يُترجَم إلى unavailable(...) — لا نرمي أبداً ولا نُخمّن رقماً.
@@ -88,7 +89,7 @@ async function marketTam(context = {}) {
                 sourceUrl: SOURCE_URL,
                 year: result.year,
                 provenance: PROVENANCE.DERIVED,
-                note: 'TAM مُشتقّ (سكان × دخل الفرد × نسبة استهلاك القطاع)؛ SAM=40% وSOM=8% افتراضات (عدّلها بمصدر).'
+                note: 'TAM مُشتقّ (سكان × دخل الفرد × نسبة استهلاك القطاع)؛ نِسب SAM/SOM قطاعية معلنة من الجدول الموحّد (عدّلها بمصدر).'
             }
         );
     } catch (e) {

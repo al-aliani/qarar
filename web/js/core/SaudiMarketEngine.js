@@ -1,57 +1,52 @@
-import { CITY_STATS, getCityStats } from '../data/SaudiCityStats.js';
-import { detectSectorBenchmark, SECTOR_BENCHMARKS } from './sectorBenchmarks.js';
+/**
+ * SaudiMarketEngine — تحليل واقعية السوق للوحة القرار.
+ *
+ * توحيد 2026-07-13: كان هذا المحرك يحسب TAM بصيغة خاصة به
+ * (سكان من نسخة يدوية في CITY_STATS × «اختراق × إنفاق سنوي × قوة شرائية» بلا مصدر)
+ * فيعرض للعميل رقماً يناقض اقتراح العصا 🪄 لنفس المدينة والقطاع. الآن يشتق
+ * حصرياً عبر marketSizingModel (لقطة GASTAT + افتراضات معلنة موحّدة) — نفس
+ * الأرقام حرفياً في كل الواجهات، وقيم المستخدم المدخلة تتقدم دائماً على المشتق.
+ */
 import { SECTIONS } from './schema.js';
+import {
+    buildSectorText,
+    detectSectorKey,
+    resolveSectorShare,
+    getCitySnapshot,
+    nationalPopulation,
+    sizingRatesFor
+} from './marketSizingModel.js';
 
 const num = (value) => {
     const n = Number(value);
     return Number.isFinite(n) ? n : 0;
 };
 
-const SECTOR_MARKET_DEFAULTS = {
-    fnb: { penetration: 0.62, annualSpend: 1800, samRate: 0.06, somRate: 0.03 },
-    retailHighMargin: { penetration: 0.35, annualSpend: 1300, samRate: 0.07, somRate: 0.025 },
-    retail: { penetration: 0.82, annualSpend: 2400, samRate: 0.06, somRate: 0.025 },
-    service: { penetration: 0.38, annualSpend: 1600, samRate: 0.06, somRate: 0.03 },
-    industrial: { penetration: 0.04, annualSpend: 50000, samRate: 0.12, somRate: 0.02 },
-    logistics: { penetration: 0.16, annualSpend: 9000, samRate: 0.10, somRate: 0.02 },
-    saas: { penetration: 0.08, annualSpend: 1200, samRate: 0.35, somRate: 0.04 },
-    default: { penetration: 0.30, annualSpend: 1500, samRate: 0.06, somRate: 0.025 }
-};
-
-function detectSectorKey(text) {
-    const benchmark = detectSectorBenchmark(text);
-    if (!benchmark) return 'default';
-    return Object.entries(SECTOR_BENCHMARKS).find(([, value]) => value === benchmark)?.[0] || 'default';
-}
-
-function estimateSaudiPopulation() {
-    const totalKnown = Object.entries(CITY_STATS)
-        .filter(([key]) => key !== 'default')
-        .reduce((sum, [, city]) => sum + num(city.population), 0);
-    return Math.max(totalKnown, 18_000_000);
-}
-
 export function analyzeSaudiMarket(study = {}, results = {}) {
     const info = study[SECTIONS.PROJECT_INFO] || {};
     const marketSizing = study[SECTIONS.MARKET_SIZING] || {};
     const city = info.city || 'الرياض';
-    const concept = `${info.concept || ''} ${info.description || ''} ${info.sector || ''}`;
-    const sectorKey = detectSectorKey(concept);
-    const defaults = SECTOR_MARKET_DEFAULTS[sectorKey] || SECTOR_MARKET_DEFAULTS.default;
-    const cityStats = getCityStats(city);
+    const sectorText = buildSectorText(info, marketSizing);
+    const sectorKey = detectSectorKey(sectorText);
     const isDigital = sectorKey === 'saas';
-    const population = isDigital ? estimateSaudiPopulation() : num(cityStats.population || 1_000_000);
-    const purchasingPowerFactor = Math.max(0.6, num(cityStats.purchasing_power || 5) / 8);
+    const snapshot = getCitySnapshot(city);
+    // الأنشطة الرقمية سوقها وطني لا مديني — إجمالي المملكة من اللقطة (تعداد 2022)
+    const population = isDigital ? nationalPopulation() : (snapshot.population || 1_000_000);
+    const sectorShare = resolveSectorShare(sectorText);
+    const rates = sizingRatesFor(sectorKey);
 
+    // قيمة المستخدم تتقدم دائماً؛ والمشتق يتسلسل من آخر قيمة معتمدة (لو أدخل
+    // المستخدم TAM فقط، يُشتق SAM من قيمته هو لا من تقديرنا) — نفس ترتيب
+    // التقريب في deriveMarketSizing حرفياً عند غياب أي إدخال.
     const tam = num(marketSizing.tam?.value) > 0
         ? num(marketSizing.tam.value)
-        : population * defaults.penetration * defaults.annualSpend * purchasingPowerFactor;
+        : Math.round(population * snapshot.perCapitaIncomeSAR * sectorShare);
     const sam = num(marketSizing.sam?.value) > 0
         ? num(marketSizing.sam.value)
-        : tam * defaults.samRate;
+        : Math.round(tam * rates.samRate);
     const som = num(marketSizing.som?.value) > 0
         ? num(marketSizing.som.value)
-        : sam * defaults.somRate;
+        : Math.round(sam * rates.somRate);
     const y1Revenue = num(results?.incomeStatement?.[0]?.revenue);
 
     const warnings = [];
@@ -74,13 +69,22 @@ export function analyzeSaudiMarket(study = {}, results = {}) {
         city,
         sectorKey,
         population,
-        purchasingPowerFactor,
+        sectorShare,
         tam: Math.round(tam),
         sam: Math.round(sam),
         som: Math.round(som),
         y1Revenue,
         captureRateOfSom: som > 0 ? y1Revenue / som : null,
-        source: num(marketSizing.tam?.value) > 0 ? 'user_input' : 'saudi_city_estimate',
+        source: num(marketSizing.tam?.value) > 0 ? 'user_input' : 'gastat_snapshot_derived',
+        // وسم المصدر لكل مكوّن — ما يميّز «دراسة قابلة للدفاع» عن أرقام عارية
+        sources: {
+            population: isDigital
+                ? { provenance: 'sourced', source: `${snapshot.populationSource} — إجمالي المملكة`, year: snapshot.year, url: snapshot.url }
+                : { provenance: 'sourced', source: snapshot.populationSource, year: snapshot.year, url: snapshot.url },
+            incomePerCapita: { provenance: 'assumption', source: snapshot.incomeSource },
+            sectorShare: { provenance: 'assumption', note: `نسبة استهلاك القطاع من الدخل: ${(sectorShare * 100).toFixed(1)}%` },
+            samSom: { provenance: 'assumption', note: `SAM=${(rates.samRate * 100).toFixed(1)}% من TAM، SOM=${(rates.somRate * 100).toFixed(1)}% من SAM (جدول قطاعي معلن)` }
+        },
         warnings
     };
 }

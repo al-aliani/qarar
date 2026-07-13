@@ -117,6 +117,11 @@
       "notes": "متوسط تقديري للمدن الأخرى"
     }
   },
+  "national": {
+    "population": 32175224,
+    "notes": "تعداد 2022 — إجمالي سكان المملكة (18.8م سعوديون + 13.4م غير سعوديين)",
+    "url": "https://www.spa.gov.sa/w1911463"
+  },
   "sectorConsumptionShare": {
     "default": 0.02,
     "مطعم": 0.025,
