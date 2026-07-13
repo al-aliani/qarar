@@ -1,6 +1,6 @@
 import { getLabel } from '../core/labels.js';
 import { getLabelSDB, getAuditorTooltip, getFieldHint } from '../core/regulatoryLabels.js';
-import { getStepHelp } from '../core/wizardSteps.js';
+import { getStepHelp, miniEssentialFields, miniEssentialTables } from '../core/wizardSteps.js';
 import { DynamicTable } from './DynamicTable.js';
 import { DataService } from '../services/DataService.js';
 import { generateTableSuggestions } from '../services/AIConnector.js';
@@ -223,6 +223,11 @@ export class Wizard {
         const isDataSectionBorrower = !!metadata.dataSection;
         stepId = metadata.dataSection || stepId;
         const studyData = this.store.get();
+        // وضع «مصغّر»: تقصير الأسئلة داخل الخطوة (حقول/جداول جوهرية فقط) — مصدر واحد
+        // wizardSteps.js. غير المصغّر يعرض القسم كاملاً كالمعتاد.
+        const studyMode = studyData?.appSettings?.mode || 'advanced';
+        const essentialFields = studyMode === 'mini' ? miniEssentialFields(stepId) : null;
+        const essentialTables = studyMode === 'mini' ? miniEssentialTables(stepId) : null;
         // Ensure state is initialized
         if (!studyData || !studyData[stepId]) {
             console.warn(`Section ${stepId} not found in store, initializing...`);
@@ -264,6 +269,11 @@ export class Wizard {
             tablesToRender = tablesToRender.filter(t => !['glossary', 'dataGatheringChecklist'].includes(t));
             optionalTablesToRender = [];
         }
+        // وضع مصغّر: الجداول الجوهرية فقط لهذا القسم (وإخفاء الجداول الاختيارية).
+        if (essentialTables) {
+            tablesToRender = tablesToRender.filter(t => essentialTables.includes(t));
+            optionalTablesToRender = [];
+        }
 
         // Render regular fields first (if section is object, not array) — لا لخطوة تستعير
         // قسم بيانات خطوة أخرى فقط لعرض جداولها (isDataSectionBorrower).
@@ -294,18 +304,22 @@ export class Wizard {
             };
 
             if (stepId === 'projectInfo') {
-                // ~49 حقلاً دفعة واحدة تُرهق المستخدم — الأساسي يظهر مباشرة والباقي مطوي
+                // ~49 حقلاً دفعة واحدة تُرهق المستخدم — الأساسي يظهر مباشرة والباقي مطوي.
+                // وضع مصغّر: نكتفي بالحقول الجوهرية (essentialFields) ولا نعرض المطويّ إطلاقاً.
                 const entries = Object.entries(sectionData);
-                const basicHtml = entries.filter(([k]) => PROJECT_INFO_BASIC_KEYS.includes(k)).map(renderEntry).join('');
-                const advancedHtml = entries.filter(([k]) => !PROJECT_INFO_BASIC_KEYS.includes(k)).map(renderEntry).join('');
+                const basicKeys = essentialFields || PROJECT_INFO_BASIC_KEYS;
+                const basicHtml = entries.filter(([k]) => basicKeys.includes(k)).map(renderEntry).join('');
                 html += `<div class="card form-grid">${basicHtml}</div>`;
-                if (advancedHtml.trim()) {
-                    html += `
+                if (!essentialFields) {
+                    const advancedHtml = entries.filter(([k]) => !PROJECT_INFO_BASIC_KEYS.includes(k)).map(renderEntry).join('');
+                    if (advancedHtml.trim()) {
+                        html += `
                         <details class="card advanced-fields mt-4">
                             <summary style="cursor: pointer; font-weight: 600; padding: 0.5rem 0;">حقول متقدمة (اختيارية) — يمكنك العودة لها لاحقاً</summary>
                             <div class="form-grid mt-3">${advancedHtml}</div>
                         </details>
                     `;
+                    }
                 }
             } else {
                 // SWOT/TOWS لهما محرر غني مخصص في خطوة «التحليل الاستراتيجي» (مع مزامنة
@@ -318,6 +332,8 @@ export class Wizard {
                 html += `<div class="card form-grid">`;
                 Object.entries(sectionData)
                     .filter(([key]) => !editedElsewhere.includes(key))
+                    // وضع مصغّر: الحقول الجوهرية فقط لهذا القسم (الافتراضات مثلاً).
+                    .filter(([key]) => !essentialFields || essentialFields.includes(key))
                     .forEach(entry => { html += renderEntry(entry); });
                 html += `</div>`;
                 if (editedElsewhere.length) {

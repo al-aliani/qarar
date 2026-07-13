@@ -20,13 +20,33 @@ export class StudyCategoryView {
         this.onGoHome = options.onGoHome || (() => {});
         this.progressTracker = options.progressTracker || null;
         this.visibleStepIndexes = null;
+        // فهارس التصنيفات غير الفارغة في الوضع الحالي (مصغّر/بسيط) — null = كلها ظاهرة.
+        this.visibleCategoryIndexes = null;
         this.instances = [];
         this.currentCategoryIndex = 0;
         this.tocObserver = null;
+        this._navPrev = null;
+        this._navNext = null;
     }
 
     setVisibleStepIndexes(indexes) {
         this.visibleStepIndexes = Array.isArray(indexes) ? new Set(indexes) : null;
+    }
+
+    setVisibleCategoryIndexes(indexes) {
+        this.visibleCategoryIndexes = Array.isArray(indexes) && indexes.length ? indexes.slice() : null;
+    }
+
+    /** أقرب تصنيف ظاهر قبل/بعد التصنيف المعطى (أو null إن لا يوجد) — يتخطى الفارغة. */
+    _adjacentVisibleCategory(categoryIndex, direction) {
+        const vis = this.visibleCategoryIndexes;
+        if (!vis) {
+            const target = categoryIndex + direction;
+            return target >= 0 && target < this.categories.length ? target : null;
+        }
+        return direction < 0
+            ? [...vis].reverse().find(c => c < categoryIndex) ?? null
+            : vis.find(c => c > categoryIndex) ?? null;
     }
 
     categoryStepIndexes(category) {
@@ -42,6 +62,9 @@ export class StudyCategoryView {
         if (!this.container || !category) return false;
         this.currentCategoryIndex = categoryIndex;
         this.instances = [];
+        // أهداف «السابق/التالي» = أقرب تصنيف ظاهر (يتخطى الفارغة في مصغّر/بسيط).
+        this._navPrev = this._adjacentVisibleCategory(categoryIndex, -1);
+        this._navNext = this._adjacentVisibleCategory(categoryIndex, +1);
 
         const stepIndexes = this.categoryStepIndexes(category);
         const categoryNumber = (categoryIndex + 1).toLocaleString('ar-SA');
@@ -80,9 +103,9 @@ export class StudyCategoryView {
                 </div>
 
                 <footer class="category-page__nav">
-                    <button type="button" class="btn btn--secondary" data-category-prev ${categoryIndex === 0 ? 'disabled' : ''}>التصنيف السابق</button>
+                    <button type="button" class="btn btn--secondary" data-category-prev ${this._navPrev === null ? 'disabled' : ''}>التصنيف السابق</button>
                     <span>${category.label}</span>
-                    <button type="button" class="btn btn--primary" data-category-next ${categoryIndex === this.categories.length - 1 ? 'disabled' : ''}>التصنيف التالي</button>
+                    <button type="button" class="btn btn--primary" data-category-next ${this._navNext === null ? 'disabled' : ''}>التصنيف التالي</button>
                 </footer>
             </div>
         `;
@@ -129,8 +152,12 @@ export class StudyCategoryView {
     }
 
     bindCategoryEvents(categoryIndex) {
-        this.container.querySelector('[data-category-prev]')?.addEventListener('click', () => this.onNavigateCategory(categoryIndex - 1));
-        this.container.querySelector('[data-category-next]')?.addEventListener('click', () => this.onNavigateCategory(categoryIndex + 1));
+        this.container.querySelector('[data-category-prev]')?.addEventListener('click', () => {
+            if (this._navPrev !== null) this.onNavigateCategory(this._navPrev);
+        });
+        this.container.querySelector('[data-category-next]')?.addEventListener('click', () => {
+            if (this._navNext !== null) this.onNavigateCategory(this._navNext);
+        });
         this.container.querySelectorAll('[data-category-anchor]').forEach(anchor => {
             anchor.addEventListener('click', event => {
                 event.preventDefault();

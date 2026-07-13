@@ -351,3 +351,64 @@ export function getStreamlinedWizardSteps() {
   const stepIndexMap = visibleSteps.map(step => STEPS.indexOf(step));
   return { visibleSteps, stepIndexMap };
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   أوضاع تفصيل الدراسة (مصغّر | بسيط | مفصّل) — مصدر واحد
+   ───────────────────────────────────────────────────────────────────────────
+   تدقيق المالك 2026-07-13: اختيار «مصغّر/بسيط» في بطاقات البداية لم يكن يغيّر شيئاً
+   فعلياً — المسار النشط (صفحة الفئات StudyCategoryView) كان يعرض كل الأقسام مهما
+   كان الوضع (app.js: setVisibleStepIndexes بلا وعي بالوضع)، والأوضاع القديمة كانت
+   تخفي أقساماً فقط دون تقليل الأسئلة داخل كل قسم.
+
+   هذا المصدر الواحد يحدّد: (1) أي الأقسام تظهر في كل وضع، و(2) أي الحقول/الجداول
+   الجوهرية تظهر داخل الخطوة في الوضع المصغّر. يستهلكه app.js (صفحة الفئات + الشريط
+   + رحلة الدراسة) وWizard.js (الحقول/الجداول) — لا قوائم مكرّرة تنحرف عن بعضها.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** «مصغّر»: الحد الأدنى للوصول لقرار سريع — ٦ أقسام إدخال + لوحة القرار. */
+export const MINI_MODE_STEP_IDS = [
+  SECTIONS.PROJECT_INFO,        // من نحن وماذا نقدّم
+  SECTIONS.TECHNICAL,           // الأصول والتكاليف التأسيسية
+  SECTIONS.HR,                  // الفريق والرواتب
+  SECTIONS.REVENUE,             // مصادر الإيرادات
+  SECTIONS.ASSUMPTIONS,         // الافتراضات المالية
+  SECTIONS.FINANCING,           // التمويل
+  SECTIONS.DECISION_DASHBOARD,  // القرار (GO / NO-GO / REVISE)
+];
+
+/** «بسيط»: الدراسة الأساسية كاملةً دون التحليلات المتقدمة والأدوات النيتشية. */
+export const SIMPLE_MODE_HIDDEN_STEP_IDS = [
+  'projectAlternatives', SECTIONS.SMART_GOALS, 'marketSizing', SECTIONS.SERVICES,
+  'operational_sim', SECTIONS.ORG_STRUCTURE, 'balance_sheet', SECTIONS.ZAKAT_TAX,
+  'investor_analysis', SECTIONS.VALUATION, SECTIONS.SCENARIOS, 'sensitivity',
+  'stress_test', SECTIONS.MONTE_CARLO, SECTIONS.APPENDICES, 'reportBuilder',
+  SECTIONS.ACTUALS,
+];
+
+/** هل يظهر القسم (بمعرّفه) في وضع التفصيل المعطى؟ (الافتراض: مفصّل → الكل) */
+export function isStepVisibleInStudyMode(stepId, mode) {
+  if (mode === 'mini') return MINI_MODE_STEP_IDS.includes(stepId);
+  if (mode === 'simple') return !SIMPLE_MODE_HIDDEN_STEP_IDS.includes(stepId);
+  return true;
+}
+
+// تقصير الأسئلة داخل الخطوة — وضع «مصغّر» فقط: الحقول/الجداول الجوهرية لكل قسم.
+// (الوضع البسيط يبقي حقول القسم كاملةً لأن أقسامه الظاهرة أساسية أصلاً؛ التقصير
+//  فيه يكون على مستوى الأقسام لا الحقول.)
+export const MINI_ESSENTIAL_FIELDS = {
+  [SECTIONS.PROJECT_INFO]: ['name', 'description', 'city', 'concept', 'targetSegment'],
+  [SECTIONS.ASSUMPTIONS]: ['discountRate', 'inflationRate', 'projectionYears'],
+};
+export const MINI_ESSENTIAL_TABLES = {
+  [SECTIONS.TECHNICAL]: ['establishmentCosts', 'equipment', 'furniture'],
+  [SECTIONS.HR]: ['positions'],
+};
+
+/** الحقول الجوهرية لقسم في وضع مصغّر، أو null إن لا تقصير (يُعرض الكل). */
+export function miniEssentialFields(stepId) {
+  return MINI_ESSENTIAL_FIELDS[stepId] || null;
+}
+/** الجداول الجوهرية لقسم في وضع مصغّر، أو null إن لا تقصير. */
+export function miniEssentialTables(stepId) {
+  return MINI_ESSENTIAL_TABLES[stepId] || null;
+}

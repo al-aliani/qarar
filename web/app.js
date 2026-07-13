@@ -1,7 +1,7 @@
 import { store } from './js/core/store.js';
 import { TEMPLATES } from './js/core/templates.js';
 import { TABLE_SCHEMAS, createEmptyStudy } from './js/core/schema.js';
-import { STEPS, SECTIONS, SIDEBAR_SECTIONS, stepIndexById, STEPS_ABSORBED_IN_CATEGORY_VIEW } from './js/core/wizardSteps.js';
+import { STEPS, SECTIONS, SIDEBAR_SECTIONS, stepIndexById, STEPS_ABSORBED_IN_CATEGORY_VIEW, isStepVisibleInStudyMode } from './js/core/wizardSteps.js';
 import { Sidebar } from './js/ui/Sidebar.js';
 import { Wizard } from './js/ui/Wizard.js';
 import { renderStepComponent } from './js/ui/stepComponentRegistry.js';
@@ -762,11 +762,46 @@ document.addEventListener('DOMContentLoaded', async () => {
   const absorbedStepIndexes = new Set(
     STEPS_ABSORBED_IN_CATEGORY_VIEW.map(id => STEPS.findIndex(s => s.id === id)).filter(i => i >= 0)
   );
-  const categoryVisibleStepIndexes = () => STEPS.map((_, index) => index).filter(i => !absorbedStepIndexes.has(i));
+  const currentStudyMode = () => store.getState()?.appSettings?.mode
+    || localStorage.getItem('study_mode_preference') || 'advanced';
+  // الخطوات الظاهرة في صفحة الفئات = غير المستوعَبة في شاشة مدموجة + الظاهرة في وضع
+  // التفصيل الحالي (تدقيق 2026-07-13: كان يتجاهل الوضع تماماً فلا أثر لـ«مصغّر/بسيط»).
+  const categoryVisibleStepIndexes = (mode = currentStudyMode()) => STEPS
+    .map((_, index) => index)
+    .filter(i => !absorbedStepIndexes.has(i) && isStepVisibleInStudyMode(STEPS[i].id, mode));
+  // فهارس التصنيفات (SIDEBAR_SECTIONS) التي فيها خطوة ظاهرة واحدة على الأقل بهذا الوضع.
+  const visibleCategoryIndexesForMode = (mode = currentStudyMode()) => {
+    const visible = new Set(categoryVisibleStepIndexes(mode));
+    const categories = [];
+    SIDEBAR_SECTIONS.forEach((cat, idx) => {
+      for (let i = cat.range[0]; i <= cat.range[1]; i++) {
+        if (visible.has(i)) { categories.push(idx); break; }
+      }
+    });
+    return categories;
+  };
+  // مزامنة كل أدوات التنقل بالفئات مع الوضع الحالي (خطوات ظاهرة + تصنيفات ظاهرة +
+  // رحلة الدراسة تعرض التصنيفات غير الفارغة فقط) — مصدر واحد يستدعيه navigateToCategory
+  // وapplyMode معاً كي لا ينحرفا.
+  const syncCategoryNavToMode = () => {
+    const mode = currentStudyMode();
+    const visibleCats = visibleCategoryIndexesForMode(mode);
+    categoryView?.setVisibleStepIndexes(categoryVisibleStepIndexes(mode));
+    categoryView?.setVisibleCategoryIndexes(visibleCats);
+    if (visibleCats.length) {
+      studyJourney?.setSteps(visibleCats.map(i => CATEGORY_STEPS[i]), visibleCats);
+    }
+  };
 
   const navigateToCategory = async (categoryIndex, focusStepIndex = null) => {
     const requestId = ++navigationRequestId;
-    const safeCategoryIndex = Math.min(Math.max(Number(categoryIndex) || 0, 0), SIDEBAR_SECTIONS.length - 1);
+    let safeCategoryIndex = Math.min(Math.max(Number(categoryIndex) || 0, 0), SIDEBAR_SECTIONS.length - 1);
+    // في وضع مصغّر/بسيط قد يكون التصنيف المطلوب فارغاً تماماً — نُعيد التوجيه لأقرب
+    // تصنيف ظاهر (الأمامي أولاً) بدل عرض صفحة «لا توجد أقسام» بلا فائدة.
+    const visibleCats = visibleCategoryIndexesForMode();
+    if (visibleCats.length && !visibleCats.includes(safeCategoryIndex)) {
+      safeCategoryIndex = visibleCats.find(c => c >= safeCategoryIndex) ?? visibleCats[visibleCats.length - 1];
+    }
     const category = SIDEBAR_SECTIONS[safeCategoryIndex];
     if (!category) return;
 
@@ -799,7 +834,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         progressTracker
       });
     }
-    categoryView.setVisibleStepIndexes(categoryVisibleStepIndexes());
+    syncCategoryNavToMode();
 
     const rendered = await categoryView.render(safeCategoryIndex, {
       focusStepIndex: activeStepIndex,
@@ -1435,20 +1470,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // دالة تطبيق وضع العرض (بسيط/مصغر/كامل) على الخطوات والشريط الجانبي
   function applyMode(mode) {
     const effective = mode || (store.getState().appSettings?.mode) || localStorage.getItem('study_mode_preference') || 'advanced';
-    const simpleHidden = [
-      SECTIONS.TECH_RESOURCES, SECTIONS.LOGISTICS, SECTIONS.ADMINISTRATIVE,
-      SECTIONS.ORG_STRUCTURE, SECTIONS.SERVICES, SECTIONS.STRATEGIC,
-      SECTIONS.RISK_ANALYSIS, 'sensitivity', SECTIONS.SCENARIOS,
-      SECTIONS.MONTE_CARLO, SECTIONS.VALUATION, SECTIONS.ACTUALS, 'fintech'
-    ];
-    // نموذج مصغر: فكرة، سوق، تكاليف، إيرادات، قرار — الحد الأدنى لبنك التنمية/الغرفة
-    const miniVisible = [
-      'preliminaryCheck', 'projectAlternatives', SECTIONS.PROJECT_INFO, 'projectDetails', SECTIONS.KEY_PEOPLE, 'projectIntro', SECTIONS.SMART_GOALS,
-      SECTIONS.TECHNICAL, SECTIONS.HR, SECTIONS.LEGAL, SECTIONS.MARKETING, SECTIONS.STRATEGIC, SECTIONS.REVENUE,
-      SECTIONS.FINANCING, SECTIONS.ASSUMPTIONS, SECTIONS.FINANCIAL_STATEMENTS, 'sensitivity',
-      SECTIONS.EXECUTIVE_SUMMARY
-    ];
-    // المسار السريع: 5-7 خطوات أساسية فقط
+    // المسار السريع: 5-7 خطوات أساسية فقط (نظام مستقل عن مصغّر/بسيط)
     const quickVisible = [
       SECTIONS.PROJECT_INFO, // Basic Info
       'projectDetails',      // تفاصيل الفكرة (كانت تلتقط بتكرار PROJECT_INFO قبل توحيد المعرّفات)
@@ -1463,11 +1485,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let visibleSteps = STEPS;
     let stepIndexMap = null;
-    if (effective === 'mini') {
-      visibleSteps = STEPS.filter(s => miniVisible.includes(s.id));
-      stepIndexMap = visibleSteps.map(step => STEPS.indexOf(step));
-    } else if (effective === 'simple') {
-      visibleSteps = STEPS.filter(s => !simpleHidden.includes(s.id));
+    // مصغّر/بسيط: مصدر واحد isStepVisibleInStudyMode (wizardSteps.js) — لا قوائم مكرّرة.
+    if (effective === 'mini' || effective === 'simple') {
+      visibleSteps = STEPS.filter(s => isStepVisibleInStudyMode(s.id, effective));
       stepIndexMap = visibleSteps.map(step => STEPS.indexOf(step));
     } else if (effective === 'quick') {
       // Note: filter preserves order and duplicates. SECTIONS.PROJECT_INFO matches 2 steps.
@@ -1493,8 +1513,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       sidebar.sections = CATEGORY_SIDEBAR_SECTIONS;
       wizard.steps = STEPS;
       wizard.stepIndexMap = null;
-      categoryView?.setVisibleStepIndexes(categoryVisibleStepIndexes());
-      studyJourney?.setSteps(CATEGORY_STEPS, null);
+      // يضبط الخطوات + التصنيفات الظاهرة + رحلة الدراسة حسب الوضع (مصدر واحد).
+      syncCategoryNavToMode();
+      // إعادة رسم صفحة الفئة المعروضة حالياً كي يسري الوضع الجديد فوراً (لا انتظار
+      // تنقّل تالٍ) — فقط إن كنا فعلاً على صفحة فئة.
+      if (categoryView && /#\/?category\//.test(window.location.hash || '')) {
+        navigateToCategory(sidebar.activeStep || 0);
+      }
     } else {
       sidebar.steps = visibleSteps;
       sidebar.stepIndexMap = stepIndexMap;

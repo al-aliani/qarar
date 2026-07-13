@@ -9,17 +9,14 @@
 import { DEFAULT_STUDY_PREPARED_BY } from '../config.js';
 import {
     applyExpertTemplate,
-    applyExpertTemplatePreset,
-    getExpertTemplatePresets,
-    getExpertTemplates,
-    saveExpertTemplate
+    getExpertTemplates
 } from '../services/ExpertTemplateService.js';
-import { toast } from '../utils/toast.js';
+import { HRFilesView } from './HRFilesView.js';
 
 // أوضاع الدراسة — كانت مدفونة في خطوة القوالب؛ صارت اختياراً واضحاً عند البداية
 const STUDY_MODES = [
-    { id: 'mini', icon: '🌱', name: 'مصغّر (للمبتدئين)', desc: 'فكرة، سوق، تكاليف، إيرادات، قرار — الحد الأدنى للوصول لقرار سريع.' },
-    { id: 'simple', icon: '📋', name: 'بسيط', desc: 'الأقسام الأساسية دون التحليلات المتقدمة (حساسية، مونت كارلو…).' },
+    { id: 'mini', icon: '🌱', name: 'مصغّر (للمبتدئين)', desc: 'المشروع، التكاليف، الفريق، الإيرادات، التمويل، القرار — أقل الأسئلة للوصول لقرار سريع.' },
+    { id: 'simple', icon: '📋', name: 'بسيط', desc: 'الأقسام الأساسية للدراسة دون التحليلات المتقدمة (حساسية، سيناريوهات، مونت كارلو، تقييم…).' },
     { id: 'advanced', icon: '📊', name: 'مفصل', desc: 'الدراسة الكاملة بكل الأقسام والتحليلات — جاهزة للبنك والمستثمر.' }
 ];
 
@@ -74,8 +71,8 @@ export class TemplateGallery {
     }
 
     render() {
+        this._hrFilesView = null;
         const expertTemplates = getExpertTemplates();
-        const expertTemplatePresets = getExpertTemplatePresets();
         this.overlay.innerHTML = `
             <div class="modal-card template-modal template-gallery animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="template-gallery-title">
                 <div class="modal-header">
@@ -118,58 +115,37 @@ export class TemplateGallery {
                     </div>
 
                     <div class="card mt-4" style="border:1px solid var(--c-border); background:rgba(255,255,255,0.03);">
-                        <h4 class="card-title mb-1">مسودات إعداد للمختص</h4>
-                        <p class="text-sm text-muted mb-2">هياكل بداية قابلة للتعديل، وليست قوالب معتمدة حتى يراجعها مختص ويحفظها.</p>
-                        ${expertTemplatePresets.length ? `
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                                ${expertTemplatePresets.map(t => `
-                                    <button type="button" class="template-card btn-apply-expert-preset" data-id="${escapeAttribute(t.id)}" style="text-align:right;">
-                                        <span class="t-icon" aria-hidden="true">↗</span>
-                                        <span class="t-info">
-                                            <span class="t-name">${escapeHtml(t.title)}</span>
-                                            <span class="t-desc">${escapeHtml(t.specialty)} — تحتاج مراجعة مختص قبل الاعتماد</span>
-                                        </span>
-                                    </button>
-                                `).join('')}
+                        <div class="flex-between" style="align-items:flex-start; gap:12px; flex-wrap:wrap;">
+                            <div>
+                                <h4 class="card-title mb-1">الموارد البشرية</h4>
+                                <p class="text-sm text-muted mb-0">نماذج ووصف وظيفي وملفات إدارية جاهزة — هياكل تنظيمية، رواتب، تقييم أداء، وتوظيف.</p>
                             </div>
-                        ` : `<p class="text-sm text-muted mb-0">لا توجد مسودات إعداد حالياً.</p>`}
-                    </div>
-
-                    <details class="card mt-4" style="border:1px solid var(--c-border); background:rgba(255,255,255,0.03);">
-                        <summary style="cursor:pointer; font-weight:600;">أدوات المختصين وتحميل الهيكل</summary>
-                        <div class="mt-3">
-                            <div class="flex flex-wrap gap-2 mb-4">
-                                <button type="button" class="btn btn--ghost btn--sm" id="btnDownloadStructureHtml" title="هيكل مبسّط للطباعة أو Word">تحميل هيكل مبسّط (Word/HTML)</button>
-                                <button type="button" class="btn btn--ghost btn--sm" id="btnDownloadStructureCsv" title="هيكل مبسّط لملئه في Excel">تحميل هيكل مبسّط (Excel/CSV)</button>
-                            </div>
-                            <h4 class="card-title mb-1">حفظ الدراسة الحالية كقالب مختص</h4>
-                            <p class="text-sm text-muted mb-3">تُحفظ الدراسة المفتوحة حالياً كقالب (بعد حذف بيانات العميل والمعرّفات)، لاستخدامها لاحقاً كنقطة بداية.</p>
-                            <form id="expertTemplateForm" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div class="form-group"><label for="etTitle">اسم القالب</label><input id="etTitle" class="input" type="text" placeholder="مثال: دراسة جدوى مقهى مختص" autocomplete="off"></div>
-                                <div class="form-group"><label for="etName">اسم المختص</label><input id="etName" class="input" type="text" placeholder="مثال: محمد العتيبي" autocomplete="off"></div>
-                                <div class="form-group"><label for="etSpecialty">التخصص / القطاع</label><input id="etSpecialty" class="input" type="text" placeholder="مثال: مطاعم ومقاهي" autocomplete="off"></div>
-                                <div class="form-group"><label for="etYears">سنوات الخبرة</label><input id="etYears" class="input" type="number" min="0" step="1" placeholder="15"></div>
-                                <div class="form-group"><label for="etPrice">سعر القالب أو الاستشارة</label><input id="etPrice" class="input" type="text" placeholder="مثال: 490 ريال" autocomplete="off"></div>
-                                <div class="form-group"><label for="etUrl">رابط حجز الاستشارة</label><input id="etUrl" class="input" type="url" placeholder="https://..." autocomplete="off"></div>
-                                <div class="form-group md:col-span-2"><label for="etScope">نطاق استخدام القالب</label><textarea id="etScope" class="input" rows="2" placeholder="مثال: مقاهي مختصة داخل المدن الرئيسية، مساحة 80-180م²."></textarea></div>
-                                <div class="form-group md:col-span-2"><label for="etNotes">ملاحظات المراجعة</label><textarea id="etNotes" class="input" rows="2" placeholder="ما الذي راجعه المختص؟ مصادر الأسعار؟"></textarea></div>
-                                <label class="md:col-span-2 text-sm text-muted" style="display:flex; gap:8px; align-items:flex-start;">
-                                    <input id="etReviewed" type="checkbox" style="margin-top:3px;">
-                                    <span>أؤكد أن القالب تمت مراجعته من مختص، وأنه ليس أرقاماً عامة تُعرض كدراسة جاهزة.</span>
-                                </label>
-                                <div class="md:col-span-2"><button type="submit" class="btn btn--primary">حفظ كقالب مختص</button></div>
-                            </form>
+                            <button type="button" class="btn btn--ghost btn--sm" id="btnToggleHrFiles" aria-expanded="false" aria-controls="galleryHrFilesRoot">تصفّح الملفات</button>
                         </div>
-                    </details>
+                        <div id="galleryHrFilesRoot" class="mt-3" hidden></div>
+                    </div>
                 </div>
             </div>
         `;
 
         this.overlay.querySelector('.btn-close').onclick = () => this.close();
-        this.overlay.querySelector('#btnDownloadStructureHtml')?.addEventListener('click', () => this.downloadStructureHtml());
-        this.overlay.querySelector('#btnDownloadStructureCsv')?.addEventListener('click', () => this.downloadStructureCsv());
-        this.overlay.querySelector('#expertTemplateForm')?.addEventListener('submit', (e) => { e.preventDefault(); this.saveCurrentStudyAsExpertTemplate(); });
         this.overlay.onclick = (e) => { if (e.target === this.overlay) this.close(); };
+
+        const hrToggle = this.overlay.querySelector('#btnToggleHrFiles');
+        const hrRoot = this.overlay.querySelector('#galleryHrFilesRoot');
+        if (hrToggle && hrRoot) {
+            hrToggle.addEventListener('click', async () => {
+                const willOpen = hrRoot.hidden;
+                hrRoot.hidden = !willOpen;
+                hrToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+                hrToggle.textContent = willOpen ? 'إخفاء الملفات' : 'تصفّح الملفات';
+                if (willOpen && !this._hrFilesView) {
+                    this._hrFilesView = new HRFilesView('galleryHrFilesRoot');
+                    await this._hrFilesView.render();
+                }
+            });
+        }
+
         this.overlay.querySelectorAll('.template-card').forEach(btn => {
             btn.onclick = () => {
                 const id = btn.dataset.id;
@@ -188,16 +164,6 @@ export class TemplateGallery {
                 if (!window.confirm(`تطبيق قالب «${template.title}» سيستبدل الدراسة الحالية بدراسة جديدة مبنية على القالب.\n\nهل تريد المتابعة؟`)) return;
                 applyExpertTemplate(this.store, template);
                 window.dispatchEvent(new CustomEvent('project-loaded', { detail: { source: 'expert-template', name: template.title } }));
-                this.close();
-            };
-        });
-        this.overlay.querySelectorAll('.btn-apply-expert-preset').forEach(btn => {
-            btn.onclick = () => {
-                const preset = getExpertTemplatePresets().find(t => t.id === btn.dataset.id);
-                if (!preset) return;
-                if (!window.confirm(`استخدام مسودة «${preset.title}» سيستبدل الدراسة الحالية بهيكل قابل للتعديل.\n\nهذه ليست قالباً معتمداً حتى يراجعها مختص ويحفظها.\n\nهل تريد المتابعة؟`)) return;
-                applyExpertTemplatePreset(this.store, preset.id);
-                window.dispatchEvent(new CustomEvent('project-loaded', { detail: { source: 'expert-template-preset', name: preset.title } }));
                 this.close();
             };
         });
@@ -281,76 +247,5 @@ export class TemplateGallery {
         if (this.store.reset) await this.store.reset();
         window.dispatchEvent(new CustomEvent('project-loaded', { detail: { source: 'blank', name: 'مشروع جديد' } }));
         this.close();
-    }
-
-    saveCurrentStudyAsExpertTemplate() {
-        const q = (id) => this.overlay.querySelector(id);
-        if (!q('#etReviewed')?.checked) {
-            toast.warning('أكد مراجعة المختص قبل حفظ القالب.');
-            return;
-        }
-        try {
-            const studyData = this.store.get ? this.store.get() : this.store.getState?.();
-            saveExpertTemplate({
-                title: q('#etTitle')?.value,
-                expertName: q('#etName')?.value,
-                specialty: q('#etSpecialty')?.value,
-                yearsExperience: q('#etYears')?.value,
-                priceLabel: q('#etPrice')?.value,
-                consultationUrl: q('#etUrl')?.value,
-                scope: q('#etScope')?.value,
-                reviewNotes: q('#etNotes')?.value,
-                status: 'approved'
-            }, studyData);
-            toast.success('تم حفظ القالب ضمن قوالب المختصين.');
-            this.render();
-        } catch (err) {
-            toast.error(err?.message || 'تعذر حفظ القالب.');
-        }
-    }
-
-    _downloadBlob(content, mime, filename) {
-        const blob = new Blob([content], { type: mime });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    downloadStructureHtml() {
-        const date = new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-        const html = `<!DOCTYPE html>
-<html dir="rtl" lang="ar">
-<head><meta charset="UTF-8"><title>هيكل دراسة جدوى — للملء يدوياً</title>
-<style>body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:12pt;line-height:1.8;max-width:21cm;margin:24px auto;padding:24px}h1{font-size:18pt;border-bottom:2px solid #C9A227;padding-bottom:8px}h2{font-size:14pt;color:#2c5282;margin-top:24px}.placeholder{color:#718096;border-bottom:1px dotted #cbd5e0;min-height:1.5em}.footer{margin-top:32px;font-size:9pt;color:#718096;text-align:center}</style></head>
-<body><h1>هيكل دراسة جدوى — للملء يدوياً</h1>
-<p class="footer">تاريخ التحميل: ${date} | هيكل مبسّط من منصة قرار</p>
-<h2>١. الملخص التنفيذي</h2><p><strong>اسم المشروع:</strong> <span class="placeholder">&nbsp;</span></p><p><strong>الفكرة / المشكلة والحل:</strong></p><p class="placeholder">&nbsp;</p>
-<h2>٢. المنهجية ونطاق الدراسة</h2><p class="placeholder">&nbsp;</p>
-<h2>٣. الجانب المالي</h2><p><strong>إجمالي الاستثمار (ريال):</strong> <span class="placeholder">&nbsp;</span></p><p><strong>أهم المؤشرات (NPV، IRR، الاسترداد، التعادل):</strong></p><p class="placeholder">&nbsp;</p>
-<h2>٤. تحليل المخاطر</h2><p class="placeholder">&nbsp;</p>
-<h2>٥. الملاحق</h2><p class="placeholder">&nbsp;</p>
-<div class="footer">هيكل مبسّط للملء اليدوي © ${new Date().getFullYear()}</div></body></html>`;
-        this._downloadBlob(html, 'text/html;charset=utf-8', `هيكل_دراسة_جدوى_${new Date().toISOString().slice(0, 10)}.html`);
-        toast.success('تم تحميل هيكل مبسّط — يمكنك فتحه وملؤه أو تحويله إلى Word');
-    }
-
-    downloadStructureCsv() {
-        const BOM = '﻿';
-        const rows = [
-            ['القسم', 'الحقل', 'القيمة / الملاحظات'],
-            ['الملخص التنفيذي', 'اسم المشروع', ''],
-            ['الملخص التنفيذي', 'المشكلة والحل', ''],
-            ['نطاق السوق', 'TAM / SAM / SOM', ''],
-            ['الجانب المالي', 'إجمالي الاستثمار (ريال)', ''],
-            ['الجانب المالي', 'NPV / IRR / فترة الاسترداد', ''],
-            ['تحليل المخاطر', 'أبرز المخاطر وخطط المواجهة', ''],
-            ['التوصية', 'القرار (مضي / مراجعة / لا تدخل)', '']
-        ];
-        const csv = BOM + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
-        this._downloadBlob(csv, 'text/csv;charset=utf-8', `هيكل_دراسة_جدوى_${new Date().toISOString().slice(0, 10)}.csv`);
-        toast.success('تم تحميل هيكل Excel (CSV) — افتحه في Excel واملأ الأعمدة');
     }
 }
