@@ -767,3 +767,41 @@ button .ic, .btn-icon .ic, [role="button"] .ic { pointer-events: none; }
     color: var(--color-primary-dark);
     border-color: var(--color-primary);
 }
+
+/* خريطة المنافسين (Leaflet) — تحجيم صريح مطلوب وإلا يرسم Leaflet ارتفاع صفر */
+.competitor-map {
+    height: 320px;
+    border-radius: var(--r-lg, 12px);
+    overflow: hidden;
+    border: 1px solid var(--c-border);
+}
+.competitor-map .leaflet-popup-content-wrapper,
+.competitor-map .leaflet-popup-tip {
+    background: var(--c-bg-card, #fff);
+    color: var(--c-text-main, #1c2420);
+}
+
+/* مرفقات الأدلة (رفع/سرد) */
+.attachments-list__items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.attachments-list__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-md, 8px);
+    background: var(--c-bg-card);
+}
+.attachments-list__name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

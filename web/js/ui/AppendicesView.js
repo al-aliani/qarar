@@ -8,6 +8,20 @@ import { TABLE_SCHEMAS } from '../core/schema.js';
 import { SECTIONS } from '../core/schema.js';
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
+import {
+    uploadAttachment,
+    listAttachments,
+    getAttachmentSignedUrl,
+    deleteAttachment,
+    ATTACHMENTS_ALLOWED_EXT
+} from '../services/AttachmentsService.js';
+
+function formatFileSize(bytes) {
+    const n = Number(bytes) || 0;
+    if (n < 1024) return `${n} بايت`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} كيلوبايت`;
+    return `${(n / 1024 / 1024).toFixed(1)} ميجابايت`;
+}
 
 export class AppendicesView {
     constructor(containerId, store, onNavigate) {
@@ -36,6 +50,18 @@ export class AppendicesView {
                     </div>
                     <p class="text-muted text-sm mb-3">سيرة ذاتية أو ملف تعريفي للمستثمر/الشركة — أو اضغط «توليد من بيانات الفريق» لبداية سريعة من أول شخص رئيسي (اسم/دور/خبرة/مؤهلات)، ثم عدّلها كما تريد.</p>
                     <textarea id="appendices-investorProfile" class="input" rows="4" placeholder="نبذة عن المستثمر أو الشركة...">${escapeHtml(appendices.investorProfile || '')}</textarea>
+                </div>
+
+                <div class="card analysis-card">
+                    <h3 class="card-title">المرفقات (فواتير، عروض أسعار، صور الموقع...)</h3>
+                    <p class="text-muted text-sm mb-3">ارفع ملف PDF أو صورة أو Excel/Word يوثّق رقماً في دراستك — يُحفظ في حسابك بشكل خاص (لا يراه غيرك). يتطلب تسجيل الدخول وحفظ الدراسة على حساب أولاً؛ المسودات المحلية فقط لا تدعم الرفع.</p>
+                    <div class="attachments-upload flex gap-2 items-center flex-wrap mb-3">
+                        <input type="file" id="appendices-file-input" accept="${ATTACHMENTS_ALLOWED_EXT.map(e => '.' + e).join(',')}" />
+                        <button type="button" class="btn btn--sm btn--secondary" id="btn-upload-attachment">رفع ملف</button>
+                    </div>
+                    <div id="appendices-attachments-list" class="attachments-list">
+                        <p class="text-muted text-sm">جارٍ التحميل...</p>
+                    </div>
                 </div>
 
                 <div class="card analysis-card">
@@ -72,6 +98,43 @@ export class AppendicesView {
         this.renderReferencesTable();
         this.renderReviewersTable();
         this.bindEvents();
+        this.renderAttachmentsList();
+    }
+
+    _currentStudyId() {
+        const state = this.store.getState();
+        return state.projectInfo?.id || state.id || null;
+    }
+
+    async renderAttachmentsList() {
+        const listEl = this.container?.querySelector('#appendices-attachments-list');
+        if (!listEl) return;
+        const studyId = this._currentStudyId();
+
+        const result = await listAttachments(studyId);
+        // الحاوية قد تكون استُبدلت (render لاحق) قبل اكتمال الجلب — لا نكتب على DOM قديم.
+        if (!this.container?.contains(listEl)) return;
+
+        if (!result.ok) {
+            listEl.innerHTML = `<p class="text-muted text-sm">تعذّر تحميل قائمة المرفقات: ${escapeHtml(result.error || '')}</p>`;
+            return;
+        }
+        if (!result.files.length) {
+            listEl.innerHTML = `<p class="text-muted text-sm">لا مرفقات بعد.</p>`;
+            return;
+        }
+        listEl.innerHTML = `
+            <ul class="attachments-list__items">
+                ${result.files.map(f => `
+                    <li class="attachments-list__item" data-path="${escapeHtml(f.path)}">
+                        <span class="attachments-list__name">${escapeHtml(f.name)}</span>
+                        <span class="attachments-list__size text-muted text-xs">${formatFileSize(f.size)}</span>
+                        <button type="button" class="btn-xs btn--secondary btn-download-attachment" data-path="${escapeHtml(f.path)}">تنزيل</button>
+                        <button type="button" class="btn-xs btn--danger btn-delete-attachment" data-path="${escapeHtml(f.path)}">حذف</button>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
     }
 
     renderReferencesTable() {
@@ -166,6 +229,64 @@ export class AppendicesView {
                 this.store.update('appendices', { ...this.store.getState().appendices, priceQuotes: val ? val.split('\n').filter(Boolean) : [] });
             });
         }
+
+        this.container.querySelector('#btn-upload-attachment')?.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            const fileInput = this.container.querySelector('#appendices-file-input');
+            const file = fileInput?.files?.[0];
+            if (!file) {
+                toast.info('اختر ملفاً أولاً.');
+                return;
+            }
+            const studyId = this._currentStudyId();
+            btn.disabled = true;
+            const prevText = btn.textContent;
+            btn.textContent = 'جاري الرفع...';
+            try {
+                const result = await uploadAttachment(studyId, file);
+                if (result.ok) {
+                    toast.success(`رُفع «${result.name}» بنجاح.`);
+                    if (fileInput) fileInput.value = '';
+                    await this.renderAttachmentsList();
+                } else {
+                    toast.error(result.error || 'تعذّر رفع الملف.');
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = prevText;
+            }
+        });
+
+        this.container.querySelector('#appendices-attachments-list')?.addEventListener('click', async (e) => {
+            const downloadBtn = e.target.closest('.btn-download-attachment');
+            const deleteBtn = e.target.closest('.btn-delete-attachment');
+
+            if (downloadBtn) {
+                const path = downloadBtn.dataset.path;
+                downloadBtn.disabled = true;
+                const result = await getAttachmentSignedUrl(path);
+                downloadBtn.disabled = false;
+                if (result.ok && result.url) {
+                    window.open(result.url, '_blank', 'noopener');
+                } else {
+                    toast.error(result.error || 'تعذّر إنشاء رابط التنزيل.');
+                }
+            }
+
+            if (deleteBtn) {
+                const path = deleteBtn.dataset.path;
+                if (!confirm('حذف هذا المرفق نهائياً؟')) return;
+                deleteBtn.disabled = true;
+                const result = await deleteAttachment(path);
+                if (result.ok) {
+                    toast.success('حُذف المرفق.');
+                    await this.renderAttachmentsList();
+                } else {
+                    deleteBtn.disabled = false;
+                    toast.error(result.error || 'تعذّر حذف المرفق.');
+                }
+            }
+        });
     }
 
     /**

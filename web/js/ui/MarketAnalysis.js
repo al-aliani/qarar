@@ -9,6 +9,7 @@ import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { getTAMSuggestion } from '../services/SaudiDemographicsService.js';
 import { suggest, isUsable } from '../services/DataConnectors.js';
 import '../services/connectors/OverpassConnector.js'; // يسجّل 'market.competitors' ذاتياً عند التحميل
+import { CITY_CENTROIDS } from '../services/connectors/OverpassConnector.js';
 import { toast } from '../utils/toast.js';
 import { SAUDI_REGIONS } from '../data/SaudiCityStats.js';
 import { fieldHelp } from './components/FieldHelp.js';
@@ -208,6 +209,10 @@ export class MarketAnalysis {
                         </div>
                     </div>
                     ${this.renderCompetitorMatrix(marketing.competitors || [])}
+                    <div class="competitor-map-wrap mt-3">
+                        <h4 class="card-title text-sm mb-2">${icon('i-pin')} خريطة المنافسين</h4>
+                        <div id="competitorMap" class="competitor-map"></div>
+                    </div>
                 </div>
 
                 <!-- مواءمة رؤية 2030 واقتصاد الدولة: توثيق اختياري يظهر في التقرير — مطوي كي لا يزاحم جوهر الخطوة -->
@@ -268,6 +273,78 @@ export class MarketAnalysis {
         `;
 
         this.bindEvents();
+        this.renderCompetitorMap();
+    }
+
+    /**
+     * خريطة تفاعلية (Leaflet) لموقع المشروع ومنافسيه ذوي الإحداثيات المعروفة (من Overpass).
+     * محمّلة عند الطلب (dynamic import) كبقية المكتبات الثقيلة في المشروع — لا تُثقل الحزمة
+     * الأساسية. تُتخطّى بصمت (رسالة نصية بدل خطأ) حين لا تتوفر إحداثيات كافية للرسم.
+     */
+    async renderCompetitorMap() {
+        const mapEl = this.container?.querySelector('#competitorMap');
+        if (!mapEl) return;
+
+        const state = this.store.getState();
+        const projectInfo = state.projectInfo || {};
+        const competitors = state.marketing?.competitors || [];
+
+        const explicitCoords = projectInfo.locationAnalysis?.coordinates;
+        const hasExplicit = explicitCoords
+            && Number.isFinite(Number(explicitCoords.lat))
+            && Number.isFinite(Number(explicitCoords.lng));
+        const cityCentroid = !hasExplicit && projectInfo.city
+            ? CITY_CENTROIDS[projectInfo.city.trim()]
+            : null;
+        const center = hasExplicit
+            ? { lat: Number(explicitCoords.lat), lng: Number(explicitCoords.lng) }
+            : (cityCentroid || null);
+
+        const points = competitors.filter(c =>
+            Number.isFinite(Number(c.lat)) && Number.isFinite(Number(c.lng))
+        );
+
+        if (!center && points.length === 0) {
+            mapEl.innerHTML = `<p class="text-muted text-sm">لا تتوفر إحداثيات كافية لعرض الخريطة بعد — أدخل موقع المشروع، أو اضغط «اكتشف (AI)» أعلاه لجلب منافسين حقيقيين من OpenStreetMap.</p>`;
+            return;
+        }
+
+        try {
+            const [{ default: L }] = await Promise.all([
+                import('leaflet'),
+                import('leaflet/dist/leaflet.css')
+            ]);
+
+            // قد يتبدّل المحتوى (render لاحق) قبل اكتمال الاستيراد الديناميكي — نتحقق أن
+            // الحاوية ما زالت في DOM الحالي قبل الرسم عليها.
+            if (!this.container?.contains(mapEl)) return;
+
+            mapEl.innerHTML = '';
+            const focus = center || { lat: Number(points[0].lat), lng: Number(points[0].lng) };
+            const map = L.map(mapEl).setView([focus.lat, focus.lng], center ? 14 : 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            if (center) {
+                L.marker([center.lat, center.lng]).addTo(map).bindPopup('موقع المشروع');
+            }
+            points.forEach(p => {
+                L.marker([Number(p.lat), Number(p.lng)]).addTo(map).bindPopup(escapeHtml(p.name || 'منافس'));
+            });
+
+            const boundsPoints = [
+                ...(center ? [[center.lat, center.lng]] : []),
+                ...points.map(p => [Number(p.lat), Number(p.lng)])
+            ];
+            if (boundsPoints.length > 1) {
+                map.fitBounds(L.latLngBounds(boundsPoints), { padding: [24, 24] });
+            }
+        } catch (e) {
+            console.error('renderCompetitorMap error:', e);
+            mapEl.innerHTML = `<p class="text-muted text-sm">تعذّر تحميل الخريطة.</p>`;
+        }
     }
 
     renderTAMSAMSOM(data) {
@@ -784,7 +861,8 @@ export class MarketAnalysis {
                     if (isUsable(live) && Array.isArray(live.value?.sample) && live.value.sample.length > 0) {
                         const current = state.marketing?.competitors || [];
                         const fromOsm = live.value.sample.map(s => ({
-                            name: s.name, marketShare: 0, strengths: '', weaknesses: '', advantage: ''
+                            name: s.name, marketShare: 0, strengths: '', weaknesses: '', advantage: '',
+                            ...(Number.isFinite(s.lat) && Number.isFinite(s.lng) ? { lat: s.lat, lng: s.lng } : {})
                         }));
                         this.store.update('marketing', {
                             ...state.marketing,

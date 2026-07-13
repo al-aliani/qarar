@@ -7,46 +7,63 @@
  * const { valid, errors } = validateStudy(store.getState());
  * if (!valid) console.warn('تحذيرات التحقق:', errors);
  */
+import { z } from 'zod';
 
 const num = (v, def) => (v != null && v !== '' ? Number(v) : def);
+
+/**
+ * projectInfo وassumptions مبنيان على zod (superRefine) بدل سلسلة if يدوية — نفس القواعد
+ * والرسائل والترتيب بالضبط (مُتحقَّق منه بمقارنة تكافؤ في validation.zodEquivalence.test.js)،
+ * فقط بمصدر حقيقة واحد تعريفي بدل منطق مبعثر. باقي دوال هذا الملف تبقى كما كانت — لا فائدة
+ * حقيقية من تحويلها (منطقها التراكمي عبر مصفوفات ديناميكية لا يستفيد من مخطط ثابت).
+ */
+const projectInfoSchema = z.any().superRefine((p, ctx) => {
+  if (typeof p?.name === 'string' && p.name.trim().length === 0 && (p.description || p.concept)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'اسم المشروع فارغ بينما يوجد وصف أو فكرة' });
+  }
+  const area = num(p?.areaSize, null);
+  if (area != null && (Number.isNaN(area) || area < 0)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'مساحة المشروع يجب أن تكون رقماً موجباً' });
+  }
+});
 
 /**
  * @param {object} p - projectInfo
  * @returns {{ valid: boolean, errors: string[] }}
  */
 export function validateProjectInfo(p) {
-  const err = [];
   if (!p || typeof p !== 'object') return { valid: false, errors: ['بيانات المشروع مفقودة'] };
-  if (typeof p.name === 'string' && p.name.trim().length === 0 && (p.description || p.concept)) {
-    err.push('اسم المشروع فارغ بينما يوجد وصف أو فكرة');
-  }
-  const area = num(p.areaSize, null);
-  if (area != null && (Number.isNaN(area) || area < 0)) {
-    err.push('مساحة المشروع يجب أن تكون رقماً موجباً');
-  }
-  return { valid: err.length === 0, errors: err };
+  const result = projectInfoSchema.safeParse(p);
+  const errors = result.success ? [] : result.error.issues.map(i => i.message);
+  return { valid: errors.length === 0, errors };
 }
+
+const assumptionsSchema = z.any().superRefine((a, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+
+  const tax = num(a?.taxRate, 0.15);
+  if (!Number.isNaN(tax) && (tax < 0 || tax > 1)) issue('نسبة الضريبة يجب أن تكون بين 0 و 100%');
+  const disc = num(a?.discountRate, null);
+  if (disc == null || Number.isNaN(disc)) issue('معدل الخصم مطلوب حتى تكون مؤشرات NPV وIRR قابلة للاعتماد');
+  if (!Number.isNaN(disc) && (disc < 0 || disc > 0.5)) issue('معدل الخصم يجب أن يكون بين 0 و 50%');
+  const inf = num(a?.inflationRate, 0.02);
+  if (!Number.isNaN(inf) && (inf < 0 || inf > 0.2)) issue('معدل التضخم يقترح أن يكون بين 0 و 20%');
+  const years = num(a?.projectionYears, num(a?.years, 5));
+  if (!Number.isNaN(years) && (years < 1 || years > 30)) issue('سنوات التخطيط يجب أن تكون بين 1 و 30');
+  const wc = num(a?.workingCapitalMonths, null);
+  if (wc == null || Number.isNaN(wc)) issue('أشهر رأس المال العامل مطلوبة حتى لا تُخفى مخاطر السيولة');
+  if (wc != null && !Number.isNaN(wc) && (wc < 0 || wc > 24)) issue('أشهر رأس المال العامل يقترح أن تكون بين 0 و 24');
+});
 
 /**
  * @param {object} a - assumptions
  * @returns {{ valid: boolean, errors: string[] }}
  */
 export function validateAssumptions(a) {
-  const err = [];
   if (!a || typeof a !== 'object') return { valid: true, errors: [] };
-  const tax = num(a.taxRate, 0.15);
-  if (!Number.isNaN(tax) && (tax < 0 || tax > 1)) err.push('نسبة الضريبة يجب أن تكون بين 0 و 100%');
-  const disc = num(a.discountRate, null);
-  if (disc == null || Number.isNaN(disc)) err.push('معدل الخصم مطلوب حتى تكون مؤشرات NPV وIRR قابلة للاعتماد');
-  if (!Number.isNaN(disc) && (disc < 0 || disc > 0.5)) err.push('معدل الخصم يجب أن يكون بين 0 و 50%');
-  const inf = num(a.inflationRate, 0.02);
-  if (!Number.isNaN(inf) && (inf < 0 || inf > 0.2)) err.push('معدل التضخم يقترح أن يكون بين 0 و 20%');
-  const years = num(a.projectionYears, num(a.years, 5));
-  if (!Number.isNaN(years) && (years < 1 || years > 30)) err.push('سنوات التخطيط يجب أن تكون بين 1 و 30');
-  const wc = num(a.workingCapitalMonths, null);
-  if (wc == null || Number.isNaN(wc)) err.push('أشهر رأس المال العامل مطلوبة حتى لا تُخفى مخاطر السيولة');
-  if (wc != null && !Number.isNaN(wc) && (wc < 0 || wc > 24)) err.push('أشهر رأس المال العامل يقترح أن تكون بين 0 و 24');
-  return { valid: err.length === 0, errors: err };
+  const result = assumptionsSchema.safeParse(a);
+  const errors = result.success ? [] : result.error.issues.map(i => i.message);
+  return { valid: errors.length === 0, errors };
 }
 
 /**

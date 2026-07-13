@@ -235,10 +235,27 @@ FROM public.studies s
 LEFT JOIN public.profiles p ON s.user_id = p.id;
 
 -- ============================================
--- 8. Storage Bucket for Attachments (Optional)
+-- 8. Storage Bucket for Attachments
 -- ============================================
--- Run this in Supabase Dashboard > Storage
--- INSERT INTO storage.buckets (id, name, public) VALUES ('attachments', 'attachments', false);
+-- خاص (public=false) — الوصول فقط عبر رابط موقَّع مؤقت (createSignedUrl) أو RLS أدناه.
+-- يطابق مسار الرفع في web/js/services/AttachmentsService.js: {auth.uid()}/{studyId}/{file}
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('attachments', 'attachments', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- RLS على storage.objects مُفعّلة افتراضياً من Supabase — نضيف فقط سياسات الوصول.
+-- كل مستخدم يرى/يرفع/يحذف فقط ما تحت مجلده الخاص (أول جزء من المسار = معرّف المستخدم).
+CREATE POLICY "Users can view own attachments"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'attachments' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can upload own attachments"
+    ON storage.objects FOR INSERT
+    WITH CHECK (bucket_id = 'attachments' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can delete own attachments"
+    ON storage.objects FOR DELETE
+    USING (bucket_id = 'attachments' AND (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ============================================
 -- SETUP COMPLETE!

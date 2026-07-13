@@ -13,7 +13,7 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; frame-src https://www.openstreetmap.org https://www.google.com https://www.recaptcha.net; connect-src 'self' https://*.supabase.co https://www.google.com https://www.recaptcha.net https://overpass-api.de https://api.worldbank.org; base-uri 'self'; form-action 'self'" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.tile.openstreetmap.org; frame-src https://www.openstreetmap.org https://www.google.com https://www.recaptcha.net; connect-src 'self' https://*.supabase.co https://www.google.com https://www.recaptcha.net https://overpass-api.de https://api.worldbank.org; base-uri 'self'; form-action 'self'" },
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },

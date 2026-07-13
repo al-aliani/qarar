@@ -48,19 +48,20 @@ const DEFAULT_RADIUS_M = 1500;
 export function buildOverpassQuery(lat, lng, radiusMeters = DEFAULT_RADIUS_M) {
     const r = Number(radiusMeters) > 0 ? Number(radiusMeters) : DEFAULT_RADIUS_M;
     // nwr = node|way|relation؛ نلتقط المطاعم والوجبات السريعة والمقاهي فقط.
-    // out tags = نُعيد الوسوم (للأسماء) دون هندسة كاملة → استجابة أخفّ.
+    // out tags center = وسوم (للأسماء) + مركز إحداثي لكل عنصر (nodes تملكه أصلاً، وways/
+    // relations يُحتسب لها بـ"center") — لازم لعرض خريطة المنافسين، ببيانات أخفّ من geometry كاملة.
     return `[out:json][timeout:25];
 (
   nwr["amenity"~"^(restaurant|fast_food|cafe)$"](around:${r},${lat},${lng});
 );
-out tags;`;
+out tags center;`;
 }
 
 /**
- * تحليل استجابة Overpass JSON إلى عدد وعيّنة أسماء.
+ * تحليل استجابة Overpass JSON إلى عدد وعيّنة أسماء + إحداثيات (حين تتوفر).
  * مُصدَّر ليتمكّن الاختبار من تمريره كائناً وهمياً دون شبكة.
  * @param {Object} json  جسم استجابة Overpass المُحلَّل
- * @returns {{ count:number, sample:Array<{name:string}> }}
+ * @returns {{ count:number, sample:Array<{name:string, lat?:number, lng?:number}> }}
  */
 export function parseOverpassCount(json) {
     const elements = Array.isArray(json?.elements) ? json.elements : [];
@@ -70,7 +71,15 @@ export function parseOverpassCount(json) {
         if (sample.length >= 8) break;
         const name = el?.tags?.name;
         if (typeof name === 'string' && name.trim()) {
-            sample.push({ name: name.trim() });
+            // nodes: lat/lon مباشرة على العنصر. ways/relations: center.lat/center.lon (بفضل "out center").
+            const lat = Number(el?.lat ?? el?.center?.lat);
+            const lng = Number(el?.lon ?? el?.center?.lon);
+            const entry = { name: name.trim() };
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                entry.lat = lat;
+                entry.lng = lng;
+            }
+            sample.push(entry);
         }
     }
     return { count, sample };
