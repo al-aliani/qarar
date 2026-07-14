@@ -19,9 +19,18 @@ function dir(name) {
 
 async function shoot(page, folder, name, opts = {}) {
     await page.waitForTimeout(opts.wait ?? 900);
+    const fullPage = opts.fullPage !== false;
+    if (fullPage) {
+        // التطبيق يستخدم حاوية داخلية (.main-stage) تُمرَّر بدل الـ body،
+        // فالتقاط fullPage العادي يقتصر على ارتفاع الشاشة فقط. نلغي ذلك مؤقتاً
+        // قبل اللقطة كي يمتد الـ document الفعلي بكامل المحتوى.
+        await page.addStyleTag({
+            content: `body, .app-shell, .main-stage { overflow: visible !important; height: auto !important; }`,
+        }).catch(() => {});
+    }
     await page.screenshot({
         path: path.join(folder, `${name}.png`),
-        fullPage: opts.fullPage !== false,
+        fullPage,
     });
     console.log(`  ✓ ${name}`);
 }

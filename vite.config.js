@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 import fs from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -52,6 +53,8 @@ export default defineConfig({
                 privacy: resolve(__dirname, 'web/privacy.html'),
                 // investor.html: صفحة عرض المستثمر (للقراءة فقط) — أُصلح الاستيراد المكسور (getPitchFromStorage)
                 investor: resolve(__dirname, 'web/investor.html'),
+                charts: resolve(__dirname, 'web/financial_charts.html'),
+                dashboard: resolve(__dirname, 'web/dashboard.html'),
             },
         },
     },
@@ -116,6 +119,7 @@ export default defineConfig({
         }
     },
     plugins: [
+        react(),
         {
             name: 'configure-server',
             configureServer(server) {
