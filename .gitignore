@@ -37,3 +37,7 @@ Thumbs.db
 # === Local databases ===
 *.db
 experience_brain.db
+
+# === مستودعات Skills خارجية مستنسَخة محلياً (لها .git خاص بها — ليست جزءاً
+#     من كود المشروع؛ إضافتها بـgit add عادي تُنتج embedded repo مكسور) ===
+.agents/
