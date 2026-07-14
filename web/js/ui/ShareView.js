@@ -32,6 +32,10 @@ export class ShareView {
         const revenue = state.revenue || {};
         const costs = state.costs || {};
         const engineResults = state.engineResults || {};
+        const indicators = engineResults.indicators || engineResults || {};
+        if (engineResults.indicators && engineResults.paybackPeriod == null) {
+            engineResults.paybackPeriod = indicators.paybackPeriod;
+        }
 
         // Generate Executive Summary if missing
         const execSummary = generateExecutiveSummary(state, engineResults);
@@ -128,11 +132,11 @@ export class ShareView {
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
                         <div class="kpi-card text-center p-6 bg-white rounded-2xl shadow-lg border-b-4 border-blue-500">
                             <div class="text-gray-400 text-xs mb-1">صافي القيمة الحالية (NPV)</div>
-                            <div class="text-xl font-bold text-blue-600">${engineResults.npv ? Math.round(engineResults.npv).toLocaleString() : '-'}</div>
+                            <div class="text-xl font-bold text-blue-600">${this.formatMoney(indicators.npv)}</div>
                         </div>
                         <div class="kpi-card text-center p-6 bg-white rounded-2xl shadow-lg border-b-4 border-green-500">
                             <div class="text-gray-400 text-xs mb-1">العائد الداخلي (IRR)</div>
-                            <div class="text-xl font-bold text-green-600">${engineResults.irr ? engineResults.irr + '%' : '-'}</div>
+                            <div class="text-xl font-bold text-green-600">${this.formatPercent(indicators.irr)}</div>
                         </div>
                         <div class="kpi-card text-center p-6 bg-white rounded-2xl shadow-lg border-b-4 border-purple-500">
                             <div class="text-gray-400 text-xs mb-1">فترة الاسترداد</div>
@@ -140,7 +144,7 @@ export class ShareView {
                         </div>
                         <div class="kpi-card text-center p-6 bg-white rounded-2xl shadow-lg border-b-4 border-orange-500">
                             <div class="text-gray-400 text-xs mb-1">هامش الربح (السنة 1)</div>
-                            <div class="text-xl font-bold text-orange-600">${engineResults.profitMargin ? engineResults.profitMargin + '%' : '-'}</div>
+                            <div class="text-xl font-bold text-orange-600">${this.formatPercent(indicators.profitMargin)}</div>
                         </div>
                     </div>
 
@@ -164,6 +168,25 @@ export class ShareView {
                 <a href="./" class="btn btn--primary">الذهاب للصفحة الرئيسية</a>
             </div>
         `;
+    }
+
+    formatMoney(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return '-';
+        return Math.round(n).toLocaleString();
+    }
+
+    formatPercent(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return '-';
+        const percent = Math.abs(n) <= 1 ? n * 100 : n;
+        return `${percent.toFixed(1)}%`;
+    }
+
+    formatYears(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n) || n <= 0) return '-';
+        return `${n.toFixed(1)} سنوات`;
     }
 
     bindEvents() {
