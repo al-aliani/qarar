@@ -1,0 +1,83 @@
+/* شريط بطاقات تصنيفات الدراسة الثمانية — دائم أعلى منطقة العمل، بديل مرئي
+   لنافذة «مسار الدراسة» المنبثقة (تبقى متاحة عبر زر breadcrumb-bar للاختصار).
+   يُبنى بواسطة StudyJourney.renderCategoryStepper() في web/js/ui/StudyJourney.js.
+   :empty يُخفيه تلقائياً قبل أول render (على الصفحة الرئيسية/الهبوط مثلاً). */
+.category-stepper {
+  display: none;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px max(16px, calc((100% - 800px) / 2)) 4px;
+  scrollbar-width: thin;
+}
+.category-stepper:not(:empty) {
+  display: flex;
+}
+
+.category-stepper__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  width: 92px;
+  padding: 8px 6px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-bg-card);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  /* عمداً transform فقط: تحريك border-color/background-color هنا كانت قيمته
+     تتجمّد على لون الثيم القديم عند تبديل [data-theme] (خاصية CSS غير مسجَّلة
+     عبر @property لا تتحرك بأمان بين قيمتي --c-p-500 فاتح/داكن في Chromium) —
+     تحقّق حي أظهر أن color (بلا transition) يتبدّل فوراً بينما border/background
+     العابرتان تجمدان على القيمة القديمة. اللون يتبدّل فوراً بدل التحرك، مقبول. */
+  transition: transform .15s ease;
+  font: inherit;
+}
+.category-stepper__card:hover {
+  transform: translateY(-1px);
+  border-color: var(--c-p-subtle);
+}
+.category-stepper__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  background: var(--c-surface-2);
+  color: inherit;
+}
+.category-stepper__icon .ic { width: 16px; height: 16px; }
+.category-stepper__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.category-stepper__card.is-active {
+  border-color: var(--c-p-500);
+  background: var(--c-p-subtle);
+  color: var(--c-p-500);
+}
+.category-stepper__card.is-active .category-stepper__icon {
+  background: var(--c-p-500);
+  color: var(--c-p-contrast);
+}
+
+.category-stepper__card.is-done {
+  color: var(--c-text-main);
+}
+.category-stepper__card.is-done .category-stepper__icon {
+  background: var(--c-gold-subtle);
+  color: var(--c-gold-500);
+}
+
+@media (max-width: 768px) {
+  .category-stepper { display: none !important; }
+}

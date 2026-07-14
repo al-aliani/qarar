@@ -5,6 +5,19 @@ const arabicNumber = (value) => new Intl.NumberFormat('ar-SA-u-nu-arab', {
     maximumFractionDigits: 0
 }).format(Number(value) || 0);
 
+// أيقونات بطاقات مسار التصنيفات — كلها من مكتبة السبرايت الموحّدة في index.html
+// (لا SVG جديد)، مفاتيحها معرّفات SIDEBAR_SECTIONS في wizardSteps.js.
+const CATEGORY_ICON = {
+    setup: 'i-shield',
+    marketing: 'i-chart',
+    technical: 'i-settings',
+    advanced: 'i-calendar',
+    financial: 'i-bank',
+    strategic: 'i-warning',
+    appendices: 'i-doc',
+    results: 'i-trophy',
+};
+
 export function getStudyJourneyContext(activeStepIndex, steps = STEPS, stepIndexMap = null, sections = SIDEBAR_SECTIONS, masterSteps = STEPS) {
     const visibleSteps = Array.isArray(steps) && steps.length ? steps : STEPS;
     const absoluteIndices = Array.isArray(stepIndexMap) && stepIndexMap.length === visibleSteps.length
@@ -41,6 +54,7 @@ export class StudyJourney {
         this.header = document.getElementById(options.headerId || 'headerStageBar');
         this.mobile = document.getElementById(options.mobileId || 'mobileStageIndicator');
         this.breadcrumb = document.getElementById(options.breadcrumbId || 'breadcrumbBar');
+        this.categoryStepper = document.getElementById(options.categoryStepperId || 'categoryStepper');
         this.openButton = document.getElementById(options.openButtonId || 'btnOpenStudyMap');
         this.dialog = document.getElementById(options.dialogId || 'studyMapDialog');
         this.onNavigate = options.onNavigate || (() => {});
@@ -92,7 +106,43 @@ export class StudyJourney {
         }
 
         this.renderDialog(context);
+        this.renderCategoryStepper(context);
         return context;
+    }
+
+    /**
+     * شريط بطاقات دائم لتصنيفات الدراسة الثمانية (بديل مرئي لنافذة «مسار الدراسة»
+     * المنبثقة) — يُبنى فقط في نسخة StudyJourney الخاصة بالتصنيفات (unitLabel
+     * === 'التصنيف'، انظر تهيئتها في app.js) كي لا يظهر مكرراً في نسخة الخطوات
+     * التفصيلية. «مكتمل/نشط/قادم» مبني على ترتيب التنقل الفعلي (context.localIndex)
+     * لا على progressTracker — هذا شريط تقدّم في الرحلة، لا قائمة اكتمال بيانات
+     * (تلك مسؤولية Sidebar.js القائمة أصلاً)، فلا داعٍ لربطه بمنطق رؤية الوضع
+     * (mini/simple) الذي قد يجعل فئة "غير مكتملة" زوراً لخطوات مخفية عمداً.
+     */
+    renderCategoryStepper(context) {
+        if (!this.categoryStepper || this.unitLabel !== 'التصنيف') return;
+
+        const cards = context.visibleSteps.map((step, localIndex) => {
+            const isActive = localIndex === context.localIndex;
+            const isDone = localIndex < context.localIndex;
+            const icon = CATEGORY_ICON[step.id] || 'i-folder';
+            const state = isActive ? 'is-active' : isDone ? 'is-done' : 'is-upcoming';
+            return `
+                <button type="button"
+                    class="category-stepper__card ${state}"
+                    data-study-step="${context.absoluteIndices[localIndex]}"
+                    ${isActive ? 'aria-current="step"' : ''}
+                    title="${escapeHtml(step.label)}">
+                    <span class="category-stepper__icon" aria-hidden="true">${
+                        isDone
+                            ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>'
+                            : `<svg class="ic" aria-hidden="true"><use href="#${icon}"/></svg>`
+                    }</span>
+                    <span class="category-stepper__label">${escapeHtml(step.label)}</span>
+                </button>`;
+        }).join('');
+
+        this.categoryStepper.innerHTML = cards;
     }
 
     renderDialog(context) {
@@ -163,6 +213,14 @@ export class StudyJourney {
             const target = Number(stepButton.dataset.studyStep);
             if (!Number.isInteger(target) || target < 0) return;
             this.close();
+            this.onNavigate(target);
+        });
+
+        this.categoryStepper?.addEventListener('click', (event) => {
+            const card = event.target.closest('[data-study-step]');
+            if (!card) return;
+            const target = Number(card.dataset.studyStep);
+            if (!Number.isInteger(target) || target < 0) return;
             this.onNavigate(target);
         });
     }

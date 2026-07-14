@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { AgGridReact } from 'ag-grid-react';
+import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
+
+// ag-grid-community v33+ يتطلب تسجيل الوحدات صراحةً قبل الاستخدام (ClientSideRowModel،
+// Pagination، الفلاتر...) — بدونه: أخطاء #239/#200 صامتة بالكونسول والجدول لا يعمل فعلياً.
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 export default function FinancialDataGrid() {
   const [rowData] = useState([
@@ -20,15 +25,19 @@ export default function FinancialDataGrid() {
   ]);
 
   return (
-    <div style={{ background: 'white', padding: '1.5rem', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-      <h3 style={{ margin: '0 0 1rem', color: '#1e293b' }}>قاعدة البيانات المالية التفصيلية 📊</h3>
+    <div>
+      <h3 className="m-0 mb-4 text-slate-900 dark:text-white font-bold">قاعدة البيانات المالية التفصيلية</h3>
       <div className="ag-theme-alpine" style={{ height: 300, width: '100%', direction: 'rtl' }}>
         <AgGridReact
+          // v33+ Theming API الافتراضي يتعارض مع ملفات CSS القديمة المستوردة أعلاه
+          // (خطأ #239) — legacy يبقي الجدول على ag-theme-alpine.css كما هو مصمَّم هنا.
+          theme="legacy"
           rowData={rowData}
           columnDefs={columnDefs}
           enableRtl={true}
           pagination={true}
           paginationPageSize={5}
+          paginationPageSizeSelector={false}
         />
       </div>
     </div>

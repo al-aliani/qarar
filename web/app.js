@@ -844,6 +844,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     enhanceFieldHelp(document.getElementById('wizardContainer'));
     studyJourney?.update(safeCategoryIndex);
+    window.aiChatModal?.setCategoryContext(category.id, category.label);
 
     const mainStage = document.querySelector('.main-stage');
     if (mainStage && activeStepIndex === category.range[0]) mainStage.scrollTop = 0;
@@ -1651,6 +1652,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const aiChat = new AIChatModal(store);
     aiChat.mount();
     window.aiChatModal = aiChat;
+    // تحميل هذا الوحدة كسول (dynamic import) — قد يكتمل بعد أول navigateToCategory،
+    // فتفوته نصيحة القسم الأول. نلتقط التصنيف الحالي فوراً من آخر خطوة مطلوبة.
+    const currentCategory = SIDEBAR_SECTIONS.find(c => latestRequestedStepIndex >= c.range[0] && latestRequestedStepIndex <= c.range[1]);
+    if (currentCategory) aiChat.setCategoryContext(currentCategory.id, currentCategory.label);
   }).catch((e) => console.warn('AIChatModal load failed:', e));
 
   // ═══════════════════════════════════════════════════════════════════

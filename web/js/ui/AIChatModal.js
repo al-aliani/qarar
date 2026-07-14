@@ -8,6 +8,7 @@ import { calculateStudy as runFullModel } from '../core/engine.js';
 import { SmartAdvisor } from '../services/SmartAdvisor.js';
 import { generateSWOT, generateAdvisorFallback, generateFinancialImprovementAdvice } from '../services/InternalAIGenerator.js';
 import { escapeHtml } from '../utils/escape.js';
+import { CATEGORY_TIPS } from '../core/categoryTips.js';
 
 const SUGGESTED_PROMPTS = [
     { label: 'ما توصياتك لمشروعي؟', type: 'advisor' },
@@ -27,6 +28,21 @@ export class AIChatModal {
         this.isLoading = false;
         this.container = null;
         this.fab = null;
+        this.currentTip = null;
+        this._lastTipCategoryId = null;
+    }
+
+    /**
+     * يُستدعى من app.js عند كل تنقّل بين تصنيفات الدراسة — يعرض نصيحة القسم
+     * كشريط ثابت أعلى الدردشة (لا كرسالة في السجل، كي لا يتضخم السجل بتكرارها
+     * عند التنقل ذهاباً وإياباً بين الأقسام).
+     */
+    setCategoryContext(categoryId, categoryLabel) {
+        const tip = CATEGORY_TIPS[categoryId];
+        if (!tip || this._lastTipCategoryId === categoryId) return;
+        this._lastTipCategoryId = categoryId;
+        this.currentTip = { label: categoryLabel, text: tip };
+        if (this.isOpen) this.render();
     }
 
     /**
@@ -51,22 +67,27 @@ export class AIChatModal {
         this.container.className = 'ai-chat-panel';
         this.container.style.cssText = `
             position: fixed; bottom: 0; left: 0; right: 0; top: auto;
-            max-height: 480px; z-index: 9999; background: #fff;
-            border-radius: 16px 16px 0 0; box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+            max-height: 480px; z-index: 9999; background: var(--c-bg-card, #fff);
+            border-radius: 16px 16px 0 0; box-shadow: var(--shadow-lg, 0 -4px 24px rgba(0,0,0,0.15));
             display: none; flex-direction: column; font-family: inherit;
         `;
         if (!document.getElementById('ai-chat-styles')) {
             const style = document.createElement('style');
             style.id = 'ai-chat-styles';
+            // ألوان الهوية (--c-p-500 أخضر / --c-gold-500 نحاسي) بدل الكحلي #1e3a5f
+            // المُقحَم سابقاً بلا علاقة بهوية «قرار» — تتبع الوضع الداكن تلقائياً
+            // لأنها متغيرات CSS من web/css/variables.css، لا قيم صلبة.
             style.textContent = `
                 .ai-chat-msg.user { text-align: right; }
-                .ai-chat-msg.user .ai-chat-bubble { background: #1e3a5f; color: #fff; margin-right: 0; margin-left: auto; }
+                .ai-chat-msg.user .ai-chat-bubble { background: var(--c-p-500, #0e5b44); color: var(--c-p-contrast, #fff); margin-right: 0; margin-left: auto; }
                 .ai-chat-msg.assistant { text-align: right; }
-                .ai-chat-msg.assistant .ai-chat-bubble { background: #f1f5f9; color: #1e293b; border: 1px solid #e2e8f0; }
-                .ai-chat-msg.system { padding: 12px; background: #f8fafc; color: #64748b; font-size: 13px; border-radius: 8px; margin-bottom: 12px; }
+                .ai-chat-msg.assistant .ai-chat-bubble { background: var(--c-surface-2, #f1f5f9); color: var(--c-text-main, #1e293b); border: 1px solid var(--c-border, #e2e8f0); }
+                .ai-chat-msg.system { padding: 12px; background: var(--c-surface-2, #f8fafc); color: var(--c-text-muted, #64748b); font-size: 13px; border-radius: 8px; margin-bottom: 12px; }
                 .ai-chat-bubble { display: inline-block; max-width: 90%; padding: 12px 16px; border-radius: 12px; margin: 6px 0; text-align: right; }
-                .ai-chat-suggest { padding: 8px 14px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; cursor: pointer; }
-                .ai-chat-suggest:hover { background: #e2e8f0; }
+                .ai-chat-suggest { padding: 8px 14px; background: var(--c-surface-2, #f1f5f9); border: 1px solid var(--c-border, #e2e8f0); border-radius: 8px; font-size: 12px; cursor: pointer; color: var(--c-text-main); }
+                .ai-chat-suggest:hover { background: var(--c-surface-3, #e2e8f0); }
+                .ai-chat-tip { margin: 12px 16px 0; padding: 10px 12px; border-radius: 10px; background: var(--c-gold-subtle); border-inline-start: 3px solid var(--c-gold-500); font-size: 12.5px; color: var(--c-text-main); line-height: 1.6; }
+                .ai-chat-tip b { color: var(--c-gold-500); }
             `;
             document.head.appendChild(style);
         }
@@ -304,14 +325,19 @@ export class AIChatModal {
             })
             .join('');
 
+        const tipHtml = this.currentTip
+            ? `<div class="ai-chat-tip"><b>نصيحة قسم «${escapeHtml(this.currentTip.label)}»:</b> ${escapeHtml(this.currentTip.text)}</div>`
+            : '';
+
         this.container.innerHTML = `
-            <div class="ai-chat-header" style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+            <div class="ai-chat-header" style="padding:16px 20px;border-bottom:1px solid var(--c-border, #e2e8f0);">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <h3 style="margin:0;font-size:18px;font-weight:700;">المستشار</h3>
+                    <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--c-text-main);">المستشار</h3>
                     <button type="button" class="ai-chat-close" aria-label="إغلاق">×</button>
                 </div>
-                <div style="font-size:12px;color:#64748b;margin-top:4px;">مساعد قواعد محلي — يجيب عن مواضيع محددة (SWOT، الملخص، المخاطر، اختبار الضغط) من بيانات دراستك، لا نموذج محادثة عام.</div>
+                <div style="font-size:12px;color:var(--c-text-muted, #64748b);margin-top:4px;">مساعد قواعد محلي — يجيب عن مواضيع محددة (SWOT، الملخص، المخاطر، اختبار الضغط) من بيانات دراستك، لا نموذج محادثة عام.</div>
             </div>
+            ${tipHtml}
             <div class="ai-chat-messages" style="flex:1;overflow-y:auto;padding:16px;min-height:180px;">
                 ${messagesHtml}
                 ${this.isLoading ? '<div class="ai-chat-msg assistant"><div class="ai-chat-bubble typing">جارٍ التحليل…</div></div>' : ''}
@@ -319,10 +345,10 @@ export class AIChatModal {
             <div class="ai-chat-suggestions" style="padding:8px 16px;display:flex;flex-wrap:wrap;gap:8px;">
                 ${suggestedHtml}
             </div>
-            <div class="ai-chat-input-row" style="padding:16px;border-top:1px solid #e2e8f0;display:flex;gap:8px;">
+            <div class="ai-chat-input-row" style="padding:16px;border-top:1px solid var(--c-border, #e2e8f0);display:flex;gap:8px;">
                 <input type="text" class="ai-chat-input" placeholder="اكتب سؤالك..." dir="rtl"
-                    style="flex:1;padding:12px 16px;border:1px solid #e2e8f0;border-radius:12px;font-size:14px;">
-                <button type="button" class="ai-chat-send" style="padding:12px 20px;background:#1e3a5f;color:#fff;border:none;border-radius:12px;font-weight:600;cursor:pointer;">إرسال</button>
+                    style="flex:1;padding:12px 16px;border:1px solid var(--c-border, #e2e8f0);border-radius:12px;font-size:14px;background:var(--c-bg-card);color:var(--c-text-main);">
+                <button type="button" class="ai-chat-send" style="padding:12px 20px;background:var(--c-p-500, #0e5b44);color:var(--c-p-contrast, #fff);border:none;border-radius:12px;font-weight:600;cursor:pointer;">إرسال</button>
             </div>
         `;
 

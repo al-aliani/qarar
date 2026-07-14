@@ -82,13 +82,13 @@
         visibility: visible;
         margin-block-end: 8mm;
         padding-block-end: 4mm;
-        border-block-end: 2px solid #0b6b4f;
+        border-block-end: 2px solid #0e5b44;
     }
 
     .tool-report-print-brand {
         font-size: 11pt;
         font-weight: 700;
-        color: #0b6b4f;
+        color: #0e5b44;
     }
 
     .tool-report-print-title {

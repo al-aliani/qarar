@@ -115,7 +115,11 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            '/lib': resolve(__dirname, 'lib')
+            '/lib': resolve(__dirname, 'lib'),
+            // web/dashboard.html يستورد "/src/main.jsx" (لوحة React) — بما أن root:'./web'
+            // أعلاه، فبدون هذا الألياس يبحث Vite عن web/src غير الموجود (404 صامت،
+            // اللوحة تُحمَّل بلا React إطلاقاً). src/ فعلياً في جذر المستودع.
+            '/src': resolve(__dirname, 'src')
         }
     },
     plugins: [
