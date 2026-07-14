@@ -19,6 +19,9 @@ import { animateCounter } from '../utils/ui.js';
 import { runQAChecks } from '../utils/qaChecks.js';
 import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
 import { toast } from '../utils/toast.js';
+import confetti from 'canvas-confetti';
+import { GridStack } from 'gridstack';
+import 'gridstack/dist/gridstack.min.css';
 
 export class DecisionDashboard {
     // onNavigate اختياري (تدقيق 2026-07-12): يمرَّره stepComponentRegistry.js — نفس دالة
@@ -285,10 +288,10 @@ export class DecisionDashboard {
                     </div>
                 ` : ''}
 
-                <div class="dashboard-grid">
+                <div class="dashboard-grid grid-stack">
                      <!-- Scoring Breakdown -->
-                    <div class="dashboard-col">
-                        <div class="card glass-card h-full">
+                    <div class="dashboard-col grid-stack-item" gs-w="12" gs-h="4">
+                        <div class="card glass-card h-full grid-stack-item-content">
                             <h4 class="card-title flex justify-between items-center">
                                 <span>تفاصيل التقييم</span>
                                 <span class="text-xs text-muted font-normal">${evaluation.score}/100 نقطة</span>
@@ -313,10 +316,10 @@ export class DecisionDashboard {
                     </div>
                 </div><!-- /dashboard-grid (تفاصيل التقييم) — كان غير مُغلق فيبتلع الشبكة التالية وشريط الأفعال -->
 
-                <div class="dashboard-grid">
+                <div class="dashboard-grid grid-stack" style="margin-top: 20px;">
                     <!-- Left Column: Metrics -->
-                    <div class="dashboard-col">
-                        <div class="card glass-card">
+                    <div class="dashboard-col grid-stack-item" gs-w="6" gs-h="6">
+                        <div class="card glass-card grid-stack-item-content">
                             <!-- تدقيق 2026-07-12: كانت شبكة المؤشرات هذه (NPV/IRR/الاسترداد/العائد) تكرّر حرفياً
                             شبكة fullKpiGrid في FinancialDashboard.js، وفجوة التمويل وDSCR مكرّرتان أيضاً مع
                             بطاقة renderFinancingGate أعلى هذه الصفحة — ثلاث نسخ لنفس الأرقام. FinancialDashboard
@@ -578,6 +581,44 @@ export class DecisionDashboard {
         // «التفاصيل الكاملة» — قفز إلى خطوة لوحة المؤشرات المالية (المصدر الوحيد لشبكة
         // NPV/IRR/الاسترداد/العائد الكاملة بعد إزالة الشبكة المكرَّرة من هذه اللوحة).
         const btnGoFinancialDashboard = this.container.querySelector('#btnGoFinancialDashboard');
+        
+        // Initialize GridStack
+        setTimeout(() => {
+            try {
+                GridStack.initAll({
+                    cellHeight: 80,
+                    margin: 10,
+                    disableResize: false,
+                    disableDrag: false,
+                    float: true
+                });
+            } catch (e) { console.error('GridStack init error:', e); }
+        }, 100);
+
+        // Confetti for 'ready' projects
+        // jsdom (بيئة الاختبارات) لا يوفّر 2D context حقيقياً — confetti تكسر بلا هذا الحارس.
+        const canPlayConfetti = (() => {
+            try { return !!document.createElement('canvas').getContext('2d'); } catch { return false; }
+        })();
+        if (canPlayConfetti && (state.projectInfo?.readinessStatus === 'ready' || (results && results.indicators && results.indicators.npv > 0))) {
+            // Give it a brief delay before firing
+            setTimeout(() => {
+                const duration = 3 * 1000;
+                const animationEnd = Date.now() + duration;
+                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+                function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+
+                const interval = setInterval(function() {
+                    const timeLeft = animationEnd - Date.now();
+                    if (timeLeft <= 0) return clearInterval(interval);
+                    const particleCount = 50 * (timeLeft / duration);
+                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+                }, 250);
+            }, 500);
+        }
+
         if (btnGoFinancialDashboard) {
             const handler = () => {
                 if (!this.onNavigate) {

@@ -217,6 +217,39 @@ export function generateMarketDescriptions(state) {
     };
 }
 
+export function generateSmartGoals(state) {
+    const concept = (state?.projectInfo?.concept || state?.projectInfo?.name || 'مشروع جديد').toLowerCase();
+    const sector = (state?.projectInfo?.sector || '').toLowerCase();
+    const isTech = /تقني|تطبيق|برمجة|منصة|tech|app|software|platform/i.test(sector + concept);
+    const isRetail = /تجزئة|محل|متجر|بقالة|retail|store|shop/i.test(sector + concept);
+    const isFood = /مطعم|مقهى|كافيه|food|restaurant|cafe/i.test(sector + concept);
+
+    if (isTech) {
+        return [
+            { specific: 'الوصول إلى 1000 مستخدم نشط', measurable: '1000 مستخدم', achievable: 'yes', relevant: 'توسيع قاعدة العملاء', category: 'market', targetValue: 1000, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
+            { specific: 'تحقيق إيرادات اشتراكات بقيمة 50 ألف', measurable: '50,000 ريال', achievable: 'yes', relevant: 'نمو الإيرادات المتكررة', category: 'financial', targetValue: 50000, currentValue: 0, status: 'pending', timeBound: '2026-12-31' }
+        ];
+    } else if (isFood) {
+        return [
+            { specific: 'بيع 100 طلب يومياً', measurable: '100 طلب', achievable: 'yes', relevant: 'رفع حجم المبيعات', category: 'market', targetValue: 100, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
+            { specific: 'تحقيق مبيعات شهرية بقيمة 80 ألف', measurable: '80,000 ريال', achievable: 'yes', relevant: 'تحقيق نقطة التعادل', category: 'financial', targetValue: 80000, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
+            { specific: 'تقليل نسبة الهدر في المواد إلى 5%', measurable: '5%', achievable: 'yes', relevant: 'خفض التكاليف التشغيلية', category: 'operational', targetValue: 5, currentValue: 15, status: 'pending', timeBound: '2026-12-31' }
+        ];
+    } else if (isRetail) {
+        return [
+            { specific: 'تحقيق مبيعات بقيمة 100 ألف', measurable: '100,000 ريال', achievable: 'yes', relevant: 'نمو المبيعات', category: 'financial', targetValue: 100000, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
+            { specific: 'رفع معدل تحويل الزوار إلى مشترين إلى 20%', measurable: '20%', achievable: 'yes', relevant: 'تحسين كفاءة المعرض', category: 'operational', targetValue: 20, currentValue: 10, status: 'pending', timeBound: '2026-12-31' }
+        ];
+    }
+
+    // Default general goals
+    return [
+        { specific: 'تحقيق نقطة التعادل التشغيلية', measurable: 'تغطية التكاليف', achievable: 'yes', relevant: 'الاستدامة المالية', category: 'financial', targetValue: 100000, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
+        { specific: 'الحصول على 500 عميل جديد', measurable: '500 عميل', achievable: 'yes', relevant: 'اختراق السوق', category: 'market', targetValue: 500, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
+        { specific: 'توظيف وتدريب فريق أساسي من 3 أشخاص', measurable: '3 موظفين', achievable: 'yes', relevant: 'بناء القدرات', category: 'hr', targetValue: 3, currentValue: 0, status: 'pending', timeBound: '2026-12-31' }
+    ];
+}
+
 /**
  * توليد تحليل SWOT من بيانات الدراسة (داخلي، بدون API)
  * @param {object} state
@@ -320,7 +353,7 @@ export function generateTOWS(state) {
     const opportunities = (swot.opportunities || []).filter(Boolean);
     const threats = (swot.threats || []).filter(Boolean);
 
-    // يُزاوج حتى بندين من كل محور (إن وُجدا) بدل بند واحد فقط — النص بالكامل من بنود
+    // يُزاوج حتى بندين من كل محور (إن وُجد) بدل بند واحد فقط — النص بالكامل من بنود
     // SWOT الحقيقية لهذا المشروع تحديداً، فيختلف تلقائياً بين مشروعين مختلفين.
     const join = (items) => items.slice(0, 2).join('، و');
 
@@ -1145,7 +1178,9 @@ export function generateLicenses(state) {
         base.push({ name: 'ترخيص هيئة التخصصات الصحية', quantity: 1, price: 3000, notes: 'للمنشآت الطبية' });
         base.push({ name: 'رخصة هيئة الغذاء والدواء (مختبر)', quantity: 1, price: 1500, notes: 'للمختبرات إن وُجدت' });
     }
-    if (isEducation) base.push({ name: 'ترخيص التعليم / وزارة التعليم', quantity: 1, price: 4000, notes: 'مؤسسة تعليمية أو تدريبية' });
+    if (isEducation) {
+        base.push({ name: 'ترخيص التعليم / وزارة التعليم', quantity: 1, price: 4000, notes: 'مؤسسة تعليمية أو تدريبية' });
+    }
     if (isLogistics) {
         base.push({ name: 'رخصة نقل بضائع', quantity: 1, price: 3500, notes: 'وزارة النقل' });
         base.push({ name: 'سجل وكالة شحن (إن وُجد)', quantity: 1, price: 2000, notes: '' });
@@ -1659,17 +1694,17 @@ export function generateTechResources(state) {
         { name: 'موقع إلكتروني / منصة', quantity: 1, price: 8000, notes: 'تصميم واشتِراك' }
     ];
     if (isHealth) {
-        base.push({ name: 'سجل طبي إلكتروني ونظام مواعيد', quantity: 1, price: 12000, notes: 'اشتراك سنوي' });
-        base.push({ name: 'أنظمة أرشفة (صورة، تقارير)', quantity: 1, price: 5500, notes: '' });
+        base.push({ name: 'سجل طبي إلكتروني ونظام مواعيد', quantity: 1, price: 12000, notes: 'اشتراك سنوي' },
+        { name: 'أنظمة أرشفة (صورة، تقارير)', quantity: 1, price: 5500, notes: '' });
     } else if (isEducation) {
-        base.push({ name: 'منصة تعلم (LMS) وحضور', quantity: 1, price: 9000, notes: 'اشتراك سنوي' });
-        base.push({ name: 'أنظمة حجز قاعات ودورات', quantity: 1, price: 4000, notes: '' });
+        base.push({ name: 'منصة تعلم (LMS) وحضور', quantity: 1, price: 9000, notes: 'اشتراك سنوي' },
+        { name: 'أنظمة حجز قاعات ودورات', quantity: 1, price: 4000, notes: '' });
     } else if (isLogistics) {
-        base.push({ name: 'نظام إدارة نقل ومستودعات (TMS/WMS)', quantity: 1, price: 18000, notes: 'اشتراك أو ترخيص' });
-        base.push({ name: 'تتبع وربط مع عملاء', quantity: 1, price: 6000, notes: '' });
+        base.push({ name: 'نظام إدارة نقل ومستودعات (TMS/WMS)', quantity: 1, price: 18000, notes: 'اشتراك أو ترخيص' },
+        { name: 'تتبع وربط مع عملاء', quantity: 1, price: 6000, notes: '' });
     } else if (isIndustrial) {
-        base.push({ name: 'ERP أو إدارة إنتاج ومخزون', quantity: 1, price: 22000, notes: 'ترخيص سنوي' });
-        base.push({ name: 'تحكم آلات وجودة', quantity: 1, price: 8000, notes: '' });
+        base.push({ name: 'ERP أو إدارة إنتاج ومخزون', quantity: 1, price: 22000, notes: 'ترخيص سنوي' },
+        { name: 'تحكم آلات وجودة', quantity: 1, price: 8000, notes: '' });
     } else {
         base.push({ name: 'أنظمة حجز أو طلبات (إن وُجد)', quantity: 1, price: 3500, notes: '' });
     }
@@ -1688,9 +1723,9 @@ export function generateRevenueStreams(state) {
     const p = state?.projectInfo || {};
     const concept = shortActivity(p, 'الخدمة');
     const sector = or(p.sector, concept);
-    // تدقيق 2026-07-09: مقهى مختص كان يُصنَّف ضمن isFandB العام بمتوسط فاتورة
-    // مطعم كامل (45 ريال) — يضاعف الإيراد المتوقع تقريباً مقارنة بمتوسط فاتورة
-    // مقهى واقعي (مشروب + إضافة خفيفة)، ما يُفسد NPV/IRR مباشرة.
+    // تدقيق 2026-07-09: مقهى مختص لا يملك مطبخاً تجارياً كاملاً (لا شيف في
+    // generatePositions لنفس النشاط) — يجب ألا يُحمَّل بند "مطبخ تجاري وتهوية"
+    // 120,000 ريال المخصص لمطاعم الطهي الكامل؛ يكفيه بار تحضير مشروبات أخف تكلفة.
     const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|قهوة|فود|طعام/i.test(sector);
     // تدقيق دفعة 3 (اختبار عميل بقالة 2026-07-12): isGrocery يجب أن يُختبر قبل isRetail
@@ -1813,6 +1848,7 @@ export const InternalAIGenerator = {
     generateAdministrative,
     generateCampaigns,
     generateRevenueStreams,
+    generateSmartGoals,
     generatePositions,
     generateKeyPeople,
     generateBuildings,

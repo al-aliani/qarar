@@ -34,6 +34,27 @@ export function rateOrDefault(v, dflt) {
     return Number.isFinite(n) ? n : dflt;
 }
 
+export function calculateFinancingWACC(study) {
+    const financing = study?.[SECTIONS.FINANCING] || {};
+    const sources = financing.sources || {};
+    const equity = Number(sources.equity?.amount || 0);
+    const debt = Number(sources.bankLoan?.amount || 0);
+    const total = equity + debt;
+    if (total <= 0) return null;
+
+    const costOfEquity = Number.isFinite(Number(financing.costOfEquity))
+        ? Number(financing.costOfEquity)
+        : 0.15;
+    const costOfDebt = rateOrDefault(sources.bankLoan?.interestRate, 0.08);
+    const assumptions = study?.assumptions || {};
+    const foreignShare = Math.min(1, Math.max(0, Number(assumptions.foreignOwnershipRate ?? 0)));
+    const effectiveLevyRate = (0.025 * (1 - foreignShare)) + (Number(assumptions.taxRate ?? 0.20) * foreignShare);
+
+    const we = equity / total;
+    const wd = debt / total;
+    return (we * costOfEquity) + (wd * costOfDebt * (1 - effectiveLevyRate));
+}
+
 /**
  * معامل تصاعد الإيراد للسنة الأولى (Ramp-Up): متوسط منحنى خطي يبلغ 100% عند شهر
  * rampUpMonths. مُصدَّرة (لا محلية داخل calculateStudy) كي تستهلكها شاشات إدخال
@@ -139,7 +160,14 @@ export function calculateStudy(study, overrides) {
 
     riskPremium = Math.min(0.08, riskPremium); // سقف علاوة المخاطر 8%
 
-    const baseDiscountRate = Number(study.assumptions?.discountRate) || 0.10;
+    const waccDiscountRate = study.assumptions?.useWaccAsDiscountRate
+        ? calculateFinancingWACC(study)
+        : null;
+    const hasWaccDiscountRate = waccDiscountRate != null && Number.isFinite(Number(waccDiscountRate));
+    const baseDiscountRate = hasWaccDiscountRate
+        ? Number(waccDiscountRate)
+        : (Number(study.assumptions?.discountRate) || 0.10);
+    const discountRateSource = hasWaccDiscountRate ? 'wacc' : 'assumptions';
     const discountRate = baseDiscountRate + riskPremium;
     const computedContingencyRate = Number(study.assumptions?.contingencyRate ?? 0.10) + (riskPremium * 0.5);
 
@@ -768,6 +796,7 @@ export function calculateStudy(study, overrides) {
             return { year: y.year, outputVat, inputVat, netPayable, avgFloat: netPayable * (45 / 365) };
         })
     };
+    const vatByYear = new Map(vat.years.map(v => [v.year, v]));
     // تدقيق 2026-07-08 (ملاحظة متوسطة #6): roi/arr كانا يقسمان على totalInvestment
     // بلا حارس صفر (خلافاً لـ pi/roa/roe المجاورة أدناه) — دراسة جديدة بلا بيانات
     // فنية بعد (totalInvestment=0) كانت تُنتج NaN/Infinity تُعرض حرفياً في الملخص
@@ -974,10 +1003,14 @@ export function calculateStudy(study, overrides) {
             cumulative: -equityOutlay
         },
         ...incomeStatement.map(y => {
+            const vatYear = vatByYear.get(y.year) || {};
+            const vatNetPayable = Number(vatYear.netPayable || 0);
             _cum += y.cashFlow;
             return {
                 year: y.year,
                 cashFlow: y.cashFlow,
+                vatNetPayable,
+                cashFlowAfterVat: y.cashFlow - vatNetPayable,
                 netIncome: y.netIncome,
                 depreciation: y.depreciation,
                 loanPrincipalPaid: y.loanPrincipalPaid || 0,
@@ -1031,11 +1064,20 @@ export function calculateStudy(study, overrides) {
         rampUpMonths,
         vat,
         cashFlow: cashFlowRows,
+        assumptionDisclosures: [
+            'حسابات الزكاة وضريبة الدخل تقديرية وتحتاج مراجعة مختص قبل الاعتماد النظامي أو التقديم التمويلي.',
+            'حساب VAT تقديري لأثر السيولة، ويفترض أن الأسعار غير شاملة للضريبة وأن المدخلات التشغيلية المحددة قابلة للخصم.',
+            'قيمة الإنقاذ/القيمة المتبقية للأصول تفترض صفراً ما لم تظهر ضمن القيمة النهائية الاسترشادية.',
+            'محاكاة مونت كارلو، عند استخدامها، تفترض استقلالية المتغيرات ولا تطبق ارتباطات بين المبيعات والتكاليف.'
+        ],
         assumptionsApplied: {
             zakatRate,
             taxRate,
             foreignOwnershipRate: foreignShare,
             discountRate,
+            baseDiscountRate,
+            discountRateSource,
+            waccDiscountRate,
             inflationRate: inflation,
             // مصدر وحيد لعتبات القرار المُطبَّقة فعلياً (بعد دمج تجاوزات المستخدم مع
             // الافتراضات) — الشاشات تقرأ من هنا بدل بناء احتياطياتها الخاصة (تدقيق 2026-07-08).

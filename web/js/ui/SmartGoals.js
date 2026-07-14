@@ -4,10 +4,17 @@
  */
 
 import { DataService } from '../services/DataService.js';
+import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
 import { fieldHelp } from './components/FieldHelp.js';
 import { escapeHtml } from '../utils/escape.js';
 import { deriveRevenueFromStreams } from '../core/engine.js';
+import Sortable from 'sortablejs';
+import Swal from 'sweetalert2';
+import Cleave from 'cleave.js';
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
+import { Arabic } from 'flatpickr/dist/l10n/ar.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -137,6 +144,52 @@ export class SmartGoals {
 
         this.bindEvents();
         this._syncFinancialHintVisibility();
+
+        // Initialize Sortable for drag-and-drop reordering
+        this.container.querySelectorAll('.goals-list').forEach(list => {
+            new Sortable(list, {
+                animation: 150,
+                handle: '.goal-drag-handle',
+                group: 'goals',
+                onEnd: (evt) => {
+                    const itemEl = evt.item;
+                    if (!itemEl || !itemEl.dataset.idx) return;
+                    
+                    const oldGlobalIdx = parseInt(itemEl.dataset.idx, 10);
+                    const nextEl = itemEl.nextElementSibling;
+                    const prevEl = itemEl.previousElementSibling;
+                    
+                    let newGlobalIdx;
+                    if (nextEl && nextEl.dataset.idx) {
+                        newGlobalIdx = parseInt(nextEl.dataset.idx, 10);
+                        if (oldGlobalIdx < newGlobalIdx) newGlobalIdx--;
+                    } else if (prevEl && prevEl.dataset.idx) {
+                        newGlobalIdx = parseInt(prevEl.dataset.idx, 10);
+                        if (oldGlobalIdx > newGlobalIdx) newGlobalIdx++;
+                    } else {
+                        return; // No valid siblings or only item
+                    }
+                    
+                    const state = this.store.getState();
+                    const goals = [...(state.smartGoals?.goals || [])];
+                    const goal = goals.splice(oldGlobalIdx, 1)[0];
+                    goals.splice(newGlobalIdx, 0, goal);
+                    
+                    this.store.update('smartGoals', { ...state.smartGoals, goals });
+                    this.render();
+                }
+            });
+        });
+
+        // Initialize Cleave for numeric inputs
+        this.container.querySelectorAll('.cleave-num').forEach(input => {
+            new Cleave(input, { numeral: true, numeralThousandsGroupStyle: 'thousand' });
+        });
+
+        // Initialize Flatpickr
+        this.container.querySelectorAll('.flatpickr-date').forEach(input => {
+            flatpickr(input, { locale: Arabic, dateFormat: 'Y-m-d' });
+        });
     }
 
     renderGoalsByCategory(goals) {
@@ -176,6 +229,7 @@ export class SmartGoals {
         return `
             <div class="goal-card" data-idx="${idx}">
                 <div class="goal-header">
+                    <span class="goal-drag-handle text-muted" style="cursor: grab; margin-left: 0.5rem; font-size: 1.2rem;">≡</span>
                     <span class="goal-title">${goal.specific ? escapeHtml(goal.specific) : 'هدف غير محدد'}</span>
                     <span class="goal-status ${status.class}">${status.label}</span>
                 </div>
@@ -268,11 +322,11 @@ export class SmartGoals {
                 <div class="form-row">
                     <div class="form-group">
                         <label for="goalTargetValue">القيمة المستهدفة</label>
-                        <input type="number" class="input" id="goalTargetValue" placeholder="0">
+                        <input type="text" inputmode="numeric" class="input cleave-num" id="goalTargetValue" placeholder="0">
                     </div>
                     <div class="form-group">
                         <label for="goalCurrentValue">القيمة الحالية</label>
-                        <input type="number" class="input" id="goalCurrentValue" placeholder="0">
+                        <input type="text" inputmode="numeric" class="input cleave-num" id="goalCurrentValue" placeholder="0">
                     </div>
                 </div>
                 <div class="form-row" id="goalFinancialHintRow">
@@ -291,11 +345,11 @@ export class SmartGoals {
                 <div class="form-row">
                     <div class="form-group">
                         <label for="goalStartDate">تاريخ البداية (إطار زمني)</label>
-                        <input type="date" class="input" id="goalStartDate">
+                        <input type="text" class="input flatpickr-date" id="goalStartDate" placeholder="اختر التاريخ">
                     </div>
                     <div class="form-group">
                         <label for="goalTimeBound">تاريخ النهاية (Time-bound - محدد بوقت) ${fieldHelp('حدد موعداً نهائياً واقعياً — الهدف بلا موعد يبقى أمنية.', 'مثال: نهاية الربع الثاني من السنة الأولى لتشغيل المطعم.')}</label>
-                        <input type="date" class="input" id="goalTimeBound">
+                        <input type="text" class="input flatpickr-date" id="goalTimeBound" placeholder="اختر التاريخ">
                     </div>
                 </div>
                 <div class="form-row">
@@ -460,8 +514,8 @@ export class SmartGoals {
             const startDate = document.getElementById('goalStartDate')?.value;
             const timeBound = document.getElementById('goalTimeBound')?.value;
             const category = document.getElementById('goalCategory')?.value;
-            const targetValue = parseFloat(document.getElementById('goalTargetValue')?.value) || 0;
-            const currentValue = parseFloat(document.getElementById('goalCurrentValue')?.value) || 0;
+            const targetValue = parseFloat(document.getElementById('goalTargetValue')?.value.replace(/,/g, '')) || 0;
+            const currentValue = parseFloat(document.getElementById('goalCurrentValue')?.value.replace(/,/g, '')) || 0;
 
             if (!specific) {
                 toast.error('يرجى إدخال الهدف');
@@ -573,36 +627,43 @@ export class SmartGoals {
         this.render();
     }
 
-    suggestGoals() {
+    async suggestGoals() {
         try {
-            const templates = DataService.getSmartGoalsTemplates();
-            if (!templates || templates.length === 0) {
-                toast.info('لا توجد أهداف نموذجية متاحة');
-                return;
-            }
-
             const state = this.store.getState();
             if (!state) {
                 toast.error('حدث خطأ: البيانات غير متوفرة');
                 return;
             }
-            const currentGoals = state.smartGoals?.goals || [];
+            
+            Swal.fire({
+                title: 'يتم الآن توليد الأهداف الذكية...',
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
 
-            // Check for duplicates based on specific text
+            const templates = InternalAIGenerator.generateSmartGoals(state);
+            
+            if (!templates || templates.length === 0) {
+                Swal.close();
+                toast.info('لا توجد أهداف نموذجية متاحة');
+                return;
+            }
+
+            const currentGoals = state.smartGoals?.goals || [];
             const existingSpecifics = new Set(currentGoals.map(g => g.specific?.toLowerCase().trim()));
 
-            // Filter out duplicates
             const newTemplates = templates.filter(t => {
                 const specific = t.specific?.toLowerCase().trim();
                 return specific && !existingSpecifics.has(specific);
             });
 
             if (newTemplates.length === 0) {
+                Swal.close();
                 toast.info('جميع الأهداف النموذجية موجودة بالفعل');
                 return;
             }
 
-            // Add templates to goals with unique IDs
             const newGoals = newTemplates.map(t => ({
                 ...t,
                 id: this.generateId()
@@ -617,21 +678,42 @@ export class SmartGoals {
 
             this.render();
 
-            // Show success message
-            toast.success(`تم إضافة ${newGoals.length} هدف نموذجي! يمكنك تعديلها الآن.`);
+            Swal.fire({
+                icon: 'success',
+                title: 'اكتمل التوليد!',
+                text: `تم إضافة ${newGoals.length} هدف نموذجي مخصص لمشروعك بنجاح.`,
+                timer: 2000,
+                showConfirmButton: false
+            });
         } catch (e) {
             console.error('Error suggesting goals:', e);
+            Swal.close();
             const errorMsg = e.message || 'حدث خطأ غير معروف';
             toast.error('حدث خطأ أثناء اقتراح الأهداف: ' + errorMsg);
         }
     }
 
-    removeGoal(e) {
+    async removeGoal(e) {
         const idx = parseInt(e.target.dataset.idx);
-        const state = this.store.getState();
-        const goals = (state.smartGoals?.goals || []).filter((_, i) => i !== idx);
-        this.store.update('smartGoals', { ...state.smartGoals, goals });
-        this.render();
+        
+        const result = await Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: 'لن تتمكن من استرجاع هذا الهدف بعد حذفه!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'نعم، احذف الهدف!',
+            cancelButtonText: 'إلغاء'
+        });
+        
+        if (result.isConfirmed) {
+            const state = this.store.getState();
+            const goals = (state.smartGoals?.goals || []).filter((_, i) => i !== idx);
+            this.store.update('smartGoals', { ...state.smartGoals, goals });
+            this.render();
+            Swal.fire({ title: 'تم الحذف!', icon: 'success', timer: 1500, showConfirmButton: false });
+        }
     }
 
     updateGoalStatus(e) {

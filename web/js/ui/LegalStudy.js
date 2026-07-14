@@ -2,6 +2,7 @@ import { DynamicTable } from './DynamicTable.js';
 import { TABLE_SCHEMAS } from '../core/schema.js';
 import { AIWriter } from '../services/AIWriter.js';
 import { generateTableSuggestions } from '../services/AIConnector.js';
+import SignaturePad from 'signature_pad';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -55,6 +56,18 @@ export class LegalStudy {
 
                 <!-- AI Output -->
                 <div id="aiLegalSuggestion" class="alert alert--info hidden mb-6"></div>
+
+                <!-- Digital Signature -->
+                <div class="card mb-6">
+                    <h3 class="card-title">توقيع مؤسس المشروع</h3>
+                    <p class="text-muted text-sm mb-3">الاعتماد والمصادقة على صحة التراخيص والشكل القانوني المذكور</p>
+                    <div style="border: 2px dashed #cbd5e1; border-radius: 8px; width: 100%; height: 200px; background: #fff; cursor: crosshair;">
+                        <canvas id="legalSignaturePad" width="800" height="200" style="width: 100%; height: 100%; display: block;"></canvas>
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                        <button id="btnClearSignature" class="btn btn--sm btn--secondary">مسح التوقيع</button>
+                    </div>
+                </div>
 
                 <!-- Navigation -->
                 <div class="wizard-nav margin-top-lg">
@@ -188,6 +201,38 @@ export class LegalStudy {
                 btn.disabled = false;
             }
         });
+
+        // Initialize Signature Pad
+        const canvas = this.container.querySelector('#legalSignaturePad');
+        const canvasCtx = canvas?.getContext?.("2d");
+        if (canvas && canvasCtx) {
+            // Resize canvas to fix blurriness
+            const ratio =  Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvasCtx.scale(ratio, ratio);
+
+            const signaturePad = new SignaturePad(canvas, {
+                penColor: "rgb(15, 23, 42)"
+            });
+
+            // Load saved signature if exists
+            const state = this.store.getState();
+            if (state.legal && state.legal.signature) {
+                signaturePad.fromDataURL(state.legal.signature);
+            }
+
+            signaturePad.addEventListener("endStroke", () => {
+                const currentState = this.store.getState().legal || {};
+                this.store.update('legal', { ...currentState, signature: signaturePad.toDataURL() });
+            });
+
+            this.container.querySelector('#btnClearSignature')?.addEventListener('click', () => {
+                signaturePad.clear();
+                const currentState = this.store.getState().legal || {};
+                this.store.update('legal', { ...currentState, signature: null });
+            });
+        }
 
         // Navigation
         this.container.querySelector('.btn-prev-step')?.addEventListener('click', () => {

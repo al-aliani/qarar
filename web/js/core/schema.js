@@ -487,6 +487,7 @@ export function createEmptyStudy() {
             foreignOwnershipRate: 0, // 0 = مشروع سعودي 100% (زكاة فقط)
             taxRate: 0.20,
             discountRate: 0.10, // معدل خصم متحفظ يناسب مخاطر مشروع مطعمي سعودي (كان 0.05 — يضخّم NPV)
+            useWaccAsDiscountRate: false,
             workingCapitalMonths: 3,
             // منحنى التصاعد: عدد الأشهر حتى بلوغ كامل المبيعات المخططة في السنة الأولى
             // (0 = بلا تصاعد — غير واقعي لمشروع جديد؛ المعتاد 6–12 شهراً)

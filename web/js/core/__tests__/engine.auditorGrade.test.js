@@ -58,6 +58,43 @@ describe('قائمة «نوع النشاط» تُطابق قطاعات المح�
     });
 });
 
+describe('WACC and VAT launch fixes', () => {
+    it('keeps manual discount rate by default and uses WACC only when explicitly enabled', () => {
+        const study = makeStudy({
+            assumptions: { projectionYears: 5, discountRate: 0.10, inflationRate: 0, hiddenOverheadsRate: 0 },
+            [SECTIONS.FINANCING]: {
+                costOfEquity: 0.20,
+                sources: {
+                    equity: { amount: 50000 },
+                    bankLoan: { amount: 50000, interestRate: 0.10, termYears: 5, gracePeriodMonths: 0 }
+                }
+            }
+        });
+
+        const manual = calculateStudy(study);
+        expect(manual.assumptionsApplied.discountRateSource).toBe('assumptions');
+        expect(manual.assumptionsApplied.baseDiscountRate).toBeCloseTo(0.10, 6);
+
+        const wacc = calculateStudy({
+            ...study,
+            assumptions: { ...study.assumptions, useWaccAsDiscountRate: true }
+        });
+        expect(wacc.assumptionsApplied.discountRateSource).toBe('wacc');
+        expect(wacc.assumptionsApplied.baseDiscountRate).toBeCloseTo(0.14875, 6);
+    });
+
+    it('exposes VAT liquidity impact beside the original cash flow without silently changing NPV cash flows', () => {
+        const result = calculateStudy(makeStudy());
+        const year1Vat = result.vat.years[0];
+        const year1Cash = result.cashFlow.find(r => r.year === 1);
+
+        expect(year1Vat.netPayable).toBeGreaterThan(0);
+        expect(year1Cash.vatNetPayable).toBeCloseTo(year1Vat.netPayable, 4);
+        expect(year1Cash.cashFlowAfterVat).toBeCloseTo(year1Cash.cashFlow - year1Vat.netPayable, 4);
+        expect(result.assumptionDisclosures.join(' ')).toContain('VAT');
+    });
+});
+
 describe('حارس IRR: مشروع خاسر لا يُظهر عائداً داخلياً مرتفعاً زائفاً', () => {
     // اختبار انحدار لخلل «IRR=1000% رغم NPV سالب واسترداد غير محقق» (تقرير ٢٠٢٦-٠٧-٠٦).
     // استثمار ضخم مقابل إيراد ضئيل ⇒ NPV سالب بعمق ⇒ يجب أن يكون IRR = null (غير قابل للحساب)

@@ -1,6 +1,8 @@
 import { getLabel } from '../core/labels.js';
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
+import Swal from 'sweetalert2';
+import Cleave from 'cleave.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id, cls = '') => `<svg class="ic${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -411,11 +413,12 @@ export class DynamicTable {
                 // في منتصف النص فينتج محتوى مشوَّهاً. col.placeholder اختياري يتيح نص
                 // إرشاد حقيقياً بخاصية placeholder، والقيمة تبقى فارغة حتى يكتب المستخدم.
                 const placeholderAttr = col.placeholder ? `placeholder="${escapeHtml(col.placeholder)}"` : '';
+                const cleaveClass = (isNumberCol && !isFractionPct) ? ' cleave-num' : '';
 
                 html += `<td class="${isHidden ? 'hidden col-advanced' : ''} relative">
                     <div class="flex items-center gap-1">
                         <input type="text"
-                               class="table-input ${magicBtn ? 'pr-8' : ''}"
+                               class="table-input ${magicBtn ? 'pr-8' : ''}${cleaveClass}"
                                data-row="${rowIndex}"
                                data-col="${col.key}"
                                value="${escapeHtml(val)}"
@@ -490,11 +493,23 @@ export class DynamicTable {
             this._eventListeners.push({ element: suggestBtn, event: 'click', handler });
         });
 
-        // Delete Row
+        // Delete Row (with SweetAlert2)
         this.container.querySelectorAll('.btn-delete').forEach(btn => {
-            const handler = (e) => {
-                const rowIndex = parseInt(e.target.dataset.row);
-                this.deleteRow(rowIndex);
+            const handler = async (e) => {
+                const rowIndex = parseInt(e.target.closest('.btn-delete').dataset.row);
+                const result = await Swal.fire({
+                    title: 'هل أنت متأكد؟',
+                    text: 'سيتم حذف هذا الصف نهائياً.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'نعم، احذف',
+                    cancelButtonText: 'إلغاء',
+                    customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                    buttonsStyling: false
+                });
+                if (result.isConfirmed) {
+                    this.deleteRow(rowIndex);
+                }
             };
             btn.addEventListener('click', handler);
             this._eventListeners.push({ element: btn, event: 'click', handler });
@@ -504,10 +519,21 @@ export class DynamicTable {
         // كي لا تضيع لو تسبّب إجراء آخر (تقدير تلقائي في خلية مجاورة، إضافة صف) بإعادة رسم
         // منتصف الكتابة. التحقق/التطبيع الفعلي يحدث عند change (blur/Enter) أدناه.
         this.container.querySelectorAll('input.table-input[type="text"]').forEach(input => {
+            // Apply Cleave.js to numeric inputs
+            if (input.classList.contains('cleave-num')) {
+                new Cleave(input, {
+                    numeral: true,
+                    numeralThousandsGroupStyle: 'thousand'
+                });
+            }
+
             const inputHandler = (e) => {
                 const rowIndex = parseInt(e.target.dataset.row, 10);
                 const colKey = e.target.dataset.col;
-                if (this.data[rowIndex]) this.data[rowIndex][colKey] = e.target.value;
+                const rawVal = e.target.value;
+                if (this.data[rowIndex]) {
+                    this.data[rowIndex][colKey] = input.classList.contains('cleave-num') ? rawVal.replace(/,/g, '') : rawVal;
+                }
             };
             input.addEventListener('input', inputHandler);
             this._eventListeners.push({ element: input, event: 'input', handler: inputHandler });

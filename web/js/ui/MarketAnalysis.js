@@ -1127,4 +1127,5 @@ export class MarketAnalysis {
         this.store.update('marketing', marketing);
         this.render();
     }
+
 }

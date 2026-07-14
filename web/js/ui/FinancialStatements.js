@@ -3,10 +3,14 @@
  * Displays Income Statement, Cash Flow, and Balance Sheet for 5 years
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
+import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
+import ApexCharts from 'apexcharts';
+import { CountUp } from 'countup.js';
+import html2pdf from 'html2pdf.js';
+import * as XLSX from 'xlsx';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
-import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
 
 export class FinancialStatements {
     constructor(containerId, store, onNavigate) {
@@ -69,9 +73,27 @@ export class FinancialStatements {
         const dataWarnHtml = investmentDataWarningHtml(investmentDataWarning(state, results));
 
         this.container.innerHTML = `
-            <div class="financial-statements">
-                <h2 class="section-title">القوائم المالية التقديرية</h2>
+            <div class="financial-statements" id="financial-statements-content">
+                <div class="flex-between mb-4">
+                    <h2 class="section-title mb-0">القوائم المالية التقديرية</h2>
+                    <div class="flex gap-2">
+                        <button id="btnExportExcel" class="btn btn--sm btn--magic"><svg class="ic" aria-hidden="true"><use href="#i-table"/></svg> تصدير Excel</button>
+                        <button id="btnExportPdf" class="btn btn--sm btn--secondary"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> تحميل PDF</button>
+                    </div>
+                </div>
+                
+                <div class="card mb-6 bg-slate-900 text-white" style="border-radius: 12px; padding: 24px;">
+                    <h3 class="text-slate-300 text-sm mb-2">إجمالي الأرباح المتوقعة (5 سنوات)</h3>
+                    <div id="totalProfitCounter" class="text-4xl font-bold text-emerald-400">0</div>
+                </div>
+
                 ${dataWarnHtml}
+                
+                <div class="card analysis-card">
+                    <h3 class="card-title">${icon('i-chart')} الأداء المالي المتوقع (إيرادات مقابل تكاليف)</h3>
+                    <div id="financialPerformanceChart" style="min-height: 350px;"></div>
+                </div>
+
                 <div class="card analysis-card">
                     <h3 class="card-title">${icon('i-doc')} قائمة الدخل التقديرية (5 سنوات)</h3>
                     ${this.renderIncomeStatement(results)}
@@ -104,6 +126,63 @@ export class FinancialStatements {
         `;
 
         this.bindEvents();
+        this.renderApexChart(results);
+        this.initCountUp(results);
+    }
+
+    renderApexChart(results) {
+        if (!results || !results.incomeStatement) return;
+        const years = results.incomeStatement.map(y => `السنة ${y.year}`);
+        const revenues = results.incomeStatement.map(y => y.revenue);
+        const netProfits = results.incomeStatement.map(y => y.netIncome);
+
+        const options = {
+            series: [{
+                name: 'الإيرادات',
+                type: 'column',
+                data: revenues
+            }, {
+                name: 'صافي الربح',
+                type: 'line',
+                data: netProfits
+            }],
+            chart: {
+                height: 350,
+                type: 'line',
+                fontFamily: 'inherit',
+                toolbar: { show: false }
+            },
+            stroke: { width: [0, 4] },
+            colors: ['#0ea5e9', '#10b981'],
+            dataLabels: { enabled: false },
+            labels: years,
+            yaxis: [{ title: { text: 'القيمة (ريال)' } }],
+            theme: { mode: 'light' }
+        };
+
+        const chartElement = this.container.querySelector('#financialPerformanceChart');
+        if (chartElement) {
+            try {
+                const chart = new ApexCharts(chartElement, options);
+                chart.render().catch(err => console.error('ApexCharts render error:', err));
+            } catch (err) {
+                console.error('ApexCharts init error:', err);
+            }
+        }
+    }
+
+    initCountUp(results) {
+        if (!results || !results.incomeStatement) return;
+        const totalProfit = results.incomeStatement.reduce((sum, y) => sum + (y.netIncome || 0), 0);
+        const counterEl = this.container.querySelector('#totalProfitCounter');
+        if (counterEl) {
+            const countUp = new CountUp(counterEl, totalProfit, {
+                suffix: ' ر.س',
+                duration: 2.5,
+                separator: ','
+            });
+            if (!countUp.error) countUp.start();
+        }
     }
 
     bindEvents() {
@@ -112,6 +191,28 @@ export class FinancialStatements {
         });
         this.container.querySelector('.btn-next-step')?.addEventListener('click', () => {
             if (this.onNavigate) this.onNavigate(this.stepIndex + 1);
+        });
+
+        // PDF Export
+        this.container.querySelector('#btnExportPdf')?.addEventListener('click', () => {
+            const element = this.container.querySelector('#financial-statements-content');
+            html2pdf().from(element).set({
+                margin: 10,
+                filename: 'القوائم_المالية.pdf',
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            }).save();
+        });
+
+        // Excel Export
+        this.container.querySelector('#btnExportExcel')?.addEventListener('click', () => {
+            const tables = this.container.querySelectorAll('table');
+            const wb = XLSX.utils.book_new();
+            tables.forEach((table, i) => {
+                const ws = XLSX.utils.table_to_sheet(table);
+                XLSX.utils.book_append_sheet(wb, ws, `جدول ${i + 1}`);
+            });
+            XLSX.writeFile(wb, 'القوائم_المالية.xlsx');
         });
     }
 

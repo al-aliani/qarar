@@ -4,6 +4,12 @@
  * تحسب لكل فكرة: فترة الاسترداد والعائد على التكلفة، وترشّح الأفضل تلقائياً (مع مراعاة المخاطرة).
  */
 import { stepIndexById } from '../core/wizardSteps.js';
+import Sortable from 'sortablejs';
+import Swal from 'sweetalert2';
+import Cleave from 'cleave.js';
+import { CountUp } from 'countup.js';
+import noUiSlider from 'nouislider';
+import 'nouislider/dist/nouislider.css';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -82,12 +88,15 @@ export class ProjectAlternativesView {
             const warn = m.payback > longPaybackThreshold(m.cost) ? ` <span class="pa-flag pa-flag--warn">طويل</span>` : '';
             return `${m.payback.toFixed(1)} سنة${warn}`;
         };
-        const rocCell = (m) => m.valid ? `${(m.roc * 100).toFixed(0)}%` : `<span class="text-muted">—</span>`;
+        const rocCell = (m) => m.valid ? `<span class="countup-roc" data-val="${m.roc * 100}">0</span>%` : `<span class="text-muted">—</span>`;
 
         const riskSelect = (i, val) => `
-            <select class="input input--sm alt-field" data-field="risk" aria-label="مستوى المخاطرة">
-                ${RISK_OPTIONS.map(r => `<option value="${r.value}" ${(val || '') === r.value ? 'selected' : ''}>${r.label}</option>`).join('')}
-            </select>`;
+            <div class="risk-slider-container" style="padding: 10px; min-width: 120px;">
+                <div class="risk-slider alt-field" data-field="risk" data-idx="${i}" data-val="${val || 'medium'}"></div>
+                <div class="risk-slider-label text-xs text-center mt-1" style="color: #64748b;">${
+                    val === 'low' ? 'منخفضة' : (val === 'high' ? 'عالية' : 'متوسطة')
+                }</div>
+            </div>`;
 
         this.container.innerHTML = `
             <div class="project-alternatives-view animate-entry">
@@ -113,6 +122,7 @@ export class ProjectAlternativesView {
                         <table class="data-table pa-table" id="alternativesTable">
                             <thead>
                                 <tr>
+                                    <th scope="col" style="width: 30px;"></th>
                                     <th scope="col"><span class="sr-only">اختيار</span>${icon('i-check')}</th>
                                     <th scope="col">اسم الفكرة</th>
                                     <th scope="col">تكلفة تقريبية (ر.س)</th>
@@ -138,13 +148,14 @@ export class ProjectAlternativesView {
                                     </tr>
                                 ` : ideas.map((idea, i) => `
                                     <tr data-idx="${i}" class="${i === bestIdx ? 'pa-best' : ''}">
+                                        <td class="pa-drag-handle text-muted" style="cursor: grab; font-size: 1.2rem;">≡</td>
                                         <td class="pa-td-select">
                                             <input type="radio" name="selectedAlt" ${selectedIndex === i ? 'checked' : ''} value="${i}" aria-label="اختيار الفكرة ${i + 1}">
                                             ${i === bestIdx ? `<span class="pa-trophy" title="الأفضل حسب الأرقام">${icon('i-trophy')}</span>` : ''}
                                         </td>
                                         <td><input type="text" class="input input--sm alt-field" data-field="name" placeholder="اسم الفكرة" aria-label="اسم الفكرة" value="${esc(idea.name)}"></td>
-                                        <td><input type="text" inputmode="numeric" class="input input--sm alt-field alt-num" data-field="estimatedCost" placeholder="0" aria-label="تكلفة تقريبية" value="${idea.estimatedCost ? fmtNum(idea.estimatedCost) : ''}"></td>
-                                        <td><input type="text" inputmode="numeric" class="input input--sm alt-field alt-num" data-field="estimatedReturn" placeholder="0" aria-label="عائد متوقع" value="${idea.estimatedReturn ? fmtNum(idea.estimatedReturn) : ''}"></td>
+                                        <td><input type="text" inputmode="numeric" class="input input--sm alt-field alt-num cleave-num" data-field="estimatedCost" placeholder="0" aria-label="تكلفة تقريبية" value="${idea.estimatedCost ? fmtNum(idea.estimatedCost) : ''}"></td>
+                                        <td><input type="text" inputmode="numeric" class="input input--sm alt-field alt-num cleave-num" data-field="estimatedReturn" placeholder="0" aria-label="عائد متوقع" value="${idea.estimatedReturn ? fmtNum(idea.estimatedReturn) : ''}"></td>
                                         <td>${riskSelect(i, idea.risk)}</td>
                                         <td class="pa-calc">${paybackCell(metrics[i])}</td>
                                         <td class="pa-calc">${rocCell(metrics[i])}</td>
@@ -168,6 +179,76 @@ export class ProjectAlternativesView {
         `;
 
         this._bindEvents();
+
+        // Initialize Sortable for drag-and-drop reordering
+        const tbody = this.container.querySelector('#alternativesBody');
+        if (tbody && hasIdeas) {
+            new Sortable(tbody, {
+                handle: '.pa-drag-handle',
+                animation: 150,
+                onEnd: (evt) => {
+                    if (evt.oldIndex === evt.newIndex) return;
+                    const state = this.store.getState();
+                    const ideas = [...(state.projectAlternatives?.ideas || [])];
+                    const item = ideas.splice(evt.oldIndex, 1)[0];
+                    ideas.splice(evt.newIndex, 0, item);
+                    
+                    let newSelected = state.projectAlternatives?.selectedIndex ?? 0;
+                    if (newSelected === evt.oldIndex) newSelected = evt.newIndex;
+                    else if (evt.oldIndex < newSelected && evt.newIndex >= newSelected) newSelected--;
+                    else if (evt.oldIndex > newSelected && evt.newIndex <= newSelected) newSelected++;
+                    
+                    this.store.updatePath('projectAlternatives', null, { ideas, selectedIndex: newSelected });
+                    this.render();
+                }
+            });
+        }
+
+        // Initialize Cleave.js for numeric inputs
+        this.container.querySelectorAll('.cleave-num').forEach(input => {
+            new Cleave(input, {
+                numeral: true,
+                numeralThousandsGroupStyle: 'thousand'
+            });
+        });
+
+        // Initialize CountUp.js
+        this.container.querySelectorAll('.countup-roc').forEach(el => {
+            const val = parseFloat(el.getAttribute('data-val') || 0);
+            const countUp = new CountUp(el, val, { duration: 2, separator: ',' });
+            if (!countUp.error) countUp.start();
+        });
+
+        // Initialize noUiSlider for risk
+        const riskMap = { 'low': 0, 'medium': 1, 'high': 2 };
+        const riskRevMap = ['low', 'medium', 'high'];
+        const riskLabels = ['منخفضة', 'متوسطة', 'عالية'];
+        this.container.querySelectorAll('.risk-slider').forEach(slider => {
+            const valStr = slider.getAttribute('data-val') || 'medium';
+            const initialVal = riskMap[valStr] ?? 1;
+            
+            noUiSlider.create(slider, {
+                start: initialVal,
+                step: 1,
+                range: { min: 0, max: 2 },
+                format: {
+                    to: v => Math.round(v),
+                    from: v => Math.round(v)
+                }
+            });
+
+            slider.noUiSlider.on('update', (values, handle) => {
+                const numVal = parseInt(values[handle], 10);
+                slider.dataset.value = riskRevMap[numVal]; // custom attribute for saving
+                const label = slider.nextElementSibling;
+                if (label) label.textContent = riskLabels[numVal];
+            });
+
+            slider.noUiSlider.on('change', () => {
+                this._save({ keepEmpty: true });
+                this.render();
+            });
+        });
     }
 
     _pickBestButtonHtml(ideas, bestIdx, validCount) {
@@ -245,7 +326,7 @@ export class ProjectAlternativesView {
             const name = tr.querySelector('[data-field="name"]')?.value?.trim() || '';
             const estimatedCost = parseNum(tr.querySelector('[data-field="estimatedCost"]')?.value);
             const estimatedReturn = parseNum(tr.querySelector('[data-field="estimatedReturn"]')?.value);
-            const risk = tr.querySelector('[data-field="risk"]')?.value || '';
+            const risk = tr.querySelector('.risk-slider')?.dataset?.value || 'medium';
             const notes = tr.querySelector('[data-field="notes"]')?.value?.trim() || '';
             if (keepEmpty || name || estimatedCost || estimatedReturn || notes) {
                 ideas.push({ name, estimatedCost, estimatedReturn, risk, notes });
@@ -273,14 +354,29 @@ export class ProjectAlternativesView {
         this._bindPickBest();
 
         this.container.querySelectorAll('.btn-remove-alt').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 const idx = parseInt(btn.dataset.idx, 10);
-                this._save({ keepEmpty: true });
-                const pa = this.store.getState().projectAlternatives || {};
-                const ideas = (pa.ideas || []).filter((_, i) => i !== idx);
-                const selectedIndex = pa.selectedIndex >= ideas.length ? Math.max(0, ideas.length - 1) : pa.selectedIndex;
-                this.store.updatePath('projectAlternatives', null, { ideas, selectedIndex: Math.min(selectedIndex, ideas.length - 1) });
-                this.render();
+                
+                const result = await Swal.fire({
+                    title: 'هل أنت متأكد؟',
+                    text: 'لن تتمكن من التراجع عن حذف هذه الفكرة!',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'نعم، احذفها!',
+                    cancelButtonText: 'إلغاء'
+                });
+                
+                if (result.isConfirmed) {
+                    this._save({ keepEmpty: true });
+                    const pa = this.store.getState().projectAlternatives || {};
+                    const ideas = (pa.ideas || []).filter((_, i) => i !== idx);
+                    const selectedIndex = pa.selectedIndex >= ideas.length ? Math.max(0, ideas.length - 1) : pa.selectedIndex;
+                    this.store.updatePath('projectAlternatives', null, { ideas, selectedIndex: Math.min(selectedIndex, ideas.length - 1) });
+                    this.render();
+                    Swal.fire({ title: 'تم الحذف!', icon: 'success', timer: 1500, showConfirmButton: false });
+                }
             });
         });
 

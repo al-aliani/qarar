@@ -4,7 +4,7 @@
  * Based on UNIDO and Monsha'at requirements
  */
 
-import { calculateStudy as runFullModel, rateOrDefault, resolveDecisionThresholds } from '../core/engine.js';
+import { calculateStudy as runFullModel, rateOrDefault, resolveDecisionThresholds, calculateFinancingWACC } from '../core/engine.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -613,7 +613,8 @@ export class FinancingStructure {
         const total = equity + debt || 1;
         const we = equity / total;
         const wd = debt / total;
-        const wacc = (we * costOfEquity) + (wd * costOfDebt * (1 - taxRate));
+        const wacc = calculateFinancingWACC({ financing, assumptions: _a }) ?? ((we * costOfEquity) + (wd * costOfDebt * (1 - taxRate)));
+        const useWaccAsDiscountRate = Boolean(_a.useWaccAsDiscountRate);
 
         return `
             <div class="wacc-container">
@@ -647,6 +648,10 @@ export class FinancingStructure {
                     <span class="wacc-label">تكلفة رأس المال المرجح</span>
                     <span class="wacc-value">${(wacc * 100).toFixed(2)}%</span>
                 </div>
+                <label class="flex items-center gap-2 mt-3 text-sm">
+                    <input type="checkbox" id="use-wacc-discount-rate" ${useWaccAsDiscountRate ? 'checked' : ''}>
+                    <span>استخدم WACC كمعدل الخصم في حساب NPV/IRR</span>
+                </label>
                 <div class="wacc-disclosure alert alert--warning mt-3" style="font-size: 0.85rem;">
                     ${icon('i-warning')} هذا الرقم إعلامي لمرجعك الشخصي فقط، ولا يُغذّي تلقائياً معدل الخصم الفعلي المستخدم لحساب
                     صافي القيمة الحالية (NPV) والعائد الداخلي (IRR) في هذه الدراسة — ذلك المعدل يُضبط بشكل منفصل
@@ -909,6 +914,15 @@ export class FinancingStructure {
             const value = Number.isFinite(pct) ? pct / 100 : 0.15;
             const state = this.store.getState();
             this.store.update('financing', { ...state.financing, costOfEquity: value });
+            this.render();
+        });
+
+        this.container.querySelector('#use-wacc-discount-rate')?.addEventListener('change', (e) => {
+            const state = this.store.getState();
+            this.store.update('assumptions', {
+                ...(state.assumptions || {}),
+                useWaccAsDiscountRate: Boolean(e.target.checked)
+            });
             this.render();
         });
 

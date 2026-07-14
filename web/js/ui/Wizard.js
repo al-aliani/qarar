@@ -16,6 +16,8 @@ import { getFieldHelp } from '../core/fieldHelpTexts.js';
 import { fieldHelp } from './components/FieldHelp.js';
 import { escapeHtml } from '../utils/escape.js';
 import { describeRevenueRampGap } from '../core/engine.js';
+import noUiSlider from 'nouislider';
+import AutoNumeric from 'autonumeric';
 
 // أيقونة sprite + تجريد إيموجي من التسميات القادمة من schema (smartFill.label تحوي 🪄)
 // — تدقيق تنظيف 2026-07-11: تُنظَّف عند العرض بلا لمس ملف schema المشترك.
@@ -382,6 +384,12 @@ export class Wizard {
             html += `<div id="marketingChart" class="mt-4 card" style="display:none; min-height:200px;"></div>`;
         } else if (stepId === 'staffing') {
             html += `<div id="staffingChart" class="mt-4 card" style="display:none; min-height:200px;"></div>`;
+        } else if (stepId === 'technical') {
+            html += `<div class="card analysis-card mt-4">
+                        <h3 class="card-title">تحليل الموقع الجغرافي</h3>
+                        <p class="text-muted text-sm mb-3">حدد موقع المشروع لتقييم الكثافة وقربه من المنافسين والموردين.</p>
+                        <div id="technicalMap" style="height: 300px; border-radius: 8px; z-index: 1;"></div>
+                     </div>`;
         }
 
         html += `</div>`; // Close step-content
@@ -406,6 +414,19 @@ export class Wizard {
                     chartContainer.style.display = 'block';
                     ReviewCharts.renderStaffingCost('staffingChart', { staffing: this.store.get().staffing?.positions || [] });
                 }
+            } else if (stepId === 'technical') {
+                const mapEl = document.getElementById('technicalMap');
+                if (mapEl) {
+                    Promise.all([import('leaflet'), import('leaflet/dist/leaflet.css')]).then(([{ default: L }]) => {
+                        if (!this.container?.contains(mapEl)) return;
+                        const map = L.map('technicalMap').setView([24.7136, 46.6753], 12); // Riyadh center
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '© OpenStreetMap contributors'
+                        }).addTo(map);
+                        const marker = L.marker([24.7136, 46.6753], {draggable: true}).addTo(map);
+                        marker.bindPopup('<b>موقع المشروع المقترح</b><br>اسحب لتحديد الموقع الدقيق.').openPopup();
+                    });
+                }
             }
         }, 300);
 
@@ -419,6 +440,48 @@ export class Wizard {
                 this.updateStore(stepId, input.dataset.key, e.target.type, e.target.value, e.target.checked);
             });
         });
+
+        // Initialize Financial Upgrades if step is Assumptions
+        if (stepId === 'assumptions' || stepId === 'financing') {
+            this.container.querySelectorAll('input[type="number"]').forEach(input => {
+                if (input.dataset.key?.includes('Rate') || input.dataset.key?.includes('contingencyRate')) {
+                    input.style.display = 'none';
+                    const sliderDiv = document.createElement('div');
+                    sliderDiv.style.margin = '20px 10px';
+                    input.parentNode.insertBefore(sliderDiv, input.nextSibling);
+                    
+                    const max = input.dataset.key.includes('contingency') ? 50 : 100;
+                    const startVal = (parseFloat(input.value) || 0) * 100;
+                    
+                    try {
+                        noUiSlider.create(sliderDiv, {
+                            start: [startVal],
+                            connect: [true, false],
+                            step: 1,
+                            range: { 'min': 0, 'max': max },
+                            tooltips: true,
+                            format: {
+                                to: value => parseInt(value) + '%',
+                                from: value => Number(value.replace('%', ''))
+                            }
+                        });
+                        sliderDiv.noUiSlider.on('change', (values) => {
+                            const pct = parseFloat(values[0]) / 100;
+                            input.value = pct;
+                            input.dispatchEvent(new Event('change'));
+                        });
+                    } catch(e) { console.error('Slider error', e); }
+                } else if (!input.dataset.key?.includes('projectionYears') && !input.dataset.key?.includes('Months')) {
+                    try {
+                        new AutoNumeric(input, {
+                            currencySymbol: '',
+                            decimalPlaces: 0,
+                            digitGroupSeparator: ','
+                        });
+                    } catch(e) { console.error('AutoNumeric error', e); }
+                }
+            });
+        }
 
         // عصا سحرية: اقتراح/إعادة صياغة تدفقية لكل textarea
         this.container.querySelectorAll('.btn-magic-wand').forEach(btn => {

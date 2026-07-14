@@ -9,6 +9,10 @@ import { attachToolReport } from './js/ui/components/ToolReport.js';
 import { StudyJourney } from './js/ui/StudyJourney.js';
 import { StudyCategoryView } from './js/ui/StudyCategoryView.js';
 import { calculateStudy as runFullModel } from './js/core/engine.js';
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css';
+import { OverlayScrollbars } from 'overlayscrollbars';
+import 'overlayscrollbars/overlayscrollbars.css';
 // المكونات الثقيلة تُحمّل عند أول زيارة للخطوة (Lazy Loading في navigateTo)
 import { toast } from './js/utils/toast.js';
 import { AutoSave } from './js/utils/autoSave.js';
@@ -804,6 +808,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     const category = SIDEBAR_SECTIONS[safeCategoryIndex];
     if (!category) return;
+    
+    // UI Feedback for premium navigation
+    NProgress.start();
 
     enterWorkspaceMode();
     const activeStepIndex = Number.isInteger(focusStepIndex) ? focusStepIndex : category.range[0];
@@ -840,6 +847,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       focusStepIndex: activeStepIndex,
       isCurrent: () => requestId === navigationRequestId
     });
+    
+    NProgress.done();
+
     if (!rendered || requestId !== navigationRequestId) return;
 
     enhanceFieldHelp(document.getElementById('wizardContainer'));
@@ -2038,7 +2048,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const renderMobileNav = () => {
     if (!mobileStepperNav) return;
     // احترام وضع العرض (سريع/مبسّط/مصغّر): نعرض نفس الخطوات المرئية في الشريط الجانبي،
-    // لا كامل STEPS.length دائماً — سابقاً كانت قائمة الجوّال تتجاهل الوضع فتُغرق مستخدم الجوّال.
+    // لا كامل STEPS.length دائما — سابقاً كانت قائمة الجوّال تتجاهل الوضع فتُغرق مستخدم الجوّال.
     const visibleSteps = (sidebar.steps && sidebar.steps.length) ? sidebar.steps : STEPS;
     const globalIndexOf = (step, localIdx) =>
       (sidebar.stepIndexMap && sidebar.stepIndexMap[localIdx] != null)
@@ -2075,6 +2085,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   mobileOverlay?.addEventListener('click', () => toggleMobileMenu(false));
   mobileNavClose?.addEventListener('click', () => toggleMobileMenu(false));
+
+  // Apply OverlayScrollbars to main stage (مرة واحدة عند التحميل، لا في كل ضغطة)
+  const mainStageEl = document.querySelector('.main-stage');
+  if (mainStageEl) {
+    OverlayScrollbars(mainStageEl, {
+      scrollbars: { autoHide: 'scroll', theme: 'os-theme-dark' }
+    });
+  }
 
   // Mobile export button
   btnMobileExport?.addEventListener('click', async () => {

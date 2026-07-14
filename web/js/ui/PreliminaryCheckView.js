@@ -8,6 +8,26 @@ import { stepIndexById } from '../core/wizardSteps.js';
 import { fieldHelp } from './components/FieldHelp.js';
 import { calculateIdeaScore } from '../core/calculateIdeaScore.js';
 
+import * as THREE from 'three';
+window.THREE = THREE;
+import Typed from 'typed.js';
+import VanillaTilt from 'vanilla-tilt';
+import confetti from 'canvas-confetti';
+import Swiper from 'swiper';
+import { Navigation, Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+
+// jsdom (بيئة الاختبارات) لا يوفّر 2D context حقيقياً — confetti تكسر بلا هذا الحارس.
+function canPlayConfetti() {
+    try {
+        return !!document.createElement('canvas').getContext('2d');
+    } catch {
+        return false;
+    }
+}
+
 // خيارات الأزرار الثلاثة — value معياري إنجليزي، label عربي معروض ومخزّن
 const TRI_CHOICES = [
     { value: 'yes', label: 'نعم' },
@@ -108,32 +128,49 @@ export class PreliminaryCheckView {
 
         this.container.innerHTML = `
             <div class="preliminary-check-view pc-premium">
-                <header class="pc-hero">
-                    <span class="pc-hero__glow" aria-hidden="true"></span>
-                    <span class="pc-hero__eyebrow"><span class="pc-hero__pulse" aria-hidden="true"></span> الخطوة الأولى — فرز سريع</span>
-                    <h1 class="pc-hero__title">قبل التفاصيل، لنتأكد أن فكرتك <span class="pc-hero__accent">تستحق الدراسة</span></h1>
-                    <p class="pc-hero__sub">أربعة أسئلة سريعة تمنحك قراراً مبكراً — <strong>أكمل</strong> أو <strong>راجع</strong> أو <strong>قارن بدائل</strong> — قبل أن تصرف وقتك في التفاصيل. إجابات تقريبية تكفي.
-                        ${fieldHelp('الهدف: قرار مبكر «أكمل / راجع / قارن أفكاراً بديلة» قبل صرف وقت في دراسة تفصيلية. تُجمع الإجابات بشكل بسيط من الأهل والمعارف، أو من الغرف التجارية والوزارات ومجلات الاستثمار.', 'مثال: قبل دراسة مطعم، اسأل ٣ من أصحاب المطاعم عن أصعب ما واجههم.')}
-                    </p>
-                    <div class="pc-hero__meta">
-                        <span class="pc-hero__chip">${heroIcon('clock')} أقل من دقيقة</span>
-                        <span class="pc-hero__chip">${heroIcon('skip')} يمكنك تخطي الخطوة</span>
-                        <span class="pc-hero__chip">${heroIcon('shield')} بدون التزام — إجابات تقريبية</span>
+                <header class="pc-hero" style="min-height: 300px; position: relative; overflow: hidden; border-radius: 12px; margin-bottom: 2rem;">
+                    <div style="position: relative; z-index: 2; padding: 2rem;">
+                        <span class="pc-hero__glow" aria-hidden="true"></span>
+                        <span class="pc-hero__eyebrow"><span class="pc-hero__pulse" aria-hidden="true"></span> الخطوة الأولى — فرز سريع</span>
+                        <h1 class="pc-hero__title typed-title" style="min-height: 48px;"></h1>
+                        <p class="pc-hero__sub">أربعة أسئلة سريعة تمنحك قراراً مبكراً — <strong>أكمل</strong> أو <strong>راجع</strong> أو <strong>قارن بدائل</strong> — قبل أن تصرف وقتك في التفاصيل. إجابات تقريبية تكفي.
+                            ${fieldHelp('الهدف: قرار مبكر «أكمل / راجع / قارن أفكاراً بديلة» قبل صرف وقت في دراسة تفصيلية. تُجمع الإجابات بشكل بسيط من الأهل والمعارف، أو من الغرف التجارية والوزارات ومجلات الاستثمار.', 'مثال: قبل دراسة مطعم، اسأل ٣ من أصحاب المطاعم عن أصعب ما واجههم.')}
+                        </p>
+                        <div class="pc-hero__meta">
+                            <span class="pc-hero__chip">${heroIcon('clock')} أقل من دقيقة</span>
+                            <span class="pc-hero__chip">${heroIcon('skip')} يمكنك تخطي الخطوة</span>
+                            <span class="pc-hero__chip">${heroIcon('shield')} بدون التزام — إجابات تقريبية</span>
+                        </div>
                     </div>
                 </header>
 
-                <div class="card analysis-card pc-card mb-4">
+                <div class="card analysis-card pc-card mb-4" data-tilt>
                     <h3 class="card-title pc-card__title">أسئلة تأهيلية</h3>
-                    ${this._renderTriQuestion('pc-feasible',
-                        `1. هل المشروع ممكن تنفيذه؟ (بناءً على معلومات أولية) ${fieldHelp('هل يمكن فعلياً تنفيذ الفكرة بالإمكانات المتاحة في السوق؟ لا يلزم يقين — انطباع أولي يكفي.', 'مثال: مقهى صغير في حي سكني — نعم، المعدات والموردون متوفرون.')}`,
-                        pc.isProjectFeasible)}
-                    ${this._renderTriQuestion('pc-environment',
-                        `2. هل المشروع مناسب للبيئة التي ستعمل فيها؟ ${fieldHelp('هل يناسب المشروع الموقع والمنطقة وطبيعة السكان وعاداتهم الشرائية؟', 'مثال: مطعم عائلي في حي عائلات — مناسب؛ مقهى ليلي بجوار مدارس — غير مناسب.')}`,
-                        pc.suitableForEnvironment)}
-                    ${this._renderResources(res)}
-                    ${this._renderTriQuestion('pc-ready',
-                        `4. هل أنت جاهز للدراسة التفصيلية؟ ${fieldHelp('الدراسة التفصيلية تحتاج وقتاً لجمع أرقام حقيقية: أسعار، إيجارات، رواتب، منافسين.', 'مثال: نعم — لدي أسبوعان لزيارة المنافسين وسؤال الموردين عن الأسعار.')}`,
-                        pc.readyForDetailedStudy)}
+                    <div class="swiper-container" style="overflow: hidden; padding: 1rem 0;">
+                        <div class="swiper-wrapper">
+                            <div class="swiper-slide">
+                                ${this._renderTriQuestion('pc-feasible',
+                                    `1. هل المشروع ممكن تنفيذه؟ (بناءً على معلومات أولية) ${fieldHelp('هل يمكن فعلياً تنفيذ الفكرة بالإمكانات المتاحة في السوق؟ لا يلزم يقين — انطباع أولي يكفي.', 'مثال: مقهى صغير في حي سكني — نعم، المعدات والموردون متوفرون.')}`,
+                                    pc.isProjectFeasible)}
+                            </div>
+                            <div class="swiper-slide">
+                                ${this._renderTriQuestion('pc-environment',
+                                    `2. هل المشروع مناسب للبيئة التي ستعمل فيها؟ ${fieldHelp('هل يناسب المشروع الموقع والمنطقة وطبيعة السكان وعاداتهم الشرائية؟', 'مثال: مطعم عائلي في حي عائلات — مناسب؛ مقهى ليلي بجوار مدارس — غير مناسب.')}`,
+                                    pc.suitableForEnvironment)}
+                            </div>
+                            <div class="swiper-slide">
+                                ${this._renderResources(res)}
+                            </div>
+                            <div class="swiper-slide">
+                                ${this._renderTriQuestion('pc-ready',
+                                    `4. هل أنت جاهز للدراسة التفصيلية؟ ${fieldHelp('الدراسة التفصيلية تحتاج وقتاً لجمع أرقام حقيقية: أسعار، إيجارات، رواتب، منافسين.', 'مثال: نعم — لدي أسبوعان لزيارة المنافسين وسؤال الموردين عن الأسعار.')}`,
+                                    pc.readyForDetailedStudy)}
+                            </div>
+                        </div>
+                        <div class="swiper-pagination"></div>
+                        <div class="swiper-button-prev"></div>
+                        <div class="swiper-button-next"></div>
+                    </div>
                 </div>
 
                 <!-- بطاقة النتيجة الفورية -->
@@ -142,6 +179,67 @@ export class PreliminaryCheckView {
         `;
 
         this._bindEvents();
+        
+        // --- UX Libraries Initialization ---
+        
+        // 1. Vanta.js (3D Background)
+        import('vanta/dist/vanta.net.min.js').then(() => {
+            if (window.VANTA && this.container.querySelector('.pc-hero')) {
+                this.vantaEffect = window.VANTA.NET({
+                    el: this.container.querySelector('.pc-hero'),
+                    mouseControls: true,
+                    touchControls: true,
+                    gyroControls: false,
+                    minHeight: 200.00,
+                    minWidth: 200.00,
+                    scale: 1.00,
+                    scaleMobile: 1.00,
+                    color: 0x3f51b5,
+                    backgroundColor: 0x0f172a,
+                    points: 12.00,
+                    maxDistance: 22.00,
+                    spacing: 18.00
+                });
+            }
+        }).catch(err => console.log('Vanta error:', err));
+
+        // 2. Typed.js
+        const titleEl = this.container.querySelector('.typed-title');
+        if (titleEl) {
+            new Typed(titleEl, {
+                strings: ['مرحباً بك في دراسة الجدوى..', 'قبل التفاصيل، لنتأكد أن فكرتك <span class="pc-hero__accent">تستحق الدراسة</span>'],
+                typeSpeed: 40,
+                backSpeed: 20,
+                showCursor: false
+            });
+        }
+
+        // 3. Swiper.js
+        new Swiper(this.container.querySelector('.swiper-container'), {
+            modules: [Navigation, Pagination],
+            navigation: {
+                nextEl: '.swiper-button-next',
+                prevEl: '.swiper-button-prev',
+            },
+            pagination: {
+                el: '.swiper-pagination',
+                clickable: true,
+            },
+            spaceBetween: 30,
+            autoHeight: true
+        });
+
+        // 4. Vanilla-Tilt.js
+        VanillaTilt.init(this.container.querySelectorAll("[data-tilt]"), {
+            max: 5,
+            speed: 400,
+            glare: true,
+            "max-glare": 0.1,
+        });
+        
+        // Call result computation initially to check if we should trigger confetti
+        const initialResult = this._computeResult(pc);
+        this.lastLevel = initialResult.level;
     }
 
     // ── حساب نتيجة الفرز ──
@@ -246,8 +344,22 @@ export class PreliminaryCheckView {
     }
 
     _updateResultCard() {
-        const el = document.getElementById('pc-result');
-        if (el) el.innerHTML = this._renderResultCard(this._collect());
+        const resultDiv = document.getElementById('pc-result');
+        const pc = this._collect();
+        if (resultDiv) {
+            resultDiv.innerHTML = this._renderResultCard(pc);
+            
+            // 5. Confetti! (If the level turns to green and wasn't green before)
+            const newLevel = this._computeResult(pc).level;
+            if (newLevel === 'green' && this.lastLevel !== 'green' && canPlayConfetti()) {
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+            this.lastLevel = newLevel;
+        }
         // زر بطاقة الأحمر يظهر ديناميكياً — أعِد ربطه
         this.container.querySelector('.btn-goto-alternatives')?.addEventListener('click', () => this._goToAlternatives());
     }

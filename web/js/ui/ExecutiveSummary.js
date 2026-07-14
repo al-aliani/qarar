@@ -12,6 +12,7 @@ import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
 import { indicatorHelp } from '../utils/glossary.js';
+import Typed from 'typed.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -519,9 +520,16 @@ export class ExecutiveSummary {
                     // Update UI — فقط إن كان الناتج نصاً فعلياً (null = تعذر التوليد؛
                     // لا نحفظ فراغاً/رسالة خطأ كملخص تنفيذي)
                     if (inputEl && typeof generatedText === 'string' && generatedText.trim()) {
-                        inputEl.value = generatedText;
-                        // Trigger change event to save to store
-                        inputEl.dispatchEvent(new Event('change'));
+                        inputEl.value = '';
+                        new Typed(inputEl, {
+                            strings: [generatedText],
+                            typeSpeed: 10,
+                            showCursor: false,
+                            attr: 'value',
+                            onComplete: () => {
+                                inputEl.dispatchEvent(new Event('change'));
+                            }
+                        });
                     } else if (!generatedText) {
                         throw new Error('تعذر التوليد — لا يوجد ناتج');
                     }
@@ -561,8 +569,17 @@ export class ExecutiveSummary {
                     try {
                         const state = this.store.getState();
                         const suggestion = InternalAIGenerator.generateFieldSuggestion(targetId, originalVal, state);
-                        inputEl.value = suggestion;
-                        inputEl.dispatchEvent(new Event('change'));
+                        
+                        inputEl.value = '';
+                        new Typed(inputEl, {
+                            strings: [suggestion],
+                            typeSpeed: 15,
+                            showCursor: false,
+                            attr: 'value',
+                            onComplete: () => {
+                                inputEl.dispatchEvent(new Event('change'));
+                            }
+                        });
                         toast.success('تم اقتراح النص بنجاح');
                     } catch (err) {
                         console.error(err);

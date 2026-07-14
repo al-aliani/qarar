@@ -2,6 +2,7 @@
  * Break-even Analysis Component
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
+import Chart from 'chart.js/auto';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;

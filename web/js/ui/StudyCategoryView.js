@@ -4,6 +4,10 @@ import { enhanceFieldHelp } from './components/FieldHelpEnhancer.js';
 import { attachToolReport } from './components/ToolReport.js';
 import { Wizard } from './Wizard.js';
 import { renderStepComponent } from './stepComponentRegistry.js';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+import tippy from 'tippy.js';
+import 'tippy.js/dist/tippy.css';
 
 /**
  * يعرض جميع أقسام التصنيف في صفحة واحدة. تظل معرّفات الأقسام الـ41 وبياناتها
@@ -126,7 +130,20 @@ export class StudyCategoryView {
         }
         if (options.isCurrent && !options.isCurrent()) return false;
 
-        this.container.querySelectorAll('.category-step__content').forEach(content => enhanceFieldHelp(content));
+        this.container.querySelectorAll('.category-step__content').forEach(content => {
+            enhanceFieldHelp(content);
+            // Initialize Tippy.js for all categories globally
+            tippy(content.querySelectorAll('.field-help-icon, .tooltip-icon, .field-help'), {
+                content: (reference) => reference.getAttribute('title'),
+                theme: 'light-border',
+                arrow: true,
+                animation: 'fade',
+                onMount(instance) {
+                    instance.reference.removeAttribute('title');
+                }
+            });
+        });
+        
         this.removeChildNavigation();
         this.setupTocScrollSpy(stepIndexes);
 
@@ -134,6 +151,26 @@ export class StudyCategoryView {
         if (focusIndex != null && stepIndexes.includes(focusIndex) && focusIndex !== stepIndexes[0]) {
             requestAnimationFrame(() => document.getElementById(`category-section-${focusIndex}`)?.scrollIntoView({ block: 'start' }));
         }
+
+        // Onboarding Tour (Category 0)
+        if (categoryIndex === 0 && !localStorage.getItem('tour_category0_seen')) {
+            localStorage.setItem('tour_category0_seen', 'true');
+            setTimeout(() => {
+                const driverObj = driver({
+                    showProgress: true,
+                    doneBtnText: 'بدء الدراسة',
+                    nextBtnText: 'التالي',
+                    prevBtnText: 'السابق',
+                    steps: [
+                        { element: '.category-page__header', popover: { title: 'مرحباً بك في دراستك!', description: 'هذه المرحلة مخصصة لتعريف مشروعك بشكل صحيح قبل الدخول في الأرقام.', side: "bottom" }},
+                        { element: '.category-toc', popover: { title: 'أقسام المرحلة', description: 'يمكنك القفز المباشر لأي قسم من هنا. كل قسم يحفظ بياناتك تلقائياً.', side: "left" }},
+                        { element: '[data-category-next]', popover: { title: 'المرحلة التالية', description: 'بعد الانتهاء من أقسام هذه الصفحة، اضغط هنا للانتقال للمرحلة التالية.', side: "top" }}
+                    ]
+                });
+                driverObj.drive();
+            }, 1000);
+        }
+
         return true;
     }
 
