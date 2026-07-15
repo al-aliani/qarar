@@ -9,6 +9,13 @@ import { SmartAdvisor } from '../services/SmartAdvisor.js';
 import { generateSWOT, generateAdvisorFallback, generateFinancialImprovementAdvice } from '../services/InternalAIGenerator.js';
 import { escapeHtml } from '../utils/escape.js';
 import { CATEGORY_TIPS } from '../core/categoryTips.js';
+import { hasMinimumRevenueData } from '../utils/dataSufficiency.js';
+
+// رسالة موحّدة تُعرض بدل أي استنتاج مبني على مؤشرات مالية (توصية/جدوى) حين لا تتوفر
+// بيانات إيرادات كافية بعد — بدل حكم سلبي قاطع («صافي القيمة الحالية غير إيجابي...
+// القرار يشير إلى عدم جدوى المشروع») على دراسة لا تزال فارغة (نفس فحص hasMinimumRevenueData
+// المستخدم في ExecutiveSummary.js وDecisionDashboard.js وFinancialDashboard.js).
+const INSUFFICIENT_DATA_MSG = 'بيانات دراستك المالية غير مكتملة بعد — لا توجد مصادر إيرادات مُدخلة. أكمل خطوة "مصادر الإيرادات" أولاً حتى أقدر أحلّل الجدوى وأقدّم توصية مبنية على أرقام حقيقية بدل استنتاج من بيانات فارغة.';
 
 const SUGGESTED_PROMPTS = [
     { label: 'ما توصياتك لمشروعي؟', type: 'advisor' },
@@ -290,9 +297,39 @@ export class AIChatModal {
                 '• يُوصى بمراقبة المتغيرات الأكثر حساسية (الإيجار، تكلفة المواد، حجم المبيعات) ووضع خطط بديلة.';
         }
 
+        // اقتراح جاهز «نصائح عامة للبدء» (promptType='advisor_fallback') — نصائح عامة من
+        // بيانات المشروع الوصفية (الاسم/المدينة/القطاع)، لا تستنتج من مؤشرات مالية، فلا
+        // تحتاج فحص كفاية بيانات الإيرادات.
+        if (promptType === 'advisor_fallback') {
+            const fallback = generateAdvisorFallback(state);
+            return fallback || 'لا توجد نصائح إضافية متاحة حالياً.';
+        }
+
+        // اقتراح جاهز «ما توصياتك لمشروعي؟» (promptType='advisor'). كان هذا السؤال يسقط
+        // دائماً في المسار الافتراضي "لم أفهم سؤالك" لأنه لا يطابق أياً من كلمات
+        // SWOT/الملخص/المخاطر/اختبار الضغط المفتاحية أعلاه رغم أنه سؤال واضح المعنى —
+        // يُفهم الآن صراحة (توجيه promptType الحتمي من الزر، أو مطابقة نصية حرة). ونطبّق
+        // hasMinimumRevenueData قبل أي استنتاج من المؤشرات المالية (SmartAdvisor.analyze
+        // يستنتج «القرار يشير إلى عدم جدوى المشروع» من دراسة لا تزال فارغة تماماً).
+        if (promptType === 'advisor' || /توصي|تنصح/i.test(text)) {
+            if (!hasMinimumRevenueData(state)) return INSUFFICIENT_DATA_MSG;
+
+            const analyzed = SmartAdvisor.analyze(results || {}, state);
+            if (analyzed?.insights?.length > 0) {
+                const insightsText = analyzed.insights.map(i =>
+                    `• [${i.category}] ${i.message}\n  **الإجراء:** ${i.action || '—'}`
+                ).join('\n\n');
+                return `**توصياتي لمشروعك بناءً على بيانات دراستك:**\n\n${insightsText}`;
+            }
+            const fallback = generateAdvisorFallback(state);
+            return fallback ? `مؤشراتك المالية ضمن النطاق الصحي حالياً ولا توجد ملاحظات سلبية.\n\n${fallback}` : 'مؤشراتك المالية ضمن النطاق الصحي حالياً ولا توجد ملاحظات سلبية.';
+        }
+
         // افتراضي: لم يُطابَق سؤالٌ محدد — نُفصح بصدق أننا لم نفهم السؤال بعينه، ثم نعرض
         // ملاحظات المستشار المبنية على بيانات المشروع (لا ندّعي أننا أجبنا عن سؤاله الحر).
         const notUnderstood = 'لم أفهم سؤالك تحديداً — هذا مساعد قواعد يجيب عن مواضيع محددة. جرّب: «حلّل SWOT»، «اكتب الملخص التنفيذي»، «اقترح مخاطر»، أو «فسّر اختبار الضغط».';
+        if (!hasMinimumRevenueData(state)) return `${notUnderstood}\n\n${INSUFFICIENT_DATA_MSG}`;
+
         const analyzed = SmartAdvisor.analyze(results || {}, state);
         if (analyzed?.insights?.length > 0) {
             const insightsText = analyzed.insights.map(i =>

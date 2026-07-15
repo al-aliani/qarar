@@ -5,6 +5,7 @@
 
 import { calculateStudy as runFullModel, resolveDecisionThresholds } from '../core/engine.js';
 import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
+import { hasMinimumRevenueData } from '../utils/dataSufficiency.js';
 import { calculateProjectScore } from '../core/scoring.js';
 import { checkDriversAgainstBenchmarks, SECTOR_BENCHMARKS, resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
 import { aiConnector } from '../services/AIConnector.js'; // Updated: use unified AI service
@@ -54,7 +55,7 @@ export class ExecutiveSummary {
                 <!-- Feasibility Score -->
                 <div class="card analysis-card">
                     <h3 class="card-title">درجة الجدوى التلقائية</h3>
-                    ${this.renderFeasibilityScore(score, breakdown)}
+                    ${this.renderFeasibilityScore(score, breakdown, state)}
                 </div>
 
                 ${compact ? '' : `
@@ -127,7 +128,23 @@ export class ExecutiveSummary {
         return { score: evaluation.score, breakdown: evaluation.breakdown || {} };
     }
 
-    renderFeasibilityScore(score, breakdown) {
+    /**
+     * رسالة مشتركة لدرجة الجدوى والتوصية النهائية عند غياب الحد الأدنى من بيانات الإيرادات —
+     * نفس صياغة رسالة "لا بيانات" المستخدمة في DecisionDashboard.js وFinancialDashboard.js،
+     * بدل إصدار حكم قاطع (مثل "5 من 100 - غير مجدٍ") من بيانات فارغة.
+     */
+    renderInsufficientRevenueNotice() {
+        return `
+            <div class="alert alert--warning">
+                <p><strong>${icon('i-warning')} لا توجد بيانات إيرادات كافية.</strong></p>
+                <p class="text-sm mt-2">أكمل خطوة "مصادر الإيرادات" أولاً لعرض درجة الجدوى والتوصية.</p>
+            </div>
+        `;
+    }
+
+    renderFeasibilityScore(score, breakdown, state) {
+        if (!hasMinimumRevenueData(state)) return this.renderInsufficientRevenueNotice();
+
         const getScoreColor = (s) => {
             if (s >= 80) return 'score-excellent';
             if (s >= 60) return 'score-good';
@@ -347,6 +364,8 @@ export class ExecutiveSummary {
     }
 
     renderRecommendation(score, results, state) {
+        if (!hasMinimumRevenueData(state)) return this.renderInsufficientRevenueNotice();
+
         let recommendation = 'conditional';
         let message = '';
         let actions = [];
@@ -399,7 +418,7 @@ export class ExecutiveSummary {
             <div class="recommendation-container">
                 <div class="decision-banner ${bannerClass}">
                     ${recommendation === 'go' ? `${icon('i-check')} المشروع مجدي - GO` :
-                recommendation === 'nogo' ? `${icon('i-x')} المشروع غير مجدي - NO GO` :
+                recommendation === 'nogo' ? `${icon('i-x')} المشروع غير مجدي - NO-GO` :
                     `${icon('i-warning')} يحتاج مراجعة - CONDITIONAL`}
                 </div>
                 <p class="recommendation-message">${message}</p>

@@ -18,6 +18,7 @@ import { exportExcel } from '../../export/excel.js';
 import { animateCounter } from '../utils/ui.js';
 import { runQAChecks } from '../utils/qaChecks.js';
 import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
+import { hasMinimumRevenueData } from '../utils/dataSufficiency.js';
 import { toast } from '../utils/toast.js';
 import confetti from 'canvas-confetti';
 import { GridStack } from 'gridstack';
@@ -49,7 +50,7 @@ export class DecisionDashboard {
 
         // بلا إيرادات لا يصح إصدار حكم «غير مجدي» بأرقام سالبة مضللة —
         // نعرض حالة «لا بيانات» إرشادية توجّه للخطوات الناقصة (كما في القوائم المالية).
-        if (!(Array.isArray(state.revenue?.streams) && state.revenue.streams.length > 0)) {
+        if (!hasMinimumRevenueData(state)) {
             this.container.innerHTML = `
                 <div class="decision-dashboard animate-entry">
                     <div class="card glass-card">

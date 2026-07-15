@@ -38,6 +38,11 @@ function buildState() {
         ...state.financing,
         sources: { ...(state.financing?.sources || {}), bankLoan: { amount: 500000 } }
     };
+    // renderRecommendation يفحص الآن hasMinimumRevenueData(state) قبل عرض التوصية (حارس
+    // بيانات جديد) — هذا الاختبار يفحص محتوى التوصية نفسها (أفعال DSCR الديناميكية) لمشروع
+    // مكتمل البيانات فعلياً (نتائج buildGoResults تفترض إيرادات 1,000,000)، فيجب أن يعكس
+    // state.revenue.streams نفس الافتراض بدل البقاء فارغاً كما في createEmptyStudy().
+    state.revenue = { streams: [{ service: 'خدمة تجريبية', customersPerMonth: 100, avgPrice: 833, growthRate: 0.05, type: 'operating' }] };
     return state;
 }
 

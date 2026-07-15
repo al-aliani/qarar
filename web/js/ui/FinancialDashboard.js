@@ -6,6 +6,7 @@
 // (بلا زكاة، خصم 5%) فتعرض NPV/IRR مختلفة عن التقرير المُصدَّر لنفس الدراسة.
 // الآن كل الشاشات والمصدّرات تقرأ من engine.js حصراً.
 import { calculateStudy as runFullModel } from '../core/engine.js';
+import { hasMinimumRevenueData } from '../utils/dataSufficiency.js';
 import { DEFAULT_SCENARIOS } from '../core/schema.js';
 import { SmartAdvisor } from '../services/SmartAdvisor.js';
 import { aiConnector } from '../services/AIConnector.js';
@@ -96,7 +97,7 @@ export class FinancialDashboard {
 
         // بلا إيرادات لا معنى للوحة: المحرك يعيد NPV/ROI سالبة مضللة لمشروع لم تُدخل
         // بياناته بعد — نعرض حالة «لا بيانات» إرشادية بدل بطاقات بأرقام سالبة.
-        if (!(Array.isArray(studyData.revenue?.streams) && studyData.revenue.streams.length > 0)) {
+        if (!hasMinimumRevenueData(studyData)) {
             this.container.innerHTML = `
                 <div class="card glass-card">
                     <h2 class="card-title">لوحة المؤشرات المالية</h2>
