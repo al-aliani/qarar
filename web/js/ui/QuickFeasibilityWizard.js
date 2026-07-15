@@ -25,7 +25,9 @@ const TOTAL_STEPS = 3;
 const ESTIMATED_MINUTES = 15;
 /** وقت متوقع متبقي للإكمال (دقائق) حسب الخطوة — KPI-1.2 / KPI-9.1 */
 const ESTIMATED_MINUTES_BY_STEP = { 1: 12, 2: 5, 3: 0 };
-const MODELIKS_HOUR_LABEL = 'جدوى في حوالي ساعة';
+/** مفتاح localStorage لحفظ مسودة الجدوى السريعة تلقائياً بين الخطوات — مسار مستقل عن مخطط الدراسة الكاملة (mac_blash_study_v2)،
+ *  فلا يمر عبر store.save() كي لا يخلط شكل quickData المخصّص بمخطط الدراسة الكاملة (مصدر واحد للحقيقة لكل مخطط). */
+const QUICK_DRAFT_KEY = 'feas_quick_draft';
 
 export class QuickFeasibilityWizard {
     constructor(containerId, store, options = {}) {
@@ -51,6 +53,58 @@ export class QuickFeasibilityWizard {
         };
         this.estimates = { ...getQuickDefaultsForSector('restaurant') };
         this.estimateSource = 'sector'; // 'sector' (متوسط قطاعي ثابت) أو 'market' (محرك السوق حسب المدينة/المساحة)
+        // آخر قيمة «ميزانية تقريبية» رُحّلت تلقائياً لحقل «الاستثمار الأولي» — تُستخدم لمعرفة إن كان
+        // المستخدم قد كتب رقماً مختلفاً بنفسه لاحقاً (فلا نطمسه بترحيل جديد). راجع bindStep1.
+        this._budgetCarriedAmount = null;
+        this._hydrateDraft(); // يستعيد مسودة محفوظة محلياً (إن وُجدت) — إصلاح فقدان البيانات عند تحديث الصفحة
+    }
+
+    /** يحفظ مسودة الجدوى السريعة محلياً فوراً — يُستدعى من goToStep ومن أي تعديل جوهري آخر على quickData. */
+    _persistDraft() {
+        try {
+            if (typeof localStorage === 'undefined') return;
+            localStorage.setItem(QUICK_DRAFT_KEY, JSON.stringify({
+                step: this.step,
+                quickData: this.quickData,
+                budgetCarriedAmount: this._budgetCarriedAmount
+            }));
+        } catch (e) {
+            console.warn('QuickFeasibilityWizard: تعذر حفظ المسودة محلياً', e);
+        }
+    }
+
+    /** يستعيد مسودة محفوظة (إن وُجدت) — يُستدعى مرة واحدة من المُنشئ فقط. */
+    _hydrateDraft() {
+        try {
+            if (typeof localStorage === 'undefined') return;
+            const raw = localStorage.getItem(QUICK_DRAFT_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object' || !parsed.quickData || typeof parsed.quickData !== 'object') return;
+            this.quickData = { ...this.quickData, ...parsed.quickData };
+            if (parsed.budgetCarriedAmount !== undefined) this._budgetCarriedAmount = parsed.budgetCarriedAmount;
+            const restoredStep = Number(parsed.step);
+            if (Number.isInteger(restoredStep) && restoredStep >= 1 && restoredStep <= TOTAL_STEPS) {
+                this.step = restoredStep;
+            }
+            this.applySectorDefaults(); // يعيد بناء this.estimates بما يطابق القطاع المُستعاد
+        } catch (e) {
+            console.warn('QuickFeasibilityWizard: تعذر استرجاع المسودة المحفوظة', e);
+        }
+    }
+
+    /** يمسح المسودة المحفوظة محلياً — تُستدعى فقط عند اكتمال المسار فعلياً نحو الدراسة الكاملة. */
+    _clearDraft() {
+        try {
+            if (typeof localStorage !== 'undefined') localStorage.removeItem(QUICK_DRAFT_KEY);
+        } catch (e) { /* تجاهل */ }
+    }
+
+    /** ينتقل لخطوة جديدة ويحفظ المسودة محلياً فوراً — نقطة وحيدة لكل تنقل بين الخطوات. */
+    goToStep(step) {
+        this.step = step;
+        this.render();
+        this._persistDraft();
     }
 
     /** يحدّث التقدير القطاعي المعروض (لا يلمس أرقام المستخدم في quickData). */
@@ -100,7 +154,7 @@ export class QuickFeasibilityWizard {
                     <div class="progress-bar-fill" style="width: ${progress}%"></div>
                 </div>
                 <h2 class="text-2xl font-bold mb-2">تعريف المشروع</h2>
-                <p class="text-muted mb-6">${MODELIKS_HOUR_LABEL} — خطوتان متبقيتان.</p>
+                <p class="text-muted mb-6">دراسة أولية جاهزة خلال ${ESTIMATED_MINUTES} دقيقة تقريباً — خطوتان متبقيتان.</p>
                 <div class="card card-hover max-w-xl space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">اسم المشروع</label>
@@ -198,6 +252,7 @@ export class QuickFeasibilityWizard {
                         <label class="block text-sm font-medium mb-1">الاستثمار الأولي (ريال)</label>
                         <input type="number" id="qf-initialInvestment" class="input w-full" dir="ltr" value="${this._fieldVal(d.initialInvestment)}" min="0" step="10000" placeholder="تقدير قطاعي: ${e.initialInvestment}" />
                         <p class="field-hint text-xs text-muted mt-1">اشمل كل التكاليف لمرة واحدة: تجهيز المكان، معدات، أثاث، تراخيص، ما قبل التشغيل، ورأس مال عامل للأشهر الأولى.</p>
+                        ${d.budget > 0 ? `<p class="field-hint text-xs text-muted mt-1">كما ذكرت سابقاً: ميزانية تقريبية ${formatCurrency(d.budget)} — عدّله إن احتجت.</p>` : ''}
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">مصدر التمويل</label>
@@ -264,7 +319,7 @@ export class QuickFeasibilityWizard {
                 </div>
                 <h2 class="text-2xl font-bold mb-2">ملخص القرار</h2>
                 <p class="text-muted mb-6">تم تقييم المشروع بناءً على المدخلات. يمكنك طباعة التقرير المختصر أو حفظه كـ PDF الآن.</p>
-                <p class="text-gold font-semibold mb-4">تم إعداد مسودة دراستك في حوالي ساعة.</p>
+                <p class="text-gold font-semibold mb-4">مسودتك الأولية جاهزة الآن.</p>
                 ${warningsHtml}
                 <div class="card card-hover max-w-xl mb-6 p-6">
                     <div class="text-center mb-6">
@@ -317,7 +372,14 @@ export class QuickFeasibilityWizard {
         };
         cityEl?.addEventListener('change', syncOtherCity);
         this.container.querySelector('#qf-next-1')?.addEventListener('click', async () => {
-            this.quickData.projectName = this.container.querySelector('#qf-projectName')?.value?.trim() || 'مشروع جديد';
+            const projectNameInput = this.container.querySelector('#qf-projectName');
+            const projectNameVal = projectNameInput?.value?.trim() || '';
+            if (!projectNameVal) {
+                toast.error('يرجى إدخال اسم المشروع قبل المتابعة.');
+                projectNameInput?.focus();
+                return;
+            }
+            this.quickData.projectName = projectNameVal;
             this.quickData.sector = normalizeQuickSector(this.container.querySelector('#qf-sector')?.value || 'restaurant');
             this.quickData.sectorLabel = getQuickSectorLabel(this.quickData.sector);
             const selectedCity = this.container.querySelector('#qf-city')?.value || 'الرياض';
@@ -329,6 +391,15 @@ export class QuickFeasibilityWizard {
             this.quickData.city = selectedCity === OTHER_CITY_VALUE ? customCity : selectedCity;
             this.quickData.area = Number(this.container.querySelector('#qf-area')?.value) || 100;
             this.quickData.budget = Number(this.container.querySelector('#qf-budget')?.value) || 0;
+            // ترحيل «ميزانية تقريبية» كقيمة ابتدائية قابلة للتعديل لحقل «الاستثمار الأولي» بالخطوة التالية —
+            // فقط إن كان الحقل ما يزال فارغاً أو متزامناً مع آخر ميزانية رُحّلت (لا نطمس رقماً حقيقياً كتبه المستخدم يدوياً).
+            const investmentUnsetOrSynced = this.quickData.initialInvestment === null
+                || this.quickData.initialInvestment === undefined
+                || this.quickData.initialInvestment === this._budgetCarriedAmount;
+            if (this.quickData.budget > 0 && investmentUnsetOrSynced) {
+                this.quickData.initialInvestment = this.quickData.budget;
+                this._budgetCarriedAmount = this.quickData.budget;
+            }
             this.applySectorDefaults();
             try {
                 const defaults = await IntelligenceService.getMarketDefaults(
@@ -355,16 +426,14 @@ export class QuickFeasibilityWizard {
             } catch (e) {
                 /* استمر بالتقدير القطاعي الثابت */
             }
-            this.step = 2;
-            this.render();
+            this.goToStep(2);
         });
         this.container.querySelector('#qf-back-dash')?.addEventListener('click', () => this.onExit());
     }
 
     bindStep2() {
         this.container.querySelector('#qf-prev-2')?.addEventListener('click', () => {
-            this.step = 1;
-            this.render();
+            this.goToStep(1);
         });
         // ملء اختياري بالتقدير القطاعي — يسجّل موافقة صريحة من المستخدم (وليس تعبئة صامتة)
         this.container.querySelector('#qf-apply-estimate')?.addEventListener('click', () => {
@@ -372,6 +441,7 @@ export class QuickFeasibilityWizard {
             this.quickData.monthlyCosts = this.estimates.monthlyCosts;
             this.quickData.initialInvestment = this.estimates.initialInvestment;
             this.render();
+            this._persistDraft();
             toast.info('تم ملء الحقول بتقدير قطاعي عام — راجع كل رقم وعدّله بأرقامك الحقيقية قبل القرار.');
         });
         this.container.querySelector('#qf-next-2')?.addEventListener('click', () => {
@@ -390,8 +460,7 @@ export class QuickFeasibilityWizard {
                 return;
             }
 
-            this.step = 3;
-            this.render();
+            this.goToStep(3);
         });
         this.container.querySelector('#qf-ai-fill')?.addEventListener('click', async () => {
             const btn = this.container.querySelector('#qf-ai-fill');
@@ -461,7 +530,11 @@ export class QuickFeasibilityWizard {
                 btn.innerHTML = '📄 طباعة / حفظ PDF';
             }
         });
-        this.container.querySelector('#qf-full-path')?.addEventListener('click', () => this.onFinish(this.quickData));
+        this.container.querySelector('#qf-full-path')?.addEventListener('click', () => {
+            // المسار انتقل فعلياً للدراسة الكاملة (مخطط تخزين مختلف) — لا داعٍ لبقاء مسودة الجدوى السريعة.
+            this._clearDraft();
+            this.onFinish(this.quickData);
+        });
         this.container.querySelector('#qf-back-dash-3')?.addEventListener('click', () => this.onExit());
     }
 }
