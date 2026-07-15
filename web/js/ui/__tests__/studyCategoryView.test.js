@@ -22,7 +22,7 @@ describe('StudyCategoryView', () => {
         return { view, onNavigateCategory };
     }
 
-    it('classifies all 41 sections exactly once in the intended order', () => {
+    it('classifies all 42 sections exactly once in the intended order', () => {
         const classifiedIndexes = SIDEBAR_SECTIONS.flatMap(category => {
             const indexes = [];
             for (let index = category.range[0]; index <= category.range[1]; index++) indexes.push(index);
@@ -31,7 +31,7 @@ describe('StudyCategoryView', () => {
 
         expect(SIDEBAR_SECTIONS).toHaveLength(8);
         expect(classifiedIndexes).toEqual(STEPS.map((_, index) => index));
-        expect(new Set(classifiedIndexes).size).toBe(41);
+        expect(new Set(classifiedIndexes).size).toBe(42);
         expect(STEPS.slice(0, 7).map(step => step.label)).toEqual([
             'الدراسة المبدئية',
             'مقارنة الأفكار',
@@ -75,9 +75,27 @@ describe('StudyCategoryView', () => {
 
         expect([...document.querySelectorAll('.category-step')].map(section => Number(section.dataset.stepIndex))).toEqual([0, 2, 6]);
         expect([...document.querySelectorAll('.category-step__number')].map(element => element.textContent)).toEqual([
-            'الخطوة ١ من ٤١',
-            'الخطوة ٣ من ٤١',
-            'الخطوة ٧ من ٤١'
+            'الخطوة ١ من ٤٢',
+            'الخطوة ٣ من ٤٢',
+            'الخطوة ٧ من ٤٢'
         ]);
+    });
+
+    it('without a visible-category filter, the category eyebrow keeps absolute numbering out of all 8 categories', async () => {
+        const { view } = createView();
+
+        await view.render(2);
+
+        expect(document.querySelector('.category-page__eyebrow').textContent).toBe('التصنيف ٣ من ٨');
+    });
+
+    it('with a visible-category filter (e.g. mini study mode), the category eyebrow shows the position within the shrunken set, not the absolute index out of 8', async () => {
+        const { view } = createView();
+        // يحاكي visibleCategoryIndexesForMode('mini') الحقيقي في app.js: 5 تصنيفات غير فارغة فقط.
+        view.setVisibleCategoryIndexes([0, 1, 2, 4, 7]);
+
+        await view.render(4);
+
+        expect(document.querySelector('.category-page__eyebrow').textContent).toBe('التصنيف ٤ من ٥');
     });
 });

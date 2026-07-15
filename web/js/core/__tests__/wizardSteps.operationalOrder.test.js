@@ -4,10 +4,10 @@ import { SECTIONS, SIDEBAR_SECTIONS, STEPS, STEP_HELP } from '../wizardSteps.js'
 const indexOf = id => STEPS.findIndex(step => step.id === id);
 
 describe('ترتيب الرحلة التشغيلية', () => {
-    it('يحافظ على 41 خطوة فريدة وشرح مطابق لكل خطوة', () => {
-        expect(STEPS).toHaveLength(41);
-        expect(new Set(STEPS.map(step => step.id)).size).toBe(41);
-        expect(STEP_HELP).toHaveLength(41);
+    it('يحافظ على 42 خطوة فريدة وشرح مطابق لكل خطوة', () => {
+        expect(STEPS).toHaveLength(42);
+        expect(new Set(STEPS.map(step => step.id)).size).toBe(42);
+        expect(STEP_HELP).toHaveLength(42);
         expect(STEP_HELP.every(Boolean)).toBe(true);
     });
 
@@ -26,7 +26,7 @@ describe('ترتيب الرحلة التشغيلية', () => {
         expect(indexOf(SECTIONS.SCENARIOS)).toBeLessThan(indexOf('sensitivity'));
         expect(indexOf('sensitivity')).toBeLessThan(indexOf('stress_test'));
         expect(indexOf('stress_test')).toBeLessThan(indexOf(SECTIONS.MONTE_CARLO));
-        expect(indexOf(SECTIONS.APPENDICES)).toBe(34);
+        expect(indexOf(SECTIONS.APPENDICES)).toBe(35);
         expect(indexOf('dashboard')).toBeLessThan(indexOf(SECTIONS.DECISION_DASHBOARD));
         expect(indexOf(SECTIONS.DECISION_DASHBOARD)).toBeLessThan(indexOf(SECTIONS.EXECUTIVE_SUMMARY));
         expect(indexOf(SECTIONS.EXECUTIVE_SUMMARY)).toBeLessThan(indexOf('reportBuilder'));
@@ -35,7 +35,7 @@ describe('ترتيب الرحلة التشغيلية', () => {
     it('تغطي مجموعات الرحلة كل الخطوات بلا فجوة', () => {
         const ordered = [...SIDEBAR_SECTIONS].sort((a, b) => a.range[0] - b.range[0]);
         expect(ordered[0].range[0]).toBe(0);
-        expect(ordered.at(-1).range[1]).toBe(40);
+        expect(ordered.at(-1).range[1]).toBe(41);
         ordered.slice(1).forEach((section, index) => {
             expect(section.range[0]).toBe(ordered[index].range[1] + 1);
         });

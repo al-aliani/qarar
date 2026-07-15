@@ -13,12 +13,20 @@ import {
     getExpertTemplates
 } from '../services/ExpertTemplateService.js';
 import { HRFilesView } from './HRFilesView.js';
+import { STEPS, isStepVisibleInStudyMode, STEPS_ABSORBED_IN_CATEGORY_VIEW } from '../core/wizardSteps.js';
+
+// عدد خطوات كل وضع — محسوب من مصدر الحقيقة الوحيد (wizardSteps.js) لا رقماً مُخمَّناً،
+// ومطابق لما يراه المستخدم فعلياً في صفحة الفئات: يستبعد الخطوات المستوعَبة بصرياً داخل
+// شاشة مدموجة أخرى (اللوجستيات/الإدارية داخل «المصاريف التشغيلية») في كل الأوضاع، تماماً
+// كما يحسبها app.js (categoryVisibleStepIndexes) كي لا ينحرف الرقمان عن بعضهما.
+const ABSORBED_STEP_IDS = new Set(STEPS_ABSORBED_IN_CATEGORY_VIEW);
+const modeStepCount = (modeId) => STEPS.filter(s => !ABSORBED_STEP_IDS.has(s.id) && isStepVisibleInStudyMode(s.id, modeId)).length;
 
 // أوضاع الدراسة — كانت مدفونة في خطوة القوالب؛ صارت اختياراً واضحاً عند البداية
 const STUDY_MODES = [
-    { id: 'mini', icon: '🌱', name: 'مصغّر (للمبتدئين)', desc: 'المشروع، التكاليف، الفريق، الإيرادات، التمويل، القرار — أقل الأسئلة للوصول لقرار سريع.' },
-    { id: 'simple', icon: '📋', name: 'بسيط', desc: 'الأقسام الأساسية للدراسة دون التحليلات المتقدمة (حساسية، سيناريوهات، مونت كارلو، تقييم…).' },
-    { id: 'advanced', icon: '📊', name: 'مفصل', desc: 'الدراسة الكاملة بكل الأقسام والتحليلات — جاهزة للبنك والمستثمر.', badge: 'موصى به لبنك/مستثمر' }
+    { id: 'mini', icon: '🌱', name: 'مصغّر (للمبتدئين)', desc: `المشروع، التكاليف، الفريق، الإيرادات، التمويل، القرار — أقل الأسئلة للوصول لقرار سريع (${modeStepCount('mini')} خطوات تقريباً).` },
+    { id: 'simple', icon: '📋', name: 'بسيط', desc: `الأقسام الأساسية للدراسة دون التحليلات المتقدمة (حساسية، سيناريوهات، مونت كارلو، تقييم…) — ${modeStepCount('simple')} خطوة تقريباً.` },
+    { id: 'advanced', icon: '📊', name: 'مفصل', desc: `الدراسة الكاملة بكل الأقسام والتحليلات — جاهزة للبنك والمستثمر (${modeStepCount('advanced')} خطوة).`, badge: 'موصى به لبنك/مستثمر' }
 ];
 
 const escapeAttribute = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -187,7 +195,13 @@ export class TemplateGallery {
     renderBlankAttributionForm() {
         const body = this.overlay.querySelector('.modal-body');
         if (!body) { this.selectTemplate('empty'); return; }
-        const currentMode = this.store.getState?.()?.appSettings?.mode || 'advanced';
+        // الافتراضي دائماً «مفصل» عند فتح هذه النافذة — لا تذكّر آخر اختيار يدوي (تحقّق
+        // 2026-07-15: appSettings.mode هنا كان يقرأ حالة الدراسة السابقة/الحالية المتبقية
+        // في المخزن قبل استدعاء store.reset() أدناه، وليس تفضيلاً متعمَّداً محفوظاً لهذه
+        // النافذة تحديداً. آلية التفضيل الفعلية عبر الجلسات — localStorage['study_mode_preference']
+        // المستهلكة في app.js/SimpleModeController.js — لغرض مختلف تماماً (الوضع الفعّال
+        // لدراسة قائمة بالفعل) ولم تُمس هنا.
+        const currentMode = 'advanced';
         body.innerHTML = `
             <div class="blank-attribution-form">
                 <p class="template-gallery__lead"><strong>ابدأ دراستك — اختر مستوى التفصيل</strong></p>

@@ -71,8 +71,15 @@ export class StudyCategoryView {
         this._navNext = this._adjacentVisibleCategory(categoryIndex, +1);
 
         const stepIndexes = this.categoryStepIndexes(category);
-        const categoryNumber = (categoryIndex + 1).toLocaleString('ar-SA');
-        const categoryTotal = this.categories.length.toLocaleString('ar-SA');
+        // ترقيم «التصنيف X من Y» يعكس تصنيفات الوضع الحالي الظاهرة فعلياً (مصغّر/بسيط
+        // تُخفيان تصنيفات فارغة تماماً) بدل الإجمالي المطلق دوماً — نفس visibleCategoryIndexes
+        // المستخدم أصلاً لتخطي التصنيفات الفارغة في تنقّل السابق/التالي، فلا ينحرف الرقمان
+        // المعروضان (رأس الصفحة هنا وشريط المراحل في الهيدر) عن بعضهما (تحقّق 2026-07-15).
+        // بلا visibleCategoryIndexes (لم يُستدعَ setVisibleCategoryIndexes بعد): يبقى السلوك
+        // القديم (ترقيم مطلق من كل التصنيفات) كما هو تماماً.
+        const visibleCatPosition = this.visibleCategoryIndexes ? this.visibleCategoryIndexes.indexOf(categoryIndex) : -1;
+        const categoryNumber = (visibleCatPosition >= 0 ? visibleCatPosition + 1 : categoryIndex + 1).toLocaleString('ar-SA');
+        const categoryTotal = (this.visibleCategoryIndexes ? this.visibleCategoryIndexes.length : this.categories.length).toLocaleString('ar-SA');
         // عدّاد «أنجزت X من Y» من progressTracker الحي الموجود أصلاً في app.js (بند 2.3) —
         // محسوب فقط على أقسام هذا التصنيف، لا إجمالي الدراسة كاملة.
         const completedCount = this.progressTracker

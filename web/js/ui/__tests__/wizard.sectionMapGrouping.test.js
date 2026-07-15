@@ -20,7 +20,7 @@ function mountJourney(onNavigate = vi.fn(), steps = STEPS, stepIndexMap = null) 
 describe('StudyJourney — مسار موحّد ومصنّف لكل الخطوات', () => {
     beforeEach(() => { document.body.innerHTML = ''; });
 
-    it('يعرض 41 خطوة موزعة على الفئات الثماني بلا فقد أو تكرار', () => {
+    it('يعرض 42 خطوة موزعة على الفئات الثماني بلا فقد أو تكرار', () => {
         const journey = mountJourney();
         journey.update(15);
 
@@ -28,7 +28,7 @@ describe('StudyJourney — مسار موحّد ومصنّف لكل الخطوا�
         const buttons = document.querySelectorAll('.study-map__step');
         expect(groups.length).toBe(SIDEBAR_SECTIONS.length);
         expect(buttons.length).toBe(STEPS.length);
-        expect(STEPS.length).toBe(41);
+        expect(STEPS.length).toBe(42);
 
         groups.forEach((group, index) => {
             expect(group.querySelector('.study-map__group-title').textContent).toBe(SIDEBAR_SECTIONS[index].label);
