@@ -12,6 +12,9 @@
 .app-shell { grid-template-rows: auto 1fr; }
 .app-header { grid-column: 1 / -1; grid-row: 1; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) var(--s-4); background-color: var(--c-bg-panel); border-bottom: 1px solid var(--c-border); min-height: 48px; flex-wrap: wrap; }
 .app-shell.dashboard-mode .app-header { display: none !important; }
+/* الرئيسية ليست داخل دراسة بعد — شريط تصنيفات الدراسة (categoryStepper) لا معنى له هنا،
+   نفس منطق إخفاء app-header وbreadcrumb-bar أدناه. */
+.app-shell.dashboard-mode .category-stepper { display: none !important; }
 .app-header__brand { font-weight: 700; font-size: 1.1rem; color: var(--c-p-500); }
 .app-header__actions { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
 /* موضع ثابت يجيب عن سؤال «أين أنا؟» من دون تحويل الهيدر إلى شريط خطوات مزدحم. */

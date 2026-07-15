@@ -38,6 +38,10 @@ function copyCatalogFiles(catalogPath, sourceRoot, urlPrefix, distDir) {
 
 export default defineConfig({
     root: './web',
+    // .env الفعلي بجذر المشروع (مستوى واحد فوق root) لا داخل web/ — بلا هذا Vite
+    // لا يجده إطلاقاً فيظن VITE_SUPABASE_URL/ANON_KEY غير مضبوطين محلياً ويعرض
+    // تحذير «وضع تطوير بلا إعداد» رغم وجود القيم فعلياً في .env بجذر المشروع.
+    envDir: '..',
     publicDir: 'public',
     // mpa: المسارات المجهولة تعيد 404 صريحاً بدل حقن index.html كاحتياط SPA
     // (كان يجعل الروابط الخاطئة مثل /web/ تعرض التطبيق بلا CSS — «تصميم مكسور» يصعب تشخيصه).
