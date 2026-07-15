@@ -159,6 +159,12 @@ export async function renderStepComponent(step, containerId, index, ctx) {
         instance.render(index);
         return { instance };
     }
+    if (step.isPricingOptimizer) {
+        const { PricingOptimizerView } = await import('./PricingOptimizerView.js');
+        const instance = get('pricingOptimizer', PricingOptimizerView, containerId, store, onNavigate);
+        instance.render(index);
+        return { instance };
+    }
     if (step.isRiskMatrix) {
         const { RiskMatrix } = await import('./RiskMatrix.js');
         const instance = get('riskMatrix', RiskMatrix, containerId, store, onNavigate);

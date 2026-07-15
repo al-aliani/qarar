@@ -84,7 +84,7 @@ const inlineIcon = (name, cls = '') =>
 /** إزالة الإيموجي من نصوص قادمة من الخارج (مثل شارة QualityCalculator) */
 const stripEmoji = (s) => (s || '').replace(/[\p{Extended_Pictographic}️‍]/gu, '').trim();
 
-export class DashboardView {
+export class DashboardViewV2 {
     constructor(containerId, store, onProjectSelect, options = {}) {
         this.container = document.getElementById(containerId);
         this.store = store;
@@ -102,11 +102,119 @@ export class DashboardView {
 
     async render() {
         this.container.innerHTML = `
-            <div class="dashboard-loading">
-                <div class="loader"></div>
-                <div class="text-muted">جاري تحميل المشاريع...</div>
+            <div class="dv2-workspace animate-entry">
+                <!-- Sidebar -->
+                <aside class="dv2-sidebar">
+                    <div class="dv2-brand">
+                        <div class="dv2-brand-mark">ق</div>
+                        قرار
+                    </div>
+                    
+                    <div style="margin-top: 32px; display: flex; flex-direction: column; gap: 8px;">
+                        <button class="dv2-nav-btn is-active">
+                            <svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg>
+                            مساحة العمل
+                        </button>
+                        <button class="dv2-nav-btn">
+                            <svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg>
+                            التحليلات المالية
+                        </button>
+                        <button class="dv2-nav-btn">
+                            <svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg>
+                            المستودعات
+                        </button>
+                        <button class="dv2-nav-btn">
+                            <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
+                            الموارد البشرية
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: auto;">
+                        <div class="dv2-view-toggle">
+                            <button type="button" onclick="window.location.hash='#/home'">الكلاسيكية</button>
+                            <button type="button" class="active">المتطورة (V2)</button>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Main Content -->
+                <main class="dv2-main">
+                    <!-- Topbar -->
+                    <header class="dv2-topbar dv2-glass-panel">
+                        <div style="font-weight: 600;">مرحباً بك في قرار! 👋</div>
+                        <div class="dv2-topbar-actions">
+                            ${!this.currentUser ? `
+                                <button type="button" id="dashboardLogin" class="dv2-btn-secondary">تسجيل الدخول</button>
+                            ` : `
+                                <span style="font-weight: 500; font-size: 0.9rem;">${userEmail}</span>
+                                <button type="button" id="btnLogout" class="dv2-btn-secondary dv-logout" style="padding: 8px 16px;">خروج</button>
+                            `}
+                        </div>
+                    </header>
+
+                    <!-- Hero Section -->
+                    <section class="dv2-hero">
+                        <h1>دراسة الجدوى، أصبحت أسهل وأذكى</h1>
+                        <p>ابدأ مشروعك الجديد بثقة مع أدوات التحليل المالي والمحاكاة الذكية التي نوفرها لك.</p>
+                        <div class="dv2-hero-actions">
+                            <button type="button" id="cardFullStudy" class="dv2-btn-primary">
+                                <svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>
+                                دراسة جديدة
+                            </button>
+                            <button type="button" id="cardQuickFeasibility" class="dv2-btn-secondary">
+                                <svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg>
+                                جدوى سريعة
+                            </button>
+                        </div>
+                    </section>
+
+                    <!-- Projects -->
+                    <section>
+                        <div class="dv2-projects-header">
+                            <h2>دراساتك المحفوظة</h2>
+                            ${hasProjects ? `
+                                <div style="display: flex; gap: 12px;">
+                                    <select id="dashboardFolderFilter" class="input input--sm" style="background: var(--v2-glass-bg); border-radius: 8px; border: 1px solid var(--v2-glass-border); padding: 8px 12px;">
+                                        ${folderOptions}
+                                    </select>
+                                    <input type="text" id="dashboardSearch" class="input input--sm" placeholder="ابحث في دراساتك..." style="background: var(--v2-glass-bg); border-radius: 8px; border: 1px solid var(--v2-glass-border); padding: 8px 12px;" value="${(this.searchQuery || '').replace(/"/g, '&quot;')}" />
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${!hasProjects ? this.renderEmptyState() : `
+                            <div class="dv2-grid" id="projectsGrid">
+                                ${filtered.map(p => {
+                                    try {
+                                        let cardHtml = this.renderProjectCard(p);
+                                        cardHtml = cardHtml.replace('class="dv-card', 'class="dv2-card');
+                                        return cardHtml;
+                                    } catch (err) {
+                                        console.error('Error rendering project card:', err);
+                                        return '<div class="dv2-card">خطأ في عرض المشروع</div>';
+                                    }
+                                }).join('')}
+                            </div>
+                        `}
+                    </section>
+                </main>
+                
+                <!-- Hidden roots to satisfy DashboardView JS logic -->
+                <div id="readyStudiesRoot" class="hidden"></div>
+                <div id="databaseFilesRoot" class="hidden"></div>
+                <div id="warehouseDatabaseFilesRoot" class="hidden"></div>
+                <div id="warehouseHrFilesRoot" class="hidden"></div>
+                <div id="hrFilesRoot" class="hidden"></div>
+                <div id="sensitivity-widget-root" class="hidden"></div>
+                <div id="funding-sim-root" class="dv-modal hidden">
+                    <div class="dv-modal__panel">
+                        <button id="btnCloseFundingSim" class="dv-modal__close" aria-label="إغلاق">&times;</button>
+                        <div id="funding-sim-container"></div>
+                    </div>
+                </div>
+                <div id="founder-card-root" class="hidden"></div>
             </div>
-        `;
+`;
 
         try {
             // Check Auth
@@ -118,11 +226,119 @@ export class DashboardView {
         } catch (e) {
             console.error(e);
             this.container.innerHTML = `
-                <div class="dv-error">
-                    <p>حدث خطأ أثناء تحميل البيانات.</p>
-                    <button class="btn btn--secondary" onclick="window.location.reload()">إعادة المحاولة</button>
+            <div class="dv2-workspace animate-entry">
+                <!-- Sidebar -->
+                <aside class="dv2-sidebar">
+                    <div class="dv2-brand">
+                        <div class="dv2-brand-mark">ق</div>
+                        قرار
+                    </div>
+                    
+                    <div style="margin-top: 32px; display: flex; flex-direction: column; gap: 8px;">
+                        <button class="dv2-nav-btn is-active">
+                            <svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg>
+                            مساحة العمل
+                        </button>
+                        <button class="dv2-nav-btn">
+                            <svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg>
+                            التحليلات المالية
+                        </button>
+                        <button class="dv2-nav-btn">
+                            <svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg>
+                            المستودعات
+                        </button>
+                        <button class="dv2-nav-btn">
+                            <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
+                            الموارد البشرية
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: auto;">
+                        <div class="dv2-view-toggle">
+                            <button type="button" onclick="window.location.hash='#/home'">الكلاسيكية</button>
+                            <button type="button" class="active">المتطورة (V2)</button>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Main Content -->
+                <main class="dv2-main">
+                    <!-- Topbar -->
+                    <header class="dv2-topbar dv2-glass-panel">
+                        <div style="font-weight: 600;">مرحباً بك في قرار! 👋</div>
+                        <div class="dv2-topbar-actions">
+                            ${!this.currentUser ? `
+                                <button type="button" id="dashboardLogin" class="dv2-btn-secondary">تسجيل الدخول</button>
+                            ` : `
+                                <span style="font-weight: 500; font-size: 0.9rem;">${userEmail}</span>
+                                <button type="button" id="btnLogout" class="dv2-btn-secondary dv-logout" style="padding: 8px 16px;">خروج</button>
+                            `}
+                        </div>
+                    </header>
+
+                    <!-- Hero Section -->
+                    <section class="dv2-hero">
+                        <h1>دراسة الجدوى، أصبحت أسهل وأذكى</h1>
+                        <p>ابدأ مشروعك الجديد بثقة مع أدوات التحليل المالي والمحاكاة الذكية التي نوفرها لك.</p>
+                        <div class="dv2-hero-actions">
+                            <button type="button" id="cardFullStudy" class="dv2-btn-primary">
+                                <svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>
+                                دراسة جديدة
+                            </button>
+                            <button type="button" id="cardQuickFeasibility" class="dv2-btn-secondary">
+                                <svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg>
+                                جدوى سريعة
+                            </button>
+                        </div>
+                    </section>
+
+                    <!-- Projects -->
+                    <section>
+                        <div class="dv2-projects-header">
+                            <h2>دراساتك المحفوظة</h2>
+                            ${hasProjects ? `
+                                <div style="display: flex; gap: 12px;">
+                                    <select id="dashboardFolderFilter" class="input input--sm" style="background: var(--v2-glass-bg); border-radius: 8px; border: 1px solid var(--v2-glass-border); padding: 8px 12px;">
+                                        ${folderOptions}
+                                    </select>
+                                    <input type="text" id="dashboardSearch" class="input input--sm" placeholder="ابحث في دراساتك..." style="background: var(--v2-glass-bg); border-radius: 8px; border: 1px solid var(--v2-glass-border); padding: 8px 12px;" value="${(this.searchQuery || '').replace(/"/g, '&quot;')}" />
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${!hasProjects ? this.renderEmptyState() : `
+                            <div class="dv2-grid" id="projectsGrid">
+                                ${filtered.map(p => {
+                                    try {
+                                        let cardHtml = this.renderProjectCard(p);
+                                        cardHtml = cardHtml.replace('class="dv-card', 'class="dv2-card');
+                                        return cardHtml;
+                                    } catch (err) {
+                                        console.error('Error rendering project card:', err);
+                                        return '<div class="dv2-card">خطأ في عرض المشروع</div>';
+                                    }
+                                }).join('')}
+                            </div>
+                        `}
+                    </section>
+                </main>
+                
+                <!-- Hidden roots to satisfy DashboardView JS logic -->
+                <div id="readyStudiesRoot" class="hidden"></div>
+                <div id="databaseFilesRoot" class="hidden"></div>
+                <div id="warehouseDatabaseFilesRoot" class="hidden"></div>
+                <div id="warehouseHrFilesRoot" class="hidden"></div>
+                <div id="hrFilesRoot" class="hidden"></div>
+                <div id="sensitivity-widget-root" class="hidden"></div>
+                <div id="funding-sim-root" class="dv-modal hidden">
+                    <div class="dv-modal__panel">
+                        <button id="btnCloseFundingSim" class="dv-modal__close" aria-label="إغلاق">&times;</button>
+                        <div id="funding-sim-container"></div>
+                    </div>
                 </div>
-            `;
+                <div id="founder-card-root" class="hidden"></div>
+            </div>
+`;
         }
     }
 
@@ -355,177 +571,119 @@ export class DashboardView {
         `;
 
         this.container.innerHTML = `
-            <div class="dashboard-view dv animate-entry">
-
-                <!-- ١. شريط العمل (مساحة عمل — لا هيرو تسويقي) -->
-                <header class="dv-topbar">
-                    <span class="dv-brand">
-                        <span class="dv-brand__mark">ق</span>
-                        <span class="dv-brand__name">قرار</span>
-                    </span>
-                    <span class="dv-brand__ctx">مساحة العمل — دراسة الجدوى</span>
-                    <!-- Resource Menu Anchor (ResourcesMenu يملؤها) -->
-                    <div id="resources-menu-root" class="dv-resources"></div>
-                    <span class="dv-topbar__sp"></span>
-                    <!-- تدقيق محتوى: زر تبديل المظهر (headerThemeToggle/btnThemeToggle) كان بلا أي
-                         وسيلة وصول في وضع اللوحة — حاويتاهما (.app-header وsidebar) مخفيتان بالكامل
-                         في dashboard-mode. زر مكافئ هنا داخل شريط عمل ظاهر دائماً. -->
-                    <button type="button" id="dvThemeToggle" class="btn-icon" aria-label="تبديل المظهر" title="المظهر: داكن / فاتح">
-                        <span data-theme-icon="dark" style="${currentTheme === 'dark' ? '' : 'display:none'}"><svg class="ic" aria-hidden="true"><use href="#i-moon"/></svg></span>
-                        <span data-theme-icon="light" style="${currentTheme === 'light' ? '' : 'display:none'}"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg></span>
-                        <span data-theme-icon="auto" style="display:none"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
-                    </button>
-                    <div class="dv-topbar__auth">
-                        ${!this.currentUser ? `
-                            <button type="button" id="dashboardLogin" class="btn btn--sm btn--secondary">${icon('i-user')} تسجيل الدخول</button>
-                        ` : `
-                            <span class="dv-userchip"><span class="dv-userchip__dot"></span> ${userEmail}</span>
-                            <button type="button" id="btnUserProfile" class="btn btn--sm btn--ghost" title="حسابي">${icon('i-user')} حسابي</button>
-                            <button type="button" id="btnLogout" class="btn btn--sm btn--ghost dv-logout">خروج</button>
-                        `}
+            <div class="dv2-workspace animate-entry">
+                <!-- Sidebar -->
+                <aside class="dv2-sidebar">
+                    <div class="dv2-brand">
+                        <div class="dv2-brand-mark">ق</div>
+                        قرار
                     </div>
-                </header>
-
-                <!-- ٢. مساحة العمل: تنقل جانبي + صفحة مستقلة لكل قسم -->
-                <div class="dv-workspace" id="homeWorkspace">
-                    <aside class="dv-home-nav" aria-label="تنقل مساحة العمل">
-                        <div class="dv-home-nav__head">
-                            <span class="dv-home-nav__eyebrow">مساحتك</span>
-                            <h2 class="dv-home-nav__heading">انتقل حسب المهمة</h2>
-                            <div class="dv2-view-toggle" style="margin-top:12px; background:var(--c-surface-3); display:flex; border-radius:100px; padding:4px; gap:4px;">
-                                <button type="button" class="active" style="border:none; padding:6px 12px; border-radius:100px; font-weight:600; cursor:pointer; background:white; color:var(--c-p-500); box-shadow:0 2px 8px rgba(0,0,0,0.1);">الكلاسيكية</button>
-                                <button type="button" onclick="window.location.hash='#/home-v2'" style="border:none; padding:6px 12px; border-radius:100px; font-weight:600; cursor:pointer; background:transparent; color:var(--c-text-muted);">المتطورة (V2)</button>
-                            </div>
+                    
+                    <div style="margin-top: 32px; display: flex; flex-direction: column; gap: 8px;">
+                        <button class="dv2-nav-btn is-active">
+                            <svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg>
+                            مساحة العمل
+                        </button>
+                        <button class="dv2-nav-btn">
+                            <svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg>
+                            التحليلات المالية
+                        </button>
+                        <button class="dv2-nav-btn">
+                            <svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg>
+                            المستودعات
+                        </button>
+                        <button class="dv2-nav-btn">
+                            <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
+                            الموارد البشرية
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: auto;">
+                        <div class="dv2-view-toggle">
+                            <button type="button" onclick="window.location.hash='#/home'">الكلاسيكية</button>
+                            <button type="button" class="active">المتطورة (V2)</button>
                         </div>
-                        <div class="dv-home-nav__list" role="tablist" aria-orientation="vertical">
-                            ${homeNavButton('studies', 'folder', 'دراساتك', 'مشاريعك المحفوظة والتنظيم', filtered.length)}
-                            ${homeNavButton('engines', 'chart', 'الأدوات والمحرّكات', 'اختصارات خطوات الدراسة والنتائج', STEPS.length)}
-                            ${homeNavButton('support', 'clipboard', 'أدوات مساندة للدراسة', 'جمع بيانات، تحقق، تصدير، وربط', supportToolsCount)}
-                            ${homeNavButton('additional', 'book', 'دراسات جدوى جاهزة', 'ملفات جاهزة للتحميل', 'ملفات')}
-                            ${homeNavButton('databases', 'list', 'قواعد بيانات', 'أدلة وبيانات القطاعات', 'ملفات')}
-                            ${homeNavButton('hr', 'users', 'الموارد البشرية', 'نماذج ووصف وظيفي', 'ملفات')}
-                        </div>
-                    </aside>
+                    </div>
+                </aside>
 
-                    <div class="dv-home-panels">
-                        <section class="dv-section dv-home-panel" id="homePanel-studies" data-home-panel="studies" ${activeHomePanel !== 'studies' ? 'hidden' : ''}>
-                            <div class="dv-section__head dv-section__head--row">
-                                <h2 class="dv-section__title">دراساتك <span class="dv-count dv-num">(${filtered.length})</span></h2>
-                                <div class="dv-toolbar">
-                                    <div class="dv-toolbar__actions">
-                                        <button type="button" id="cardFullStudy" class="btn btn--sm btn--primary">${icon('i-plus')} دراسة جديدة</button>
-                                        <button type="button" id="cardQuickFeasibility" class="btn btn--sm btn--ghost">${icon('i-bolt')} جدوى سريعة (٣ خطوات)</button>
-                                        ${lastStep ? `<button type="button" id="btnContinueLastStep" class="btn btn--sm btn--ghost">${inlineIcon('play')} تابع: ${lastStep.label}</button>` : ''}
-                                        <button type="button" id="cardSampleReport" class="btn btn--sm btn--ghost">${icon('i-doc')} عينة تقرير</button>
-                                    </div>
-                                    ${hasProjects ? `
-                                    <div class="dv-toolbar__organize">
-                                        <label for="dashboardFolderFilter" class="dv-toolbar__label">عرض:</label>
-                                        <select id="dashboardFolderFilter" name="folderFilter" class="input input--sm dv-toolbar__select">
-                                            ${folderOptions}
-                                        </select>
-                                        <button type="button" id="btnNewFolder" class="btn btn--sm btn--secondary">${icon('i-folder')} مجلد جديد</button>
-                                        <input type="text" id="dashboardSearch" name="searchQuery" aria-label="بحث عن مشروع" class="input input--sm dv-toolbar__search" placeholder="بحث بالاسم..." value="${(this.searchQuery || '').replace(/"/g, '&quot;')}" />
-                                    </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-
-                            <!-- شريط الجودة (أكمل) -->
-                            ${await this.renderQualityStrip(filtered)}
-
-                            <!-- تدقيق محتوى: باقتا «مراجَع بخبير»/«خدمة كاملة» لم تكونا مذكورتين
-                                 إطلاقاً في مساحة العمل — الفرصة البيعية الوحيدة كانت مؤجَّلة لحظة
-                                 التصدير النهائية عبر PaywallModal.js فقط. بطاقة تعريفية مبكرة هنا. -->
-                            ${hasProjects ? this.renderExpertCta() : ''}
-
-                            <!-- Projects Grid -->
-                            ${!hasProjects ? this.renderEmptyState() : `
-                                <div class="dv-projects" id="projectsGrid">
-                                    ${filtered.map(p => {
-            try {
-                return this.renderProjectCard(p);
-            } catch (err) {
-                console.error('Error rendering project card:', err);
-                return '<div class="card">خطأ في عرض المشروع</div>';
-            }
-        }).join('')}
-                                </div>
+                <!-- Main Content -->
+                <main class="dv2-main">
+                    <!-- Topbar -->
+                    <header class="dv2-topbar dv2-glass-panel">
+                        <div style="font-weight: 600;">مرحباً بك في قرار! 👋</div>
+                        <div class="dv2-topbar-actions">
+                            ${!this.currentUser ? `
+                                <button type="button" id="dashboardLogin" class="dv2-btn-secondary">تسجيل الدخول</button>
+                            ` : `
+                                <span style="font-weight: 500; font-size: 0.9rem;">${userEmail}</span>
+                                <button type="button" id="btnLogout" class="dv2-btn-secondary dv-logout" style="padding: 8px 16px;">خروج</button>
                             `}
-                        </section>
+                        </div>
+                    </header>
 
-                        <section class="dv-section dv-home-panel" id="additionalReadyStudies" data-home-panel="additional" ${activeHomePanel !== 'additional' ? 'hidden' : ''}>
-                            <div id="readyStudiesRoot"></div>
-                        </section>
+                    <!-- Hero Section -->
+                    <section class="dv2-hero">
+                        <h1>دراسة الجدوى، أصبحت أسهل وأذكى</h1>
+                        <p>ابدأ مشروعك الجديد بثقة مع أدوات التحليل المالي والمحاكاة الذكية التي نوفرها لك.</p>
+                        <div class="dv2-hero-actions">
+                            <button type="button" id="cardFullStudy" class="dv2-btn-primary">
+                                <svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>
+                                دراسة جديدة
+                            </button>
+                            <button type="button" id="cardQuickFeasibility" class="dv2-btn-secondary">
+                                <svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg>
+                                جدوى سريعة
+                            </button>
+                        </div>
+                    </section>
 
-                        <section class="dv-section dv-home-panel" id="databaseFilesRootPanel" data-home-panel="databases" ${activeHomePanel !== 'databases' ? 'hidden' : ''}>
-                            <div id="databaseFilesRoot"></div>
-                        </section>
-
-                        <section class="dv-section dv-home-panel" id="hrFilesRootPanel" data-home-panel="hr" ${activeHomePanel !== 'hr' ? 'hidden' : ''}>
-                            <div id="hrFilesRoot"></div>
-                        </section>
-
-                        <!-- 4. مختصر رحلة الدراسة — نفس خطوات القائمة اليسرى داخل صفحة مستقلة -->
-                        <section class="dv-section dv-section--tools dv-home-panel" id="toolsAndEngines" data-home-panel="engines" ${activeHomePanel !== 'engines' ? 'hidden' : ''}>
-                            <div class="dv-section__head">
-                                <h2 class="dv-section__title">الأدوات والمحرّكات</h2>
-                                <p class="dv-section__sub">مختصر رحلة المستخدم كاملة — كل خطوات الدراسة مصنّفة هنا وتفتح مباشرة.</p>
-                            </div>
-                            <div class="dv-toolsbar">
-                                <input type="search" id="toolsSearch" class="input input--sm dv-toolsbar__search" aria-label="بحث في الأدوات والخطوات" placeholder="ابحث في الخطوات والأدوات..." />
-                                <span class="dv-toolsbar__hint">الأقسام تفتح تلقائياً عند وجود نتيجة</span>
-                            </div>
-                            <div class="dv-tools dv-tools--journey">
-                                ${journeySections}
-                            </div>
-                            <!-- الاختصارات الثلاثة الأخرى (تمويل/تصدير/موارد) أُزيلت من هنا — كانت مكرَّرة
-                                 حرفياً (نفس المعالج) مع أدوات «التحليل المالي» و«الإخراج والتقديم» في تبويب
-                                 «أدوات مساندة للدراسة»، بفهرس بحث منفصل لكل نسخة. أُبقي على محاكي التمويل
-                                 وحده لأنه الفحص الأهم لهذا التبويب تحديداً. -->
-                            <h3 class="dv-toolcol__title dv-quicktools__heading">اختصار سريع</h3>
-                            <div class="dv-quicktools">
-                                ${toolButton({ id: 'btnFundingSim', icon: 'bank', name: 'محاكي قبول التمويل', desc: 'اختبار سريع لجاهزية التمويل', engine: true, compact: false })}
-                            </div>
-                        </section>
-
-                        <section class="dv-section dv-section--tools dv-home-panel" id="studyToolkits" data-home-panel="support" ${activeHomePanel !== 'support' ? 'hidden' : ''}>
-                            <div class="dv-section__head">
-                                <h2 class="dv-section__title">أدوات مساندة للدراسة</h2>
-                                <p class="dv-section__sub">جمع بيانات، تحليل، تخطيط، جودة، وإخراج — كلها مرتبطة بخطوات الدراسة أو بمحركات جاهزة.</p>
-                            </div>
-                            <div class="dv-toolsbar">
-                                <input type="search" id="supportToolsSearch" class="input input--sm dv-toolsbar__search" aria-label="بحث في الأدوات المساندة" placeholder="ابحث في الأدوات المساندة..." />
-                                <span class="dv-toolsbar__hint">استخدمها قبل أو أثناء تعبئة الدراسة</span>
-                            </div>
-                            <div class="dv-tools-count-note" role="status">
-                                ${journeyToolsCount} اختصاراً لخطوات الدراسة، و${independentToolsCount} أداة/مصدر مستقل فعلياً (${supportToolsCount} إجمالاً).
-                            </div>
-                            <div class="dv-toolkits">
-                                <div class="dv-toolkit-grid">
-                                    ${toolkitHtml}
+                    <!-- Projects -->
+                    <section>
+                        <div class="dv2-projects-header">
+                            <h2>دراساتك المحفوظة</h2>
+                            ${hasProjects ? `
+                                <div style="display: flex; gap: 12px;">
+                                    <select id="dashboardFolderFilter" class="input input--sm" style="background: var(--v2-glass-bg); border-radius: 8px; border: 1px solid var(--v2-glass-border); padding: 8px 12px;">
+                                        ${folderOptions}
+                                    </select>
+                                    <input type="text" id="dashboardSearch" class="input input--sm" placeholder="ابحث في دراساتك..." style="background: var(--v2-glass-bg); border-radius: 8px; border: 1px solid var(--v2-glass-border); padding: 8px 12px;" value="${(this.searchQuery || '').replace(/"/g, '&quot;')}" />
                                 </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${!hasProjects ? this.renderEmptyState() : `
+                            <div class="dv2-grid" id="projectsGrid">
+                                ${filtered.map(p => {
+                                    try {
+                                        let cardHtml = this.renderProjectCard(p);
+                                        cardHtml = cardHtml.replace('class="dv-card', 'class="dv2-card');
+                                        return cardHtml;
+                                    } catch (err) {
+                                        console.error('Error rendering project card:', err);
+                                        return '<div class="dv2-card">خطأ في عرض المشروع</div>';
+                                    }
+                                }).join('')}
                             </div>
-                        </section>
+                        `}
+                    </section>
+                </main>
+                
+                <!-- Hidden roots to satisfy DashboardView JS logic -->
+                <div id="readyStudiesRoot" class="hidden"></div>
+                <div id="databaseFilesRoot" class="hidden"></div>
+                <div id="warehouseDatabaseFilesRoot" class="hidden"></div>
+                <div id="warehouseHrFilesRoot" class="hidden"></div>
+                <div id="hrFilesRoot" class="hidden"></div>
+                <div id="sensitivity-widget-root" class="hidden"></div>
+                <div id="funding-sim-root" class="dv-modal hidden">
+                    <div class="dv-modal__panel">
+                        <button id="btnCloseFundingSim" class="dv-modal__close" aria-label="إغلاق">&times;</button>
+                        <div id="funding-sim-container"></div>
                     </div>
                 </div>
-
+                <div id="founder-card-root" class="hidden"></div>
             </div>
-
-            <!-- Competitor Gap 2: Sensitivity Widget (معطّل حالياً — انظر ملاحظة ما بعد الرندر) -->
-            <div id="sensitivity-widget-root" class="hidden"></div>
-
-            <!-- Funding Simulator Modal -->
-            <div id="funding-sim-root" class="dv-modal hidden">
-                <div class="dv-modal__panel">
-                    <button id="btnCloseFundingSim" class="dv-modal__close" aria-label="إغلاق">&times;</button>
-                    <div id="funding-sim-container"></div>
-                </div>
-            </div>
-
-            <!-- Founder Card Root (Viral Growth) -->
-            <div id="founder-card-root"></div>
-        `;
+`;
 
         // Post-render initialization
         // (عدّاد جاهزية الفكرة أُزيل من الهيرو الجديد — لا معنى لعرض 0% في صفحة «ابدأ دراسة جديدة»)

@@ -422,6 +422,13 @@ export function createEmptyStudy() {
                 place: "",
                 promotion: ""
             },
+            pricingOptimization: {
+                targetGrossMargin: 0.55,
+                willingnessToPay: 0,
+                competitorAveragePrice: 0,
+                positioning: "balanced",
+                notes: ""
+            },
             // الحملات - مصنفة: رأسمالي أو تشغيلي
             campaigns: [
                 // { name: "حملة إطلاق", type: "capital", amount: 50000, notes: "" }

@@ -31,6 +31,7 @@ export const STEPS = [
   // AI)، وأُضيف لها الحقلان الناقصان (estimatedDailyCustomers/estimatedAvgTicket) كي لا
   // يُفقد أي عمود تقرير كان يقرأهما من نسخة الجدول القديمة.
   { id: SECTIONS.MARKETING, label: "الدراسة السوقية", tables: ['marketAnalysis', 'historicalData', 'supplyDemandBalance', 'competitorBenchmarking', 'marketingPlan'] },
+  { id: 'pricingOptimizer', label: "التسعير المثالي", isPricingOptimizer: true },
   { id: SECTIONS.STRATEGIC, label: "التحليل الاستراتيجي", isStrategic: true },
   { id: SECTIONS.REVENUE, label: "مصادر الإيرادات", tables: ['revenueStreams'] },
   { id: SECTIONS.SERVICES, label: "تحليل الخدمات", isServiceAnalysis: true, isAdvancedStep: true },
@@ -84,13 +85,13 @@ export const STEPS = [
 /** Ranges [start, end] inclusive; must match STEPS indices. Update when adding steps. */
 export const SIDEBAR_SECTIONS = [
   { id: 'setup', label: 'التحقق والتعريف', range: [0, 6] },
-  { id: 'marketing', label: 'السوق والإيرادات', range: [7, 11] },
-  { id: 'technical', label: 'التشغيل والتأسيس', range: [12, 19] },
-  { id: 'advanced', label: 'خطة التنفيذ', range: [20, 20] },
-  { id: 'financial', label: 'المالية والتمويل', range: [21, 28] },
-  { id: 'strategic', label: 'المخاطر والاختبارات', range: [29, 33] },
-  { id: 'appendices', label: 'الأدلة والمرفقات', range: [34, 34] },
-  { id: 'results', label: 'النتائج والمتابعة', range: [35, 40] },
+  { id: 'marketing', label: 'السوق والإيرادات', range: [7, 12] },
+  { id: 'technical', label: 'التشغيل والتأسيس', range: [13, 20] },
+  { id: 'advanced', label: 'خطة التنفيذ', range: [21, 21] },
+  { id: 'financial', label: 'المالية والتمويل', range: [22, 29] },
+  { id: 'strategic', label: 'المخاطر والاختبارات', range: [30, 34] },
+  { id: 'appendices', label: 'الأدلة والمرفقات', range: [35, 35] },
+  { id: 'results', label: 'النتائج والمتابعة', range: [36, 41] },
 ];
 
 /**
@@ -136,6 +137,7 @@ const STEP_HELP_SOURCE = [
   // السوقية والاستراتيجية
   { why: 'الدراسة السوقية تبرر حجم الطلب والعرض والمنافسة والإيرادات المتوقعة.', how: 'املأ تحليل السوق، العرض والطلب، المنافسين، خطة التسويق والتوقعات.' },
   { why: 'تحجيم السوق (TAM/SAM/SOM) يقدّر إجمالي السوق والسوق المتاح وحصتك المستهدفة — ركن أساسي لتقدير الإيرادات وقرار الجدوى، وتقرؤه لوحة القرار لقياس جاهزية السوق.', how: 'أدخل TAM ثم SAM ثم SOM (حصتك ≤ المتاح ≤ الإجمالي)، أو استخدم «اقتراح من بيانات هيئة الإحصاء».' },
+  { why: 'التسعير المثالي يحوّل السعر من تخمين إلى نطاق مبرر بالتكلفة والمنافسين واستعداد العميل للدفع.', how: 'راجع كل مصدر إيراد، أدخل هامشك المستهدف وسعر المنافسين أو استعداد الدفع، ثم طبّق السعر المناسب قبل اعتماد الإيرادات.' },
   { why: 'SWOT يلخص نقاط القوة والضعف والفرص والتهديدات لاتخاذ قرار استراتيجي.', how: 'أدخل نقاطاً واضحة في كل محور؛ استخدم مصفوفة TOWS للاستراتيجيات.' },
   { why: 'مصادر الإيرادات تغذّي النموذج المالي؛ بدونها لا يمكن حساب الربحية.', how: 'حدد كل مصدر إيراد (منتج، خدمة، اشتراك) والكمية والسعر.' },
   { why: 'تحليل الخدمات المفصل يربط الخدمة بالتكلفة والإيراد بشكل دقيق.', how: 'صِف كل خدمة ووقت التنفيذ والتكلفة والإيراد المتوقع.' },
@@ -181,7 +183,7 @@ const STEP_HELP_SOURCE = [
 const STEP_HELP_SOURCE_IDS = [
   'preliminaryCheck', 'projectAlternatives', SECTIONS.PROJECT_INFO, 'projectDetails',
   SECTIONS.KEY_PEOPLE, 'projectIntro', SECTIONS.SMART_GOALS,
-  SECTIONS.MARKETING, 'marketSizing', SECTIONS.STRATEGIC, SECTIONS.REVENUE, SECTIONS.SERVICES,
+  SECTIONS.MARKETING, 'marketSizing', 'pricingOptimizer', SECTIONS.STRATEGIC, SECTIONS.REVENUE, SECTIONS.SERVICES,
   SECTIONS.TECHNICAL, SECTIONS.HR, SECTIONS.TECH_RESOURCES, SECTIONS.LOGISTICS,
   SECTIONS.ADMINISTRATIVE, SECTIONS.ORG_STRUCTURE, 'operational_sim', SECTIONS.LEGAL,
   SECTIONS.FINANCING, 'investor_analysis', SECTIONS.ASSUMPTIONS,
@@ -223,9 +225,9 @@ export const STEPS_ABSORBED_IN_CATEGORY_VIEW = [SECTIONS.LOGISTICS, SECTIONS.ADM
 
 // تصدير صريح لاستيراد Wizard.js وغيره (يتجنب مشاكل ESM/HMR)
 export const MAJOR_PHASES = [
-  { id: 'phase1', label: 'التقييم والسوق', range: [0, 11] }, // setup & marketing
-  { id: 'phase2', label: 'البناء الفني والمالي', range: [12, 28] }, // technical, execution, financial
-  { id: 'phase3', label: 'المخاطر والقرار', range: [29, 40] }, // risk, evidence, results
+  { id: 'phase1', label: 'التقييم والسوق', range: [0, 12] }, // setup & marketing
+  { id: 'phase2', label: 'البناء الفني والمالي', range: [13, 29] }, // technical, execution, financial
+  { id: 'phase3', label: 'المخاطر والقرار', range: [30, 41] }, // risk, evidence, results
 ];
 
 export function getMajorPhaseForStep(stepIndex) {
@@ -267,6 +269,7 @@ const STEP_FLOW_ENTRIES = [
   // ── سوقك ──
   ['marketSizing', 'advanced'],               // TAM/SAM/SOM → يُدمج ضمن الدراسة السوقية
   [SECTIONS.MARKETING, 'input'],
+  ['pricingOptimizer', 'input'],
   [SECTIONS.STRATEGIC, 'input'],
   [SECTIONS.REVENUE, 'advanced'],             // مدموج داخل OfferingView (ماذا تبيع وبكم)
   [SECTIONS.SERVICES, 'advanced'],            // تحليل خدمات مكرّر مع المنتجات/الإيراد
@@ -336,7 +339,7 @@ export const ADVANCED_TOOLS = STEPS
  */
 export const INPUT_PHASES = [
   { id: 'idea',     label: 'فكرتك',            stepIds: ['preliminaryCheck', SECTIONS.PROJECT_INFO, 'projectDetails', 'projectIntro'] },
-  { id: 'market',   label: 'سوقك',             stepIds: [SECTIONS.MARKETING, SECTIONS.STRATEGIC] },
+  { id: 'market',   label: 'سوقك',             stepIds: [SECTIONS.MARKETING, 'pricingOptimizer', SECTIONS.STRATEGIC] },
   { id: 'ops',      label: 'تشغيلك وتكاليفك',  stepIds: [SECTIONS.TECHNICAL, SECTIONS.HR, SECTIONS.TECH_RESOURCES, SECTIONS.KEY_PEOPLE, SECTIONS.LEGAL] },
   { id: 'finance',  label: 'مالك',             stepIds: [SECTIONS.ASSUMPTIONS, SECTIONS.FINANCING, SECTIONS.TIMELINE] },
   { id: 'risk',     label: 'مخاطرك',           stepIds: [SECTIONS.RISK_ANALYSIS] },

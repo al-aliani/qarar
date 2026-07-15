@@ -182,28 +182,7 @@ export class PreliminaryCheckView {
         
         // --- UX Libraries Initialization ---
         
-        // 1. Vanta.js (3D Background)
-        import('vanta/dist/vanta.net.min.js').then(() => {
-            if (window.VANTA && this.container.querySelector('.pc-hero')) {
-                this.vantaEffect = window.VANTA.NET({
-                    el: this.container.querySelector('.pc-hero'),
-                    mouseControls: true,
-                    touchControls: true,
-                    gyroControls: false,
-                    minHeight: 200.00,
-                    minWidth: 200.00,
-                    scale: 1.00,
-                    scaleMobile: 1.00,
-                    color: 0x3f51b5,
-                    backgroundColor: 0x0f172a,
-                    points: 12.00,
-                    maxDistance: 22.00,
-                    spacing: 18.00
-                });
-            }
-        }).catch(err => console.log('Vanta error:', err));
-
-        // 2. Typed.js
+        // 1. Typed.js
         const titleEl = this.container.querySelector('.typed-title');
         if (titleEl) {
             new Typed(titleEl, {
@@ -214,7 +193,7 @@ export class PreliminaryCheckView {
             });
         }
 
-        // 3. Swiper.js
+        // 2. Swiper.js
         new Swiper(this.container.querySelector('.swiper-container'), {
             modules: [Navigation, Pagination],
             navigation: {

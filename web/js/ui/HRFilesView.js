@@ -4,10 +4,11 @@ const downloadIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3
 const fileIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>';
 
 export class HRFilesView {
-    constructor(containerId) {
+    constructor(containerId, options = {}) {
         this.container = document.getElementById(containerId);
         this.catalog = null;
         this.loaded = false;
+        this.options = options;
     }
 
     async render() {
@@ -45,10 +46,32 @@ export class HRFilesView {
 
     draw() {
         const catalog = this.catalog || { totalFiles: 0, totalGroups: 0, groups: [] };
+        const filterTerm = (this.options.filterTerm || '').trim().toLowerCase();
+        const matchesFilter = (value) => String(value || '').toLowerCase().includes(filterTerm);
+        const groups = filterTerm
+            ? (catalog.groups || []).map((group) => {
+                const files = (group.files || []).filter((file) => [
+                    group.label,
+                    group.description,
+                    file.title,
+                    file.filename,
+                    file.downloadName
+                ].some(matchesFilter));
+                const groupMatches = [group.label, group.description, group.sourceFolder].some(matchesFilter);
+                return groupMatches ? { ...group, files: files.length ? files : (group.files || []) } : { ...group, files };
+            }).filter((group) => (group.files || []).length)
+            : (catalog.groups || []);
+        const totalFiles = groups.reduce((sum, group) => sum + (group.files || []).length, 0);
+        const title = this.options.title || 'ملفات الموارد البشرية';
+        const eyebrow = this.options.eyebrow || 'مكتبة جاهزة للتحميل';
+        const copy = this.options.copy || 'نماذج ووصف وظيفي وملفات إدارية جاهزة داعمة لعملياتك ومشاريعك.';
+        const introTitle = this.options.introTitle || 'فكرة مكتبة الموارد البشرية والنماذج الوظيفية:';
+        const sectionTitle = this.options.sectionTitle || 'أقسام الموارد البشرية';
+        const sectionCopy = this.options.sectionCopy || 'تصفح وحمل الملفات حسب القسم المناسب.';
         
         let groupsHtml = '';
-        if (catalog.groups && catalog.groups.length) {
-            groupsHtml = catalog.groups.map((group) => `
+        if (groups.length) {
+            groupsHtml = groups.map((group) => `
                 <details class="rs-db-group">
                     <summary>
                         <span class="rs-db-group__title">${escapeHtml(group.label)}</span>
@@ -74,6 +97,13 @@ export class HRFilesView {
                     </div>
                 </details>
             `).join('');
+        } else {
+            groupsHtml = `
+                <div class="rs-error" role="status">
+                    <strong>لا توجد ملفات مطابقة حالياً.</strong>
+                    <p>أضف ملفات تحتوي على "${escapeHtml(this.options.filterTerm || '')}" في الفهرس لتظهر هنا تلقائياً.</p>
+                </div>
+            `;
         }
 
         this.container.innerHTML = `
@@ -81,18 +111,18 @@ export class HRFilesView {
                 <div class="rs-hero">
                     <div class="rs-hero__icon">${fileIcon}</div>
                     <div>
-                        <p class="rs-eyebrow">مكتبة جاهزة للتحميل</p>
-                        <h2 class="dv-section__title">ملفات الموارد البشرية</h2>
-                        <p class="rs-hero__copy">نماذج ووصف وظيفي وملفات إدارية جاهزة داعمة لعملياتك ومشاريعك.</p>
+                        <p class="rs-eyebrow">${escapeHtml(eyebrow)}</p>
+                        <h2 class="dv-section__title">${escapeHtml(title)}</h2>
+                        <p class="rs-hero__copy">${escapeHtml(copy)}</p>
                     </div>
                     <div class="rs-hero__stats" aria-label="إحصاءات المكتبة">
-                        <strong>${escapeHtml(catalog.totalFiles)}</strong>
-                        <span>ملف في ${escapeHtml(catalog.totalGroups)} قسم</span>
+                        <strong>${escapeHtml(filterTerm ? totalFiles : catalog.totalFiles)}</strong>
+                        <span>ملف في ${escapeHtml(filterTerm ? groups.length : catalog.totalGroups)} قسم</span>
                     </div>
                 </div>
 
                 <div class="rs-intro-box">
-                    <h3>فكرة مكتبة الموارد البشرية والنماذج الوظيفية:</h3>
+                    <h3>${escapeHtml(introTitle)}</h3>
                     <ul>
                         <li><strong>الاسترشاد والاستلهام:</strong> فهم كيفية بناء الهيكل التنظيمي الأنسب لمشروعك وتوزيع الأدوار الوظيفية.</li>
                         <li><strong>معرفة متطلبات التوظيف:</strong> تصور واضح للمهام، المسؤوليات، والمؤهلات لكل وظيفة لتجنب العشوائية الإدارية.</li>
@@ -104,8 +134,8 @@ export class HRFilesView {
                 <section class="rs-databases" aria-labelledby="rsHRTitle">
                     <div class="rs-databases__header">
                         <div>
-                            <h3 id="rsHRTitle">أقسام الموارد البشرية</h3>
-                            <p>تصفح وحمل الملفات حسب القسم المناسب.</p>
+                            <h3 id="rsHRTitle">${escapeHtml(sectionTitle)}</h3>
+                            <p>${escapeHtml(sectionCopy)}</p>
                         </div>
                     </div>
                     <div class="rs-db-groups">${groupsHtml}</div>
