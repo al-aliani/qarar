@@ -34,6 +34,7 @@ export const PREMIUM_EXPORT_TYPES = new Map([
     ['word', 'الملف القابل للتعديل'],
     ['bank', 'تقرير التمويل البنكي'],
     ['financier', 'نسخة الممول'],
+    ['lending_ready', 'تقرير جاهز للإقراض'],
     ['review_copy', 'نسخة المراجعة'],
     ['professional_review', 'النسخة الاحترافية للمراجعة'],
     ['monshaat', 'الهيكل المتوافق مع منشآت'],
@@ -238,7 +239,7 @@ export class ExportMenu {
                             </div>
                         </button>
 
-                        <button type="button" class="export-card" data-type="financier" aria-label="تقرير جاهز للإقراض — بنك التنمية والمؤسسات التمويلية">
+                        <button type="button" class="export-card" data-type="lending_ready" aria-label="تقرير جاهز للإقراض — بنك التنمية والمؤسسات التمويلية">
                             <div class="icon">🏦</div>
                             <div class="info">
                                 <h4>تقرير جاهز للإقراض</h4>
@@ -630,6 +631,30 @@ export class ExportMenu {
                         finWin.focus();
                         setTimeout(() => finWin.print(), 350);
                         toast.success('تم فتح نسخة للممول — اختر «حفظ كـ PDF» في نافذة الطباعة');
+                    } else {
+                        toast.error('تعذر فتح النافذة. يرجى السماح بالنوافذ المنبثقة.');
+                    }
+                    break;
+                }
+
+                // تدقيق 2026-07-15: كانت هذه البطاقة تحمل data-type="financier" نفسه (خطأ
+                // نسخ-لصق أثناء الإصدار التأسيسي — كلا الزرين أُضيفا بنفس الكوميت)، فتُظهر
+                // رسالة "نسخة للممول" حتى عند نقر "تقرير جاهز للإقراض"، ويصعب تمييز الزرّين
+                // في سجل التدقيق/الـwebhook. تستخدم نفس مولّد BankReportGenerator (يغطي فعلاً
+                // ملخص/استخدام التمويل/القوائم المالية/الضمانات الموصوفة في بطاقتها) مع لافتة
+                // مائزة (نفس نمط لافتة review_copy) بدل ناتج مطابق بلا أي تمييز.
+                case 'lending_ready': {
+                    const lendingCertification = await getCertificationForStudy(state.projectInfo?.id || state.id || null);
+                    const lendingBaseHtml = BankReportGenerator.generateHTML(this.store, { certification: lendingCertification });
+                    const lendingBanner = '<div style="background:#f0f4f8;border:1px solid #2c5282;padding:10px 20px;margin:0 0 16px;text-align:center;font-weight:600;font-size:11pt;">تقرير جاهز للإقراض — بنية متوافقة مع متطلبات بنك التنمية الاجتماعية</div>';
+                    const lendingHtml = lendingBaseHtml.replace(/<body([^>]*)>/i, '<body$1>' + lendingBanner);
+                    const lendingWin = window.open('', '_blank');
+                    if (lendingWin) {
+                        lendingWin.document.write(lendingHtml);
+                        lendingWin.document.close();
+                        lendingWin.focus();
+                        setTimeout(() => lendingWin.print(), 350);
+                        toast.success('تم فتح تقرير جاهز للإقراض — اختر «حفظ كـ PDF» في نافذة الطباعة');
                     } else {
                         toast.error('تعذر فتح النافذة. يرجى السماح بالنوافذ المنبثقة.');
                     }
