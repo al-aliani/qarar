@@ -2,6 +2,7 @@
  * 2FA Modal - إعداد المصادقة الثنائية (TOTP)
  * تفعيل، تحقق، إلغاء — Supabase MFA
  */
+import Swal from 'sweetalert2';
 import { mfaEnrollTOTP, mfaChallengeAndVerify, mfaListFactors, mfaUnenroll } from '../../supabaseClient.js';
 import { toast } from '../utils/toast.js';
 
@@ -80,7 +81,17 @@ export class TwoFactorModal {
             overlay.querySelectorAll('.text-danger').forEach(btn => {
                 btn.addEventListener('click', async () => {
                     const factorId = btn.dataset.factorId;
-                    if (!confirm('هل تريد إلغاء المصادقة الثنائية؟')) return;
+                    const confirmResult = await Swal.fire({
+                        title: 'هل أنت متأكد؟',
+                        text: 'هل تريد إلغاء المصادقة الثنائية؟',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'نعم، ألغِ',
+                        cancelButtonText: 'إلغاء',
+                        customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                        buttonsStyling: false
+                    });
+                    if (!confirmResult.isConfirmed) return;
                     const result = await mfaUnenroll(factorId);
                     if (result.ok) {
                         toast.success('تم إلغاء المصادقة الثنائية');

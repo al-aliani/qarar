@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import { store } from './js/core/store.js';
 import { TEMPLATES } from './js/core/templates.js';
 import { TABLE_SCHEMAS, createEmptyStudy } from './js/core/schema.js';
@@ -1815,7 +1816,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           // Confirm before loading
           const projectName = data.projectInfo?.name || 'دراسة غير معروفة';
-          if (!confirm(`هل تريد تحميل دراسة "${projectName}"?\n\nسيتم استبدال الدراسة الحالية.`)) {
+          const loadConfirmResult = await Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: `هل تريد تحميل دراسة "${projectName}"؟ سيتم استبدال الدراسة الحالية.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، حمّل',
+            cancelButtonText: 'إلغاء',
+            customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+            buttonsStyling: false
+          });
+          if (!loadConfirmResult.isConfirmed) {
             fileLoadStudy.value = ''; // Reset file input
             return;
           }
@@ -1857,7 +1868,17 @@ document.addEventListener('DOMContentLoaded', async () => {
           const state = store.getState ? store.getState() : store.get();
           const result = importFromCSV(ev.target.result, state);
           if (result.success && result.data) {
-            if (!confirm('سيتم دمج البيانات المستوردة مع الدراسة الحالية. متابعة؟')) {
+            const mergeConfirmResult = await Swal.fire({
+              title: 'هل أنت متأكد؟',
+              text: 'سيتم دمج البيانات المستوردة مع الدراسة الحالية. متابعة؟',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'نعم، ادمج',
+              cancelButtonText: 'إلغاء',
+              customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+              buttonsStyling: false
+            });
+            if (!mergeConfirmResult.isConfirmed) {
               fileImportCSV.value = '';
               return;
             }
@@ -1943,7 +1964,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnReset = document.getElementById('btnReset');
   if (btnReset) {
     btnReset.addEventListener('click', async () => {
-      if (!confirm('هل أنت متأكد؟ سيتم مسح جميع بيانات الدراسة الحالية والبدء من جديد.')) return;
+      const resetConfirmResult = await Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'سيتم مسح جميع بيانات الدراسة الحالية والبدء من جديد.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، امسح',
+        cancelButtonText: 'إلغاء',
+        customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+        buttonsStyling: false
+      });
+      if (!resetConfirmResult.isConfirmed) return;
       try {
         await store.reset();
         if (typeof navigateTo === 'function') navigateTo(0);

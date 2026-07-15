@@ -2,6 +2,7 @@
  * Timeline Component — خارطة الطريق المرئية (Visual Roadmap)
  * خط زمني أفقي أنيق: مراحل كدوائر متصلة بخط، مع سحب وإفلات لتعديل التواريخ.
  */
+import Swal from 'sweetalert2';
 import { SECTIONS } from '../core/schema.js';
 import { generateTableSuggestions } from '../services/AIConnector.js';
 import { TimelineChart } from './TimelineChart.js';
@@ -123,10 +124,19 @@ export class Timeline {
             btn.addEventListener('click', async (e) => {
                 if (this.isGenerating) return;
 
-                const confirmMsg = "هل أنت متأكد؟ سيتم استبدال الخطة الحالية بخطة مقترحة جديدة.";
                 const state = this.store.get();
-                if (state[SECTIONS.TIMELINE]?.activities?.length > 0 && !confirm(confirmMsg)) {
-                    return;
+                if (state[SECTIONS.TIMELINE]?.activities?.length > 0) {
+                    const result = await Swal.fire({
+                        title: 'هل أنت متأكد؟',
+                        text: 'سيتم استبدال الخطة الحالية بخطة مقترحة جديدة.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'نعم، استبدل',
+                        cancelButtonText: 'إلغاء',
+                        customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                        buttonsStyling: false
+                    });
+                    if (!result.isConfirmed) return;
                 }
 
                 e.target.disabled = true;

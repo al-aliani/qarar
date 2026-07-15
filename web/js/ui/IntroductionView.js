@@ -3,6 +3,7 @@
  * المنتجات والخدمات والموقع والأهداف والأدلة لها خطوات مستقلة، لذلك لا تُعاد هنا.
  */
 
+import Swal from 'sweetalert2';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { escapeHtml } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
@@ -95,12 +96,24 @@ export class IntroductionView {
         this.store.update('projectInfo', projectInfo);
     }
 
-    suggest(button) {
+    async suggest(button) {
         const targetId = button.dataset.target;
         const element = this.container.querySelector(`#${targetId}`);
         if (!element) return;
 
-        if (element.value.trim().length > 20 && !window.confirm('يوجد نص مكتوب في هذه الخانة. هل تريد استبداله بالاقتراح؟')) return;
+        if (element.value.trim().length > 20) {
+            const result = await Swal.fire({
+                title: 'هل أنت متأكد؟',
+                text: 'يوجد نص مكتوب في هذه الخانة. هل تريد استبداله بالاقتراح؟',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'نعم، استبدل',
+                cancelButtonText: 'إلغاء',
+                customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                buttonsStyling: false
+            });
+            if (!result.isConfirmed) return;
+        }
 
         const originalLabel = button.textContent;
         button.disabled = true;

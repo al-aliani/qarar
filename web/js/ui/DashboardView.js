@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import { ProjectManager } from '../services/ProjectManager.js';
 import { createEmptyStudy } from '../core/schema.js';
 import { getAuthUser, signOut } from '../../supabaseClient.js';
@@ -919,7 +920,17 @@ export class DashboardView {
 
         // Logout
         this.container.querySelector('#btnLogout')?.addEventListener('click', async () => {
-            if (confirm('هل تود تسجيل الخروج؟')) {
+            const result = await Swal.fire({
+                title: 'هل أنت متأكد؟',
+                text: 'هل تود تسجيل الخروج؟',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'نعم، سجّل الخروج',
+                cancelButtonText: 'إلغاء',
+                customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                buttonsStyling: false
+            });
+            if (result.isConfirmed) {
                 await signOut();
             }
         });
@@ -1198,7 +1209,17 @@ export class DashboardView {
         this.container.querySelectorAll('.btn-delete').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                if (confirm('هل أنت متأكد من نقل هذه الدراسة إلى سلة المحذوفات؟')) {
+                const result = await Swal.fire({
+                    title: 'هل أنت متأكد؟',
+                    text: 'هل أنت متأكد من نقل هذه الدراسة إلى سلة المحذوفات؟',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'نعم، انقل',
+                    cancelButtonText: 'إلغاء',
+                    customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                    buttonsStyling: false
+                });
+                if (result.isConfirmed) {
                     const id = (e.target.closest('[data-id]') || e.target).dataset?.id;
                     await ProjectManager.deleteProject(id);
                     this.render();

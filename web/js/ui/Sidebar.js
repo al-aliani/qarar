@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import { toast } from '../utils/toast.js';
 import { calculateStudyCompleteness } from '../utils/studyCompleteness.js';
 import { calculateIdeaScore } from '../core/calculateIdeaScore.js';
@@ -163,7 +164,17 @@ export class Sidebar {
                 const id = btn.dataset.id;
                 const item = btn.closest('.studies-load-item');
                 const name = (item?.dataset.name || 'هذه الدراسة').replace(/&quot;/g, '"');
-                if (!confirm(`حذف الدراسة «${name}»؟ لا يمكن التراجع.`)) return;
+                const result = await Swal.fire({
+                    title: 'هل أنت متأكد؟',
+                    text: `حذف الدراسة «${name}»؟ لا يمكن التراجع.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'نعم، احذف',
+                    cancelButtonText: 'إلغاء',
+                    customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                    buttonsStyling: false
+                });
+                if (!result.isConfirmed) return;
                 try {
                     const { ProjectManager } = await import('../services/ProjectManager.js');
                     await ProjectManager.deleteProject(id);

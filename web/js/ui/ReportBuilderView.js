@@ -5,6 +5,7 @@
  * جدوى كلاود: شريط توليد سريع بالذكاء الاصطناعي (ملخص، تحليل سوق، SWOT، منافسون).
  */
 
+import Swal from 'sweetalert2';
 import { DEFAULT_REPORT_SECTION_ORDER } from '../core/schema.js';
 import { AIConnector } from '../services/AIConnector.js';
 import { toast } from '../utils/toast.js';
@@ -198,8 +199,20 @@ export class ReportBuilderView {
                     results = calculateStudy(state);
                 } catch (_) {}
                 const existingSummary = (state.executiveSummary?.projectOverview || '').trim();
-                if (existingSummary && !confirm('سيستبدل هذا الملخصَ التنفيذي الحالي. متابعة؟')) {
-                    btn.disabled = false; restoreLabel(btn); return;
+                if (existingSummary) {
+                    const confirmResult = await Swal.fire({
+                        title: 'هل أنت متأكد؟',
+                        text: 'سيستبدل هذا الملخصَ التنفيذي الحالي. متابعة؟',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'نعم، استبدل',
+                        cancelButtonText: 'إلغاء',
+                        customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                        buttonsStyling: false
+                    });
+                    if (!confirmResult.isConfirmed) {
+                        btn.disabled = false; restoreLabel(btn); return;
+                    }
                 }
                 const text = await connector.generateExecutiveSummary(state, results);
                 if (typeof text === 'string' && text.trim()) {
@@ -225,8 +238,20 @@ export class ReportBuilderView {
             const state = getState();
             try {
                 const existingMarket = (state.marketing?.marketAnalysis?.summary || '').trim();
-                if (existingMarket && !confirm('سيستبدل هذا ملخصَ تحليل السوق الحالي. متابعة؟')) {
-                    btn.disabled = false; restoreLabel(btn); return;
+                if (existingMarket) {
+                    const confirmResult = await Swal.fire({
+                        title: 'هل أنت متأكد؟',
+                        text: 'سيستبدل هذا ملخصَ تحليل السوق الحالي. متابعة؟',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'نعم، استبدل',
+                        cancelButtonText: 'إلغاء',
+                        customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                        buttonsStyling: false
+                    });
+                    if (!confirmResult.isConfirmed) {
+                        btn.disabled = false; restoreLabel(btn); return;
+                    }
                 }
                 const text = await connector.generateMarketAnalysisText(state);
                 if (typeof text === 'string' && text.trim()) {
@@ -253,8 +278,20 @@ export class ReportBuilderView {
             try {
                 const prevSwot = (state.strategic || state.strategicAnalysis || {}).swot || {};
                 const hasSwot = (prevSwot.strengths?.length || prevSwot.weaknesses?.length || prevSwot.opportunities?.length || prevSwot.threats?.length);
-                if (hasSwot && !confirm('سيستبدل هذا تحليلَ SWOT الحالي. متابعة؟')) {
-                    btn.disabled = false; restoreLabel(btn); return;
+                if (hasSwot) {
+                    const confirmResult = await Swal.fire({
+                        title: 'هل أنت متأكد؟',
+                        text: 'سيستبدل هذا تحليلَ SWOT الحالي. متابعة؟',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'نعم، استبدل',
+                        cancelButtonText: 'إلغاء',
+                        customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                        buttonsStyling: false
+                    });
+                    if (!confirmResult.isConfirmed) {
+                        btn.disabled = false; restoreLabel(btn); return;
+                    }
                 }
                 const swot = await connector.generateSWOT(state);
                 if (swot && (swot.strengths?.length || swot.weaknesses?.length || swot.opportunities?.length || swot.threats?.length)) {
@@ -279,9 +316,20 @@ export class ReportBuilderView {
             const state = getState();
             try {
                 const existingCompetitors = state.marketing?.competitors || [];
-                if (existingCompetitors.length > 0 &&
-                    !confirm(`سيستبدل هذا ${existingCompetitors.length} منافساً أدخلتهم. متابعة؟`)) {
-                    btn.disabled = false; restoreLabel(btn); return;
+                if (existingCompetitors.length > 0) {
+                    const confirmResult = await Swal.fire({
+                        title: 'هل أنت متأكد؟',
+                        text: `سيستبدل هذا ${existingCompetitors.length} منافساً أدخلتهم. متابعة؟`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'نعم، استبدل',
+                        cancelButtonText: 'إلغاء',
+                        customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                        buttonsStyling: false
+                    });
+                    if (!confirmResult.isConfirmed) {
+                        btn.disabled = false; restoreLabel(btn); return;
+                    }
                 }
                 const competitors = await connector.generateCompetitors(state);
                 if (Array.isArray(competitors) && competitors.length > 0) {

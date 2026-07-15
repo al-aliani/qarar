@@ -1,4 +1,5 @@
 
+import Swal from 'sweetalert2';
 import { ProjectManager } from '../services/ProjectManager.js';
 import { toast } from '../utils/toast.js';
 
@@ -90,7 +91,17 @@ export class TrashView {
         this.container.querySelectorAll('.btn-restore').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.closest('button').dataset.id;
-                if (confirm('هل أنت متأكد من استعادة هذا المشروع؟')) {
+                const result = await Swal.fire({
+                    title: 'هل أنت متأكد؟',
+                    text: 'هل أنت متأكد من استعادة هذا المشروع؟',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'نعم، استعد',
+                    cancelButtonText: 'إلغاء',
+                    customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                    buttonsStyling: false
+                });
+                if (result.isConfirmed) {
                     const res = await ProjectManager.restoreProject(id);
                     if (res.success) {
                         toast.success('تمت استعادة المشروع بنجاح');
@@ -106,7 +117,17 @@ export class TrashView {
         this.container.querySelectorAll('.btn-permanent-delete').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.closest('button').dataset.id;
-                if (confirm('تحذير: الحذف النهائي لا يمكن التراجع عنه! هل أنت متأكد؟')) {
+                const result = await Swal.fire({
+                    title: 'هل أنت متأكد؟',
+                    text: 'تحذير: الحذف النهائي لا يمكن التراجع عنه! هل أنت متأكد؟',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'نعم، احذف نهائياً',
+                    cancelButtonText: 'إلغاء',
+                    customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                    buttonsStyling: false
+                });
+                if (result.isConfirmed) {
                     try {
                         await ProjectManager.permanentDelete(id);
                         toast.success('تم الحذف نهائياً');

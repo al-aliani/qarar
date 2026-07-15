@@ -6,6 +6,7 @@
  * معروف النطاق والخبرة ومراجعة الأرقام، لا من أرقام افتراضية عامة.
  */
 
+import Swal from 'sweetalert2';
 import { DEFAULT_STUDY_PREPARED_BY } from '../config.js';
 import {
     applyExpertTemplate,
@@ -158,10 +159,20 @@ export class TemplateGallery {
         });
 
         this.overlay.querySelectorAll('.btn-apply-expert-template').forEach(btn => {
-            btn.onclick = () => {
+            btn.onclick = async () => {
                 const template = getExpertTemplates().find(t => t.id === btn.dataset.id);
                 if (!template) return;
-                if (!window.confirm(`تطبيق قالب «${template.title}» سيستبدل الدراسة الحالية بدراسة جديدة مبنية على القالب.\n\nهل تريد المتابعة؟`)) return;
+                const result = await Swal.fire({
+                    title: 'هل أنت متأكد؟',
+                    text: `تطبيق قالب «${template.title}» سيستبدل الدراسة الحالية بدراسة جديدة مبنية على القالب. هل تريد المتابعة؟`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'نعم، طبّق',
+                    cancelButtonText: 'إلغاء',
+                    customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                    buttonsStyling: false
+                });
+                if (!result.isConfirmed) return;
                 applyExpertTemplate(this.store, template);
                 window.dispatchEvent(new CustomEvent('project-loaded', { detail: { source: 'expert-template', name: template.title } }));
                 this.close();

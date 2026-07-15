@@ -209,7 +209,7 @@ export class PPTXExporter {
         kpis.forEach((kpi, i) => {
             const x = 0.8 + (i % 2) * 4.5;
             const y = 1.5 + Math.floor(i / 2) * 2.2;
-            slide.addShape(pptxgen.ShapeType.rect, {
+            slide.addShape(this.pptx.ShapeType.rect, {
                 x, y, w: 4.2, h: 2,
                 fill: { color: kpi.color, transparency: 85 },
                 line: { color: kpi.color, width: 2 }
@@ -258,7 +258,7 @@ export class PPTXExporter {
         const decision = this.score?.recommendation || 'revise';
         const color = decision === 'go' ? this.colors.success : decision === 'nogo' ? this.colors.danger : this.colors.warning;
 
-        slide.addShape(pptxgen.ShapeType.rect, {
+        slide.addShape(this.pptx.ShapeType.rect, {
             x: 2, y: 2, w: 6, h: 2,
             fill: { color: color, transparency: 80 },
             line: { color: color, width: 4 }
@@ -285,7 +285,7 @@ export class PPTXExporter {
             fontSize: 24, bold: true, color: this.colors.primary,
             align: 'center'
         });
-        slide.addShape(pptxgen.ShapeType.line, {
+        slide.addShape(this.pptx.ShapeType.line, {
             x: 1, y: 0.95, w: 8, h: 0,
             line: { color: this.colors.secondary, width: 2 }
         });

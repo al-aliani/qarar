@@ -7,10 +7,15 @@ import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQ
 import ApexCharts from 'apexcharts';
 import { CountUp } from 'countup.js';
 import html2pdf from 'html2pdf.js';
-import * as XLSX from 'xlsx';
+import { loadXLSX } from '../../export/utils.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
+// الـshim (xlsxShim.js) لا يوفّر table_to_sheet — نبني AOA يدوياً من صفوف/خلايا الجدول.
+function tableToAOA(table) {
+    return Array.from(table.rows).map(row => Array.from(row.cells).map(cell => cell.textContent.trim()));
+}
 
 export class FinancialStatements {
     constructor(containerId, store, onNavigate) {
@@ -205,14 +210,15 @@ export class FinancialStatements {
         });
 
         // Excel Export
-        this.container.querySelector('#btnExportExcel')?.addEventListener('click', () => {
+        this.container.querySelector('#btnExportExcel')?.addEventListener('click', async () => {
+            await loadXLSX();
             const tables = this.container.querySelectorAll('table');
-            const wb = XLSX.utils.book_new();
+            const wb = window.XLSX.utils.book_new();
             tables.forEach((table, i) => {
-                const ws = XLSX.utils.table_to_sheet(table);
-                XLSX.utils.book_append_sheet(wb, ws, `جدول ${i + 1}`);
+                const ws = window.XLSX.utils.aoa_to_sheet(tableToAOA(table));
+                window.XLSX.utils.book_append_sheet(wb, ws, `جدول ${i + 1}`);
             });
-            XLSX.writeFile(wb, 'القوائم_المالية.xlsx');
+            await window.XLSX.writeFile(wb, 'القوائم_المالية.xlsx');
         });
     }
 

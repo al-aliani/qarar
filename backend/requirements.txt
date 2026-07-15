@@ -1,10 +1,1 @@
-fastapi
-uvicorn
-pydantic
-numpy
-sqlalchemy
-passlib[bcrypt]
-python-multipart
-pyjwt
-python-jose[cryptography]
-python-dotenv
+# backend/app/financial_engine.py يستخدم مكتبة typing القياسية فقط — لا تبعيات خارجية.

@@ -100,21 +100,21 @@ export class FounderCardGenerator {
         ctx.textAlign = 'center';
 
         // "I am launching..." Header
-        ctx.font = 'bold 40px "Tajawal", "Segoe UI", sans-serif'; // Fallback fonts
+        ctx.font = 'bold 40px "IBM Plex Sans Arabic", "Segoe UI", sans-serif'; // Fallback fonts
         ctx.fillStyle = '#e5e7eb'; // Gray-200
         ctx.fillText('أنا أطلق مشروعي...', w / 2, 150);
 
         // Project Name (Big Gold)
-        ctx.font = 'bold 80px "Tajawal", sans-serif';
+        ctx.font = 'bold 80px "IBM Plex Sans Arabic", sans-serif';
         ctx.fillStyle = '#8a5f1c';
         ctx.fillText(name, w / 2, 300);
 
         // Concept & City
-        ctx.font = '50px "Tajawal", sans-serif';
+        ctx.font = '50px "IBM Plex Sans Arabic", sans-serif';
         ctx.fillStyle = '#ffffff';
         ctx.fillText(`${concept}`, w / 2, 400);
 
-        ctx.font = '40px "Tajawal", sans-serif';
+        ctx.font = '40px "IBM Plex Sans Arabic", sans-serif';
         ctx.fillStyle = '#9ca3af'; // Gray-400
         ctx.fillText(`📍 ${city}`, w / 2, 480);
 
@@ -127,7 +127,7 @@ export class FounderCardGenerator {
         ctx.stroke();
 
         // Quote/Stats
-        ctx.font = 'italic 36px "Tajawal", serif';
+        ctx.font = 'italic 36px "IBM Plex Sans Arabic", serif';
         ctx.fillStyle = '#ffffff';
         const msg = "ادعوا لي بالتوفيق! 🙏";
         ctx.fillText(msg, w / 2, 650);
