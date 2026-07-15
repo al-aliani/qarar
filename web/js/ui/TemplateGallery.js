@@ -88,7 +88,7 @@ export class TemplateGallery {
 
                     <div class="templates-grid" role="list">
                         ${this.templates.map(t => `
-                            <button class="template-card" type="button" data-id="${t.id}" role="listitem">
+                            <button class="template-card" type="button" data-id="${t.id}" role="listitem" aria-label="${escapeAttribute(t.name)}: ${escapeAttribute(t.description)}">
                                 <span class="t-icon" aria-hidden="true">${t.icon}</span>
                                 <span class="t-info">
                                     <span class="t-name">${t.name}</span>
@@ -103,7 +103,7 @@ export class TemplateGallery {
                         ${expertTemplates.length ? `
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                                 ${expertTemplates.map(t => `
-                                    <button type="button" class="template-card btn-apply-expert-template" data-id="${escapeAttribute(t.id)}" style="text-align:right;">
+                                    <button type="button" class="template-card btn-apply-expert-template" data-id="${escapeAttribute(t.id)}" style="text-align:right;" aria-label="${escapeAttribute(t.title)}: ${escapeAttribute(t.expertName)} — ${escapeAttribute(t.specialty)} — ${Number(t.yearsExperience) || 0} سنة خبرة">
                                         <span class="t-icon" aria-hidden="true">✓</span>
                                         <span class="t-info">
                                             <span class="t-name">${escapeHtml(t.title)}</span>
@@ -194,7 +194,7 @@ export class TemplateGallery {
                 <p class="text-sm text-muted mb-3">اختر ما يناسب خبرتك ووقتك؛ يمكنك تغييره لاحقاً في أي وقت.</p>
                 <div class="mode-cards" role="radiogroup" aria-label="مستوى تفصيل الدراسة">
                     ${STUDY_MODES.map(m => `
-                        <button type="button" class="mode-card ${m.id === currentMode ? 'active' : ''}" data-mode="${m.id}" role="radio" aria-checked="${m.id === currentMode}">
+                        <button type="button" class="mode-card ${m.id === currentMode ? 'active' : ''}" data-mode="${m.id}" role="radio" aria-checked="${m.id === currentMode}" aria-label="${escapeAttribute(m.name)}: ${escapeAttribute(m.desc)}${m.badge ? ' — ' + escapeAttribute(m.badge) : ''}">
                             ${m.badge ? `<span class="mode-card__badge" style="display:block;font-size:.7rem;font-weight:700;color:var(--c-primary,#0f5132);margin-bottom:4px;">${m.badge}</span>` : ''}
                             <span class="mode-card__icon" aria-hidden="true" style="font-size:1.5rem;">${m.icon}</span>
                             <span class="mode-card__name" style="display:block;font-weight:700;font-size:1.05rem;margin-top:4px;">${m.name}</span>
