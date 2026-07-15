@@ -167,6 +167,11 @@ export const LABELS = {
     price: "السعر",
     place: "المكان",
     promotion: "الترويج",
+    pricingOptimization: "تحسين التسعير",
+    targetGrossMargin: "هامش الربح المستهدف",
+    willingnessToPay: "أعلى سعر يقبله العميل",
+    competitorAveragePrice: "متوسط سعر المنافسين",
+    positioning: "تموضع السعر",
     promotionPlan: "خطة الترويج",
     channels: "القنوات",
     campaigns: "الحملات",
@@ -364,6 +369,7 @@ export const LABELS = {
     taxRate: "ضريبة الدخل (حصة الأجانب فقط)",
     foreignOwnershipRate: "نسبة الملكية الأجنبية",
     discountRate: "معدل الخصم",
+    useWaccAsDiscountRate: "استخدام متوسط تكلفة رأس المال (WACC) كمعدل الخصم بدل المعدل الثابت أعلاه",
     workingCapitalMonths: "أشهر رأس المال العامل",
     rampUpMonths: "أشهر التصاعد لبلوغ كامل المبيعات",
     seasonalityProfile: "نمط الموسمية (لتخطيط السيولة)",
@@ -384,6 +390,7 @@ export const LABELS = {
     minIRR: "الحد الأدنى لمعدل العائد الداخلي",
     maxPayback: "الحد الأقصى لفترة الاسترداد (سنوات)",
     minROI: "الحد الأدنى للعائد على الاستثمار",
+    targetDSCR: "الحد الأدنى المستهدف لنسبة تغطية خدمة الدين (DSCR)",
     hiddenOverheadsRate: "احتياطي مخاطر التشغيل (Hidden Overheads %)",
 
     // Transcript 9: New Indicators
