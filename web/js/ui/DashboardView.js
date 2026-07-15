@@ -340,17 +340,14 @@ export class DashboardView {
         }[panel] || 'homePanel-studies');
         const homeNavButton = (panel, iconName, title, desc, badge) => `
             <button type="button"
-                class="dv-home-nav__btn ${activeHomePanel === panel ? 'is-active' : ''}"
+                class="dv-bento-tile dv-bento-tile--small ${activeHomePanel === panel ? 'is-active' : ''}"
                 data-dv-panel-button="${panel}"
                 role="tab"
                 aria-controls="${homePanelId(panel)}"
                 aria-selected="${activeHomePanel === panel ? 'true' : 'false'}">
-                <span class="dv-home-nav__ic">${inlineIcon(iconName)}</span>
-                <span class="dv-home-nav__body">
-                    <span class="dv-home-nav__title">${title}</span>
-                    <span class="dv-home-nav__desc">${desc}</span>
-                </span>
-                <span class="dv-home-nav__badge dv-num">${badge}</span>
+                <span class="dv-bento-tile__label"><span class="dv-bento-tile__ic">${inlineIcon(iconName)}</span> ${title}</span>
+                <span class="dv-bento-tile__count dv-num">${badge}</span>
+                <span class="dv-bento-tile__hint">${desc}</span>
             </button>
         `;
 
@@ -359,10 +356,10 @@ export class DashboardView {
 
                 <!-- ١. شريط العمل (مساحة عمل — لا هيرو تسويقي) -->
                 <header class="dv-topbar">
-                    <span class="dv-brand">
+                    <button type="button" id="dvBrandHome" class="dv-brand" title="الرئيسية">
                         <span class="dv-brand__mark">ق</span>
                         <span class="dv-brand__name">قرار</span>
-                    </span>
+                    </button>
                     <span class="dv-brand__ctx">مساحة العمل — دراسة الجدوى</span>
                     <!-- Resource Menu Anchor (ResourcesMenu يملؤها) -->
                     <div id="resources-menu-root" class="dv-resources"></div>
@@ -386,53 +383,54 @@ export class DashboardView {
                     </div>
                 </header>
 
-                <!-- ٢. مساحة العمل: تنقل جانبي + صفحة مستقلة لكل قسم -->
+                <!-- ٢. مساحة العمل: شبكة Bento بدل التنقل الجانبي (اعتماد 2026-07-16) -->
                 <div class="dv-workspace" id="homeWorkspace">
-                    <aside class="dv-home-nav" aria-label="تنقل مساحة العمل">
-                        <div class="dv-home-nav__head">
-                            <span class="dv-home-nav__eyebrow">مساحتك</span>
-                            <h2 class="dv-home-nav__heading">انتقل حسب المهمة</h2>
-                            <div class="dv2-view-toggle" style="margin-top:12px; background:var(--c-surface-3); display:flex; border-radius:100px; padding:4px; gap:4px;">
-                                <button type="button" class="active" style="border:none; padding:6px 12px; border-radius:100px; font-weight:600; cursor:pointer; background:white; color:var(--c-p-500); box-shadow:0 2px 8px rgba(0,0,0,0.1);">الكلاسيكية</button>
-                                <button type="button" onclick="window.location.hash='#/home-v2'" style="border:none; padding:6px 12px; border-radius:100px; font-weight:600; cursor:pointer; background:transparent; color:var(--c-text-muted);">المتطورة (V2)</button>
-                            </div>
-                        </div>
-                        <div class="dv-home-nav__list" role="tablist" aria-orientation="vertical">
-                            ${homeNavButton('studies', 'folder', 'دراساتك', 'مشاريعك المحفوظة والتنظيم', filtered.length)}
-                            ${homeNavButton('engines', 'chart', 'الأدوات والمحرّكات', 'اختصارات خطوات الدراسة والنتائج', STEPS.length)}
-                            ${homeNavButton('support', 'clipboard', 'أدوات مساندة للدراسة', 'جمع بيانات، تحقق، تصدير، وربط', supportToolsCount)}
-                            ${homeNavButton('additional', 'book', 'دراسات جدوى جاهزة', 'ملفات جاهزة للتحميل', 'ملفات')}
-                            ${homeNavButton('databases', 'list', 'قواعد بيانات', 'أدلة وبيانات القطاعات', 'ملفات')}
-                            ${homeNavButton('hr', 'users', 'الموارد البشرية', 'نماذج ووصف وظيفي', 'ملفات')}
-                        </div>
-                    </aside>
-
                     <div class="dv-home-panels">
                         <section class="dv-section dv-home-panel" id="homePanel-studies" data-home-panel="studies" ${activeHomePanel !== 'studies' ? 'hidden' : ''}>
-                            <div class="dv-section__head dv-section__head--row">
-                                <h2 class="dv-section__title">دراساتك <span class="dv-count dv-num">(${filtered.length})</span></h2>
-                                <div class="dv-toolbar">
-                                    <div class="dv-toolbar__actions">
-                                        <button type="button" id="cardFullStudy" class="btn btn--sm btn--primary">${icon('i-plus')} دراسة جديدة</button>
-                                        <button type="button" id="cardQuickFeasibility" class="btn btn--sm btn--ghost">${icon('i-bolt')} جدوى سريعة (٣ خطوات)</button>
-                                        ${lastStep ? `<button type="button" id="btnContinueLastStep" class="btn btn--sm btn--ghost">${inlineIcon('play')} تابع: ${lastStep.label}</button>` : ''}
-                                        <button type="button" id="cardSampleReport" class="btn btn--sm btn--ghost">${icon('i-doc')} عينة تقرير</button>
+
+                            <div class="dv-bento" role="tablist" aria-label="مساحتك">
+                                ${hasProjects ? `
+                                <div class="dv-bento-tile dv-bento-tile--hero">
+                                    <div>
+                                        <span class="dv-bento-tile__eyebrow">${inlineIcon('folder')} متابعة</span>
+                                        <h3 class="dv-bento-tile__heroTitle">${escapeHtml(filtered[0]?.name || 'مشروعك')}</h3>
+                                        ${lastStep ? `<p class="dv-bento-tile__hint">آخر خطوة: ${lastStep.label}</p>` : ''}
                                     </div>
-                                    ${hasProjects ? `
-                                    <div class="dv-toolbar__organize">
-                                        <label for="dashboardFolderFilter" class="dv-toolbar__label">عرض:</label>
-                                        <select id="dashboardFolderFilter" name="folderFilter" class="input input--sm dv-toolbar__select">
-                                            ${folderOptions}
-                                        </select>
-                                        <button type="button" id="btnNewFolder" class="btn btn--sm btn--secondary">${icon('i-folder')} مجلد جديد</button>
-                                        <input type="text" id="dashboardSearch" name="searchQuery" aria-label="بحث عن مشروع" class="input input--sm dv-toolbar__search" placeholder="بحث بالاسم..." value="${(this.searchQuery || '').replace(/"/g, '&quot;')}" />
-                                    </div>
-                                    ` : ''}
+                                    ${lastStep ? `<button type="button" id="btnContinueLastStep" class="btn btn--primary">${inlineIcon('play')} تابع من حيث توقفت</button>` : ''}
                                 </div>
+                                ` : ''}
+
+                                <div class="dv-bento-tile dv-bento-tile--wide">
+                                    <span class="dv-bento-tile__eyebrow">${inlineIcon('bulb')} ابدأ</span>
+                                    <div class="dv-bento-tile__stack">
+                                        <button type="button" id="cardFullStudy" class="btn btn--primary">${icon('i-plus')} دراسة جديدة</button>
+                                        <button type="button" id="cardQuickFeasibility" class="btn btn--ghost">${icon('i-bolt')} جدوى سريعة (٣ خطوات)</button>
+                                        <button type="button" id="cardSampleReport" class="btn btn--ghost">${icon('i-doc')} عينة تقرير</button>
+                                    </div>
+                                </div>
+
+                                ${hasProjects ? `<div class="dv-bento-tile dv-bento-tile--wide dv-bento-tile--quality">${await this.renderQualityStrip(filtered)}</div>` : ''}
+
+                                ${homeNavButton('engines', 'chart', 'الأدوات والمحرّكات', 'اختصارات خطوات الدراسة والنتائج', STEPS.length)}
+                                ${homeNavButton('support', 'clipboard', 'أدوات مساندة للدراسة', 'جمع بيانات، تحقق، تصدير، وربط', supportToolsCount)}
+                                ${homeNavButton('additional', 'book', 'دراسات جدوى جاهزة', 'ملفات جاهزة للتحميل', 'ملفات')}
+                                ${homeNavButton('databases', 'list', 'قواعد بيانات', 'أدلة وبيانات القطاعات', 'ملفات')}
+                                ${homeNavButton('hr', 'users', 'الموارد البشرية', 'نماذج ووصف وظيفي', 'ملفات')}
                             </div>
 
-                            <!-- شريط الجودة (أكمل) -->
-                            ${await this.renderQualityStrip(filtered)}
+                            <div class="dv-section__head dv-section__head--row">
+                                <h2 class="dv-section__title">دراساتك <span class="dv-count dv-num">(${filtered.length})</span></h2>
+                                ${hasProjects ? `
+                                <div class="dv-toolbar__organize">
+                                    <label for="dashboardFolderFilter" class="dv-toolbar__label">عرض:</label>
+                                    <select id="dashboardFolderFilter" name="folderFilter" class="input input--sm dv-toolbar__select">
+                                        ${folderOptions}
+                                    </select>
+                                    <button type="button" id="btnNewFolder" class="btn btn--sm btn--secondary">${icon('i-folder')} مجلد جديد</button>
+                                    <input type="text" id="dashboardSearch" name="searchQuery" aria-label="بحث عن مشروع" class="input input--sm dv-toolbar__search" placeholder="بحث بالاسم..." value="${(this.searchQuery || '').replace(/"/g, '&quot;')}" />
+                                </div>
+                                ` : ''}
+                            </div>
 
                             <!-- تدقيق محتوى: باقتا «مراجَع بخبير»/«خدمة كاملة» لم تكونا مذكورتين
                                  إطلاقاً في مساحة العمل — الفرصة البيعية الوحيدة كانت مؤجَّلة لحظة
@@ -999,6 +997,11 @@ export class DashboardView {
         this.container.querySelectorAll('[data-dv-panel-button]').forEach(btn => {
             btn.addEventListener('click', () => switchHomePanel(btn.dataset.dvPanelButton));
         });
+
+        // شعار «قرار» بالشريط العلوي (ظاهر دائماً) يعيد المستخدم لتبويب «دراساتك» —
+        // ضروري الآن لأن شريط التنقل الجانبي الدائم أُزيل لصالح شبكة Bento داخل تبويب
+        // «دراساتك» نفسه، فلا توجد وسيلة رجوع أخرى وأنت داخل تبويب آخر (مثل الأدوات).
+        this.container.querySelector('#dvBrandHome')?.addEventListener('click', () => switchHomePanel('studies'));
 
         this.container.querySelector('#btnContinueLastStep')?.addEventListener('click', () => {
             const index = Number(localStorage.getItem('feas_last_step_index'));

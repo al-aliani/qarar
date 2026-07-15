@@ -1305,17 +1305,9 @@
     border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
-/* ═══ ٣) دراساتك — أدوات التنظيم + الشبكة ═══ */
-.dv-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px 16px;
-}
-
-/* مجموعتان منفصلتان: أفعال البدء (يمين) وأدوات التنظيم (تُدفَع للطرف المقابل) —
-   بدل صفٍّ واحد يخلط ٦ عناصر متراصّة بلا هرمية. */
-.dv-toolbar__actions,
+/* ═══ ٣) دراساتك — أدوات التنظيم + الشبكة ═══
+   أزرار البدء (دراسة جديدة/جدوى سريعة/عينة تقرير) انتقلت لبطاقة Bento «ابدأ» —
+   .dv-toolbar__actions لم تعد مستخدمة، أُبقي فقط على .dv-toolbar__organize. */
 .dv-toolbar__organize {
     display: flex;
     flex-wrap: wrap;
@@ -1716,142 +1708,144 @@
     color: var(--c-text-muted);
 }
 
-/* ═══ مساحة العمل: تنقل جانبي يفتح صفحة مستقلة لكل قسم ═══ */
+/* ═══ مساحة العمل: شبكة Bento أعلى تبويب «دراساتك» بدل التنقل الجانبي الدائم
+   (اعتماد 2026-07-16 — راجع .dv-bento أدناه) ═══ */
 .dv-workspace {
-    display: grid;
-    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
-    gap: 18px;
-    align-items: start;
-}
-
-.dv-home-nav {
-    position: sticky;
-    top: 16px;
-    display: grid;
-    gap: 14px;
-    padding: 14px;
-    background: var(--c-bg-card);
-    border: 1px solid var(--c-border);
-    border-radius: var(--r-lg);
-    box-shadow: var(--shadow-sm);
-}
-
-.dv-home-nav__head {
-    padding: 4px 4px 0;
-}
-
-.dv-home-nav__eyebrow {
     display: block;
-    margin-bottom: 4px;
-    color: var(--c-gold-500);
-    font-size: 0.72rem;
-    font-weight: 700;
-}
-
-.dv-home-nav__heading {
-    margin: 0;
-    color: var(--c-text-main);
-    font-size: 0.98rem;
-    font-weight: 700;
-}
-
-.dv-home-nav__list {
-    display: grid;
-    gap: 8px;
-}
-
-.dv-home-nav__btn {
-    display: grid;
-    grid-template-columns: 34px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 11px 10px;
-    border: 1px solid transparent;
-    border-radius: var(--r-md);
-    background: transparent;
-    color: var(--c-text-main);
-    cursor: pointer;
-    font: inherit;
-    text-align: start;
-}
-
-.dv-home-nav__btn:hover {
-    background: var(--c-p-subtle);
-}
-
-.dv-home-nav__btn.is-active {
-    background: var(--c-p-subtle);
-    border-color: var(--c-p-500);
-    box-shadow: inset 3px 0 0 var(--c-p-500);
-}
-
-[dir="rtl"] .dv-home-nav__btn.is-active {
-    box-shadow: inset -3px 0 0 var(--c-p-500);
-}
-
-.dv-home-nav__btn:focus-visible {
-    outline: 2px solid var(--c-gold-deco);
-    outline-offset: 2px;
-}
-
-.dv-home-nav__ic {
-    display: inline-grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    border-radius: var(--r-sm);
-    color: var(--c-text-muted);
-    background: var(--c-bg-panel);
-}
-
-.dv-home-nav__btn.is-active .dv-home-nav__ic,
-.dv-home-nav__btn:hover .dv-home-nav__ic {
-    color: var(--c-p-500);
-    background: var(--c-bg-card);
-}
-
-.dv-home-nav__ic .ic {
-    width: 19px;
-    height: 19px;
-}
-
-.dv-home-nav__body {
-    min-width: 0;
-}
-
-.dv-home-nav__title {
-    display: block;
-    font-size: 0.88rem;
-    font-weight: 700;
-}
-
-.dv-home-nav__desc {
-    display: block;
-    margin-top: 2px;
-    color: var(--c-text-muted);
-    font-size: 0.7rem;
-    line-height: 1.55;
-}
-
-.dv-home-nav__badge {
-    min-width: 28px;
-    height: 24px;
-    display: inline-grid;
-    place-items: center;
-    border-radius: var(--r-pill);
-    color: var(--c-text-muted);
-    background: var(--c-bg-panel);
-    font-size: 0.68rem;
-}
-
-.dv-home-nav__btn.is-active .dv-home-nav__badge {
-    color: var(--c-p-600);
-    background: var(--c-bg-card);
 }
 
 .dv-home-panels {
     min-width: 0;
+}
+
+/* ═══ شبكة Bento (تبويب «دراساتك») ═══ */
+.dv-bento {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: var(--s-4);
+}
+
+.dv-bento-tile {
+    background: var(--c-bg-card);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow .15s, transform .15s;
+}
+
+.dv-bento-tile--hero {
+    grid-column: span 2;
+    grid-row: span 2;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.dv-bento-tile--wide {
+    grid-column: span 2;
+}
+
+.dv-bento-tile--quality {
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+.dv-bento-tile--small {
+    grid-column: span 1;
+    cursor: pointer;
+    border: 1px solid transparent;
+    text-align: start;
+    font: inherit;
+    color: var(--c-text-main);
+}
+
+.dv-bento-tile--small:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.dv-bento-tile--small.is-active {
+    border-color: var(--c-p-500);
+    box-shadow: inset 0 0 0 1px var(--c-p-500);
+}
+
+.dv-bento-tile--small:focus-visible {
+    outline: 2px solid var(--c-gold-deco);
+    outline-offset: 2px;
+}
+
+.dv-bento-tile__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--c-gold-500);
+}
+
+.dv-bento-tile__heroTitle {
+    margin: 8px 0 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.dv-bento-tile__hint {
+    margin: 4px 0 0;
+    color: var(--c-text-muted);
+    font-size: 0.78rem;
+}
+
+.dv-bento-tile__stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.dv-bento-tile__stack .btn {
+    justify-content: flex-start;
+}
+
+.dv-bento-tile__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.dv-bento-tile__ic {
+    display: inline-grid;
+    place-items: center;
+    color: var(--c-p-500);
+}
+
+.dv-bento-tile__count {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-top: auto;
+}
+
+.dv-bento-tile--small .dv-bento-tile__hint {
+    margin-top: 2px;
+}
+
+@media (max-width: 720px) {
+    .dv-bento {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dv-bento-tile--hero,
+    .dv-bento-tile--wide {
+        grid-column: span 2;
+    }
 }
 
 .dv-home-panel[hidden] {
@@ -2516,44 +2510,6 @@
 
 /* ═══ استجابة ═══ */
 @media (max-width: 960px) {
-    .dv-workspace {
-        grid-template-columns: 1fr;
-    }
-
-    .dv-home-nav {
-        position: relative;
-    }
-
-    .dv-home-nav__head {
-        display: none;
-    }
-
-    .dv-home-nav__list {
-        display: flex;
-        gap: 8px;
-        overflow-x: auto;
-        padding-bottom: 2px;
-        scrollbar-width: thin;
-    }
-
-    .dv-home-nav__btn {
-        min-width: 220px;
-    }
-
-    /* تلميح تمرير أفقي 2026-07-15: .dv-home-nav__btn شفاف الخلفية افتراضياً (لا يظهر لون
-       إلا عند hover/active)، فحافة القسم التالي تُقصّ فجأة بلا أي حافة/ظل مرئي — يبدو
-       الشريط كأنه يعرض قسماً واحداً بفراغ فارغ بعده رغم وجود 6 أقسام قابلة للتمرير. تدرّج
-       بلون خلفية البطاقة نفسها (var(--c-bg-card) يتبع الثيم تلقائياً) يوحي بامتداد المحتوى. */
-    .dv-home-nav::after {
-        content: '';
-        position: absolute;
-        inset-block: 14px;
-        inset-inline-end: 14px;
-        width: 28px;
-        background: linear-gradient(to right, var(--c-bg-card), transparent);
-        pointer-events: none;
-    }
-
     .dv-tools {
         grid-template-columns: 1fr;
     }
@@ -2608,10 +2564,6 @@
 
     .dv-section__head--row {
         align-items: flex-start;
-    }
-
-    .dv-toolbar {
-        width: 100%;
     }
 
     .dv-toolbar__search {
