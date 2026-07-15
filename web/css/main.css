@@ -217,8 +217,18 @@
   border-color: var(--c-p-500); color: var(--c-p-contrast, #fff); background: var(--c-p-500);
 }
 .category-toc__links a.is-active span { color: inherit; }
-.category-page__sections { display: grid; gap: var(--s-5); }
+/* تدقيق 2026-07-15: عمود واحد بلا minmax(0,1fr) = "auto" يكبر بعرض أوسع عنصر ابن (نفس علة
+   .app-shell قبل إصلاحها أعلاه) — أي خطوة تحوي select بنص خيار طويل (مثال: مرونة الطلب) كانت
+   تُكبّر .category-step لهذا العرض (~810-910px شوهد حياً)، فيتجاوز المحتوى حواف الجوّال يساراً
+   (إحداثيات x سالبة) بلا أي شريط تمرير ظاهر عملياً (main-stage يُدار عبر OverlayScrollbars
+   بـautoHide:'scroll' — المحور الأفقي قابل للتمرير برمجياً لكن شريطه لا يظهر إلا أثناء لمسة
+   تمرير فعلية ثم يختفي، فلا يوجد أي مؤشر دائم يدل المستخدم على وجوده أصلاً). minmax(0,1fr) +
+   min-width:0 يجبران الشبكة/الخطوة على الانكماش لعرض الشاشة؛ أي
+   جدول عريض فعلاً يبقى قابلاً للتمرير داخل غلافه الخاص (.table-wrapper/.competitor-matrix) كما
+   هو مصمَّم، دون أن يُكبّر الصفحة كلها. */
+.category-page__sections { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-5); }
 .category-step {
+  min-width: 0;
   scroll-margin-top: 112px; padding: var(--s-5); border: 1px solid var(--c-border);
   border-radius: var(--r-xl); background: var(--c-surface-1); box-shadow: var(--shadow-sm);
 }

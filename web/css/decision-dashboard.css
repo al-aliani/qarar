@@ -2521,7 +2521,7 @@
     }
 
     .dv-home-nav {
-        position: static;
+        position: relative;
     }
 
     .dv-home-nav__head {
@@ -2538,6 +2538,20 @@
 
     .dv-home-nav__btn {
         min-width: 220px;
+    }
+
+    /* تلميح تمرير أفقي 2026-07-15: .dv-home-nav__btn شفاف الخلفية افتراضياً (لا يظهر لون
+       إلا عند hover/active)، فحافة القسم التالي تُقصّ فجأة بلا أي حافة/ظل مرئي — يبدو
+       الشريط كأنه يعرض قسماً واحداً بفراغ فارغ بعده رغم وجود 6 أقسام قابلة للتمرير. تدرّج
+       بلون خلفية البطاقة نفسها (var(--c-bg-card) يتبع الثيم تلقائياً) يوحي بامتداد المحتوى. */
+    .dv-home-nav::after {
+        content: '';
+        position: absolute;
+        inset-block: 14px;
+        inset-inline-end: 14px;
+        width: 28px;
+        background: linear-gradient(to right, var(--c-bg-card), transparent);
+        pointer-events: none;
     }
 
     .dv-tools {

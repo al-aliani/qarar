@@ -68,6 +68,15 @@
     font-size: 0.85rem;
 }
 
+/* أزرار التنقّل في مسار «الجدوى السريعة» (QuickFeasibilityWizard.js) تُرسم بارتفاع
+   .btn الافتراضي (~40px) — أقل من حد اللمس الموصى به 44px (WCAG 2.5.5) على الجوال.
+   الحجم الحالي يبقى كما هو لسطح المكتب؛ الرفع هنا مقصور على الجوال فقط. */
+@media (max-width: 768px) {
+    #qf-next-1, #qf-back-dash, #qf-next-2, #qf-prev-2 {
+        min-height: 44px;
+    }
+}
+
 .nav-actions {
     display: flex;
     flex-direction: column;
