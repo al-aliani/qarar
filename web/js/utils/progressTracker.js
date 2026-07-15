@@ -2,6 +2,18 @@
  * Progress Tracker
  * Tracks user progress through the feasibility study wizard
  */
+import { createEmptyStudy } from '../core/schema.js';
+
+// حقول تقنية بحتة (معرّف/طوابع زمنية) قد تُحقَن داخل أي قسم عبر مسارات الحفظ/المزامنة
+// (مثال حي 2026-07-15: store.js._syncToCloud تكتب state.projectInfo.id تلقائياً لأول
+// مزامنة سحابية، فتُظهر خطوة «معلومات المشروع» كمكتملة رغم عدم كتابة المستخدم لحرف
+// واحد) — لا تعكس إدخال مستخدم فتُستبعد من مقارنة "هل يختلف القسم عن دراسة فارغة؟"،
+// بنفس قائمة التجاهل المستخدمة في hasMeaningfulUnsavedChanges بـapp.js.
+const IGNORED_BOOKKEEPING_KEYS = new Set(['id', 'createdAt', 'updatedAt']);
+
+function normalizeSection(value) {
+    return JSON.stringify(value, (key, val) => (IGNORED_BOOKKEEPING_KEYS.has(key) ? undefined : val));
+}
 
 export class ProgressTracker {
     constructor(totalSteps) {
@@ -117,8 +129,11 @@ export class ProgressTracker {
         // أعد بناء الاكتمال المستنتج كي لا تبقى خطوة «مكتملة» بعد حذف بياناتها،
         // مع الحفاظ فقط على الخطوات التي وُسِمت صراحةً عبر markCompleted().
         this.completedSteps = new Set(this.manualCompletedSteps);
+        // مرجع «فارغ» واحد لكل دورة كشف — createEmptyStudy() هو مصدر الحقيقة الوحيد
+        // لشكل القسم الفارغ (يُستخدم أيضاً في hasMeaningfulUnsavedChanges بـapp.js).
+        const blankStudy = createEmptyStudy();
         stepConfig.forEach((step, index) => {
-            if (this.isStepComplete(step, storeData)) {
+            if (this.isStepComplete(step, storeData, blankStudy)) {
                 this.completedSteps.add(index);
             }
         });
@@ -129,7 +144,7 @@ export class ProgressTracker {
     /**
      * Check if a specific step has required data
      */
-    isStepComplete(step, storeData) {
+    isStepComplete(step, storeData, blankStudy = {}) {
         // Template selector is always complete if a template was selected
         if (step.isTemplateSelector) {
             return storeData.templateId !== undefined;
@@ -146,12 +161,19 @@ export class ProgressTracker {
             });
         }
 
-        // For custom components, check if section exists
+        // For custom components, check if section exists AND فعلياً يختلف عن دراسة
+        // فارغة تماماً. تحقق حي 2026-07-15: Object.keys(section).length > 0 كانت تتحقق
+        // فقط من "شكل" القسم — وcreateEmptyStudy() (schema.js) يملأ كل قسم بمفاتيحه
+        // الافتراضية دائماً (نصوص/أصفار/مصفوفات قوالب مثل preliminaryCheck أو
+        // smartGoals.goals)، فكانت كل خطوة غير جدولية تُحتسب "مكتملة" فوراً حتى في
+        // دراسة جديدة 100% فارغة (مثال حي: 4 من 7 خطوات في أول تصنيف رغم عدم إدخال أي
+        // بيانات، بينما الصفحة الرئيسية—عبر QualityCalculator—أظهرت 0% بالمقابل).
+        // المقارنة الآن بمثيل فعلي طازج من createEmptyStudy()، بنفس أسلوب
+        // hasMeaningfulUnsavedChanges في app.js، بدل عدّ المفاتيح فقط.
         if (sectionKey && storeData[sectionKey]) {
             const section = storeData[sectionKey];
-            // Check if section has any meaningful data
             if (typeof section === 'object') {
-                return Object.keys(section).length > 0;
+                return normalizeSection(section) !== normalizeSection(blankStudy[sectionKey]);
             }
             return true;
         }

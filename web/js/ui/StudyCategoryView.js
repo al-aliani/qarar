@@ -158,9 +158,20 @@ export class StudyCategoryView {
             setTimeout(() => {
                 const driverObj = driver({
                     showProgress: true,
+                    // نص التقدّم الافتراضي للمكتبة "{{current}} of {{total}}" كان يظهر
+                    // بالإنجليزية وسط فقاعة عربية بالكامل (تحقق حي 2026-07-15). progressText
+                    // هو خيار driver.js 1.7.0 الفعلي لتخصيصه (راجع dist/driver.js.mjs).
+                    progressText: '{{current}} من {{total}}',
                     doneBtnText: 'بدء الدراسة',
                     nextBtnText: 'التالي',
                     prevBtnText: 'السابق',
+                    // زر الإغلاق (×) ليس له خيار تهيئة مباشر لنصه/aria-label في driver.js
+                    // 1.7.0 — المكتبة تكتب aria-label="Close" مباشرة داخل createElement
+                    // (dist/driver.js.mjs). onPopoverRender هو الـhook الموثّق للوصول إلى
+                    // عناصر الفقاعة الفعلية بعد الرسم وتعديلها (closeButton هنا).
+                    onPopoverRender: (popover) => {
+                        popover.closeButton.setAttribute('aria-label', 'إغلاق');
+                    },
                     steps: [
                         { element: '.category-page__header', popover: { title: 'مرحباً بك في دراستك!', description: 'هذه المرحلة مخصصة لتعريف مشروعك بشكل صحيح قبل الدخول في الأرقام.', side: "bottom" }},
                         { element: '.category-toc', popover: { title: 'أقسام المرحلة', description: 'يمكنك القفز المباشر لأي قسم من هنا. كل قسم يحفظ بياناتك تلقائياً.', side: "left" }},
