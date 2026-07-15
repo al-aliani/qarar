@@ -471,7 +471,11 @@ export class Wizard {
                             input.dispatchEvent(new Event('change'));
                         });
                     } catch(e) { console.error('Slider error', e); }
-                } else if (!input.dataset.key?.includes('projectionYears') && !input.dataset.key?.includes('Months')) {
+                } else if (input.type !== 'number' && !input.dataset.key?.includes('projectionYears') && !input.dataset.key?.includes('Months')) {
+                    // AutoNumeric لا يدعم input[type=number] إطلاقاً (يرمي خطأً دائماً — انظر
+                    // توثيقه). كانت المحاولة تفشل بصمت هنا على كل حقول العتبات/الأيام
+                    // (thresholds.*, workingCapitalPolicy.*Days) في كل مرة تُرسم فيها هذه
+                    // الخطوة، فتُغرق الـconsole بأخطاء متكررة بلا أي أثر فعلي.
                     try {
                         new AutoNumeric(input, {
                             currencySymbol: '',
@@ -1030,20 +1034,36 @@ export class Wizard {
         }
 
         // Saudi City Selector (Phase 9: Local Intelligence)
+        // كان select مقفلاً على 11 مدينة كبرى فقط — أي مستخدم من بلدة أو محافظة أصغر
+        // (مثل سبت العلايا) لا يجد اسمه إطلاقاً ويُجبر على اختيار مدينة بديلة غير
+        // دقيقة. datalist (نفس نمط حقل الحي أدناه) يتيح الكتابة الحرة مع اقتراحات
+        // المدن الكبرى؛ أي اسم غير موجود في CITY_STATS يستخدم تلقائياً متوسطات
+        // 'default' المحايدة (انظر getCityStats في SaudiCityStats.js) بدل رقم مُختلَق.
         if (labelKey === 'city') {
             const cities = Object.keys(CITY_STATS).filter(c => c !== 'default').sort();
-            const cityOpts = cities.map(c =>
-                `<option value="${c}" ${value === c ? 'selected' : ''}>${c}</option>`
-            ).join('');
+            const listId = `dl-${fullKey}`;
+            const cityOpts = cities.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+            const isKnownCity = cities.includes(displayValue);
+            // أزرار اختيار سريع للمدن الكبرى الأكثر شيوعاً — تكمّل datalist (لا تحل محله)
+            // فتظهر أمام المستخدم كخيارات ملموسة بدل الاعتماد فقط على اقتراح متصفح ضمني.
+            const quickCities = ['الرياض', 'جدة', 'الدمام', 'أبها', 'المدينة المنورة'];
+            const pillsHtml = `
+                <div class="quick-select-pills d-flex flex-wrap gap-2 mt-2">
+                    ${quickCities.map(c => `
+                        <button type="button" class="btn btn--ghost btn-xs btn-pill" onclick="const i=document.getElementById('field-${fullKey}'); i.value='${c}'; i.dispatchEvent(new Event('input',{bubbles:true})); i.dispatchEvent(new Event('change',{bubbles:true}));">${c}</button>
+                    `).join('')}
+                </div>`;
 
             return `
                 <div class="form-group">
                     <label for="field-${fullKey}">${arabicLabel}${tooltipHtml}</label>
                     <div class="relative">
-                        <select id="field-${fullKey}" data-key="${fullKey}" class="input">
-                            ${cityOpts}
-                        </select>
-                        <p class="field-hint">اختيار المدينة يساعدنا في تقدير <strong>الإيجار والرواتب</strong> بدقة أكبر.</p>
+                        <input type="text" id="field-${fullKey}" data-key="${fullKey}" value="${escapeHtml(displayValue)}" list="${listId}" class="input input--datalist" placeholder="اختر مدينة كبرى أو اكتب اسم مدينتك/محافظتك بحرية...">
+                        <datalist id="${listId}">${cityOpts}</datalist>
+                        ${pillsHtml}
+                        <p class="field-hint">${!isKnownCity && displayValue
+                            ? 'مدينتك غير مدرجة — تُستخدم متوسطات عامة للإيجار والرواتب بدل رقم مدينة أخرى.'
+                            : 'يُستخدم لتقدير الإيجار والرواتب محلياً. مدينتك غير مدرجة؟ اكتبها بحرية.'}</p>
                     </div>
                 </div>
             `;

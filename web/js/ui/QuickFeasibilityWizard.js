@@ -1,23 +1,25 @@
 /**
  * مسار "جدوى سريعة" / "جدوى في حوالي ساعة" (Modeliks) — 3 خطوات: تعريف المشروع → الأرقام الأساسية → القرار والتصدير.
- * استنساخ لنقاط قوة منافس (جدوى تك، Modeliks): تبسيط، تحميل PDF فوري، ملء بالذكاء الاصطناعي اختياري.
+ * استنساخ لنقاط قوة منافس (جدوى تك، Modeliks): تبسيط، طباعة/حفظ PDF فوري، ملء بالذكاء الاصطناعي اختياري.
  */
-import { quickFeasibilityCalc, QUICK_DEFAULTS_BY_SECTOR, estimateAllInInvestment, quickSanityChecks } from '../utils/quickFeasibilityCalc.js';
+import {
+    quickFeasibilityCalc,
+    QUICK_SECTOR_OPTIONS,
+    estimateAllInInvestment,
+    getQuickDefaultsForSector,
+    getQuickSectorLabel,
+    normalizeQuickSector,
+    quickSanityChecks
+} from '../utils/quickFeasibilityCalc.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { toast } from '../utils/toast.js';
 import { QuickPDFGenerator } from '../../export/quickPdfGenerator.js';
 import { IntelligenceService } from '../services/IntelligenceService.js';
 
-const SECTORS = [
-    { value: 'مطعم', label: 'مطعم / مقهى' },
-    { value: 'retail', label: 'تجزئة' },
-    { value: 'خدمي', label: 'خدمي' },
-    { value: 'صناعي', label: 'صناعي' },
-    { value: 'تقني', label: 'تقني' },
-    { value: 'أخرى', label: 'أخرى' }
-];
+const SECTORS = QUICK_SECTOR_OPTIONS;
 
-const CITIES = ['الرياض', 'جدة', 'مكة المكرمة', 'المدينة المنورة', 'الدمام', 'الخبر', 'الطائف', 'تبوك', 'بريدة', 'خميس مشيط', 'أخرى'];
+const OTHER_CITY_VALUE = '__other__';
+const CITIES = ['الرياض', 'جدة', 'مكة المكرمة', 'المدينة المنورة', 'الدمام', 'الخبر', 'الطائف', 'تبوك', 'بريدة', 'خميس مشيط', 'سبت العلايا'];
 
 const TOTAL_STEPS = 3;
 const ESTIMATED_MINUTES = 15;
@@ -36,7 +38,8 @@ export class QuickFeasibilityWizard {
         // التقدير القطاعي يُخزَّن منفصلاً في this.estimates ويُعرض كتلميح/زر اختياري فقط.
         this.quickData = {
             projectName: '',
-            sector: 'مطعم',
+            sector: 'restaurant',
+            sectorLabel: getQuickSectorLabel('restaurant'),
             city: 'الرياض',
             area: 100,
             budget: 0,
@@ -46,13 +49,15 @@ export class QuickFeasibilityWizard {
             fundingSource: 'self',
             apiDefaults: null
         };
-        this.estimates = { ...QUICK_DEFAULTS_BY_SECTOR.مطعم };
+        this.estimates = { ...getQuickDefaultsForSector('restaurant') };
         this.estimateSource = 'sector'; // 'sector' (متوسط قطاعي ثابت) أو 'market' (محرك السوق حسب المدينة/المساحة)
     }
 
     /** يحدّث التقدير القطاعي المعروض (لا يلمس أرقام المستخدم في quickData). */
     applySectorDefaults() {
-        const def = QUICK_DEFAULTS_BY_SECTOR[this.quickData.sector] || QUICK_DEFAULTS_BY_SECTOR.أخرى;
+        this.quickData.sector = normalizeQuickSector(this.quickData.sector);
+        this.quickData.sectorLabel = getQuickSectorLabel(this.quickData.sector);
+        const def = getQuickDefaultsForSector(this.quickData.sector);
         this.estimates = { ...def };
         this.estimateSource = 'sector';
     }
@@ -76,6 +81,9 @@ export class QuickFeasibilityWizard {
         const d = this.quickData;
         const progress = (1 / TOTAL_STEPS) * 100;
         const remaining = TOTAL_STEPS - 1;
+        const selectedSector = normalizeQuickSector(d.sector);
+        const selectedCity = CITIES.includes(d.city) ? d.city : OTHER_CITY_VALUE;
+        const customCity = selectedCity === OTHER_CITY_VALUE && d.city ? d.city : '';
         this.container.innerHTML = `
             <div class="quick-feasibility animate-entry" dir="rtl">
                 <div class="progress-step-map flex gap-2 justify-center mb-4" role="navigation" aria-label="خريطة الخطوات">
@@ -101,14 +109,16 @@ export class QuickFeasibilityWizard {
                     <div>
                         <label class="block text-sm font-medium mb-1">القطاع</label>
                         <select id="qf-sector" class="input w-full">
-                            ${SECTORS.map(s => `<option value="${s.value}" ${d.sector === s.value ? 'selected' : ''}>${s.label}</option>`).join('')}
+                            ${SECTORS.map(s => `<option value="${s.value}" ${selectedSector === s.value ? 'selected' : ''}>${s.label}</option>`).join('')}
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">المدينة / المنطقة</label>
                         <select id="qf-city" class="input w-full">
-                            ${CITIES.map(c => `<option value="${c}" ${d.city === c ? 'selected' : ''}>${c}</option>`).join('')}
+                            ${CITIES.map(c => `<option value="${c}" ${selectedCity === c ? 'selected' : ''}>${c}</option>`).join('')}
+                            <option value="${OTHER_CITY_VALUE}" ${selectedCity === OTHER_CITY_VALUE ? 'selected' : ''}>أخرى</option>
                         </select>
+                        <input type="text" id="qf-city-other" class="input w-full mt-2" value="${(customCity || '').replace(/"/g, '&quot;')}" placeholder="اكتب المدينة أو المحافظة" style="${selectedCity === OTHER_CITY_VALUE ? '' : 'display:none;'}" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">المساحة (م²)</label>
@@ -171,7 +181,7 @@ export class QuickFeasibilityWizard {
                     <div class="progress-bar-fill" style="width: ${progress}%"></div>
                 </div>
                 <h2 class="text-2xl font-bold mb-2">الأرقام الأساسية</h2>
-                <p class="text-muted mb-6">خطوة واحدة متبقية — ثم تحصل على القرار وتحميل PDF (حوالي 5 دقائق).</p>
+                <p class="text-muted mb-6">خطوة واحدة متبقية — ثم تحصل على القرار وخيار الطباعة أو الحفظ كـ PDF (حوالي 5 دقائق).</p>
                 ${this._renderEstimatesNotice()}
                 <div class="card card-hover max-w-xl space-y-4">
                     <div>
@@ -253,7 +263,7 @@ export class QuickFeasibilityWizard {
                     <div class="progress-bar-fill" style="width: 100%"></div>
                 </div>
                 <h2 class="text-2xl font-bold mb-2">ملخص القرار</h2>
-                <p class="text-muted mb-6">تم تقييم المشروع بناءً على المدخلات. يمكنك تحميل التقرير المختصر الآن.</p>
+                <p class="text-muted mb-6">تم تقييم المشروع بناءً على المدخلات. يمكنك طباعة التقرير المختصر أو حفظه كـ PDF الآن.</p>
                 <p class="text-gold font-semibold mb-4">تم إعداد مسودة دراستك في حوالي ساعة.</p>
                 ${warningsHtml}
                 <div class="card card-hover max-w-xl mb-6 p-6">
@@ -277,8 +287,8 @@ export class QuickFeasibilityWizard {
                     </div>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3 items-center justify-between max-w-xl">
-                    <button type="button" id="qf-download-pdf" class="btn btn--primary text-lg py-4 px-8 shadow-lg hover:scale-105" aria-label="تحميل PDF الآن — يفتح نافذة الطباعة لاختيار حفظ كـ PDF">
-                        📄 تحميل PDF الآن
+                    <button type="button" id="qf-download-pdf" class="btn btn--primary text-lg py-4 px-8 shadow-lg hover:scale-105" aria-label="طباعة أو حفظ PDF — يفتح نافذة الطباعة لاختيار حفظ كـ PDF">
+                        📄 طباعة / حفظ PDF
                     </button>
                     <div class="flex gap-2">
                         <button type="button" id="qf-full-path" class="btn btn--secondary">استكمال الدراسة الكاملة</button>
@@ -294,13 +304,29 @@ export class QuickFeasibilityWizard {
     bindStep1() {
         const sectorEl = this.container.querySelector('#qf-sector');
         sectorEl?.addEventListener('change', () => {
-            this.quickData.sector = sectorEl.value;
+            this.quickData.sector = normalizeQuickSector(sectorEl.value);
+            this.quickData.sectorLabel = getQuickSectorLabel(this.quickData.sector);
             this.applySectorDefaults();
         });
+        const cityEl = this.container.querySelector('#qf-city');
+        const cityOtherEl = this.container.querySelector('#qf-city-other');
+        const syncOtherCity = () => {
+            if (!cityOtherEl) return;
+            cityOtherEl.style.display = cityEl?.value === OTHER_CITY_VALUE ? '' : 'none';
+            if (cityEl?.value === OTHER_CITY_VALUE) cityOtherEl.focus();
+        };
+        cityEl?.addEventListener('change', syncOtherCity);
         this.container.querySelector('#qf-next-1')?.addEventListener('click', async () => {
             this.quickData.projectName = this.container.querySelector('#qf-projectName')?.value?.trim() || 'مشروع جديد';
-            this.quickData.sector = this.container.querySelector('#qf-sector')?.value || 'مطعم';
-            this.quickData.city = this.container.querySelector('#qf-city')?.value || 'الرياض';
+            this.quickData.sector = normalizeQuickSector(this.container.querySelector('#qf-sector')?.value || 'restaurant');
+            this.quickData.sectorLabel = getQuickSectorLabel(this.quickData.sector);
+            const selectedCity = this.container.querySelector('#qf-city')?.value || 'الرياض';
+            const customCity = this.container.querySelector('#qf-city-other')?.value?.trim() || '';
+            if (selectedCity === OTHER_CITY_VALUE && !customCity) {
+                toast.error('اكتب المدينة أو المحافظة قبل المتابعة.');
+                return;
+            }
+            this.quickData.city = selectedCity === OTHER_CITY_VALUE ? customCity : selectedCity;
             this.quickData.area = Number(this.container.querySelector('#qf-area')?.value) || 100;
             this.quickData.budget = Number(this.container.querySelector('#qf-budget')?.value) || 0;
             this.applySectorDefaults();
@@ -378,7 +404,7 @@ export class QuickFeasibilityWizard {
                 const ctx = {
                     projectInfo: {
                         name: this.quickData.projectName || 'مشروع',
-                        concept: this.quickData.sector,
+                        concept: this.quickData.sectorLabel || getQuickSectorLabel(this.quickData.sector),
                         city: this.quickData.city
                     }
                 };
@@ -432,7 +458,7 @@ export class QuickFeasibilityWizard {
             }
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = '📄 تحميل PDF الآن';
+                btn.innerHTML = '📄 طباعة / حفظ PDF';
             }
         });
         this.container.querySelector('#qf-full-path')?.addEventListener('click', () => this.onFinish(this.quickData));

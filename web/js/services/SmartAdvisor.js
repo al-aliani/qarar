@@ -8,6 +8,7 @@
 
 import { resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
 import { getCostRatios } from '../core/costRatios.js';
+import { getOfficialIndicators } from '../core/resultContract.js';
 
 const pctText = (v) => (v * 100).toFixed(0) + '%';
 // تدقيق 2026-07-08 (ملاحظة حرجة، خبير السوق): نطاقات sectorBenchmarks.js تقديرية
@@ -30,7 +31,7 @@ export class SmartAdvisor {
 
         if (!hasFull) {
             // تحليل جزئي من المؤشرات فقط عند غياب year1 أو الإيرادات
-            const ind = results?.indicators || results || {};
+            const ind = getOfficialIndicators(results, { allowLegacy: true });
             const insights = [];
             const npv = Number(ind.npv);
             if (!isNaN(npv) && npv <= 0) insights.push({ type: 'critical', category: 'جدوى', value: npv, message: 'صافي القيمة الحالية غير إيجابي؛ المشروع قد لا يخلق قيمة فوق تكلفة رأس المال.', action: 'مراجعة الافتراضات أو خفض التكاليف أو زيادة الإيرادات.' });
@@ -55,7 +56,7 @@ export class SmartAdvisor {
         const insights = [];
 
         // 2a. مؤشرات مالية (إن وُجدت)
-        const ind = results?.indicators || results;
+        const ind = getOfficialIndicators(results, { allowLegacy: true });
         if (ind && (ind.npv !== undefined || ind.irr !== undefined || ind.paybackPeriod !== undefined)) {
             const npv = Number(ind.npv);
             if (!isNaN(npv) && npv <= 0) {

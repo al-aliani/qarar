@@ -75,9 +75,9 @@ describe('StudyCategoryView', () => {
 
         expect([...document.querySelectorAll('.category-step')].map(section => Number(section.dataset.stepIndex))).toEqual([0, 2, 6]);
         expect([...document.querySelectorAll('.category-step__number')].map(element => element.textContent)).toEqual([
-            'القسم ١ من ٤١',
-            'القسم ٣ من ٤١',
-            'القسم ٧ من ٤١'
+            'الخطوة ١ من ٤١',
+            'الخطوة ٣ من ٤١',
+            'الخطوة ٧ من ٤١'
         ]);
     });
 });

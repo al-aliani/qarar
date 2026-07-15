@@ -9,12 +9,16 @@ test.describe('محاكي الجدوى — E2E', () => {
         await expect(page).toHaveTitle(/محاكي|جدوى|دراسة/i);
     });
 
-    test('وجود الشريط الجانبي وزر التصدير', async ({ page }) => {
+    test('وجود شريط تصنيفات الدراسة وزر التصدير', async ({ page }) => {
+        // تدقيق 2026-07-15: .sidebar مخفي دائماً منذ استبداله بنظام التنقّل بالتصنيفات
+        // (انظر main.css) — التنقّل الأساسي الحالي هو #categoryStepper. زر التصدير
+        // نفسه يختلف معرّفه بين الصفحة الرئيسية (لوحة التحكم) وداخل الدراسة (#headerExportMenu)
+        // — نطابق أي عنصر نصّه "تصدير" بدل معرّف واحد يتغيّر حسب السياق.
         await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
-        const sidebar = page.locator('.sidebar').first();
-        await expect(sidebar).toBeVisible({ timeout: 10000 });
-        const exportBtn = page.locator('#btnExportMenu, button:has-text("تصدير")').first();
+        const categoryNav = page.locator('#categoryStepper').first();
+        await expect(categoryNav).toBeVisible({ timeout: 10000 });
+        const exportBtn = page.locator('button:visible, a:visible').filter({ hasText: 'تصدير' }).first();
         await expect(exportBtn).toBeVisible({ timeout: 5000 });
     });
 
@@ -26,9 +30,14 @@ test.describe('محاكي الجدوى — E2E', () => {
     });
 
     test('زر تبديل المظهر (Dark/Light) موجود', async ({ page }) => {
+        // #btnThemeToggle الأصلي داخل .sidebar المخفي دائماً؛ #headerThemeToggle
+        // ظاهر فقط داخل وضع الدراسة (workspace)، و#dvThemeToggle ظاهر في لوحة
+        // التحكم الرئيسية — على المستخدم أن يجد واحداً منهما ظاهراً في أي الحالتين.
         await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
-        const themeBtn = page.locator('#btnThemeToggle');
+        // :visible يفلتر عند المطابقة قبل first() — دون هذا، عنصر hidden أسبق في DOM
+        // (headerThemeToggle) قد يُختار بدل dvThemeToggle الظاهر فعلياً، فيفشل التوكيد رغم توفّر الزر.
+        const themeBtn = page.locator('#headerThemeToggle:visible, #dvThemeToggle:visible').first();
         await expect(themeBtn).toBeVisible({ timeout: 8000 });
     });
 
@@ -41,12 +50,13 @@ test.describe('محاكي الجدوى — E2E', () => {
     });
 
     test('حاوية المصادقة أو زر الدخول ظاهرة', async ({ page }) => {
+        // كان يفحص .count() فوراً بلا انتظار — لوحة التحكم (DashboardView) تُرسم
+        // بعد فحص async لحالة المستخدم، فقد يُقرأ العدد صفراً قبل اكتمال الرسم.
+        // toBeVisible() ينتظر تلقائياً (auto-retry) بدل قراءة لقطة لحظية.
         await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
-        await expect(page.locator('.sidebar, #app')).toBeVisible({ timeout: 8000 });
-        const authContainer = page.locator('#authContainer');
-        const hasAuth = await authContainer.count() > 0;
-        const hasLogin = await page.locator('button:has-text("دخول"), #btnLogin').count() > 0;
-        expect(hasAuth || hasLogin).toBeTruthy();
+        await expect(page.locator('.app-shell')).toBeVisible({ timeout: 8000 });
+        const authOrLogin = page.locator('#authContainer, #dashboardLogin, button:has-text("دخول")').first();
+        await expect(authOrLogin).toBeVisible({ timeout: 8000 });
     });
 });

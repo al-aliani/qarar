@@ -47,4 +47,19 @@ describe('startFullStudyFromQuick', () => {
         expect(store.getState().marketing.competitors).toEqual([{ name: 'منافس جديد' }]);
         expect(store.getState().riskAnalysis.risks).toEqual([{ title: 'خطر جديد' }]);
     });
+
+    it('uses the display sector label when quick mode passes stable engine keys', async () => {
+        const store = createStoreWithState(createEmptyStudy());
+
+        await startFullStudyFromQuick(store, {
+            projectName: 'مشروع سريع',
+            sector: 'restaurant',
+            sectorLabel: 'مطعم / مقهى',
+            city: 'سبت العلايا'
+        });
+
+        expect(store.getState().projectInfo.concept).toBe('مطعم / مقهى');
+        expect(store.getState().projectInfo.concept).not.toBe('restaurant');
+        expect(store.getState().projectInfo.city).toBe('سبت العلايا');
+    });
 });

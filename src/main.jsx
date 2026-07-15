@@ -17,7 +17,7 @@ const path = window.location.search;
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <div style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}>
+    <div style={{ fontFamily: "'IBM Plex Sans Arabic', system-ui, sans-serif" }}>
       {path.includes('auth') ? <AuthPage /> : <App />}
     </div>
   </React.StrictMode>

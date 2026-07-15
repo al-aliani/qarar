@@ -40,6 +40,22 @@ export function calculateIRR(cashflows, guess = 0.1) {
     return rate;
 }
 
+export function calculatePaybackPeriod(cashflows) {
+    if (!Array.isArray(cashflows) || cashflows.length === 0 || cashflows[0] >= 0) return null;
+    let cumulative = 0;
+    for (let i = 0; i < cashflows.length; i++) {
+        const previous = cumulative;
+        cumulative += Number(cashflows[i]) || 0;
+        if (cumulative >= 0) {
+            if (i === 0) return 0;
+            const current = Number(cashflows[i]) || 0;
+            if (current <= 0) return null;
+            return (i - 1) + (-previous / current);
+        }
+    }
+    return Infinity;
+}
+
 export function calculateMIRR(cashflows, financeRate, reinvestRate) {
     if (!cashflows?.length) return 0;
     const n = cashflows.length;

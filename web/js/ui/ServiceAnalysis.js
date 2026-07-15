@@ -4,6 +4,7 @@
  * Including individual Break-even, NPV, IRR calculations
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
+import { calculateIRR, calculateNPV, calculatePaybackPeriod } from '../core/financial/cashflow.js';
 import { investmentDataWarning, investmentDataWarningHtml, productCatalogWarning } from '../utils/dataQuality.js';
 import { stepIndexById } from '../core/wizardSteps.js';
 import { escapeHtml } from '../utils/escape.js';
@@ -314,15 +315,16 @@ export class ServiceAnalysis {
                 cashFlows.push({ year: y, cashFlow: profit });
             }
         }
+        const cashFlowValues = cashFlows.map(cf => Number(cf.cashFlow) || 0);
 
         // NPV
-        const npv = hasAllocatedInvestment ? this.calculateNPV(cashFlows, discountRate) : null;
+        const npv = hasAllocatedInvestment ? calculateNPV(discountRate, cashFlowValues) : null;
 
         // IRR لا يكون ذا معنى بدون استثمار مخصص للمنتج.
-        const irr = hasAllocatedInvestment ? this.calculateIRR(cashFlows) : null;
+        const irr = hasAllocatedInvestment ? calculateIRR(cashFlowValues) : null;
 
         // Payback period
-        const paybackPeriod = hasAllocatedInvestment ? this.calculatePayback(cashFlows) : null;
+        const paybackPeriod = hasAllocatedInvestment ? calculatePaybackPeriod(cashFlowValues) : null;
 
         // ROI
         const roi = hasAllocatedInvestment ? (netProfitYear1 / capexEff) : null;
@@ -357,66 +359,6 @@ export class ServiceAnalysis {
             unitEconomicsPositive,
             cashFlows
         };
-    }
-
-    /**
-     * Calculate NPV
-     */
-    calculateNPV(cashFlows, discountRate) {
-        return cashFlows.reduce((npv, cf) => {
-            return npv + cf.cashFlow / Math.pow(1 + discountRate, cf.year);
-        }, 0);
-    }
-
-    /**
-     * Calculate IRR using Newton-Raphson
-     */
-    calculateIRR(cashFlows, maxIter = 100, tolerance = 0.0001) {
-        let rate = 0.1;
-
-        // Check if all positive or all negative (no IRR)
-        const hasPositive = cashFlows.some(cf => cf.cashFlow > 0);
-        const hasNegative = cashFlows.some(cf => cf.cashFlow < 0);
-        if (!hasPositive || !hasNegative) return null;
-
-        for (let i = 0; i < maxIter; i++) {
-            let npv = 0, derivative = 0;
-            cashFlows.forEach(cf => {
-                const den = Math.pow(1 + rate, cf.year);
-                npv += cf.cashFlow / den;
-                derivative -= cf.year * cf.cashFlow / (den * (1 + rate));
-            });
-            if (Math.abs(npv) < tolerance) return rate;
-            if (Math.abs(derivative) < 1e-9) break; // Avoid div by zero
-            rate = rate - npv / derivative;
-            if (rate <= -1) rate = -0.99; // Lower bound
-            if (rate > 100) rate = 100; // Upper bound cap
-        }
-        return rate; // Return best guess or null? Stick with rate if converged reasonably, else maybe null.
-    }
-
-    /**
-     * Calculate Payback Period
-     */
-    calculatePayback(cashFlows) {
-        let cumulative = 0;
-        // بدون تدفق استثماري سالب لا توجد فترة استرداد ذات معنى.
-        if (!Array.isArray(cashFlows) || cashFlows.length === 0 || cashFlows[0].cashFlow >= 0) return null;
-
-        for (let i = 0; i < cashFlows.length; i++) {
-            const prevCum = cumulative;
-            cumulative += cashFlows[i].cashFlow;
-
-            if (cumulative >= 0) {
-                if (i === 0) return 0;
-                // Fraction: how much of this year's cashflow was needed to cover the remaining negative balance
-                // Remaining negative was 'prevCum' (which is negative).
-                // Fraction = -prevCum / thisYearCashFlow
-                const fraction = -prevCum / cashFlows[i].cashFlow;
-                return (i - 1) + fraction;
-            }
-        }
-        return Infinity;
     }
 
     metricClass(n) {

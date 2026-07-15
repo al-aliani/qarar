@@ -29,10 +29,56 @@ const DEFAULT_SUPABASE_URL = "https://ykvcshxcjjicujayfwxg.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrdmNzaHhjamppY3VqYXlmd3hnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNjM1MjksImV4cCI6MjA5ODczOTUyOX0.VJ0_MQeYX9Audzjg1F9pqW3b1NdL5HnsFBxH3snG3lw";
 
+/** شريط تحذير ثابت (مرة واحدة فقط) في وضع التطوير حين لا يوجد إعداد Supabase محلي. */
+function showDevProdWarningBanner() {
+  if (typeof document === "undefined" || document.getElementById("devProdDbWarningBanner")) return;
+  const show = () => {
+    if (document.getElementById("devProdDbWarningBanner")) return;
+    const bar = document.createElement("div");
+    bar.id = "devProdDbWarningBanner";
+    bar.setAttribute("role", "alert");
+    // z-index أقل من طبقة التنبيهات (toast: 10000) كي لا يحجبها؛ حجم خط متجاوب
+    // للجوال (clamp) كي لا يفيض النص على شاشة ضيقة. pointer-events:none على الشريط
+    // نفسه (مع إعادة تفعيله على الزر فقط) — كان يغطي أزرار الترويسة (تصدير/حفظ..)
+    // ويعترض نقراتها فعلياً (اكتُشف عبر فشل اختبارات Playwright الحالية)، فيمنع
+    // المستخدم من التفاعل مع أي عنصر يقع تحته أعلى الصفحة.
+    bar.style.cssText =
+      "position:fixed;top:0;left:0;right:0;z-index:9998;background:#7a1f1f;color:#fff;" +
+      "font-family:system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;font-size:clamp(11px,2.6vw,13px);" +
+      "padding:8px 12px;text-align:center;direction:rtl;box-shadow:0 2px 8px rgba(0,0,0,.2);" +
+      "line-height:1.6;pointer-events:none;";
+    bar.innerHTML =
+      "⚠️ وضع تطوير بلا إعداد Supabase محلي — تم تعطيل الاتصال بقاعدة الإنتاج الافتراضية لحماية البيانات. " +
+      "اضبط VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY محلياً لتفعيل الحفظ السحابي في التطوير. " +
+      "<button id='devProdDbWarningDismiss' style='pointer-events:auto;margin-inline-start:10px;background:#fff;color:#7a1f1f;" +
+      "border:none;border-radius:6px;padding:2px 10px;cursor:pointer;'>إخفاء</button>";
+    document.body.appendChild(bar);
+    document.getElementById("devProdDbWarningDismiss")?.addEventListener("click", () => bar.remove());
+  };
+  if (document.body) show();
+  else document.addEventListener("DOMContentLoaded", show, { once: true });
+}
+
 let _client = null;
 let _lastError = "";
 /** Promise of the first client creation — avoids multiple GoTrueClient when getSupabaseClient() is called concurrently */
 let _clientPromise = null;
+
+function isDevRuntime() {
+  try {
+    if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.DEV) return true;
+  } catch (_) { }
+  try {
+    const host = typeof location !== "undefined" ? location.hostname : "";
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch (_) {
+    return false;
+  }
+}
+
+function allowDefaultSupabaseInDev() {
+  return String(envVar("VITE_ALLOW_DEFAULT_SUPABASE_IN_DEV") || "").toLowerCase() === "true";
+}
 
 function readConfig() {
   const fromEnvUrl = String(envVar("VITE_SUPABASE_URL") || "").trim();
@@ -50,17 +96,38 @@ function readConfig() {
   // تشغيل محلي دون .env كان يكتب صامتاً في قاعدة بيانات الإنتاج الفعلية دون أي تنبيه.
   const usingDefaultUrl = !fromEnvUrl && !fromWindowUrl && !fromStorageUrl;
   const usingDefaultKey = !fromEnvKey && !fromWindowKey && !fromStorageKey;
-  if (usingDefaultUrl || usingDefaultKey) {
+  const usingDefaultConfig = usingDefaultUrl || usingDefaultKey;
+  if (usingDefaultConfig) {
     console.warn(
       "[Supabase] لا توجد متغيرات بيئة/إعداد محلي (VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY أو window.*/localStorage) — " +
       "يُستخدم الإعداد الافتراضي المُضمَّن في الكود، وهو يشير إلى مشروع Supabase الحقيقي في الإنتاج. " +
-      "أي حفظ أو تعديل بيانات أثناء التطوير أو الاختبار المحلي سيُكتب فعلياً في قاعدة بيانات الإنتاج."
+      "سيتم تعطيل الاتصال في التطوير المحلي ما لم تضبط VITE_ALLOW_DEFAULT_SUPABASE_IN_DEV=true صراحة."
     );
+    // تحذير في console وحده كان يُفوَّت بسهولة (كما حدث فعلياً) — في وضع التطوير
+    // (import.meta.env.DEV) نعرض أيضاً شريطاً ثابتاً في الصفحة، لا يمكن تفويته،
+    // كي لا يُختبر أي تدفّق حفظ/تعديل بيانات ضد قاعدة الإنتاج الحقيقية بالخطأ.
+    try {
+      if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.DEV) {
+        showDevProdWarningBanner();
+      }
+    } catch (_) { /* بيئة اختبار بلا import.meta — تجاهل */ }
   }
 
   return {
     url: (String(url || "").trim() || DEFAULT_SUPABASE_URL),
-    anonKey: (String(anonKey || "").trim() || DEFAULT_SUPABASE_ANON_KEY)
+    anonKey: (String(anonKey || "").trim() || DEFAULT_SUPABASE_ANON_KEY),
+    usingDefaultConfig,
+    blockedInDev: isDevRuntime() && usingDefaultConfig && !allowDefaultSupabaseInDev()
+  };
+}
+
+export function getSupabaseConfigStatus() {
+  const cfg = readConfig();
+  return {
+    configured: !cfg.usingDefaultConfig,
+    usingDefaultConfig: cfg.usingDefaultConfig,
+    blockedInDev: cfg.blockedInDev,
+    url: cfg.url
   };
 }
 
@@ -69,7 +136,12 @@ export async function getSupabaseClient() {
 
   if (_clientPromise) return _clientPromise;
 
-  const { url, anonKey } = readConfig();
+  const { url, anonKey, blockedInDev } = readConfig();
+  if (blockedInDev) {
+    _lastError =
+      "Supabase blocked in local development because the embedded production defaults are active. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY for a local/dev project.";
+    return { supabase: null, ok: false, error: _lastError, blockedInDev: true };
+  }
   if (!url || !anonKey) {
     _lastError =
       "Supabase غير مهيأ. ضع SUPABASE_URL و SUPABASE_ANON_KEY (window.* أو localStorage) لتفعيل الحفظ على قاعدة البيانات.";

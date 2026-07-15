@@ -281,6 +281,9 @@
 
   <!-- Theme init (external file: enables CSP without 'unsafe-inline' for scripts) -->
   <script src="./js/theme-init.js"></script>
+  <!-- حارس تهيئة: يعرض شاشة خطأ صريحة إن فشل app.js بالكامل (بلا صفحة بيضاء صامتة).
+       يجب تحميله قبل app.js ليلتقط أخطاء الوحدات المبكرة. -->
+  <script src="./js/init-watchdog.js"></script>
   <!-- App Logic -->
   <script type="module" src="./app.js"></script>
   <script src="./js/sw-register.js"></script>

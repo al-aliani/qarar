@@ -12,6 +12,7 @@
 import { generateExecutiveSummary } from '../services/InternalAIGenerator.js'; // Re-use summary logic
 import { getSharedStudy } from '../services/ShareService.js';
 import { toast } from '../utils/toast.js';
+import { getOfficialIndicators } from '../core/resultContract.js';
 
 export class ShareView {
     constructor(containerId, store, onNavigate) {
@@ -32,10 +33,7 @@ export class ShareView {
         const revenue = state.revenue || {};
         const costs = state.costs || {};
         const engineResults = state.engineResults || {};
-        const indicators = engineResults.indicators || engineResults || {};
-        if (engineResults.indicators && engineResults.paybackPeriod == null) {
-            engineResults.paybackPeriod = indicators.paybackPeriod;
-        }
+        const indicators = getOfficialIndicators(engineResults, { allowLegacy: true });
 
         // Generate Executive Summary if missing
         const execSummary = generateExecutiveSummary(state, engineResults);
@@ -140,7 +138,7 @@ export class ShareView {
                         </div>
                         <div class="kpi-card text-center p-6 bg-white rounded-2xl shadow-lg border-b-4 border-purple-500">
                             <div class="text-gray-400 text-xs mb-1">فترة الاسترداد</div>
-                            <div class="text-xl font-bold text-purple-600">${engineResults.paybackPeriod ? engineResults.paybackPeriod + ' سنوات' : '-'}</div>
+                            <div class="text-xl font-bold text-purple-600">${this.formatYears(indicators.paybackPeriod)}</div>
                         </div>
                         <div class="kpi-card text-center p-6 bg-white rounded-2xl shadow-lg border-b-4 border-orange-500">
                             <div class="text-gray-400 text-xs mb-1">هامش الربح (السنة 1)</div>

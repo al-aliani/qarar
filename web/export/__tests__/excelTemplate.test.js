@@ -7,6 +7,7 @@
 import { vi, describe, it, expect, beforeAll } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 let capturedBlob = null;
 vi.mock('../utils.js', async (importOriginal) => {
@@ -21,7 +22,8 @@ import { exportExcel } from '../excel.js';
 import { calculateStudy } from '../../js/core/engine.js';
 import { SECTIONS } from '../../js/core/schema.js';
 
-const TEMPLATE_PATH = path.resolve(process.cwd(), 'assets/templates/excel/قالب_دراسة_الجدوى_المعياري.xlsx');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TEMPLATE_PATH = path.resolve(__dirname, '../../../assets/templates/excel/قالب_دراسة_الجدوى_المعياري.xlsx');
 
 function makeCafeStudy() {
     return {

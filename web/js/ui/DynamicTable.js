@@ -659,7 +659,11 @@ export class DynamicTable {
         const newRow = {};
         (Array.isArray(this.config?.columns) ? this.config.columns : []).forEach(col => {
             if (col.type !== 'computed') {
-                newRow[col.key] = col.type === 'number' ? 0 : '';
+                // كان يتجاهل col.default تماماً (مثل nationality: default 'expat') فيبدأ
+                // كل صف جديد بقيمة فارغة صامتة تدخل حسابات التوطين/الرواتب دون اختيار واعٍ.
+                newRow[col.key] = col.default !== undefined
+                    ? col.default
+                    : (col.type === 'number' ? 0 : '');
             }
         });
         this.data = [...this.data, newRow];

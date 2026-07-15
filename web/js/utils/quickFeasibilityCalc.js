@@ -8,6 +8,35 @@ const DEFAULT_LOAN_YEARS = 5;
 const DEFAULT_LOAN_RATE = 0.08;
 const PROJECTION_YEARS = 5;
 
+export const QUICK_SECTOR_OPTIONS = [
+    { value: 'restaurant', label: 'مطعم / مقهى', aliases: ['مطعم', 'مقهى', 'cafe', 'restaurant'] },
+    { value: 'retail', label: 'تجزئة', aliases: ['retail', 'تجزئة', 'متجر', 'محل'] },
+    { value: 'service', label: 'خدمي', aliases: ['service', 'خدمي', 'خدمات'] },
+    { value: 'industrial', label: 'صناعي', aliases: ['industrial', 'صناعي', 'مصنع'] },
+    { value: 'tech', label: 'تقني', aliases: ['tech', 'تقني', 'تقنية'] },
+    { value: 'other', label: 'أخرى', aliases: ['other', 'general', 'أخرى', 'اخرى'] }
+];
+
+const QUICK_SECTOR_LABELS = Object.fromEntries(QUICK_SECTOR_OPTIONS.map(s => [s.value, s.label]));
+const QUICK_SECTOR_ALIAS_MAP = new Map();
+for (const option of QUICK_SECTOR_OPTIONS) {
+    QUICK_SECTOR_ALIAS_MAP.set(option.value, option.value);
+    for (const alias of option.aliases || []) {
+        QUICK_SECTOR_ALIAS_MAP.set(String(alias).trim().toLowerCase(), option.value);
+    }
+}
+
+export function normalizeQuickSector(sector) {
+    const raw = String(sector || '').trim();
+    if (!raw) return 'other';
+    const key = raw.toLowerCase();
+    return QUICK_SECTOR_ALIAS_MAP.get(key) || (QUICK_DEFAULTS_BY_SECTOR[key] ? key : 'other');
+}
+
+export function getQuickSectorLabel(sector) {
+    return QUICK_SECTOR_LABELS[normalizeQuickSector(sector)] || QUICK_SECTOR_LABELS.other;
+}
+
 /**
  * @param {Object} inputs
  * @param {number} inputs.monthlyRevenue - إيراد شهري متوقع (ريال)
@@ -96,13 +125,26 @@ export function quickFeasibilityCalc(inputs) {
 
 /** قيم افتراضية حسب القطاع (إيراد شهري، تكلفة شهرية، استثمار أولي) */
 export const QUICK_DEFAULTS_BY_SECTOR = {
-    مطعم: { monthlyRevenue: 80000, monthlyCosts: 50000, initialInvestment: 400000 },
+    restaurant: { monthlyRevenue: 80000, monthlyCosts: 50000, initialInvestment: 400000 },
     retail: { monthlyRevenue: 60000, monthlyCosts: 35000, initialInvestment: 250000 },
-    خدمي: { monthlyRevenue: 45000, monthlyCosts: 25000, initialInvestment: 150000 },
-    صناعي: { monthlyRevenue: 120000, monthlyCosts: 70000, initialInvestment: 800000 },
-    تقني: { monthlyRevenue: 35000, monthlyCosts: 20000, initialInvestment: 100000 },
-    أخرى: { monthlyRevenue: 50000, monthlyCosts: 30000, initialInvestment: 200000 }
+    service: { monthlyRevenue: 45000, monthlyCosts: 25000, initialInvestment: 150000 },
+    industrial: { monthlyRevenue: 120000, monthlyCosts: 70000, initialInvestment: 800000 },
+    tech: { monthlyRevenue: 35000, monthlyCosts: 20000, initialInvestment: 100000 },
+    other: { monthlyRevenue: 50000, monthlyCosts: 30000, initialInvestment: 200000 }
 };
+
+// Backward compatibility for saved quick studies and older tests/data that used Arabic keys directly.
+QUICK_DEFAULTS_BY_SECTOR.مطعم = QUICK_DEFAULTS_BY_SECTOR.restaurant;
+QUICK_DEFAULTS_BY_SECTOR.مقهى = QUICK_DEFAULTS_BY_SECTOR.restaurant;
+QUICK_DEFAULTS_BY_SECTOR.خدمي = QUICK_DEFAULTS_BY_SECTOR.service;
+QUICK_DEFAULTS_BY_SECTOR.صناعي = QUICK_DEFAULTS_BY_SECTOR.industrial;
+QUICK_DEFAULTS_BY_SECTOR.تقني = QUICK_DEFAULTS_BY_SECTOR.tech;
+QUICK_DEFAULTS_BY_SECTOR.أخرى = QUICK_DEFAULTS_BY_SECTOR.other;
+QUICK_DEFAULTS_BY_SECTOR.اخرى = QUICK_DEFAULTS_BY_SECTOR.other;
+
+export function getQuickDefaultsForSector(sector) {
+    return QUICK_DEFAULTS_BY_SECTOR[normalizeQuickSector(sector)] || QUICK_DEFAULTS_BY_SECTOR.other;
+}
 
 /**
  * تقدير استثمار أولي *شامل* من قيم محرك السوق (لا يُكتفى بالتجهيز فقط).
@@ -133,7 +175,8 @@ export function quickSanityChecks(inputs, result, opts = {}) {
     const cost = Number(inputs.monthlyCosts) || 0;
     const initial = Number(inputs.initialInvestment) || 0;
     const area = Number(inputs.area) || 0;
-    const isVenue = inputs.sector === 'مطعم' || inputs.sector === 'retail';
+    const normalizedSector = normalizeQuickSector(inputs.sector);
+    const isVenue = normalizedSector === 'restaurant' || normalizedSector === 'retail';
 
     // أرقام تعتمد على تقدير قطاعي عام وليست أرقام المستخدم الحقيقية
     if (opts.estimatesApplied) {

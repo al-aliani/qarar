@@ -100,7 +100,7 @@ export class StudyCategoryView {
                 <div class="category-page__sections">
                     ${stepIndexes.length ? stepIndexes.map(index => `
                         <section class="category-step" id="category-section-${index}" data-step-index="${index}">
-                            <div class="category-step__number">القسم ${(index + 1).toLocaleString('ar-SA')} من ${this.steps.length.toLocaleString('ar-SA')}</div>
+                            <div class="category-step__number">الخطوة ${(index + 1).toLocaleString('ar-SA')} من ${this.steps.length.toLocaleString('ar-SA')}</div>
                             <div id="category-step-content-${index}" class="category-step__content" tabindex="-1"></div>
                         </section>
                     `).join('') : '<div class="empty-state">لا توجد أقسام ظاهرة في هذا التصنيف ضمن وضع العرض الحالي.</div>'}

@@ -98,7 +98,7 @@ export class QuickPDFGenerator {
         const r = this.result;
         const date = new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
         const projectName = d.projectName || 'مشروع جديد';
-        const sector = d.sector || '—';
+        const sector = d.sectorLabel || d.sector || '—';
         const city = d.city || '—';
 
         const sectionOrder = this.getQuickSectionOrder();

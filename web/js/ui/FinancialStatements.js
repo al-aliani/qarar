@@ -274,7 +274,7 @@ export class FinancialStatements {
                             ${incomeStatement.map(y => `<td class="text-mono">${this.formatCurrency(getProfitBeforeZakat(y))}</td>`).join('')}
                         </tr>
                         <tr>
-                            <td>(-) الزكاة</td>
+                            <td title="الزكاة تُحسب على وعاء رأس المال (حقوق الملكية + مخصصات معيّنة)، لا على صافي الربح — لذا قد تظهر حتى في سنة خسارة تشغيلية. هذا صحيح شرعاً/نظاماً وليس خطأ حسابياً.">(-) الزكاة <span class="text-muted" style="cursor:help;" aria-hidden="true">ⓘ</span></td>
                             ${incomeStatement.map(y => `<td class="text-mono">${this.formatCurrency(-(y.zakat || 0))}</td>`).join('')}
                         </tr>
                         ${incomeStatement.some(y => (y.tax || 0) > 0) ? `

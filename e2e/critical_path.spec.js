@@ -3,85 +3,77 @@ import { test, expect } from '@playwright/test';
 test.describe('Critical Path: Full User Journey', () => {
 
   test('User can create a project, add revenue, and see calculations', async ({ page }) => {
+    const pageErrors = [];
+    page.on('pageerror', (err) => pageErrors.push(err.message));
+
+    // جولة driver.js التعريفية (مرة واحدة لكل مستخدم حقيقي) تظهر على التصنيف الأول
+    // بعد ثانية عبر setTimeout، وقد تتراكب فوق تصنيف لاحق إن انتقل الاختبار أسرع من
+    // ذلك — نُعطّلها هنا لأن هذا الاختبار يفحص تدفّق البيانات لا تجربة الجولة نفسها.
+    await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
+
     // 1. Landing Page
     await page.goto('/index.html');
     await expect(page).toHaveTitle(/محاكي دراسة الجدوى/);
     await page.waitForLoadState('domcontentloaded');
 
-    // 2. Start New Project from Dashboard (or empty state)
+    // حارس أساسي ضد بلا-محتوى-صامت: #wizardContainer له ارتفاع CSS ثابت حتى فارغاً،
+    // فـ toBeVisible() وحده لا يكشف صفحة فارغة فعلياً (اكتُشف 2026-07-15: استيراد
+    // ميت واحد كسر التطبيق بالكامل بصفحة بيضاء بلا أي خطأ ظاهر، وهذا التوكيد
+    // القديم (toBeVisible فقط) لم يكن سيكشفه).
     await expect(page.locator('#wizardContainer')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#wizardContainer')).not.toBeEmpty();
 
-    // Click "New Project" (Full Study) — only if dashboard/empty is shown
-    const btnNew = page.locator('#btnNewProject, #btnNewProjectEmpty').filter({ hasText: 'دراسة جديدة' }).first();
-    if (await btnNew.isVisible()) {
+    // 2. Start New Project (Full Study) — الزر يختلف حسب وجود مشاريع محفوظة مسبقاً
+    const btnNew = page.locator('#btnNewProjectEmpty, #cardFullStudy').first();
+    if (await btnNew.isVisible().catch(() => false)) {
       await btnNew.click();
       await expect(page.locator('#templateGalleryOverlay')).toBeVisible({ timeout: 8000 });
     }
 
-    // 2.1 Template Gallery (if opened)
+    // 2.1 Template Gallery: مشروع فارغ ← مستوى "مفصّل" ← إنشاء
     const galleryOverlay = page.locator('#templateGalleryOverlay');
-    if (await galleryOverlay.isVisible()) {
+    if (await galleryOverlay.isVisible().catch(() => false)) {
       const emptyTemplate = galleryOverlay.locator('.template-card[data-id="empty"]');
       await emptyTemplate.click();
       const advancedMode = galleryOverlay.locator('.mode-card[data-mode="advanced"]');
-      if (await advancedMode.isVisible()) {
+      if (await advancedMode.isVisible().catch(() => false)) {
         await advancedMode.click();
         await galleryOverlay.locator('#btnBlankCreate').click();
       }
       await expect(galleryOverlay).not.toBeVisible({ timeout: 5000 });
     }
 
-    // Navigate through the single shared study map (the legacy sidebar is intentionally hidden)
-    await expect(page.locator('#btnOpenStudyMap')).toBeVisible({ timeout: 10000 });
-    await page.locator('#btnOpenStudyMap').click();
-    const projectInfoStep = page.locator('#studyMapDialog [data-study-step]').filter({ hasText: 'معلومات المشروع' });
-    await projectInfoStep.click();
-
-    // 3. Fill Project Info
-    // Wizard inputs use id="field-{key}" where key matches schema
-    // Project Name key is "name" -> #field-name
-    const nameInput = page.locator('input[data-key="name"], #field-name').first();
-    await nameInput.waitFor({ state: 'visible' });
+    // 3. ننتهي مباشرةً على تصنيف "التحقق والتعريف" — حقول معلومات المشروع ظاهرة
+    // على نفس الصفحة (لا حوار وسيط منفصل؛ نظام التنقّل الحالي تصنيفات لا خريطة خطوات مسطّحة)
+    const nameInput = page.locator('#field-name');
+    await nameInput.waitFor({ state: 'visible', timeout: 10000 });
     await nameInput.fill('مقهى التميز');
-    
-    // City (select usually, or text) -> schema says default "الرياض"
-    // Let's just fill name for now as it's the critical validator
-
-    // Blur to trigger store update
     await nameInput.blur();
 
-    // 4. Navigate to Revenue (مصادر الإيرادات)
-    await page.locator('#btnOpenStudyMap').click();
-    const revenueStep = page.locator('#studyMapDialog [data-study-step]').filter({ hasText: 'مصادر الإيرادات' });
-    await revenueStep.click();
+    // 4. الانتقال لتصنيف "السوق والإيرادات" عبر شريط التصنيفات العلوي
+    await page.locator('nav[aria-label="فئات الدراسة"] button', { hasText: 'السوق والإيرادات' }).click();
 
-    // 5. Add Revenue Stream
-    // Table ID inside Wizard map: revenueStreams -> #table-revenueStreams
-    const tableContainer = page.locator('#table-revenueStreams');
-    await expect(tableContainer).toBeVisible();
+    // 5. إضافة صف إيراد داخل جدول "مصادر الإيرادات"
+    const tableContainer = page.locator('[data-table-id="revenueStreams"]');
+    await expect(tableContainer).toBeVisible({ timeout: 10000 });
 
-    // Click Add Row
-    const addBtn = tableContainer.locator('.btn-add-row');
+    const addBtn = tableContainer.locator('button', { hasText: 'إضافة بند' }).first();
     await addBtn.click();
-    
-    // Fill first row inputs
-    // DynamicTable inputs have class .table-input and data-col="{key}"
-    // Schema keys: service, customersPerMonth, avgPrice
-    const row = tableContainer.locator('tr[data-row-index="0"]');
-    await expect(row).toBeVisible();
 
-    await row.locator('input[data-col="service"]').fill('قهوة مقطرة');
-    await row.locator('input[data-col="avgPrice"]').fill('15');
-    await row.locator('input[data-col="customersPerMonth"]').fill('3000'); // 100/day * 30
+    const serviceInput = tableContainer.locator('input[data-col="service"]').first();
+    await expect(serviceInput).toBeVisible();
+    await serviceInput.fill('قهوة مقطرة');
+    await tableContainer.locator('input[data-col="avgPrice"]').first().fill('15');
+    const customersInput = tableContainer.locator('input[data-col="customersPerMonth"]').first();
+    await customersInput.fill('3000'); // 100/day * 30
+    await customersInput.blur();
 
-    // Trigger calculation by blurring or changing focus
-    await row.locator('input[data-col="customersPerMonth"]').blur();
+    // 6. الانتقال لتصنيف "النتائج والمتابعة" والتحقق من ظهور لوحة القرار الاستثماري فعلياً
+    await page.locator('nav[aria-label="فئات الدراسة"] button', { hasText: 'النتائج والمتابعة' }).click();
+    await expect(page.locator('.category-page__sections')).not.toBeEmpty({ timeout: 10000 });
+    await expect(page.locator('h2', { hasText: 'النتائج والمتابعة' })).toBeVisible();
 
-    // 6. Check the financial indicators dashboard (the duplicate live panel and early-summary step were removed)
-    await page.locator('#btnOpenStudyMap').click();
-    const financialDashboardStep = page.locator('#studyMapDialog [data-study-step]').filter({ hasText: 'لوحة المؤشرات المالية' });
-    await financialDashboardStep.click();
-    await expect(page.locator('h2').filter({ hasText: 'لوحة المؤشرات المالية' })).toBeVisible();
+    expect(pageErrors, `Uncaught page errors: ${pageErrors.join('; ')}`).toEqual([]);
   });
 
   test('Export Menu triggers download options', async ({ page }) => {

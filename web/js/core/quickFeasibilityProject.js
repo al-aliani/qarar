@@ -9,7 +9,7 @@ export async function startFullStudyFromQuick(store, quickData = {}) {
     store.update('projectInfo', {
         ...projectInfo,
         name: quickData.projectName || projectInfo.name,
-        concept: quickData.sector || projectInfo.concept,
+        concept: quickData.sectorLabel || quickData.sector || projectInfo.concept,
         city: quickData.city || projectInfo.city
     });
 

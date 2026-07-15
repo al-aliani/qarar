@@ -105,7 +105,7 @@ class ExpertLogicHandler(http.server.SimpleHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', ALLOWED_ORIGIN)
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 
@@ -116,6 +116,12 @@ class ExpertLogicHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             return
         if self.path.startswith('/api'):
+            if self.path.startswith('/api/health'):
+                self._send_json({
+                    "ok": True,
+                    "market_engine": bool(MARKET_ENGINE_AVAILABLE and market_engine is not None)
+                })
+                return
             if self.path.startswith('/api/market/defaults'):
                 self.handle_market_defaults()
                 return
@@ -155,7 +161,7 @@ class ExpertLogicHandler(http.server.SimpleHTTPRequestHandler):
 
     def _send_json(self, data):
         if LOG_REQUESTS:
-            _log_request("POST", self.path, self.client_address[0], 200)
+            _log_request(self.command, self.path, self.client_address[0], 200)
         self.send_response(200)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Access-Control-Allow-Origin', ALLOWED_ORIGIN)
@@ -188,10 +194,16 @@ class ExpertLogicHandler(http.server.SimpleHTTPRequestHandler):
         from urllib.parse import urlparse, parse_qs
         parsed = urlparse(self.path)
         qs = parse_qs(parsed.query)
+        def int_param(name, default=0):
+            raw = (qs.get(name) or [default])[0]
+            try:
+                return max(0, int(float(raw)))
+            except (TypeError, ValueError):
+                return default
         sector = (qs.get('sector') or [''])[0]
         city = (qs.get('city') or [''])[0]
-        area = int((qs.get('area') or ['100'])[0]) if (qs.get('area')) else 100
-        budget = int((qs.get('budget') or ['0'])[0]) if (qs.get('budget')) else 0
+        area = int_param('area', 100)
+        budget = int_param('budget', 0)
         if not MARKET_ENGINE_AVAILABLE or market_engine is None:
             self._send_json({"error": "Market Engine unavailable", "defaults": {}})
             return

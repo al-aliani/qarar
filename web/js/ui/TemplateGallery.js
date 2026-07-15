@@ -17,7 +17,7 @@ import { HRFilesView } from './HRFilesView.js';
 const STUDY_MODES = [
     { id: 'mini', icon: '🌱', name: 'مصغّر (للمبتدئين)', desc: 'المشروع، التكاليف، الفريق، الإيرادات، التمويل، القرار — أقل الأسئلة للوصول لقرار سريع.' },
     { id: 'simple', icon: '📋', name: 'بسيط', desc: 'الأقسام الأساسية للدراسة دون التحليلات المتقدمة (حساسية، سيناريوهات، مونت كارلو، تقييم…).' },
-    { id: 'advanced', icon: '📊', name: 'مفصل', desc: 'الدراسة الكاملة بكل الأقسام والتحليلات — جاهزة للبنك والمستثمر.' }
+    { id: 'advanced', icon: '📊', name: 'مفصل', desc: 'الدراسة الكاملة بكل الأقسام والتحليلات — جاهزة للبنك والمستثمر.', badge: 'موصى به لبنك/مستثمر' }
 ];
 
 const escapeAttribute = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -184,8 +184,9 @@ export class TemplateGallery {
                 <div class="mode-cards" role="radiogroup" aria-label="مستوى تفصيل الدراسة">
                     ${STUDY_MODES.map(m => `
                         <button type="button" class="mode-card ${m.id === currentMode ? 'active' : ''}" data-mode="${m.id}" role="radio" aria-checked="${m.id === currentMode}">
-                            <span class="mode-card__icon" aria-hidden="true">${m.icon}</span>
-                            <span class="mode-card__name">${m.name}</span>
+                            ${m.badge ? `<span class="mode-card__badge" style="display:block;font-size:.7rem;font-weight:700;color:var(--c-primary,#0f5132);margin-bottom:4px;">${m.badge}</span>` : ''}
+                            <span class="mode-card__icon" aria-hidden="true" style="font-size:1.5rem;">${m.icon}</span>
+                            <span class="mode-card__name" style="display:block;font-weight:700;font-size:1.05rem;margin-top:4px;">${m.name}</span>
                             <span class="mode-card__desc">${m.desc}</span>
                         </button>
                     `).join('')}

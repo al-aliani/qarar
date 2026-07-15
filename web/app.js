@@ -27,6 +27,7 @@ import { trackEvent } from './js/utils/analytics.js';
 import { enhanceFieldHelp, observeFieldHelp } from './js/ui/components/FieldHelpEnhancer.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+ try {
   const installArabicUiGuard = () => {
     // كل الأنماط بحدود كلمات (\b) حصراً: الاستبدال بلا حدود كان يفسد أي نص يحوي
     // النمط داخل كلمة («QAR» صارت «فحص الجودةR»). أسماء الصيغ المعروفة عالمياً
@@ -2108,4 +2109,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       toggleMobileMenu(false);
     }
   });
+
+  // إشارة نجاح التهيئة لحارس init-watchdog.js — يمنعه من عرض شاشة الخطأ.
+  window.__qararAppBooted = true;
+ } catch (initError) {
+  console.error('[App Init] فشل تشغيل التطبيق:', initError);
+  if (window.__qararEarlyErrors) {
+    window.__qararEarlyErrors.push(String(initError?.message || initError));
+  }
+  if (typeof window.__qararShowInitFallback === 'function') {
+    window.__qararShowInitFallback();
+  }
+ }
 });

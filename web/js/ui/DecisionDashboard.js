@@ -632,6 +632,23 @@ export class DecisionDashboard {
             this._eventListeners.push({ element: btnGoFinancialDashboard, event: 'click', handler });
         }
 
+        // «لماذا هذا الرقم؟» بجانب فجوة التمويل — رقم الفجوة يقفز فجأة (يشمل رأس المال
+        // العامل: إيجار مقدّم + رواتب + بضاعة لأشهر قبل أول إيراد) بلا أي تفسير في
+        // هذه اللوحة. يوصّل المستخدم مباشرة لتفصيل الحساب بندًا بندًا بدل تركه يحزر.
+        const btnGoFinancingBreakdown = this.container.querySelector('#btnGoFinancingBreakdown');
+        if (btnGoFinancingBreakdown) {
+            const handler = () => {
+                if (!this.onNavigate) {
+                    toast.info('افتح «مصادر وهيكلة التمويل» من قائمة أقسام الدراسة لعرض تفصيل الحساب.');
+                    return;
+                }
+                const financingIndex = STEPS.findIndex(s => s.isFinancing);
+                if (financingIndex >= 0) this.onNavigate(financingIndex);
+            };
+            btnGoFinancingBreakdown.addEventListener('click', handler);
+            this._eventListeners.push({ element: btnGoFinancingBreakdown, event: 'click', handler });
+        }
+
         // Executive Summary Button
         const btnExec = this.container.querySelector('#btnExecutiveSummary');
         if (btnExec) {
@@ -1136,6 +1153,9 @@ export class DecisionDashboard {
                 ? `فائض ${this.formatCurrency(Math.abs(d.fundingGap))}`
                 : 'متوازن';
         const dscrLabel = d.dscr == null ? 'غير قابل للحساب' : `${Number(d.dscr).toFixed(2)}x`;
+        const dscrTitle = d.dscr == null
+            ? 'DSCR = EBITDA ÷ أقساط الدين. EBITDA السنة الأولى سالبة أو صفرية هنا، فالنسبة غير قابلة للحساب فعلياً — راجع بطاقة EBITDA بجانبها.'
+            : 'DSCR = EBITDA ÷ أقساط الدين (أصل + فائدة). البنوك عادة تطلب 1.25x فأعلى.';
 
         return `
             <div class="card dd-status ${statusClass}">
@@ -1150,9 +1170,12 @@ export class DecisionDashboard {
                     <div class="kpi-mini-card ${d.fundingGap > gapThreshold ? 'negative' : 'positive'}">
                         <span class="mini-label">فجوة التمويل</span>
                         <span class="mini-value">${gapLabel}</span>
+                        ${d.fundingGap > gapThreshold ? `<button type="button" id="btnGoFinancingBreakdown" class="btn btn--ghost btn--xs" style="margin-top:6px;" title="لماذا هذا الرقم؟ عرض تفصيل إجمالي الاستثمار (رأس المال العامل، الأصول، التأسيس) بندًا بندًا">
+                            لماذا هذا الرقم؟
+                        </button>` : ''}
                     </div>
-                    <div class="kpi-mini-card ${d.dscrBlocked ? 'negative' : 'positive'}">
-                        <span class="mini-label">DSCR السنة الأولى</span>
+                    <div class="kpi-mini-card ${d.dscrBlocked ? 'negative' : 'positive'}" title="${dscrTitle}">
+                        <span class="mini-label">DSCR السنة الأولى <span class="text-muted" style="cursor:help;" aria-hidden="true">ⓘ</span></span>
                         <span class="mini-value">${dscrLabel}</span>
                     </div>
                     <div class="kpi-mini-card ${d.y1Ebitda < 0 ? 'negative' : 'positive'}">
