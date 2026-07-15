@@ -67,7 +67,13 @@ describe('StudyCategoryView', () => {
         expect(onNavigateCategory).toHaveBeenNthCalledWith(2, 2);
     });
 
-    it('respects the visible-step filter without changing original section numbers', async () => {
+    // تغيير مقصود بقرار صاحب المنتج 2026-07-15: عدّاد «الخطوة X من Y» المعروض كان
+    // يعرض دوماً الرقم/الإجمالي المطلقين (من كل الـ42 خطوة) حتى تحت فلتر خطوات ظاهرة
+    // أضيق — نفس العلة التي أُصلحت سابقاً لعدّاد «التصنيف X من Y» أدناه. الآن يعرض
+    // موضع الخطوة ضمن المجموعة المُصفّاة فعلياً وإجمالي تلك المجموعة، بنفس مبدأ اختبار
+    // "with a visible-category filter" أدناه تماماً؛ الفهرسة الداخلية (dataset.stepIndex)
+    // تبقى مطلقة كما كانت (تحقّق دون تغيير في السطر التالي).
+    it('with a visible-step filter, the step number shows the position within the filtered set, not the absolute index out of 42', async () => {
         const { view } = createView();
         view.setVisibleStepIndexes([0, 2, 6]);
 
@@ -75,8 +81,28 @@ describe('StudyCategoryView', () => {
 
         expect([...document.querySelectorAll('.category-step')].map(section => Number(section.dataset.stepIndex))).toEqual([0, 2, 6]);
         expect([...document.querySelectorAll('.category-step__number')].map(element => element.textContent)).toEqual([
+            'الخطوة ١ من ٣',
+            'الخطوة ٢ من ٣',
+            'الخطوة ٣ من ٣'
+        ]);
+        // شارة الرقم في فهرس الأقسام (.category-toc__links) تعرض نفس «معادل بصياغة
+        // مختلفة» للرقم — يجب ألا تنحرف عن رأس القسم أعلاه لنفس الخطوة (لا أرقام
+        // متضاربة على نفس الصفحة لنفس العنصر).
+        expect([...document.querySelectorAll('.category-toc__links a span')].map(el => el.textContent)).toEqual(['١', '٢', '٣']);
+    });
+
+    it('without a visible-step filter, the step number keeps absolute numbering out of all 42 steps', async () => {
+        const { view } = createView();
+
+        await view.render(0);
+
+        expect([...document.querySelectorAll('.category-step__number')].map(element => element.textContent)).toEqual([
             'الخطوة ١ من ٤٢',
+            'الخطوة ٢ من ٤٢',
             'الخطوة ٣ من ٤٢',
+            'الخطوة ٤ من ٤٢',
+            'الخطوة ٥ من ٤٢',
+            'الخطوة ٦ من ٤٢',
             'الخطوة ٧ من ٤٢'
         ]);
     });

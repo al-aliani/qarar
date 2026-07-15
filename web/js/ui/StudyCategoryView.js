@@ -80,6 +80,22 @@ export class StudyCategoryView {
         const visibleCatPosition = this.visibleCategoryIndexes ? this.visibleCategoryIndexes.indexOf(categoryIndex) : -1;
         const categoryNumber = (visibleCatPosition >= 0 ? visibleCatPosition + 1 : categoryIndex + 1).toLocaleString('ar-SA');
         const categoryTotal = (this.visibleCategoryIndexes ? this.visibleCategoryIndexes.length : this.categories.length).toLocaleString('ar-SA');
+        // ترقيم «الخطوة X من Y» (رأس كل قسم أدناه + شارة رقمه في فهرس الأقسام أعلى
+        // الصفحة) بنفس مبدأ ترقيم «التصنيف X من Y» أعلاه بالضبط: يعكس خطوات الوضع
+        // الحالي الظاهرة فعلياً (مصغّر=7، بسيط=23، مفصّل=40 بعد استبعاد الخطوتين
+        // المُمتصّتين بصرياً في OperatingCostsView) بدل إجمالي STEPS المطلق (42) دوماً
+        // — قرار صاحب المنتج 2026-07-15. visibleStepIndexes نفسه المستخدم أصلاً في
+        // categoryStepIndexes() لتصفية الأقسام الظاهرة، فلا مصدر ثانٍ للحقيقة، ولا
+        // ينحرف رقم شارة الفهرس عن رقم رأس نفس القسم أدناه. الفهرسة الداخلية
+        // (id="category-section-N"/data-step-index) تبقى مطلقة كما هي — التغيير في
+        // الرقم المعروض فقط. بلا visibleStepIndexes (لم يُستدعَ setVisibleStepIndexes
+        // بعد): يبقى السلوك القديم (ترقيم مطلق من كل الخطوات) كما هو تماماً.
+        const visibleStepOrder = this.visibleStepIndexes ? [...this.visibleStepIndexes].sort((a, b) => a - b) : null;
+        const stepTotal = (visibleStepOrder ? visibleStepOrder.length : this.steps.length).toLocaleString('ar-SA');
+        const stepPosition = (idx) => {
+            const pos = visibleStepOrder ? visibleStepOrder.indexOf(idx) : -1;
+            return (pos >= 0 ? pos + 1 : idx + 1).toLocaleString('ar-SA');
+        };
         // عدّاد «أنجزت X من Y» من progressTracker الحي الموجود أصلاً في app.js (بند 2.3) —
         // محسوب فقط على أقسام هذا التصنيف، لا إجمالي الدراسة كاملة.
         const completedCount = this.progressTracker
@@ -100,14 +116,14 @@ export class StudyCategoryView {
                         <span class="category-toc__progress">أنجزت <strong>${completedCount.toLocaleString('ar-SA')}</strong> من ${stepIndexes.length.toLocaleString('ar-SA')}</span>
                     ` : ''}
                     <div class="category-toc__links">
-                        ${stepIndexes.map(index => `<a href="#category-section-${index}" data-category-anchor="${index}"><span>${(index + 1).toLocaleString('ar-SA')}</span>${this.steps[index].label}</a>`).join('')}
+                        ${stepIndexes.map(index => `<a href="#category-section-${index}" data-category-anchor="${index}"><span>${stepPosition(index)}</span>${this.steps[index].label}</a>`).join('')}
                     </div>
                 </nav>
 
                 <div class="category-page__sections">
                     ${stepIndexes.length ? stepIndexes.map(index => `
                         <section class="category-step" id="category-section-${index}" data-step-index="${index}">
-                            <div class="category-step__number">الخطوة ${(index + 1).toLocaleString('ar-SA')} من ${this.steps.length.toLocaleString('ar-SA')}</div>
+                            <div class="category-step__number">الخطوة ${stepPosition(index)} من ${stepTotal}</div>
                             <div id="category-step-content-${index}" class="category-step__content" tabindex="-1"></div>
                         </section>
                     `).join('') : '<div class="empty-state">لا توجد أقسام ظاهرة في هذا التصنيف ضمن وضع العرض الحالي.</div>'}
