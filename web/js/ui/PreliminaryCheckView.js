@@ -194,11 +194,16 @@ export class PreliminaryCheckView {
         }
 
         // 2. Swiper.js
-        // observer/observeParents: بلا هذين الخيارين، عرض الشرائح المحسوب عند
-        // التهيئة يبقى ثابتاً حتى لو تغيّر عرض الحاوية لاحقاً (تبديل حجم نافذة
-        // المتصفح، تدوير الجهاز، أو تغيّر تخطيط البطاقة الأب) — تحقّق حي 2026-07-16:
-        // عرض الشريحة بقي 445px بعد تصغير النافذة لعرض 375px رغم أن حاوية Swiper
-        // الفعلية أصبحت 240px، لأن Swiper لا يراقب تغيّر الحجم افتراضياً.
+        // تحقّق حي 2026-07-16: observer/observeParents (MutationObserver على كل
+        // الأسلاف) كانا يسبّبان تجمّداً كاملاً للصفحة عند رسم هذه الخطوة داخل صفحة
+        // التصنيف — الحلقة المتسلسلة في StudyCategoryView.render() تضيف 6 أقسام
+        // إخوة أخرى لنفس السلف مباشرة بعد تهيئة Swiper هنا، فيُطلق observeParents
+        // إعادة حساب height (autoHeight) عند كل إضافة، وإعادة الحساب نفسها تُحدث
+        // الحاوية فتُطلق المراقب من جديد — لا حارس تكرار مثل ResizeObserver المدمج.
+        // الإصلاح الأصلي (عرض شريحة ثابت 445px بعد تصغير النافذة لعرض 375px) لا
+        // يحتاج المراقبة الواسعة أصلاً: resizeObserver وupdateOnWindowResize كلاهما
+        // true افتراضياً في Swiper (راقبا حاوية Swiper نفسها فقط، لا كل الأسلاف)
+        // ويغطيان تماماً تصغير النافذة/تدوير الجهاز/تغيّر تخطيط البطاقة الأب.
         new Swiper(this.container.querySelector('.swiper-container'), {
             modules: [Navigation, Pagination],
             navigation: {
@@ -210,9 +215,7 @@ export class PreliminaryCheckView {
                 clickable: true,
             },
             spaceBetween: 30,
-            autoHeight: true,
-            observer: true,
-            observeParents: true
+            autoHeight: true
         });
 
         // 4. Vanilla-Tilt.js

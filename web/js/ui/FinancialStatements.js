@@ -186,7 +186,13 @@ export class FinancialStatements {
                 duration: 2.5,
                 separator: ','
             });
-            if (!countUp.error) countUp.start();
+            if (countUp.error) return;
+            // تحقّق حي 2026-07-16: التحريك يعتمد requestAnimationFrame — لا يُطلَق إطلاقاً
+            // في تبويب مخفي (نفس علة rAF الموثَّقة في StudyCategoryView.render)، فيبقى
+            // العداد عالقاً على "0" للأبد إن رُسمت الخطوة والتبويب في الخلفية (فتح رابط
+            // بتبويب خلفي، أو عودة من سكون). نعرض القيمة النهائية مباشرة حينها بدل التحريك.
+            if (document.hidden) countUp.printValue(totalProfit);
+            else countUp.start();
         }
     }
 

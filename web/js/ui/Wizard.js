@@ -451,8 +451,14 @@ export class Wizard {
                     input.parentNode.insertBefore(sliderDiv, input.nextSibling);
                     
                     const max = input.dataset.key.includes('contingency') ? 50 : 100;
-                    const startVal = (parseFloat(input.value) || 0) * 100;
-                    
+                    // تدقيق حي 2026-07-16: input.value هنا هو بالفعل رقم النسبة المئوية
+                    // المعروض (مثلاً "10" لـ discountRate=0.10) — renderField يحوّله من
+                    // الكسر المخزَّن قبل هذا الكود (pctDisplay = value*100، انظر أعلى
+                    // الملف). ×100 هنا كان يضاعف التحويل فيصل startVal إلى 1000 لحقل
+                    // قيمته الفعلية 10%، فيُقصّ Slider القيمة عند سقفه (100 أو 50) ويعرض
+                    // تلميحاً مضلِّلاً «100%»/«50%» مهما كانت القيمة الحقيقية.
+                    const startVal = parseFloat(input.value) || 0;
+
                     try {
                         noUiSlider.create(sliderDiv, {
                             start: [startVal],
@@ -466,8 +472,12 @@ export class Wizard {
                             }
                         });
                         sliderDiv.noUiSlider.on('change', (values) => {
-                            const pct = parseFloat(values[0]) / 100;
-                            input.value = pct;
+                            // نفس الخلل بالاتجاه المعاكس: values[0] رقم نسبة مئوية جاهز
+                            // (مثلاً 10) — updateStore أدناه (isFractionPercentKey) هو من
+                            // يحوّله لكسر (÷100) عند الحفظ. القسمة هنا كانت تُطبَّق مرتين
+                            // فتُخزَّن القيمة أصغر 100 مرة من المُدخلة فعلياً (10% → 0.001
+                            // بدل 0.10) — تلاعب صامت بأرقام القرار المالي دون أي خطأ ظاهر.
+                            input.value = parseFloat(values[0]) || 0;
                             input.dispatchEvent(new Event('change'));
                         });
                     } catch(e) { console.error('Slider error', e); }
