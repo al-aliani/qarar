@@ -14,6 +14,7 @@ import {
 } from '../services/ExpertTemplateService.js';
 import { HRFilesView } from './HRFilesView.js';
 import { STEPS, isStepVisibleInStudyMode, STEPS_ABSORBED_IN_CATEGORY_VIEW } from '../core/wizardSteps.js';
+import { trackEvent } from '../utils/analytics.js';
 
 // عدد خطوات كل وضع — محسوب من مصدر الحقيقة الوحيد (wizardSteps.js) لا رقماً مُخمَّناً،
 // ومطابق لما يراه المستخدم فعلياً في صفحة الفئات: يستبعد الخطوات المستوعَبة بصرياً داخل
@@ -259,6 +260,7 @@ export class TemplateGallery {
                 this.store.updatePath('projectInfo', 'preparedBy', preparedBy);
             }
             if (this.store.flush) await this.store.flush();
+            trackEvent('study_created', { source: 'blank' });
             window.dispatchEvent(new CustomEvent('project-loaded', { detail: { source: 'blank', name: 'مشروع جديد' } }));
             this.close();
         };
@@ -271,6 +273,7 @@ export class TemplateGallery {
         if (id !== 'empty') return;
 
         if (this.store.reset) await this.store.reset();
+        trackEvent('study_created', { source: 'template' });
         window.dispatchEvent(new CustomEvent('project-loaded', { detail: { source: 'blank', name: 'مشروع جديد' } }));
         this.close();
     }

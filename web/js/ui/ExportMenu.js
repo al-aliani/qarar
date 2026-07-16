@@ -13,6 +13,7 @@ import { resolveQaStepIndex } from '../utils/qaStepMapper.js';
 import { escapeHtml } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
 import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
+import { trackEvent } from '../utils/analytics.js';
 import { APP_CONFIG, BANK_COMPLIANCE_SENTENCE } from '../config.js';
 import { ConsultationModal } from './ConsultationModal.js';
 import { PaywallModal } from './PaywallModal.js';
@@ -466,6 +467,7 @@ export class ExportMenu {
             btn.addEventListener('click', async () => {
                 const type = btn.dataset.type;
                 if (!type) return;
+                trackEvent('export_click', { format: type });
                 if (type === 'consultation') {
                     this.close();
                     const modal = new ConsultationModal('consultationModalOverlay', this.store);

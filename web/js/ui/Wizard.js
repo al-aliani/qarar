@@ -6,6 +6,7 @@ import { DataService } from '../services/DataService.js';
 import { generateTableSuggestions } from '../services/AIConnector.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { generateSuggestionStreaming } from '../services/FieldSuggestionService.js';
+import { trackEvent } from '../utils/analytics.js';
 import { ReviewCharts } from './ReviewCharts.js';
 import { toast } from '../utils/toast.js';
 import { validateAssumptions, validateFinancing } from '../utils/validation.js';
@@ -518,6 +519,7 @@ export class Wizard {
                 const originalTitle = btn.getAttribute('title');
                 btn.setAttribute('title', 'جاري التوليد...');
                 const previousValue = currentValue; // للتراجع عند الفشل
+                trackEvent('ai_wand_use', { type: 'text', key });
                 try {
                     await generateSuggestionStreaming(key, currentValue, state, {
                         onChunk: (chunk) => { textarea.value = chunk; },

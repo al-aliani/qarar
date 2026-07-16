@@ -13,6 +13,7 @@
 import { PRICING_PACKAGES, formatPrice, CURRENCY_SYMBOL } from '../core/pricing.js';
 import { buildWhatsAppLink, REFUND_POLICY } from '../config.js';
 import { startCheckout } from '../services/PaymentService.js';
+import { trackEvent } from '../utils/analytics.js';
 
 const PACKAGE_FEATURES = {
     self: ['قوالب مختصين', 'مؤشرات فورية', 'تصدير PDF/Excel/Word', 'تعديل حي غير محدود'],
@@ -146,6 +147,7 @@ export class PaywallModal {
         btn.textContent = 'جاري تجهيز الدفع...';
         showErr('');
 
+        trackEvent('checkout_start', { tier, provider });
         const result = await startCheckout({ tier, studyId: this.studyId, provider });
         if (result.ok && result.checkoutUrl) {
             window.location.href = result.checkoutUrl;

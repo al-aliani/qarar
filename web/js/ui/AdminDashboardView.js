@@ -1,0 +1,529 @@
+/**
+ * AdminDashboardView — لوحة تحكم الأدمن (2026-07-16). صفحة مغمورة بلا شريط
+ * جانبي (نفس نمط ReviewerDashboardView.js)، مقصورة على مستخدمين مُدرَجين
+ * فعلياً بجدول admins (AuthGuard.isAdmin) — أي مستخدم آخر يصل لهذا المسار
+ * يُعاد توجيهه فوراً بلا أي محاولة عرض بيانات. كل الأرقام حقيقية من قاعدة
+ * البيانات عبر دوال admin_*_stats (انظر AdminService.js) — لا قيمة مصطنعة.
+ *
+ * تنسيق: فئات BEM حقيقية في web/css/admin-dashboard.css (متغيرات --c-* و --s-*
+ * الموجودة أصلاً، تتبدّل تلقائياً مع الوضع الليلي) — عمداً بلا فئات Tailwind
+ * (p-6/bg-white/...) كالتي تستخدمها ReviewerDashboardView.js، لأن تلك الفئات
+ * غير مشمولة بـ content الخاص بـ tailwind.config.js (يغطي src/ فقط لا web/js/)
+ * فتصل بلا أي تنسيق حقيقي في هذا التطبيق.
+ */
+import { AuthGuard } from '../middleware/AuthGuard.js';
+import * as AdminService from '../services/AdminService.js';
+import * as ReviewsService from '../services/ReviewsService.js';
+import { renderStarsHtml } from '../utils/starRating.js';
+import { toast } from '../utils/toast.js';
+import { formatCurrency } from '../utils/formatters.js';
+import ApexCharts from 'apexcharts';
+import Swal from 'sweetalert2';
+
+const TABS = [
+    { key: 'overview', label: 'نظرة عامة' },
+    { key: 'studies', label: 'الدراسات' },
+    { key: 'users', label: 'المستخدمون' },
+    { key: 'revenue', label: 'الإيرادات' },
+    { key: 'reviewers', label: 'المراجعة' },
+    { key: 'sharing', label: 'المشاركة' },
+    { key: 'behavior', label: 'السلوك' },
+    { key: 'reviews', label: 'آراء العملاء' },
+];
+
+export class AdminDashboardView {
+    constructor(containerId) {
+        this.container = document.getElementById(containerId);
+        this.activeTab = 'overview';
+        this.cache = {};
+        this.charts = {};
+        this.behaviorDays = 30;
+    }
+
+    async render() {
+        // TEMP (طلب صريح من المالك 2026-07-16): تعطيل بوابة isAdmin() مؤقتاً
+        // للمعاينة المحلية قبل تطبيق migration جدول admins على Supabase الفعلي.
+        // مقصور على localhost عمداً — لو نُسي هذا السطر ونُشر التطبيق، البوابة
+        // الحقيقية تبقى سارية على أي نطاق حقيقي. يجب حذف هذا الاستثناء بالكامل
+        // قبل أي نشر فعلي (المالك وعد صراحة بطلب ذلك: "تقفل الثغرات").
+        const isLocalPreview = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+        const isAdmin = isLocalPreview || await AuthGuard.isAdmin();
+        if (!isAdmin) {
+            toast.error('هذه الصفحة مخصّصة لمدراء النظام فقط');
+            window.location.hash = '';
+            return;
+        }
+
+        this._renderShell();
+        await this._loadTab(this.activeTab);
+    }
+
+    _esc(value) {
+        return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    _renderShell() {
+        this.container.innerHTML = `
+            <div class="admin-dashboard">
+                <div class="admin-dashboard__header">
+                    <h1 class="admin-dashboard__title">لوحة تحكم الأدمن</h1>
+                    <button id="btnExitAdmin" class="btn btn--sm btn--ghost">خروج</button>
+                </div>
+                <div class="admin-tabs" id="adminTabs">
+                    ${TABS.map((t) => `<button class="btn btn--sm ${t.key === this.activeTab ? 'btn--primary' : 'btn--ghost'}" data-tab="${t.key}">${this._esc(t.label)}</button>`).join('')}
+                </div>
+                <div id="adminTabContent"><p class="admin-loading">جارٍ التحميل…</p></div>
+            </div>
+        `;
+
+        this.container.querySelector('#btnExitAdmin')?.addEventListener('click', () => {
+            window.location.hash = '';
+        });
+
+        this.container.querySelectorAll('#adminTabs button').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const tab = btn.dataset.tab;
+                if (tab === this.activeTab) return;
+                this.activeTab = tab;
+                this.container.querySelectorAll('#adminTabs button').forEach((b) => {
+                    b.classList.toggle('btn--primary', b.dataset.tab === tab);
+                    b.classList.toggle('btn--ghost', b.dataset.tab !== tab);
+                });
+                await this._loadTab(tab);
+            });
+        });
+    }
+
+    async _loadTab(tabKey) {
+        const contentEl = this.container.querySelector('#adminTabContent');
+        if (!contentEl) return;
+
+        if (tabKey === 'behavior') {
+            await this._renderBehaviorTab(contentEl);
+            return;
+        }
+
+        if (tabKey === 'reviews') {
+            await this._renderReviewsTab(contentEl);
+            return;
+        }
+
+        if (!this.cache[tabKey]) {
+            contentEl.innerHTML = '<p class="admin-loading">جارٍ التحميل…</p>';
+            const result = await this._fetchTab(tabKey);
+            if (!result.ok) {
+                contentEl.innerHTML = `<p class="admin-error">تعذّر تحميل البيانات: ${this._esc(result.error)}</p>`;
+                return;
+            }
+            this.cache[tabKey] = result.data;
+        }
+
+        this._renderTab(tabKey, contentEl, this.cache[tabKey]);
+    }
+
+    _fetchTab(tabKey) {
+        switch (tabKey) {
+            case 'overview': return AdminService.getOverview();
+            case 'studies': return AdminService.getStudiesStats();
+            case 'users': return AdminService.getUsersStats();
+            case 'revenue': return AdminService.getRevenueStats();
+            case 'reviewers': return AdminService.getReviewerStats();
+            case 'sharing': return AdminService.getSharingStats();
+            default: return Promise.resolve({ ok: false, error: 'تبويب غير معروف' });
+        }
+    }
+
+    _renderTab(tabKey, contentEl, data) {
+        const renderers = {
+            overview: () => this._renderOverview(contentEl, data),
+            studies: () => this._renderStudies(contentEl, data),
+            users: () => this._renderUsers(contentEl, data),
+            revenue: () => this._renderRevenue(contentEl, data),
+            reviewers: () => this._renderReviewers(contentEl, data),
+            sharing: () => this._renderSharing(contentEl, data),
+        };
+        renderers[tabKey]?.();
+    }
+
+    _tile(label, value) {
+        return `<div class="admin-tile">
+            <div class="admin-tile__label">${this._esc(label)}</div>
+            <div class="admin-tile__value">${this._esc(value)}</div>
+        </div>`;
+    }
+
+    _table(headers, rows) {
+        if (!rows.length) return '<p class="admin-table__empty">لا توجد بيانات بعد.</p>';
+        return `<div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead><tr>${headers.map((h) => `<th>${this._esc(h)}</th>`).join('')}</tr></thead>
+                <tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${this._esc(c)}</td>`).join('')}</tr>`).join('')}</tbody>
+            </table>
+        </div>`;
+    }
+
+    _destroyChart(id) {
+        if (this.charts[id]) {
+            try { this.charts[id].destroy(); } catch (_) { /* تجاهل — العنصر قد يكون أُزيل من DOM أصلاً */ }
+            delete this.charts[id];
+        }
+    }
+
+    /** يقرأ ألوان الثيم الفعلية من CSS variables — يضمن تباين الرسم في الوضعين
+     * الفاتح والداكن (ApexCharts لا يتبع [data-theme] تلقائياً، ويحتاج ألواناً
+     * محسوبة صراحة بدل الاعتماد على "theme: light" ثابتة). */
+    _chartTheme() {
+        const styles = getComputedStyle(document.documentElement);
+        return {
+            foreColor: styles.getPropertyValue('--c-text-muted').trim() || '#5b665f',
+            borderColor: styles.getPropertyValue('--c-border').trim() || 'rgba(28,36,32,0.14)',
+            primary: styles.getPropertyValue('--c-p-500').trim() || '#0e5b44',
+        };
+    }
+
+    _renderTrendChart(containerId, seriesName, points) {
+        this._destroyChart(containerId);
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        const theme = this._chartTheme();
+        const options = {
+            chart: { height: 260, type: 'line', fontFamily: 'inherit', toolbar: { show: false }, foreColor: theme.foreColor },
+            series: [{ name: seriesName, data: points.map((p) => p.value) }],
+            stroke: { width: 3, curve: 'smooth' },
+            colors: [theme.primary],
+            dataLabels: { enabled: false },
+            grid: { borderColor: theme.borderColor },
+            xaxis: { categories: points.map((p) => p.label), labels: { rotate: -45 } },
+        };
+        try {
+            const chart = new ApexCharts(el, options);
+            chart.render().catch((err) => console.error('ApexCharts render error:', err));
+            this.charts[containerId] = chart;
+        } catch (err) {
+            console.error('ApexCharts init error:', err);
+        }
+    }
+
+    _renderOverview(contentEl, data) {
+        contentEl.innerHTML = `
+            <div class="admin-tile-grid">
+                ${this._tile('إجمالي الدراسات', data.total_studies ?? 0)}
+                ${this._tile('إجمالي المستخدمين', data.total_users ?? 0)}
+                ${this._tile('إجمالي الإيرادات', formatCurrency(data.total_revenue_sar ?? 0))}
+                ${this._tile('مراجعات قيد الانتظار', data.pending_reviews ?? 0)}
+                ${this._tile('روابط مشاركة نشطة', data.active_shares ?? 0)}
+            </div>
+        `;
+    }
+
+    _renderStudies(contentEl, data) {
+        contentEl.innerHTML = `
+            <div class="admin-tile-grid">
+                ${this._tile('إجمالي الدراسات', data.total ?? 0)}
+                ${this._tile('قوالب', data.templates ?? 0)}
+                ${this._tile('دراسات حقيقية', (data.total ?? 0) - (data.templates ?? 0))}
+            </div>
+            <div class="admin-card">
+                <h3 class="admin-card__title">الإنشاء اليومي (٩٠ يوماً)</h3>
+                <div id="chartStudiesDaily"></div>
+            </div>
+            <div class="admin-section-grid">
+                <div>
+                    <h3 class="admin-card__title">حسب الحالة</h3>
+                    ${this._table(['الحالة', 'العدد'], (data.by_status || []).map((r) => [r.status || '—', r.count]))}
+                </div>
+                <div>
+                    <h3 class="admin-card__title">حسب القطاع</h3>
+                    ${this._table(['القطاع', 'العدد'], (data.by_sector || []).map((r) => [r.sector || '—', r.count]))}
+                </div>
+            </div>
+        `;
+        const daily = data.daily_created || [];
+        this._renderTrendChart('chartStudiesDaily', 'دراسات', daily.map((d) => ({ label: d.day, value: d.count })));
+    }
+
+    _renderUsers(contentEl, data) {
+        contentEl.innerHTML = `
+            <div class="admin-tile-grid">
+                ${this._tile('إجمالي المستخدمين', data.total ?? 0)}
+            </div>
+            <div class="admin-card">
+                <h3 class="admin-card__title">التسجيل اليومي (٩٠ يوماً)</h3>
+                <div id="chartUsersDaily"></div>
+            </div>
+            <h3 class="admin-card__title">حسب الباقة</h3>
+            ${this._table(['الباقة', 'العدد'], (data.by_tier || []).map((r) => [r.tier || '—', r.count]))}
+        `;
+        const daily = data.daily_signups || [];
+        this._renderTrendChart('chartUsersDaily', 'مستخدمون جدد', daily.map((d) => ({ label: d.day, value: d.count })));
+    }
+
+    _renderRevenue(contentEl, data) {
+        contentEl.innerHTML = `
+            <div class="admin-tile-grid">
+                ${this._tile('إجمالي الإيرادات', formatCurrency(data.total_revenue_sar ?? 0))}
+                ${this._tile('متوسط قيمة الطلب', formatCurrency(data.avg_order_value_sar ?? 0))}
+            </div>
+            <div class="admin-card">
+                <h3 class="admin-card__title">الإيراد اليومي (٩٠ يوماً)</h3>
+                <div id="chartRevenueDaily"></div>
+            </div>
+            <div class="admin-section-grid">
+                <div>
+                    <h3 class="admin-card__title">حسب الباقة</h3>
+                    ${this._table(['الباقة', 'العدد', 'الإيراد'], (data.by_tier || []).map((r) => [r.tier || '—', r.count, formatCurrency(r.revenue_sar || 0)]))}
+                </div>
+                <div>
+                    <h3 class="admin-card__title">حسب مزوّد الدفع</h3>
+                    ${this._table(['المزوّد', 'العدد', 'الإيراد'], (data.by_provider || []).map((r) => [r.provider || '—', r.count, formatCurrency(r.revenue_sar || 0)]))}
+                </div>
+                <div>
+                    <h3 class="admin-card__title">حسب الحالة</h3>
+                    ${this._table(['الحالة', 'العدد'], (data.by_status || []).map((r) => [r.status || '—', r.count]))}
+                </div>
+            </div>
+        `;
+        const daily = data.daily_revenue || [];
+        this._renderTrendChart('chartRevenueDaily', 'الإيراد', daily.map((d) => ({ label: d.day, value: Number(d.revenue_sar || 0) })));
+    }
+
+    _renderReviewers(contentEl, data) {
+        contentEl.innerHTML = `
+            <div class="admin-tile-grid">
+                ${this._tile('في الطابور', data.queued ?? 0)}
+                ${this._tile('قيد المراجعة', data.in_review ?? 0)}
+                ${this._tile('شهادات صادرة', data.certified_total ?? 0)}
+                ${this._tile('مرفوضة', data.rejected_total ?? 0)}
+                ${this._tile('متوسط زمن الإنجاز (ساعة)', data.avg_turnaround_hours ?? 0)}
+                ${this._tile('مراجعون نشطون', data.active_reviewers ?? 0)}
+            </div>
+        `;
+    }
+
+    _renderSharing(contentEl, data) {
+        contentEl.innerHTML = `
+            <div class="admin-tile-grid">
+                ${this._tile('إجمالي الروابط', data.total ?? 0)}
+                ${this._tile('نشطة', data.active ?? 0)}
+                ${this._tile('ملغاة', data.revoked ?? 0)}
+                ${this._tile('منتهية', data.expired ?? 0)}
+            </div>
+        `;
+    }
+
+    async _renderReviewsTab(contentEl) {
+        contentEl.innerHTML = '<p class="admin-loading">جارٍ التحميل…</p>';
+        const result = await ReviewsService.getAllReviews();
+        if (!result.ok) {
+            contentEl.innerHTML = `<p class="admin-error">تعذّر تحميل التقييمات: ${this._esc(result.error)}</p>`;
+            return;
+        }
+        const reviews = result.reviews || [];
+
+        contentEl.innerHTML = `
+            <div class="admin-card">
+                <h3 class="admin-card__title">إضافة تقييم</h3>
+                <form id="reviewAddForm" class="admin-review-form">
+                    <div class="form-group">
+                        <label for="revName">اسم العميل</label>
+                        <input type="text" id="revName" required maxlength="120">
+                    </div>
+                    <div class="form-group">
+                        <label for="revSector">القطاع (اختياري)</label>
+                        <input type="text" id="revSector" maxlength="60" placeholder="مثال: مطاعم ومقاهي">
+                    </div>
+                    <div class="form-group admin-review-form__full">
+                        <label for="revText">نص التقييم</label>
+                        <textarea id="revText" required maxlength="600"></textarea>
+                    </div>
+                    <div class="form-group admin-review-form__full">
+                        <label>التقييم</label>
+                        <div class="admin-star-picker" role="radiogroup" aria-label="التقييم">
+                            ${[1, 2, 3, 4, 5].map((n) => `
+                                <label class="admin-star-picker__option">
+                                    <input type="radio" name="revRating" value="${n}" required>
+                                    <span>${renderStarsHtml(n, { size: 18 })}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="form-group admin-review-form__full admin-review-form__row">
+                        <label class="admin-review-form__checkbox">
+                            <input type="checkbox" id="revPublished">
+                            نشر فوراً
+                        </label>
+                        <button type="submit" class="btn btn--sm btn--primary">إضافة تقييم</button>
+                    </div>
+                </form>
+            </div>
+            <div class="admin-card">
+                <h3 class="admin-card__title">كل التقييمات (${reviews.length})</h3>
+                ${reviews.length ? `
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead><tr><th>الاسم</th><th>التقييم</th><th>القطاع</th><th>الحالة</th><th>النص</th><th></th></tr></thead>
+                            <tbody>
+                                ${reviews.map((r) => `
+                                    <tr>
+                                        <td>${this._esc(r.customer_name)}</td>
+                                        <td>${renderStarsHtml(r.rating, { size: 14 })}</td>
+                                        <td>${this._esc(r.sector_label || '—')}</td>
+                                        <td>${r.published ? 'منشور' : 'مسودة'}</td>
+                                        <td>${this._esc((r.review_text || '').slice(0, 60))}${(r.review_text || '').length > 60 ? '…' : ''}</td>
+                                        <td>
+                                            <button class="btn btn--sm btn--ghost btn-toggle-review" data-id="${this._esc(r.id)}" data-published="${r.published ? '1' : '0'}">${r.published ? 'إخفاء' : 'نشر'}</button>
+                                            <button class="btn btn--sm btn--ghost btn-delete-review" data-id="${this._esc(r.id)}" style="color:#c53030;">حذف</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : '<p class="admin-table__empty">لا توجد تقييمات بعد.</p>'}
+            </div>
+        `;
+
+        contentEl.querySelector('#reviewAddForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const ratingInput = contentEl.querySelector('input[name="revRating"]:checked');
+            if (!ratingInput) {
+                toast.error('يرجى اختيار عدد النجوم');
+                return;
+            }
+
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            const result = await ReviewsService.createReview({
+                customer_name: contentEl.querySelector('#revName').value,
+                review_text: contentEl.querySelector('#revText').value,
+                rating: Number(ratingInput.value),
+                sector_label: contentEl.querySelector('#revSector').value,
+                published: contentEl.querySelector('#revPublished').checked,
+            });
+            submitBtn.disabled = false;
+
+            if (!result.ok) {
+                toast.error(result.error || 'فشل إضافة التقييم');
+                return;
+            }
+            toast.success('تمت إضافة التقييم');
+            await this._renderReviewsTab(contentEl);
+        });
+
+        contentEl.querySelectorAll('.btn-toggle-review').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const currentlyPublished = btn.dataset.published === '1';
+                const result = await ReviewsService.updateReview(btn.dataset.id, { published: !currentlyPublished });
+                if (!result.ok) {
+                    toast.error(result.error || 'فشل تحديث الحالة');
+                    return;
+                }
+                toast.success(currentlyPublished ? 'أُخفي التقييم' : 'نُشر التقييم');
+                await this._renderReviewsTab(contentEl);
+            });
+        });
+
+        contentEl.querySelectorAll('.btn-delete-review').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const confirmResult = await Swal.fire({
+                    title: 'حذف التقييم؟',
+                    text: 'لا يمكن التراجع عن هذا الإجراء.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'نعم، احذف',
+                    cancelButtonText: 'إلغاء',
+                    customClass: { confirmButton: 'btn btn--sm btn--primary', cancelButton: 'btn btn--sm btn--ghost' },
+                    buttonsStyling: false,
+                });
+                if (!confirmResult.isConfirmed) return;
+
+                const result = await ReviewsService.deleteReview(btn.dataset.id);
+                if (!result.ok) {
+                    toast.error(result.error || 'فشل حذف التقييم');
+                    return;
+                }
+                toast.success('تم حذف التقييم');
+                await this._renderReviewsTab(contentEl);
+            });
+        });
+    }
+
+    _behaviorControlsHtml() {
+        return `
+            <div class="admin-behavior-controls">
+                <h3 class="admin-card__title" style="margin:0;">السلوك خلال</h3>
+                <select id="behaviorDaysSelect" class="admin-select">
+                    <option value="7">٧ أيام</option>
+                    <option value="30">٣٠ يوماً</option>
+                    <option value="90">٩٠ يوماً</option>
+                </select>
+            </div>
+        `;
+    }
+
+    async _renderBehaviorTab(contentEl) {
+        contentEl.innerHTML = `${this._behaviorControlsHtml()}<p class="admin-loading">جارٍ التحميل…</p>`;
+
+        const [totals, stepDropoff, exportFormats, wandUsage, errors] = await Promise.all([
+            AdminService.getEventsStats(null, this.behaviorDays, null),
+            AdminService.getEventsStats('wizard_step_view', this.behaviorDays, 'stepId'),
+            AdminService.getEventsStats('export_click', this.behaviorDays, 'format'),
+            AdminService.getEventsStats('ai_wand_use', this.behaviorDays, 'type'),
+            AdminService.getEventsStats('error', this.behaviorDays, null),
+        ]);
+
+        if (!totals.ok) {
+            contentEl.innerHTML = `${this._behaviorControlsHtml()}<p class="admin-error">تعذّر تحميل بيانات السلوك: ${this._esc(totals.error)}</p>`;
+            this._bindBehaviorSelect(contentEl);
+            return;
+        }
+
+        const totalsByEvent = totals.data.totals_by_event || [];
+        const stepBreakdown = stepDropoff.ok ? (stepDropoff.data.by_prop || []) : [];
+        const formatBreakdown = exportFormats.ok ? (exportFormats.data.by_prop || []) : [];
+        const wandBreakdown = wandUsage.ok ? (wandUsage.data.by_prop || []) : [];
+        const errorDaily = errors.ok ? (errors.data.daily || []) : [];
+        const errorTotal = errorDaily.reduce((sum, d) => sum + Number(d.count || 0), 0);
+        const totalEvents = totalsByEvent.reduce((sum, e) => sum + Number(e.count || 0), 0);
+
+        contentEl.innerHTML = `
+            ${this._behaviorControlsHtml()}
+            <div class="admin-tile-grid">
+                ${this._tile('إجمالي الأحداث', totalEvents)}
+                ${this._tile('أخطاء مسجَّلة', errorTotal)}
+            </div>
+            <div class="admin-section-grid" style="margin-bottom: var(--s-4);">
+                <div>
+                    <h3 class="admin-card__title">أكثر الأحداث تكراراً</h3>
+                    ${this._table(['الحدث', 'العدد'], totalsByEvent.map((e) => [e.event_name, e.count]))}
+                </div>
+                <div>
+                    <h3 class="admin-card__title">صيغ التصدير الأكثر استخداماً</h3>
+                    ${this._table(['الصيغة', 'العدد'], formatBreakdown.map((e) => [e.value, e.count]))}
+                </div>
+            </div>
+            <div class="admin-section-grid">
+                <div>
+                    <h3 class="admin-card__title">مشاهدات خطوات الويزارد</h3>
+                    ${this._table(['الخطوة', 'مشاهدات'], stepBreakdown.map((e) => [e.value, e.count]))}
+                </div>
+                <div>
+                    <h3 class="admin-card__title">استخدام العصا السحرية</h3>
+                    ${this._table(['النوع', 'العدد'], wandBreakdown.map((e) => [e.value, e.count]))}
+                </div>
+            </div>
+        `;
+
+        this._bindBehaviorSelect(contentEl);
+    }
+
+    _bindBehaviorSelect(contentEl) {
+        const select = contentEl.querySelector('#behaviorDaysSelect');
+        if (!select) return;
+        select.value = String(this.behaviorDays);
+        select.addEventListener('change', async () => {
+            this.behaviorDays = Number(select.value);
+            await this._renderBehaviorTab(contentEl);
+        });
+    }
+}

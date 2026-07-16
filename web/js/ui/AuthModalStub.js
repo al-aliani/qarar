@@ -2,6 +2,7 @@
  * AuthModal — واجهة تسجيل الدخول والتسجيل عبر Supabase.
  * يحافظ على توافق (containerId, options) مع الاستدعاء في Sidebar و DashboardView.
  */
+import { trackEvent } from '../utils/analytics.js';
 
 export class AuthModal {
     constructor(containerId, options = {}) {
@@ -207,6 +208,7 @@ export class AuthModal {
                         if (!mfaResult.ok) return;
                     }
                     this._succeeded = true;
+                    trackEvent(isSignUp ? 'signup_complete' : 'login_complete', {});
                     if (this.onSuccess) this.onSuccess({ success: true });
                     this.close();
                 } else {

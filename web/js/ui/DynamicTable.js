@@ -3,6 +3,7 @@ import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
 import Swal from 'sweetalert2';
 import Cleave from 'cleave.js';
+import { trackEvent } from '../utils/analytics.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id, cls = '') => `<svg class="ic${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -472,6 +473,7 @@ export class DynamicTable {
             const handler = (e) => {
                 const rowIndex = parseInt(e.target.dataset.row);
                 const colKey = e.target.dataset.col;
+                trackEvent('ai_wand_use', { type: 'cell', colKey });
                 this.handleMagicCell(rowIndex, colKey, btn);
             };
             btn.addEventListener('click', handler);

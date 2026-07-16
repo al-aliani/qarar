@@ -1,0 +1,194 @@
+/* لوحة تحكم الأدمن (2026-07-16) — كل الألوان عبر متغيرات --c-*/--s-* الموجودة
+ * أصلاً (variables.css) فتتبدّل تلقائياً مع [data-theme="dark"]، بلا حاجة لقواعد
+ * وضع داكن منفصلة هنا. عمداً بلا فئات Tailwind (p-6/bg-white/...) — تلك الفئات
+ * غير مُولَّدة فعلياً لملفات web/js/** (خارج content Tailwind config الجذر)
+ * فتصل بلا أي تنسيق حقيقي؛ هذا الملف فئات BEM حقيقية بدل ذلك.
+ */
+
+.admin-dashboard {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--s-4);
+}
+
+.admin-dashboard__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.admin-dashboard__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--c-text-main);
+  margin: 0;
+}
+
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-4);
+}
+
+.admin-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.admin-tile {
+  background: var(--c-bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--s-3);
+}
+
+.admin-tile__label {
+  font-size: 0.75rem;
+  color: var(--c-text-muted);
+  margin-bottom: var(--s-1);
+}
+
+.admin-tile__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--c-text-main);
+}
+
+.admin-card {
+  background: var(--c-bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.admin-card__title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--c-text-main);
+  margin: 0 0 var(--s-3);
+}
+
+.admin-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--s-4);
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.admin-table th {
+  text-align: start;
+  padding: var(--s-2);
+  color: var(--c-text-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.admin-table td {
+  padding: var(--s-2);
+  color: var(--c-text-main);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.admin-table__empty {
+  color: var(--c-text-muted);
+  font-size: 0.875rem;
+}
+
+.admin-behavior-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.admin-select {
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  background: var(--c-bg-card);
+  color: var(--c-text-main);
+  padding: var(--s-1) var(--s-2);
+  font-size: 0.875rem;
+}
+
+.admin-loading,
+.admin-error {
+  color: var(--c-text-muted);
+  padding: var(--s-3) 0;
+}
+
+.admin-error {
+  color: var(--c-danger);
+}
+
+.admin-review-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0 var(--s-3);
+}
+
+.admin-review-form__full {
+  grid-column: 1 / -1;
+}
+
+.admin-review-form__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.admin-review-form__checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 0.875rem;
+  color: var(--c-text-main);
+  cursor: pointer;
+}
+
+.admin-star-picker {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+
+.admin-star-picker__option {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  color: var(--c-gold-500);
+  cursor: pointer;
+}
+
+.admin-star-picker__option:has(input:checked) {
+  border-color: var(--c-gold-500);
+  background: var(--c-gold-subtle);
+}
+
+.admin-star-picker__option input {
+  accent-color: var(--c-gold-500);
+}

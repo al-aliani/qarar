@@ -1375,6 +1375,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+  // لوحة الأدمن (2026-07-16) — عرض مغمور بلا شريط جانبي، مقصور على مستخدمين
+  // مُدرَجين فعلياً بجدول admins (التحقق داخل AdminDashboardView نفسها عبر
+  // AuthGuard.isAdmin؛ هذا الفرع فقط يهيّئ الحاوية ويستورد الملف).
+  const renderAdminRoute = async () => {
+    const sidebarEl = document.querySelector('.sidebar');
+    const stepperNavEl = document.getElementById('stepperNav');
+    const breadcrumbBar = document.getElementById('breadcrumbBar');
+    if (sidebarEl) sidebarEl.style.display = 'none';
+    if (stepperNavEl) stepperNavEl.style.display = 'none';
+    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+    try {
+      const { AdminDashboardView } = await import('./js/ui/AdminDashboardView.js');
+      await new AdminDashboardView('wizardContainer').render();
+    } catch (e) {
+      console.error('AdminDashboardView load failed:', e);
+      toast.error('تعذر فتح لوحة الأدمن');
+    }
+  };
+
   // رسم الواجهة المطابقة للعنوان — بدون كتابة تاريخ جديد (يُستدعى عند الرجوع/التقديم)
   const routeToView = async (route) => {
     _isRestoring = true;
@@ -1395,6 +1414,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         await renderShareRoute(route.slice(6));
       } else if (route.startsWith('reviewer')) {
         await renderReviewerRoute();
+      } else if (route.startsWith('admin')) {
+        await renderAdminRoute();
       } else if (route.startsWith('payment-return')) {
         // Moyasar/Stripe يُعيدان توجيه المتصفح هنا بعد الدفع (انظر create-checkout
         // Edge Function: returnUrl يبني هذا الرابط تحديداً بمعامل order=<orderId>).

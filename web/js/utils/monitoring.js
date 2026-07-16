@@ -2,6 +2,7 @@
  * Monitoring Service (Error Tracking & Performance)
  * Integrates with Sentry or similar service for production error tracking
  */
+import { trackEvent } from './analytics.js';
 
 class MonitoringService {
     constructor() {
@@ -100,7 +101,8 @@ class MonitoringService {
         } else {
             // Console logging with structured format
             console.error('[Monitoring] Exception captured:', errorInfo);
-            
+            trackEvent('error', { message: errorInfo.message, ...context });
+
             // In production, you might want to send to a custom endpoint
             if (this.environment === 'production') {
                 this._sendToEndpoint(errorInfo);

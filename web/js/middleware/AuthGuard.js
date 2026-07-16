@@ -15,6 +15,7 @@ class AuthGuardClass {
         this.listeners = [];
         this.initialized = false;
         this._reviewerCache = null; // { userId, value } — يُبطَل عند أي تغيّر بحالة المصادقة
+        this._adminCache = null; // { userId, value } — نفس مبدأ _reviewerCache
     }
 
     /**
@@ -87,6 +88,7 @@ class AuthGuardClass {
             this.currentUser = session?.user || null;
             this.isAuthenticated = !!this.currentUser;
             this._reviewerCache = null; // هوية مختلفة (أو خروج) = ذاكرة isReviewer() القديمة غير صالحة
+            this._adminCache = null; // نفس السبب — ذاكرة isAdmin() القديمة غير صالحة
 
             if (event === 'SIGNED_IN') {
                 auditLog(ACTIONS.LOGIN, { email: this.currentUser?.email });
@@ -265,6 +267,32 @@ class AuthGuardClass {
 
         const value = !error && !!data?.active;
         this._reviewerCache = { userId: this.currentUser.id, value };
+        return value;
+    }
+
+    /**
+     * هل المستخدم الحالي أدمن (جدول admins)؟ نفس مبدأ isReviewer() تماماً —
+     * استعلام فعلي مخزَّن مؤقتاً لهوية المستخدم الحالية، يُبطَل تلقائياً
+     * عند أي تغيّر بحالة المصادقة (انظر subscribeToAuthChanges أعلاه).
+     */
+    async isAdmin() {
+        if (!this.currentUser) return false;
+
+        if (this._adminCache && this._adminCache.userId === this.currentUser.id) {
+            return this._adminCache.value;
+        }
+
+        const { supabase } = await getSupabaseClient();
+        if (!supabase) return false;
+
+        const { data, error } = await supabase
+            .from('admins')
+            .select('id')
+            .eq('id', this.currentUser.id)
+            .maybeSingle();
+
+        const value = !error && !!data;
+        this._adminCache = { userId: this.currentUser.id, value };
         return value;
     }
 

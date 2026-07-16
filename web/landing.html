@@ -393,6 +393,12 @@
     .card h3 { margin-bottom: 9px; font-size: var(--text-lg); }
     .card p { color: var(--muted); font-size: var(--text-sm); }
 
+    /* آراء العملاء */
+    .review-card { display: flex; flex-direction: column; }
+    .review-card__stars { color: var(--gold-deep); margin-bottom: 4px; }
+    .review-card__meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .review-card__meta strong { font-size: var(--text-sm); color: var(--ink); font-weight: 700; }
+
     /* المشكلة — قائمة */
     .pain-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
     .pain-list li { display: flex; gap: 13px; align-items: flex-start; padding: 18px 18px; border: 1px solid var(--line); border-radius: var(--r); background: var(--white); box-shadow: var(--shadow-sm); transition: transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s ease, border-color .22s ease; }
@@ -668,6 +674,7 @@
       <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
       <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
       <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8-6.2 3.8 1.6-7L2 9.2l7.1-.6L12 2Z"/></symbol>
       <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
       <symbol id="i-wa" viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.15-1.75-.86-2-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.9-.8-1.5-1.78-1.67-2.08-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.53.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.5h-.57c-.2 0-.53.07-.8.38-.28.3-1.05 1.02-1.05 2.5s1.07 2.9 1.22 3.1c.15.2 2.1 3.2 5.1 4.5.7.3 1.26.48 1.7.62.7.22 1.35.2 1.86.12.57-.08 1.75-.72 2-1.4.24-.7.24-1.28.17-1.4-.07-.13-.27-.2-.57-.35Z"/><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.5A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.15l-.3-.18-2.9.9.92-2.84-.2-.3A8.2 8.2 0 1 1 12 20.2Z"/></symbol>
     </defs>
@@ -1032,6 +1039,19 @@
       </div>
     </section>
 
+    <!-- آراء العملاء (2026-07-16) — تقييمات حقيقية أدخلها صاحب الموقع يدوياً عبر
+         لوحة الأدمن (#admin)، لا تقييمات مصطنعة. يبدأ القسم مخفياً بصمت ولا يظهر
+         إلا عند نجاح جلب تقييم منشور واحد على الأقل — نفس نمط heroUsageStats أدناه. -->
+    <section id="reviews" hidden>
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">آراء العملاء</span>
+          <h2>تجارب حقيقية من عملاء استخدموا المنصة</h2>
+        </div>
+        <div class="grid-3" id="reviewsGrid"></div>
+      </div>
+    </section>
+
     <!-- الدعوة الختامية -->
     <section class="final-cta">
       <div class="wrap">
@@ -1209,6 +1229,37 @@
         document.getElementById('heroUsageStats').hidden = false;
       } catch (e) {
         console.warn('[قرار] تعذّر تحميل عدّاد الاستخدام؛ يبقى القسم مخفياً.', e);
+      }
+    })();
+  </script>
+
+  <!-- آراء العملاء (2026-07-16) — تُجلب فقط التقييمات المنشورة (RLS يفرض هذا أصلاً
+       حتى بلا هذا الفلتر)، والقسم يبقى مخفياً بصمت إن لم توجد أي تقييمات منشورة
+       بعد أو عند أي فشل شبكة — نفس فلسفة عدّاد الاستخدام أعلاه. -->
+  <script type="module">
+    import { getPublishedReviews } from './js/services/ReviewsService.js';
+    import { renderStarsHtml } from './js/utils/starRating.js';
+    import { escapeHtml } from './js/utils/escape.js';
+    (async () => {
+      try {
+        const result = await getPublishedReviews();
+        if (!result.ok || !result.reviews || !result.reviews.length) return;
+
+        const grid = document.getElementById('reviewsGrid');
+        grid.innerHTML = result.reviews.map((r) => `
+          <div class="card review-card">
+            <div class="review-card__stars">${renderStarsHtml(r.rating, { size: 18 })}</div>
+            <p>«${escapeHtml(r.review_text)}»</p>
+            <div class="review-card__meta">
+              <strong>${escapeHtml(r.customer_name)}</strong>
+              ${r.sector_label ? `<span class="sector-chip">${escapeHtml(r.sector_label)}</span>` : ''}
+            </div>
+          </div>
+        `).join('');
+
+        document.getElementById('reviews').hidden = false;
+      } catch (e) {
+        console.warn('[قرار] تعذّر تحميل آراء العملاء؛ يبقى القسم مخفياً.', e);
       }
     })();
   </script>

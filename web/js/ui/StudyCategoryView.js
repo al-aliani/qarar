@@ -4,6 +4,7 @@ import { enhanceFieldHelp } from './components/FieldHelpEnhancer.js';
 import { attachToolReport } from './components/ToolReport.js';
 import { Wizard } from './Wizard.js';
 import { renderStepComponent } from './stepComponentRegistry.js';
+import { trackEvent } from '../utils/analytics.js';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import tippy from 'tippy.js';
@@ -326,6 +327,7 @@ export class StudyCategoryView {
         });
 
         if (instance) this.instances.push(instance);
+        trackEvent('wizard_step_view', { stepId: step.id });
         const content = document.getElementById(containerId);
         if (content) enhanceFieldHelp(content);
         // خانة «إصدار تقرير» للأدوات التحليلية/المختلطة (تُتجاهل لخطوات الإدخال).
