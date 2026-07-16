@@ -14,6 +14,7 @@ import './OverpassConnector.js';        // يسجّل: market.competitors
 import './WorldBankConnector.js';       // يسجّل: macro.inflation، macro.gdpGrowth
 import './GastatSnapshotConnector.js';  // يسجّل: demographics.city، market.tam
 import './GooglePlacesConnector.js';    // يسجّل: market.competitorsPrecise
+import './ChamberSuppliersConnector.js'; // يسجّل: market.suppliers
 
 // ── إعادة تصدير الواجهة العامة للطبقة ────────────────────────────────────────
 export {

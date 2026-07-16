@@ -43,10 +43,24 @@ export class AuthModal {
                             <input type="password" id="authPassword" class="input w-full" placeholder="••••••••" required minlength="8" title="8+ أحرف، رقم واحد على الأقل، رمز واحد على الأقل" autocomplete="current-password">
                             <div id="authPasswordStrength" class="text-xs mt-1" style="display:none;"></div>
                         </div>
+                        <div class="mb-3" id="authNameGroup">
+                            <label class="block text-sm mb-1" for="authName">الاسم <span class="text-muted text-xs">— لإنشاء حساب جديد</span></label>
+                            <input type="text" id="authName" class="input w-full" placeholder="اسمك الكامل" autocomplete="name">
+                        </div>
+                        <div class="mb-3" id="authPhoneGroup">
+                            <label class="block text-sm mb-1" for="authPhone">رقم الجوال (واتساب) <span class="text-muted text-xs">— لإنشاء حساب جديد</span></label>
+                            <input type="tel" id="authPhone" class="input w-full" placeholder="05xxxxxxxx" autocomplete="tel" dir="ltr" inputmode="numeric">
+                            <p class="text-xs text-muted mt-1">نستخدمه للتواصل معك بخصوص طلباتك عبر واتساب.</p>
+                        </div>
                         <div class="flex gap-2 mb-2">
                             <button type="submit" id="authBtnSignIn" class="btn btn--primary flex-1">دخول</button>
                             <button type="button" id="authBtnSignUp" class="btn btn--secondary flex-1">إنشاء حساب</button>
                         </div>
+                        <p class="text-xs text-muted text-center mb-2">
+                            بإنشاء حساب أو تسجيل الدخول، أنت توافق على
+                            <a href="./terms.html" target="_blank" rel="noopener">الشروط والأحكام</a>
+                            و<a href="./privacy.html" target="_blank" rel="noopener">سياسة الخصوصية</a>.
+                        </p>
                         <div class="text-center mb-2">
                             <button type="button" id="authBtnForgotPassword" class="btn--text text-sm text-muted">نسيت كلمة المرور؟</button>
                         </div>
@@ -184,9 +198,17 @@ export class AuthModal {
             const email = this.overlay.querySelector('#authEmail').value.trim();
             const pass = passEl.value;
             if (!email || !pass) { showErr('أدخل البريد وكلمة المرور'); return; }
+            let phoneE164 = null;
+            let fullName = null;
             if (isSignUp) {
                 const pErr = validatePassword(pass);
                 if (pErr) { showErr(pErr); return; }
+                fullName = (this.overlay.querySelector('#authName')?.value || '').trim();
+                if (!fullName) { showErr('أدخل اسمك لإنشاء الحساب'); return; }
+                const { normalizeSaudiPhone } = await import('../utils/phoneUtils.js');
+                const phoneRaw = this.overlay.querySelector('#authPhone')?.value || '';
+                phoneE164 = normalizeSaudiPhone(phoneRaw);
+                if (!phoneE164) { showErr('أدخل رقم جوال سعودي صحيح لإنشاء الحساب (مثال: 0512345678)'); return; }
             }
             showErr('');
             const btn = isSignUp ? this.overlay.querySelector('#authBtnSignUp') : this.overlay.querySelector('#authBtnSignIn');
@@ -197,8 +219,7 @@ export class AuthModal {
                 const { signIn, signUp, getSupabaseClient } = await import('../../supabaseClient.js');
                 const { ok } = await getSupabaseClient();
                 if (!ok) { showErr('Supabase غير مهيأ. لا يمكن الدخول أو إنشاء حساب.'); return; }
-                const fn = isSignUp ? signUp : signIn;
-                const { ok: authOk, error } = await fn(email, pass);
+                const { ok: authOk, error } = isSignUp ? await signUp(email, pass, phoneE164, fullName) : await signIn(email, pass);
                 if (authOk) {
                     if (isSignUp) {
                         const { log: auditLog, ACTIONS } = await import('../utils/auditLogger.js');

@@ -10,13 +10,20 @@ import { trackEvent } from '../utils/analytics.js';
 import { ReviewCharts } from './ReviewCharts.js';
 import { toast } from '../utils/toast.js';
 import { validateAssumptions, validateFinancing } from '../utils/validation.js';
-import { GULF_CURRENCIES, CURRENCY_LABELS } from '../utils/formatters.js';
+import { GULF_CURRENCIES, CURRENCY_LABELS, formatCurrency, formatFractionAsPercent } from '../utils/formatters.js';
 import { CITY_STATS } from '../data/SaudiCityStats.js';
 import { getFieldOptionSpec } from '../core/fieldOptions.js';
 import { getFieldHelp } from '../core/fieldHelpTexts.js';
 import { fieldHelp } from './components/FieldHelp.js';
 import { escapeHtml } from '../utils/escape.js';
 import { describeRevenueRampGap } from '../core/engine.js';
+import { suggest, isUsable } from '../services/DataConnectors.js';
+import '../services/connectors/ChamberSuppliersConnector.js'; // يسجّل 'market.suppliers' ذاتياً عند التحميل
+import { getExpertTemplates } from '../services/ExpertTemplateService.js';
+import { detectKeyPeopleSectorGap } from '../core/keyPeopleSectorGap.js';
+import { buildNitaqatHrCardData } from '../core/nitaqatHrCard.js';
+import { findMissingCommonLicenses } from '../core/licensingGap.js';
+import { scanContractRisks } from '../core/contractRiskScan.js';
 import noUiSlider from 'nouislider';
 import AutoNumeric from 'autonumeric';
 
@@ -764,6 +771,70 @@ export class Wizard {
         }
         // -------------------------------------------------------------------------
 
+        // بحث موردين حقيقيين قريبين (Overpass/OSM) — يكمّل زر «اقتراح بنود» (نص AI)
+        // بمصدر بيانات حيّ وموقعي فعلي بدل توليد نصي فقط؛ راجع ChamberSuppliersConnector.js.
+        if (tableKey === 'suppliers' && !document.getElementById('btn-real-suppliers')) {
+            const realBtnHtml = `
+                <div class="flex-between mb-2">
+                    <span></span>
+                    <button id="btn-real-suppliers" type="button" class="btn-xs btn-magic">${icon('i-pin')} بحث موردين حقيقيين قريبين</button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforebegin', realBtnHtml);
+
+            document.getElementById('btn-real-suppliers').addEventListener('click', async (e) => {
+                const btn = e.currentTarget;
+                if (btn.disabled) return;
+                btn.disabled = true;
+                const originalHtml = btn.innerHTML;
+                btn.textContent = 'جاري البحث…';
+                try {
+                    const projectInfo = this.store.get().projectInfo || {};
+                    // نفس منطق تحليل موقع السوق (MarketAnalysis.js): إحداثيات فعلية فقط
+                    // من locationAnalysis.coordinates — projectInfo.coords غير موجود بالمخطط.
+                    const coords = projectInfo.locationAnalysis?.coordinates;
+                    const hasRealCoords = coords && Number.isFinite(Number(coords.lat)) && Number.isFinite(Number(coords.lng));
+                    const live = await suggest('market.suppliers', {
+                        city: projectInfo.city,
+                        coords: hasRealCoords ? coords : undefined
+                    });
+
+                    if (isUsable(live)) {
+                        const sample = Array.isArray(live.value?.sample) ? live.value.sample : [];
+                        if (sample.length > 0) {
+                            const kindLabel = { shop: 'تجارة جملة', office: 'مكتب تجاري', craft: 'حرفي/تصنيع صغير' };
+                            const citation = [live.source, live.note].filter(Boolean).join(' — ');
+                            const newRows = sample.map(s => ({
+                                name: s.name,
+                                supplyNature: kindLabel[s.kind] || '',
+                                availability: '',
+                                avgDeliveryDays: 0,
+                                notes: citation
+                            }));
+                            const table = this.tables['suppliers'];
+                            if (table) {
+                                table.data = [...table.data, ...newRows];
+                                table.onChange(JSON.parse(JSON.stringify(table.data)));
+                                table.render();
+                            }
+                            toast.success(`عُثر على ${live.value.count} منشأة قريبة فعلياً (OpenStreetMap) — أُضيفت ${newRows.length} كصفوف، راجع طبيعة التوريد والتوفر يدوياً.`);
+                        } else {
+                            toast.info('لم يُعثر على منشآت قريبة حقيقية ضمن نصف القطر — جرّب موقعاً آخر أو أدخل يدوياً.');
+                        }
+                    } else {
+                        toast.error(live.note || 'تعذّر البحث عن موردين حقيقيين قريبين.');
+                    }
+                } catch (err) {
+                    console.error('Real suppliers search error:', err);
+                    toast.error('تعذّر البحث عن موردين حقيقيين قريبين.');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            });
+        }
+        // -------------------------------------------------------------------------
+
         const schema = this.tableSchemas[tableKey];
         if (!schema) {
             console.warn(`No schema for table: ${tableKey}`);
@@ -851,7 +922,11 @@ export class Wizard {
                 ? (action) => this._applyStaffingSuggestion(action, tableKey)
                 : undefined,
             onChange: (newData) => {
-                this.store.updatePath(stepId, this.getRelativePath(tableKey), newData);
+                // جدول الموردين مسجّل فعلياً تحت قسم 'marketing' (يقرأه partnerNeeds.js
+                // وsectionExporter.js لتحليل فجوة الموردين وتصدير القسم التسويقي) حتى لو
+                // عُرض من خطوة الأشخاص الرئيسين — الكتابة يجب أن تستهدف نفس القسم دائماً.
+                const targetSection = tableKey === 'suppliers' ? 'marketing' : stepId;
+                this.store.updatePath(targetSection, this.getRelativePath(tableKey), newData);
             }
         });
 
@@ -861,7 +936,147 @@ export class Wizard {
 
         if (tableKey === 'positions') {
             this._bindLiveStaffingHint(table);
+            this._renderNitaqatHrCard(container, studyData);
         }
+
+        if (tableKey === 'keyPeople') {
+            this._renderKeyPeopleSectorGapCard(container, studyData);
+        }
+
+        if (tableKey === 'licenses') {
+            this._renderLicensingGapCard(container, studyData);
+        }
+
+        if (tableKey === 'partnershipContracts') {
+            this._renderContractRiskScanPanel(container);
+        }
+    }
+
+    /**
+     * بطاقة نطاقات (Nitaqat) + مقارنة تكلفة سعودي/وافد — تُعرض دائماً أسفل جدول «الوظائف
+     * والرواتب» (بخلاف بطاقة الفجوة القطاعية لكبار الموظفين، لا تشترط اكتشاف قطاع
+     * مسبقاً: مقارنة التكلفة مفيدة حتى بلا قطاع مكتشَف). كل المنطق في nitaqatHrCard.js
+     * (نقي، مختبَر منفصلاً) — هذه الدالة تُحوّله فقط إلى HTML (مهمة Nitaqat، دفعة 4).
+     */
+    _renderNitaqatHrCard(container, studyData) {
+        const cardId = 'nitaqatHrCard';
+        document.getElementById(cardId)?.remove();
+
+        const data = buildNitaqatHrCardData(studyData);
+
+        const tierHtml = data.tierInfo ? `
+            <p class="mb-1">${icon('i-users')} نسبة التوطين الحالية <strong>${formatFractionAsPercent(data.rate, 0)}</strong>
+                تقع تقريبياً ضمن نطاق «<strong>${escapeHtml(data.tierInfo.label)}</strong>»${data.sectorLabel ? ` (تقدير مبسّط لقطاع «${escapeHtml(data.sectorLabel)}»)` : ''}.
+                ${!data.tierInfo.isCompliant ? `<span class="text-danger">هذا أقل من الحد الأدنى التقريبي للالتزام (${formatFractionAsPercent(data.tierInfo.minCompliantRate, 0)}) — راجع حسابك في منصة قوى.</span>` : ''}
+            </p>
+            <p class="text-xs text-muted mb-2">تصنيف تقريبي تعليمي وليس رقماً رسمياً منشوراً — النسبة الملزمة الدقيقة تُحسب بمعادلة رسمية تختلف حسب نشاطك وحجم منشأتك، راجعها في منصة قوى (qiwa.sa).</p>
+        ` : `<p class="mb-1 text-muted">أضف موظفين في الجدول أعلاه لعرض تصنيف نطاقك التقريبي.</p>`;
+
+        const costHtml = `
+            <p class="mb-1">${icon('i-info')} تكلفة سنوية تقديرية (${data.avgSalaryIsAssumed ? 'مثال توضيحي براتب أساسي شهري' : 'بمتوسط الراتب الأساسي الشهري المُدخل'} ${formatCurrency(data.avgSalary)}):</p>
+            <ul class="text-sm mb-0">
+                <li>موظف سعودي: <strong>${formatCurrency(data.saudiAnnualCost)}</strong>/سنة</li>
+                <li>موظف وافد: <strong>${formatCurrency(data.expatAnnualCost)}</strong>/سنة</li>
+            </ul>
+            <p class="text-xs text-muted mt-1 mb-0">معدل التأمينات الاجتماعية (GOSI) المستخدم كما بتاريخ 2026 — لا تغذية حية، راجع gosi.gov.sa لأي تحديث رسمي لاحق.</p>
+        `;
+
+        const cardHtml = `
+            <div class="alert alert--info mt-2" id="${cardId}">
+                ${tierHtml}
+                ${costHtml}
+            </div>
+        `;
+        container.insertAdjacentHTML('afterend', cardHtml);
+    }
+
+    /**
+     * تنبيه استشاري: تراخيص شائعة لنشاط المشروع المكتشَف (نفس قائمة زر "اقتراح بنود"
+     * لهذا الجدول تحديداً — لا مصدر ثانٍ) لم تُدرَج بعد. صمت تام إن تعذّر اكتشاف
+     * القطاع أو كانت القائمة مكتملة أصلاً — لا نص "لا يوجد نقص" مزعج.
+     */
+    _renderLicensingGapCard(container, studyData) {
+        const cardId = 'licensingGapCard';
+        document.getElementById(cardId)?.remove();
+
+        let missing = [];
+        try { missing = findMissingCommonLicenses(studyData) || []; } catch (_) { missing = []; }
+        if (!missing.length) return;
+
+        const cardHtml = `
+            <div class="alert alert--info mt-2" id="${cardId}">
+                <p class="mb-0">${icon('i-info')} تراخيص شائعة لأنشطة مشابهة لم تُدرَج بعد: ${missing.map(escapeHtml).join('، ')} — تنبيه استرشادي فقط، راجع الجهة المختصة لمتطلباتك الفعلية.</p>
+            </div>
+        `;
+        container.insertAdjacentHTML('afterend', cardHtml);
+    }
+
+    /**
+     * فحص أولي (بحث كلمات مفتاحية، لا فهم لغوي حقيقي) لأهم بنود/مخاطر شائعة في نص
+     * عقد شراكة يلصقه المستخدم يدوياً أو يرفعه كملف .txt — لا استخراج من PDF (يحتاج
+     * مكتبة تحليل PDF غير موجودة في المشروع بعد، قرار تبعية مستقبلي) ولا OCR للصور.
+     */
+    _renderContractRiskScanPanel(container) {
+        const cardId = 'contractRiskScanCard';
+        document.getElementById(cardId)?.remove();
+
+        const cardHtml = `
+            <div class="card mt-2" id="${cardId}">
+                <p class="text-sm text-muted mb-1">${icon('i-doc')} فحص أولي لبنود عقد شراكة (كلمات مفتاحية شائعة — ليس فهماً قانونياً حقيقياً، راجع مستشاراً قانونياً دائماً): الصق نص العقد أو ارفع ملف .txt.</p>
+                <textarea id="contractRiskScanText" class="input" rows="4" style="width:100%" placeholder="الصق نص العقد هنا..."></textarea>
+                <div class="ca-row mt-1">
+                    <input type="file" id="contractRiskScanFile" accept=".txt">
+                    <button type="button" id="contractRiskScanBtn" class="btn btn--sm btn--secondary">فحص العقد</button>
+                </div>
+                <div id="contractRiskScanResult" class="mt-2"></div>
+            </div>
+        `;
+        container.insertAdjacentHTML('afterend', cardHtml);
+
+        const card = document.getElementById(cardId);
+        const textarea = card.querySelector('#contractRiskScanText');
+        card.querySelector('#contractRiskScanFile')?.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            textarea.value = await file.text();
+        });
+        card.querySelector('#contractRiskScanBtn')?.addEventListener('click', () => {
+            const result = scanContractRisks(textarea.value);
+            const resultEl = card.querySelector('#contractRiskScanResult');
+            if (!result.wordCount) {
+                resultEl.innerHTML = `<p class="text-sm text-muted">ألصق نص العقد أولاً.</p>`;
+            } else if (!result.flags.length) {
+                resultEl.innerHTML = `<p class="text-sm text-muted">لم يُرصد أي من الكلمات المفتاحية الشائعة في هذا النص — هذا لا يعني خلوّه من المخاطر، فقط أن الفحص الأولي لم يجد إشارات معروفة.</p>`;
+            } else {
+                resultEl.innerHTML = `<ul class="text-sm mb-0">${result.flags.map(f => `<li>${escapeHtml(f.label)}</li>`).join('')}</ul>`;
+            }
+        });
+    }
+
+    /**
+     * بطاقة اقتراح غير مزعجة: إن لم يكن لدى الفريق المؤسس خبرة موثّقة في قطاع المشروع
+     * المكتشَف، وتوجد قوالب خبراء مسجّلة محلياً (ExpertTemplateService) بنفس القطاع،
+     * تُعرض أسماؤهم/تخصصاتهم. صمت تام إن تعذّر اكتشاف القطاع أو لا خبراء مطابقون —
+     * السجل محلي وفارغ افتراضياً في أغلب التثبيتات، فلا داعي لنص "لا يوجد" مزعج.
+     */
+    _renderKeyPeopleSectorGapCard(container, studyData) {
+        const cardId = 'keyPeopleSectorGapCard';
+        document.getElementById(cardId)?.remove();
+
+        const gap = detectKeyPeopleSectorGap(studyData, getExpertTemplates());
+        if (!gap) return;
+
+        const expertsHtml = gap.experts.map(e => `
+            <li><strong>${escapeHtml(e.name)}</strong>${e.specialty ? ' — ' + escapeHtml(e.specialty) : ''}</li>
+        `).join('');
+
+        const cardHtml = `
+            <div class="alert alert--info mt-2" id="${cardId}">
+                <p class="mb-1">${icon('i-info')} لا يوجد في فريقك المؤسس خبرة موثّقة في قطاع «${escapeHtml(gap.sectorLabel)}» — خبراء مسجّلون بنفس القطاع قد يفيدونك كمستشارين:</p>
+                <ul class="text-sm mb-0">${expertsHtml}</ul>
+            </div>
+        `;
+        container.insertAdjacentHTML('afterend', cardHtml);
     }
 
     /**
@@ -933,7 +1148,9 @@ export class Wizard {
             'licenses': `${stepId}.licenses`,
             'competitors': `${stepId}.competitors`,
             'campaigns': `${stepId}.campaigns`,
-            'suppliers': `${stepId}.suppliers`,
+            // مسار ثابت (لا ${stepId}): الجدول يُعرض من خطوة الأشخاص الرئيسين لكن بياناته
+            // تبقى تحت 'marketing' (partnerNeeds.js/sectionExporter.js يقرآن من هناك).
+            'suppliers': 'marketing.suppliers',
             'competitorBenchmarking': `${stepId}.competitorBenchmarking`,
             'historicalData': `${stepId}.marketAnalysis.historicalData`,
             'supplyDemandBalance': `${stepId}.supplyDemandBalance`,

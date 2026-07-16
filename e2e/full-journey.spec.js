@@ -154,7 +154,7 @@ test.describe('التقاط رحلة المستخدم الكاملة', () => {
             // إنشاء دراسة جديدة واختيار أول قالب متاح
             await page.getByRole('button', { name: /^دراسة جديدة$/ }).first().click();
             await page.waitForTimeout(1000);
-            const firstTemplate = page.locator('[role="listitem"], .template-card, [data-template]').first();
+            const firstTemplate = page.locator('#btnStartBlank, [role="listitem"], .template-card, [data-template]').first();
             if (await firstTemplate.isVisible({ timeout: 2000 }).catch(() => false)) {
                 await firstTemplate.click();
                 inStudy = true;

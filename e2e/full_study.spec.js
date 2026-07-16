@@ -22,7 +22,7 @@ test.describe('دورة دراسة الجدوى الكاملة', () => {
     }
     const galleryOverlay = page.locator('#templateGalleryOverlay');
     if (await galleryOverlay.isVisible().catch(() => false)) {
-      await galleryOverlay.locator('.template-card[data-id="empty"]').click();
+      await galleryOverlay.locator('#btnStartBlank').click();
       const advancedMode = galleryOverlay.locator('.mode-card[data-mode="advanced"]');
       if (await advancedMode.isVisible().catch(() => false)) {
         await advancedMode.click();

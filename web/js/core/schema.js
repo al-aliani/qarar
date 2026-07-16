@@ -849,7 +849,9 @@ export function createEmptyStudy() {
         // ═══════════════════════════════════════════════════════════
         [SECTIONS.ACTUALS]: {
             // فارغة عمداً: شهر بلا بيانات فعلية يجب أن يُعامَل كـ"لم يُدخل بعد" لا كأداء صفري (انظر PostLaunchTracker.hasNum)
-            months: []
+            months: [],
+            // اكتمال فعلي لأنشطة الجدول الزمني (timeline.activities): { [activityId]: شهر الإنجاز الفعلي }
+            timelineCompletions: {}
         },
 
         // ترتيب أقسام التقرير (بناء التقرير — السحب والإفلات)

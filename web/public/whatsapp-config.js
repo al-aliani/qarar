@@ -10,4 +10,4 @@
  * بديل: يمكن أيضاً ضبط متغيّر البيئة VITE_WHATSAPP_NUMBER وقت البناء
  * (يُفضَّل تلقائياً على هذا الملف إن وُجد كلاهما).
  */
-window.WHATSAPP_NUMBER = '';
+window.WHATSAPP_NUMBER = '966590592553';

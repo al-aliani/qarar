@@ -21,7 +21,7 @@ test('capture decision & export tools', async ({ page }) => {
         await page.getByRole('button', { name: /^دراسة جديدة$/ }).first().click();
         await page.waitForTimeout(1200);
         // «ابدأ من الصفر» → نموذج اختيار الوضع → إنشاء الدراسة
-        await page.locator('.template-card[data-id="empty"]').first().click();
+        await page.locator('#btnStartBlank').first().click();
         await page.waitForTimeout(800);
         await page.locator('.mode-card').first().click().catch(() => {});
         await page.locator('#btnBlankCreate').click();

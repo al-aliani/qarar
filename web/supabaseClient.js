@@ -13,6 +13,7 @@
  * - If not configured or not authenticated, app will fall back to local draft cache.
  */
 import { createClient } from "@supabase/supabase-js";
+import { toE164SaudiPhone } from "./js/utils/phoneUtils.js";
 
 /** قراءة متغيّر بيئة Vite بأمان (import.meta.env قد لا يوجد في بيئة اختبار Node) */
 function envVar(name) {
@@ -25,9 +26,9 @@ function envVar(name) {
 
 /** قيم افتراضية لمشروع Supabase (قرار) — المفتاح anon عمومي وآمن في بناء الواجهة (محمي بـ RLS).
  *  تُتجاوز عبر env (VITE_SUPABASE_*) أو window أو localStorage. */
-const DEFAULT_SUPABASE_URL = "https://ykvcshxcjjicujayfwxg.supabase.co";
+const DEFAULT_SUPABASE_URL = "https://kyvtfmmbohmxqjlnjoys.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrdmNzaHhjamppY3VqYXlmd3hnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNjM1MjksImV4cCI6MjA5ODczOTUyOX0.VJ0_MQeYX9Audzjg1F9pqW3b1NdL5HnsFBxH3snG3lw";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5dnRmbW1ib2hteHFqbG5qb3lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxOTE2OTMsImV4cCI6MjA5OTc2NzY5M30.fLUQX0C9skG93G_kRzaDlpY6s2lGJgUoaWb7vGK_VIs";
 
 /** شريط تحذير ثابت (مرة واحدة فقط) في وضع التطوير حين لا يوجد إعداد Supabase محلي. */
 function showDevProdWarningBanner() {
@@ -190,10 +191,21 @@ export async function signIn(email, password) {
   return { ok: true, data };
 }
 
-export async function signUp(email, password) {
+/**
+ * @param {string} email
+ * @param {string} password
+ * @param {string} [phone] - E.164 سعودي (+9665XXXXXXXX)، اختياري — يُمرَّر إلى
+ *   raw_user_meta_data.phone فيلتقطه handle_new_user() ويعبّئ profiles.phone فوراً
+ *   (انظر supabase/migrations/20260717000000_profiles_and_phone.sql).
+ */
+export async function signUp(email, password, phone, fullName) {
   const { supabase, ok, error } = await getSupabaseClient();
   if (!ok) return { ok: false, error };
-  const { data, error: e } = await supabase.auth.signUp({ email, password });
+  const metadata = {};
+  if (phone) metadata.phone = phone;
+  if (fullName) metadata.full_name = fullName;
+  const payload = Object.keys(metadata).length ? { email, password, options: { data: metadata } } : { email, password };
+  const { data, error: e } = await supabase.auth.signUp(payload);
   if (e) return { ok: false, error: e.message };
   return { ok: true, data };
 }
@@ -306,11 +318,7 @@ export async function signInWithOtpPhone(phone) {
   const { supabase, ok, error } = await getSupabaseClient();
   if (!ok) return { ok: false, error };
 
-  let raw = (phone || '').trim().replace(/\s/g, '');
-  if (raw.startsWith('05')) raw = '+966' + raw.slice(1); // 05xxxxxxxx → +9665xxxxxxxx
-  else if (raw.startsWith('5') && raw.length <= 10) raw = '+966' + raw;
-  else if (!raw.startsWith('+')) raw = '+' + raw;
-  const e164 = raw;
+  const e164 = toE164SaudiPhone(phone);
 
   const { data, error: e } = await supabase.auth.signInWithOtp({
     phone: e164
@@ -327,11 +335,7 @@ export async function verifyOtpPhone(phone, token) {
   const { supabase, ok, error } = await getSupabaseClient();
   if (!ok) return { ok: false, error };
 
-  let raw = (phone || '').trim().replace(/\s/g, '');
-  if (raw.startsWith('05')) raw = '+966' + raw.slice(1);
-  else if (raw.startsWith('5') && raw.length <= 10) raw = '+966' + raw;
-  else if (!raw.startsWith('+')) raw = '+' + raw;
-  const e164 = raw;
+  const e164 = toE164SaudiPhone(phone);
 
   const { data, error: e } = await supabase.auth.verifyOtp({
     phone: e164,

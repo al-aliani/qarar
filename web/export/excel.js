@@ -360,5 +360,8 @@ export async function exportExcel(study, results) {
   const baseName = sanitizeFilename(study.projectInfo?.name || study.id || study.projectInfo?.id || "export");
   const outFilename = `${baseName}_${exportDateISO()}.xlsx`;
   downloadBlob(blob, outFilename);
+  import("./exportTracking.js").then(({ trackExport }) =>
+    trackExport(blob, { fileType: "excel", fileName: outFilename, studyId: study.projectInfo?.id, studyName: study.projectInfo?.name })
+  );
   return outFilename;
 }

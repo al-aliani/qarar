@@ -21,11 +21,11 @@ function fakeStore(appSettingsMode) {
     };
 }
 
-/** يفتح المعرض وينقر بطاقة «مشروع فارغ» — نفس مسار المستخدم الفعلي لبلوغ نموذج الأوضاع. */
+/** يفتح المعرض وينقر زر «ابدأ الآن» — نفس مسار المستخدم الفعلي لبلوغ نموذج الأوضاع. */
 function openBlankModeForm(store) {
     const gallery = new TemplateGallery('templateGalleryOverlay', store);
     gallery.open();
-    document.querySelector('.template-card[data-id="empty"]').click();
+    document.querySelector('#btnStartBlank').click();
     return gallery;
 }
 

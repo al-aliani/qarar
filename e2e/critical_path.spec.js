@@ -33,7 +33,7 @@ test.describe('Critical Path: Full User Journey', () => {
     // 2.1 Template Gallery: مشروع فارغ ← مستوى "مفصّل" ← إنشاء
     const galleryOverlay = page.locator('#templateGalleryOverlay');
     if (await galleryOverlay.isVisible().catch(() => false)) {
-      const emptyTemplate = galleryOverlay.locator('.template-card[data-id="empty"]');
+      const emptyTemplate = galleryOverlay.locator('#btnStartBlank');
       await emptyTemplate.click();
       const advancedMode = galleryOverlay.locator('.mode-card[data-mode="advanced"]');
       if (await advancedMode.isVisible().catch(() => false)) {

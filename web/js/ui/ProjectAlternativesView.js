@@ -10,6 +10,7 @@ import Cleave from 'cleave.js';
 import { CountUp } from 'countup.js';
 import noUiSlider from 'nouislider';
 import 'nouislider/dist/nouislider.css';
+import { detectSectorBenchmark, GENERIC_BENCHMARK } from '../core/sectorBenchmarks.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -36,6 +37,21 @@ function longPaybackThreshold(cost) {
 // أرقام بفواصل آلاف للقراءة (إدخال نصّي inputmode رقمي) — يمنع خطأ الأصفار
 const fmtNum = (n) => (Number(n) || 0).toLocaleString('en-US');
 const parseNum = (s) => parseFloat(String(s ?? '').replace(/[^\d.]/g, '')) || 0;
+
+// تدقيق 2026-07-16 (تقدير تلقائي لتكلفة الفكرة): «مقارنة الأفكار» تسبق أي خطوة يُدخِل فيها
+// المستخدم إيرادات فعلية (تُدخَل لاحقاً في النموذج المالي)، فلا يوجد سياق إيراد حقيقي نبني
+// عليه. لذا نفترض مرجعاً خشناً موحّداً لحجم إيرادات سنوية لمشروع صغير/متوسط نموذجي في
+// السوق السعودي (ASSUMPTION وليس تنبؤاً لهذه الفكرة تحديداً)، ونضربه في مجموع نسب تكلفة
+// القطاع (بضاعة/خدمة + إيجار + عمالة) من sectorBenchmarks.js — نفس مصدر معايير SmartAdvisor،
+// لا جدول تكلفة موازٍ جديد. الناتج رقم استرشادي أولي فقط يعدّله المستخدم بحرية.
+const REFERENCE_ANNUAL_REVENUE = 400000; // ريال/سنة — مرجع تقريبي لمشروع صغير نموذجي، ليس تنبؤاً
+function estimateIdeaCost(text) {
+    const bench = detectSectorBenchmark(text) || GENERIC_BENCHMARK;
+    const mid = ([lo, hi]) => (lo + hi) / 2;
+    const opexRatio = mid(bench.variableCostRate) + mid(bench.rentToRevenue) + mid(bench.laborToRevenue);
+    const cost = Math.round((REFERENCE_ANNUAL_REVENUE * opexRatio) / 1000) * 1000;
+    return { cost, sectorLabel: bench.label };
+}
 
 export class ProjectAlternativesView {
     constructor(containerId, store, onNavigate) {
@@ -147,14 +163,20 @@ export class ProjectAlternativesView {
                                         </td>
                                     </tr>
                                 ` : ideas.map((idea, i) => `
-                                    <tr data-idx="${i}" class="${i === bestIdx ? 'pa-best' : ''}">
+                                    <tr data-idx="${i}" data-cost-estimated="${idea.costIsEstimated ? '1' : ''}" class="${i === bestIdx ? 'pa-best' : ''}">
                                         <td class="pa-drag-handle text-muted" style="cursor: grab; font-size: 1.2rem;">≡</td>
                                         <td class="pa-td-select">
                                             <input type="radio" name="selectedAlt" ${selectedIndex === i ? 'checked' : ''} value="${i}" aria-label="اختيار الفكرة ${i + 1}">
                                             ${i === bestIdx ? `<span class="pa-trophy" title="الأفضل حسب الأرقام">${icon('i-trophy')}</span>` : ''}
                                         </td>
                                         <td><input type="text" class="input input--sm alt-field" data-field="name" placeholder="اسم الفكرة" aria-label="اسم الفكرة" value="${esc(idea.name)}"></td>
-                                        <td><input type="text" inputmode="numeric" class="input input--sm alt-field alt-num cleave-num" data-field="estimatedCost" placeholder="0" aria-label="تكلفة تقريبية" value="${idea.estimatedCost ? fmtNum(idea.estimatedCost) : ''}"></td>
+                                        <td>
+                                            <input type="text" inputmode="numeric" class="input input--sm alt-field alt-num cleave-num" data-field="estimatedCost" placeholder="0" aria-label="تكلفة تقريبية" value="${idea.estimatedCost ? fmtNum(idea.estimatedCost) : ''}">
+                                            <div class="pa-cost-actions">
+                                                <button type="button" class="btn-xs btn-magic pa-estimate" data-idx="${i}" title="تقدير استرشادي لتكلفة الفكرة حسب متوسطات القطاع — ليس رقماً نهائياً">${icon('i-sparkle')} تقدير تلقائي</button>
+                                                ${idea.costIsEstimated ? `<span class="badge badge--neutral pa-estimate-badge">تقدير تلقائي</span>` : ''}
+                                            </div>
+                                        </td>
                                         <td><input type="text" inputmode="numeric" class="input input--sm alt-field alt-num cleave-num" data-field="estimatedReturn" placeholder="0" aria-label="عائد متوقع" value="${idea.estimatedReturn ? fmtNum(idea.estimatedReturn) : ''}"></td>
                                         <td>${riskSelect(i, idea.risk)}</td>
                                         <td class="pa-calc">${paybackCell(metrics[i])}</td>
@@ -328,8 +350,9 @@ export class ProjectAlternativesView {
             const estimatedReturn = parseNum(tr.querySelector('[data-field="estimatedReturn"]')?.value);
             const risk = tr.querySelector('.risk-slider')?.dataset?.value || 'medium';
             const notes = tr.querySelector('[data-field="notes"]')?.value?.trim() || '';
+            const costIsEstimated = tr.dataset.costEstimated === '1';
             if (keepEmpty || name || estimatedCost || estimatedReturn || notes) {
-                ideas.push({ name, estimatedCost, estimatedReturn, risk, notes });
+                ideas.push({ name, estimatedCost, estimatedReturn, risk, notes, costIsEstimated });
             }
         });
 
@@ -341,7 +364,7 @@ export class ProjectAlternativesView {
         this.container.querySelector('#btnAddIdea')?.addEventListener('click', () => {
             this._save({ keepEmpty: true });
             const pa = this.store.getState().projectAlternatives || {};
-            const ideas = [...(pa.ideas || []), { name: '', estimatedCost: 0, estimatedReturn: 0, risk: '', notes: '' }];
+            const ideas = [...(pa.ideas || []), { name: '', estimatedCost: 0, estimatedReturn: 0, risk: '', notes: '', costIsEstimated: false }];
             this.store.updatePath('projectAlternatives', null, {
                 ...pa,
                 ideas,
@@ -377,6 +400,43 @@ export class ProjectAlternativesView {
                     this.render();
                     Swal.fire({ title: 'تم الحذف!', icon: 'success', timer: 1500, showConfirmButton: false });
                 }
+            });
+        });
+
+        // تعديل يدوي لحقل التكلفة يُسقط وسم «تقدير تلقائي» — يجب أن يُبنى قبل مستمع الحفظ
+        // العام أدناه كي يقرأ _save() القيمة المُسقَطة من نفس حدث change.
+        this.container.querySelectorAll('[data-field="estimatedCost"]').forEach(el => {
+            el.addEventListener('change', () => { el.closest('tr')?.removeAttribute('data-cost-estimated'); });
+        });
+
+        // زر «تقدير تلقائي»: يكتشف قطاع الفكرة من اسمها/ملاحظتها ويقترح تكلفة استرشادية
+        // (انظر estimateIdeaCost أعلاه) — لا يستبدل قيمة أدخلها المستخدم فعلياً دون تأكيد.
+        this.container.querySelectorAll('.pa-estimate').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const idx = parseInt(btn.dataset.idx, 10);
+                this._save({ keepEmpty: true });
+                const pa = this.store.getState().projectAlternatives || {};
+                const ideas = [...(pa.ideas || [])];
+                const idea = ideas[idx];
+                if (!idea) return;
+
+                const { cost, sectorLabel } = estimateIdeaCost(`${idea.name || ''} ${idea.notes || ''}`);
+
+                if (Number(idea.estimatedCost) > 0) {
+                    const result = await Swal.fire({
+                        title: 'يوجد تكلفة مُدخلة مسبقاً',
+                        html: `التكلفة الحالية: <strong>${fmtNum(idea.estimatedCost)}</strong> ر.س.<br>استبدالها بتقدير تلقائي (~${fmtNum(cost)} ر.س حسب قطاع «${sectorLabel}»)؟`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'استبدال',
+                        cancelButtonText: 'إلغاء'
+                    });
+                    if (!result.isConfirmed) return;
+                }
+
+                ideas[idx] = { ...idea, estimatedCost: cost, costIsEstimated: true };
+                this.store.updatePath('projectAlternatives', null, { ...pa, ideas });
+                this.render();
             });
         });
 

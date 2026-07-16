@@ -69,6 +69,18 @@ describe('AdminService', () => {
         });
     });
 
+    it('getUnverifiedPhones يستدعي admin_list_unverified_phones', async () => {
+        const { getUnverifiedPhones } = await import('../AdminService.js');
+        await getUnverifiedPhones();
+        expect(rpcMock).toHaveBeenCalledWith('admin_list_unverified_phones', {});
+    });
+
+    it('confirmPhoneVerified يمرّر target_user_id بالاسم الصحيح', async () => {
+        const { confirmPhoneVerified } = await import('../AdminService.js');
+        await confirmPhoneVerified('user-123');
+        expect(rpcMock).toHaveBeenCalledWith('admin_confirm_phone_verified', { target_user_id: 'user-123' });
+    });
+
     it('خطأ RPC (مثال: مستخدم غير أدمن) ⇒ ok:false برسالة الخطأ', async () => {
         rpcMock.mockResolvedValue({ data: null, error: { message: 'not authorized' } });
         const { getOverview } = await import('../AdminService.js');

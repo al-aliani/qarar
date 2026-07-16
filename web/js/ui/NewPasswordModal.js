@@ -4,9 +4,16 @@
  * نفس اتفاقيات AuthModalStub.js (overlay/escape/focus-trap) لتوحيد تجربة المصادقة.
  */
 export class NewPasswordModal {
-    constructor() {
+    /**
+     * @param {object} options
+     * @param {string} [options.description] - نص توضيحي أعلى النموذج. الافتراضي
+     * يخص سياق "نسيت كلمة المرور" (الاستخدام الأصلي)؛ استدعاء من "حسابي" (تغيير
+     * استباقي بلا رابط بريد) يمرّر نصاً مختلفاً كي لا يظهر سياق غير صحيح للمستخدم.
+     */
+    constructor(options = {}) {
         this.overlay = null;
         this._prevFocus = null;
+        this.description = options.description || 'وصلت هنا عبر رابط استعادة كلمة المرور. أدخل كلمة مرور جديدة لإكمال الدخول.';
     }
 
     open() {
@@ -21,7 +28,7 @@ export class NewPasswordModal {
                     <button type="button" class="btn-close" aria-label="إغلاق">×</button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted text-sm mb-3">وصلت هنا عبر رابط استعادة كلمة المرور. أدخل كلمة مرور جديدة لإكمال الدخول.</p>
+                    <p class="text-muted text-sm mb-3">${this.description}</p>
                     <div id="newPasswordError" class="text-danger text-sm mb-2" style="display:none;"></div>
                     <form id="newPasswordForm">
                         <div class="mb-3">

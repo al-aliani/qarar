@@ -285,6 +285,14 @@ button.tg-row.tg-row--clickable:focus-visible {
     vertical-align: middle;
 }
 
+.project-alternatives-view .pa-cost-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
 /* زر الحذف: أحمر عند التحويم، مساحة لمس ≥40px */
 .project-alternatives-view .pa-remove {
     display: inline-flex;

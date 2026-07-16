@@ -12,6 +12,7 @@ const BLOCK_KEYS = [
 import { getCityStats, getSuggestion } from '../data/SaudiCityStats.js';
 import { getCostRatios } from '../core/costRatios.js';
 import { resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
+import { analyzeSaudiMarket } from '../core/SaudiMarketEngine.js';
 
 function or(v, d) { return (v != null && String(v).trim() !== '') ? String(v).trim() : d; }
 
@@ -217,6 +218,21 @@ export function generateMarketDescriptions(state) {
     };
 }
 
+/**
+ * SOM الفعلي لهذه الدراسة تحديداً — عبر SaudiMarketEngine (نفس مصدر لوحة القرار
+ * واقتراح TAM؛ توحيد 2026-07-13). القيمة المخزَّنة في state.marketSizing لها الأسبقية
+ * دائماً (analyzeSaudiMarket يقدّم مدخل المستخدم على المشتق). بلا مدينة مُدخلة وبلا SOM
+ * مخزَّن لا يوجد أساس فعلي للاشتقاق (المحرك يستخدم "الرياض" افتراضياً) — نُرجع null
+ * بدل اختلاق رقم بمدينة لا علاقة لها بمشروع المستخدم.
+ */
+function computeRealSOM(state) {
+    const hasStoredSom = Number(state?.marketSizing?.som?.value ?? state?.marketSizing?.som ?? 0) > 0;
+    const city = (state?.projectInfo?.city || '').toString().trim();
+    if (!hasStoredSom && !city) return null;
+    const { som } = analyzeSaudiMarket(state || {}, {});
+    return som > 0 ? som : null;
+}
+
 export function generateSmartGoals(state) {
     const concept = (state?.projectInfo?.concept || state?.projectInfo?.name || 'مشروع جديد').toLowerCase();
     const sector = (state?.projectInfo?.sector || '').toLowerCase();
@@ -224,27 +240,53 @@ export function generateSmartGoals(state) {
     const isRetail = /تجزئة|محل|متجر|بقالة|retail|store|shop/i.test(sector + concept);
     const isFood = /مطعم|مقهى|كافيه|food|restaurant|cafe/i.test(sector + concept);
 
+    // أرقام أهداف الإيراد كانت قوالب عامة ثابتة (50/80/100 ألف) لكل مشروع بصرف النظر
+    // عن مدينته أو قطاعه الفعليين. عند توفر SOM حقيقي لهذه الدراسة تحديداً نستبدل
+    // الرقم بثلثه — SOM موثَّق أصلاً كحصة "السنوات الأولى (3-5)" (انظر
+    // generateMarketDescriptions)، فهدف بأفق سنة واحدة يأخذ أدنى ذلك الأفق (١/٣).
+    // بلا SOM حقيقي محسوب (لا مدينة ولا قيمة مخزَّنة) نبقي القالب العام كما كان تماماً.
+    const realSOM = computeRealSOM(state);
+    const year1Target = realSOM ? Math.round(realSOM / 3) : null;
+
     if (isTech) {
+        const target = year1Target || 50000;
         return [
             { specific: 'الوصول إلى 1000 مستخدم نشط', measurable: '1000 مستخدم', achievable: 'yes', relevant: 'توسيع قاعدة العملاء', category: 'market', targetValue: 1000, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
-            { specific: 'تحقيق إيرادات اشتراكات بقيمة 50 ألف', measurable: '50,000 ريال', achievable: 'yes', relevant: 'نمو الإيرادات المتكررة', category: 'financial', targetValue: 50000, currentValue: 0, status: 'pending', timeBound: '2026-12-31' }
+            {
+                specific: year1Target ? `تحقيق إيرادات اشتراكات بقيمة ${target.toLocaleString('ar-SA')} ريال` : 'تحقيق إيرادات اشتراكات بقيمة 50 ألف',
+                measurable: year1Target ? `${target.toLocaleString('ar-SA')} ريال` : '50,000 ريال',
+                achievable: 'yes', relevant: 'نمو الإيرادات المتكررة', category: 'financial', targetValue: target, currentValue: 0, status: 'pending', timeBound: '2026-12-31'
+            }
         ];
     } else if (isFood) {
+        // الرقم الأصلي "شهرية" — السوم/الثلث سنوي، فيُقسَّم على 12 قبل الاستخدام هنا
+        // (تحويل وحدة، وليس مجرد استبدال رقم بآخر بنفس الوحدة).
+        const target = year1Target ? Math.round(year1Target / 12) : 80000;
         return [
             { specific: 'بيع 100 طلب يومياً', measurable: '100 طلب', achievable: 'yes', relevant: 'رفع حجم المبيعات', category: 'market', targetValue: 100, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
-            { specific: 'تحقيق مبيعات شهرية بقيمة 80 ألف', measurable: '80,000 ريال', achievable: 'yes', relevant: 'تحقيق نقطة التعادل', category: 'financial', targetValue: 80000, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
+            {
+                specific: year1Target ? `تحقيق مبيعات شهرية بقيمة ${target.toLocaleString('ar-SA')} ريال` : 'تحقيق مبيعات شهرية بقيمة 80 ألف',
+                measurable: year1Target ? `${target.toLocaleString('ar-SA')} ريال` : '80,000 ريال',
+                achievable: 'yes', relevant: 'تحقيق نقطة التعادل', category: 'financial', targetValue: target, currentValue: 0, status: 'pending', timeBound: '2026-12-31'
+            },
             { specific: 'تقليل نسبة الهدر في المواد إلى 5%', measurable: '5%', achievable: 'yes', relevant: 'خفض التكاليف التشغيلية', category: 'operational', targetValue: 5, currentValue: 15, status: 'pending', timeBound: '2026-12-31' }
         ];
     } else if (isRetail) {
+        const target = year1Target || 100000;
         return [
-            { specific: 'تحقيق مبيعات بقيمة 100 ألف', measurable: '100,000 ريال', achievable: 'yes', relevant: 'نمو المبيعات', category: 'financial', targetValue: 100000, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
+            {
+                specific: year1Target ? `تحقيق مبيعات بقيمة ${target.toLocaleString('ar-SA')} ريال` : 'تحقيق مبيعات بقيمة 100 ألف',
+                measurable: year1Target ? `${target.toLocaleString('ar-SA')} ريال` : '100,000 ريال',
+                achievable: 'yes', relevant: 'نمو المبيعات', category: 'financial', targetValue: target, currentValue: 0, status: 'pending', timeBound: '2026-12-31'
+            },
             { specific: 'رفع معدل تحويل الزوار إلى مشترين إلى 20%', measurable: '20%', achievable: 'yes', relevant: 'تحسين كفاءة المعرض', category: 'operational', targetValue: 20, currentValue: 10, status: 'pending', timeBound: '2026-12-31' }
         ];
     }
 
     // Default general goals
+    const target = year1Target || 100000;
     return [
-        { specific: 'تحقيق نقطة التعادل التشغيلية', measurable: 'تغطية التكاليف', achievable: 'yes', relevant: 'الاستدامة المالية', category: 'financial', targetValue: 100000, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
+        { specific: 'تحقيق نقطة التعادل التشغيلية', measurable: 'تغطية التكاليف', achievable: 'yes', relevant: 'الاستدامة المالية', category: 'financial', targetValue: target, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
         { specific: 'الحصول على 500 عميل جديد', measurable: '500 عميل', achievable: 'yes', relevant: 'اختراق السوق', category: 'market', targetValue: 500, currentValue: 0, status: 'pending', timeBound: '2026-12-31' },
         { specific: 'توظيف وتدريب فريق أساسي من 3 أشخاص', measurable: '3 موظفين', achievable: 'yes', relevant: 'بناء القدرات', category: 'hr', targetValue: 3, currentValue: 0, status: 'pending', timeBound: '2026-12-31' }
     ];
@@ -935,6 +977,67 @@ export function generateCustomerValues(state) {
 }
 
 /**
+ * توليد أفكار اسم تجاري وفكرة شعار/هوية بصرية أولية — 3 إلى 5 مقترحات، كل واحد
+ * باسم وسطر وصفي لفكرة الشعار. حتمي بالكامل (بلا اتصال شبكي)، قطاعي عبر نفس
+ * أسلوب regex المستخدم في generateProducts/generateCompetitors أعلاه.
+ * @param {object} state
+ * @returns {Array<{ name: string, logoIdea: string }>}
+ */
+export function generateNameIdeas(state) {
+    const p = state?.projectInfo || {};
+    const concept = shortActivity(p, 'النشاط');
+    const sector = or(p.sector, concept);
+    const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
+    const isFandB = /مطعم|كافي|كافتيريا|وجبات|مأكولات|مشروبات|فود|طعام|حلويات|مخبوزات/i.test(sector);
+    const isRetail = /بقالة|تجزئة|متجر|بيع/i.test(sector);
+    const isTech = /تقني|تطبيق|برمجة|منصة|tech|app|software|platform/i.test(sector);
+    const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
+
+    if (isCafe) {
+        return [
+            { name: 'رُكن البُن', logoIdea: 'دائرة بسيطة بحبة بن مختزلة وخط عربي منحني — توحي بالدفء والاختصاص.' },
+            { name: 'محمصة الأصالة', logoIdea: 'أيقونة محمصة بن كلاسيكية بلونين بني وذهبي — تبرز الحرفية والتحميص اليدوي.' },
+            { name: 'قهوة ولمّة', logoIdea: 'خط يد عربي دافئ فوق فنجان مبسّط — يعكس الجانب الاجتماعي للمقهى.' },
+            { name: 'دفتر البن', logoIdea: 'شعار مستطيل يشبه غلاف دفتر مع حبة بن كعلامة — هوية أنيقة وبسيطة.' }
+        ];
+    }
+    if (isFandB) {
+        return [
+            { name: 'مائدة الذواقة', logoIdea: 'شعار دائري بملعقة وشوكة متقاطعتين وخط عربي عريض — يوحي بالضيافة والجودة.' },
+            { name: 'نكهة البيت', logoIdea: 'أيقونة منزل صغيرة فوق طبق مبسّط — تعكس دفء المطبخ المنزلي.' },
+            { name: 'زاوية الطعم', logoIdea: 'شعار زاوية هندسية بسيطة بلون واحد جريء — حداثة وهوية مميزة.' }
+        ];
+    }
+    if (isRetail) {
+        return [
+            { name: 'ملتقى المنتجات', logoIdea: 'شعار كيس تسوق مبسّط بخط عربي أفقي واضح — سهولة تعرّف فورية.' },
+            { name: 'واحة التسوق', logoIdea: 'أيقونة نخلة مختزلة ترمز محلياً مع اسم أفقي — هوية سعودية بسيطة.' },
+            { name: 'زاوية التميز', logoIdea: 'شعار مربع بحواف دائرية ولون واحد جريء — حداثة وثقة.' }
+        ];
+    }
+    if (isTech) {
+        return [
+            { name: `${concept} الذكية`, logoIdea: 'أيقونة هندسية مجرّدة (نقاط متصلة أو دائرة مقطوعة) بلون واحد — تقنية وبساطة.' },
+            { name: 'منصة انطلاق', logoIdea: 'شعار سهم أو صاروخ مبسّط جداً — يوحي بالنمو والانطلاقة الرقمية.' },
+            { name: 'نبضة رقمية', logoIdea: 'أيقونة نبضة أو موجة صوتية مختزلة — حيوية وابتكار.' }
+        ];
+    }
+    if (isHealth) {
+        return [
+            { name: 'رعاية وثقة', logoIdea: 'شعار دائري بصليب طبي مبسّط جداً ولون أزرق أو أخضر هادئ — يوحي بالطمأنينة.' },
+            { name: 'مركز العافية', logoIdea: 'أيقونة ورقة أو نبتة صغيرة ترمز للصحة الطبيعية — هدوء وثقة.' },
+            { name: 'نبض الرعاية', logoIdea: 'خط نبض بسيط داخل دائرة — يوحي بالدقة الطبية والرعاية الإنسانية.' }
+        ];
+    }
+
+    return [
+        { name: `${concept} الأول`, logoIdea: `شعار نصي بخط عربي واضح يبرز اسم النشاط مع أيقونة مبسّطة ترمز لـ${concept}.` },
+        { name: 'الوجهة الموثوقة', logoIdea: 'شعار درع أو ختم مبسّط — يوحي بالثقة والموثوقية.' },
+        { name: 'نقطة الانطلاق', logoIdea: 'أيقونة نقطة أو دائرة صغيرة تتوسع لخط أفقي — توحي بالبداية والنمو.' }
+    ];
+}
+
+/**
  * توليد جدول زمني مقترح (داخلي، بدون API)
  * صيغة الخرج متوافقة مع واجهة الجدول الزمني: name, duration (أشهر), startMonth, category
  * @param {object} state - حالة الدراسة
@@ -987,7 +1090,12 @@ export function generateTimeline(state) {
     if (isIndustrial) {
         steps.push({ name: 'موافقة بيئية وتركيب خط إنتاج', duration: 2, startMonth: 7, category: 'technical' });
     }
-    return steps.sort((a, b) => (a.startMonth || 1) - (b.startMonth || 1));
+    const sorted = steps.sort((a, b) => (a.startMonth || 1) - (b.startMonth || 1));
+    // dependsOnIndex: كل مرحلة تعتمد افتراضياً على المرحلة السابقة مباشرة في الترتيب
+    // الزمني المقترح (تسلسل واقعي بسيط: تراخيص→موقع→تصميم→تنفيذ→معدات→توظيف→تسويق→افتتاح)
+    // — Timeline.js يترجم هذا لمعرّفات dependsOn الفعلية بعد توليدها، لأن هذه الدالة
+    // لا تُنشئ معرّفات ثابتة بنفسها (Timeline.js يفعل ذلك عند الحفظ).
+    return sorted.map((s, i) => i === 0 ? s : { ...s, dependsOnIndex: [i - 1] });
 }
 
 /**

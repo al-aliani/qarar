@@ -15,6 +15,15 @@
 #   - MOYASAR_SECRET_KEY، MOYASAR_WEBHOOK_SECRET (لوحة تحكم Moyasar → API Keys / Webhooks)
 #   - STRIPE_SECRET_KEY، STRIPE_WEBHOOK_SECRET (لوحة تحكم Stripe → Developers → API keys / Webhooks)
 #
+# مطلوبة لتحقق واتساب الحقيقي عند التسجيل (2026-07-17):
+#   - WHATSAPP_ACCESS_TOKEN، WHATSAPP_PHONE_NUMBER_ID (WhatsApp Business Platform
+#     من ميتا — Meta Business Account + Cloud API، يتطلب موافقة خارجية على حساب
+#     حقيقي، لا بديل تجريبي/محلي لهذا)
+#   - WHATSAPP_TEMPLATE_NAME، WHATSAPP_TEMPLATE_LANG (اسم/لغة قالب Authentication
+#     المعتمد فعلياً من ميتا لحسابكم — يختلف حسب ما يوافقون عليه)
+#   - OTP_HASH_SECRET (سرّ عشوائي جديد خاص بهذا المشروع فقط — غير مرتبط بأي حساب
+#     خارجي، لهاش رموز التحقق قبل تخزينها؛ ولّده بنفسك، مثال: openssl rand -hex 32)
+#
 # كل سرّ غائب يُتخطّى بتحذير واضح بدل إيقاف النشر بالكامل — يمكن تفعيل مزوّد واحد
 # أولاً (مثلاً Moyasar فقط) وإضافة الآخر لاحقاً بلا أي تعديل كود.
 
@@ -68,6 +77,20 @@ jobs:
           npx supabase functions deploy webhook-moyasar --no-verify-jwt
           npx supabase functions deploy webhook-stripe --no-verify-jwt
 
+      - name: "Deploy whatsapp-otp-send / whatsapp-otp-verify (تتطلبان JWT مستخدم حقيقي، نفس نمط create-checkout)"
+        if: steps.check_link_secrets.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          npx supabase functions deploy whatsapp-otp-send
+          npx supabase functions deploy whatsapp-otp-verify
+
+      - name: "Deploy check-name-availability (JWT مستخدم حقيقي، بلا أسرار — فحوصات صادرة فقط)"
+        if: steps.check_link_secrets.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: npx supabase functions deploy check-name-availability
+
       - name: Push payment provider secrets to Supabase (skips any missing one safely)
         if: steps.check_link_secrets.outputs.configured == 'true'
         env:
@@ -83,6 +106,11 @@ jobs:
             [MOYASAR_WEBHOOK_SECRET]="${{ secrets.MOYASAR_WEBHOOK_SECRET }}"
             [STRIPE_SECRET_KEY]="${{ secrets.STRIPE_SECRET_KEY }}"
             [STRIPE_WEBHOOK_SECRET]="${{ secrets.STRIPE_WEBHOOK_SECRET }}"
+            [WHATSAPP_ACCESS_TOKEN]="${{ secrets.WHATSAPP_ACCESS_TOKEN }}"
+            [WHATSAPP_PHONE_NUMBER_ID]="${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}"
+            [WHATSAPP_TEMPLATE_NAME]="${{ secrets.WHATSAPP_TEMPLATE_NAME }}"
+            [WHATSAPP_TEMPLATE_LANG]="${{ secrets.WHATSAPP_TEMPLATE_LANG }}"
+            [OTP_HASH_SECRET]="${{ secrets.OTP_HASH_SECRET }}"
           )
           MISSING=""
           for KEY in "${!SECRET_VALUES[@]}"; do

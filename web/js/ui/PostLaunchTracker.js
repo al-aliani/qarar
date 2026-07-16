@@ -5,6 +5,7 @@
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { SECTIONS } from '../core/schema.js';
 import { escapeHtml } from '../utils/escape.js';
+import { getUpcomingMilestoneReminders } from '../services/timelineReminders.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -30,6 +31,10 @@ export class PostLaunchTracker {
         const plannedOpexTotal = (plannedY1.variableCosts || 0) + (plannedY1.fixedCosts || 0);
         const plannedMonthlyOpex = plannedOpexTotal / 12;
 
+        const timelineActivities = Array.isArray(state[SECTIONS.TIMELINE]?.activities) ? state[SECTIONS.TIMELINE].activities : [];
+        const timelineCompletions = actuals.timelineCompletions || {};
+        const reminders = getUpcomingMilestoneReminders(state, new Date());
+
         this.container.innerHTML = `
             <div class="tracker-container animate-entry">
                 <div class="section-header">
@@ -38,6 +43,10 @@ export class PostLaunchTracker {
                     <div class="alert alert--info mt-3" style="font-size: 0.85rem;">
                         إشارة تحذير مبكرة: خسائر تتزايد 3 أشهر متتالية بدل أن تتناقص.
                     </div>
+                    ${reminders.length ? `
+                    <div class="alert alert--info mt-3" style="font-size: 0.85rem;">
+                        ${reminders.map(r => `<div>${icon('i-calendar')} ${escapeHtml(r.message)}</div>`).join('')}
+                    </div>` : ''}
                 </div>
 
                 <div class="grid-2-col gap-4">
@@ -69,6 +78,12 @@ export class PostLaunchTracker {
                             ${this.renderVarianceSummary(actuals, plannedMonthlyRev, plannedMonthlyOpex)}
                         </div>
                     </div>
+                </div>
+
+                <!-- Timeline: Planned vs Actual -->
+                <div class="card glass-card mt-4">
+                    <h3 class="card-title">مقارنة الجدول الزمني: المخطط مقابل الفعلي</h3>
+                    ${this.renderTimelineComparison(timelineActivities, timelineCompletions)}
                 </div>
 
                 <!-- Comparison Chart -->
@@ -133,8 +148,83 @@ export class PostLaunchTracker {
         `;
     }
 
+    renderTimelineComparison(activities, completions) {
+        if (!activities.length) {
+            return `<p class="text-muted">${icon('i-info')} لا توجد أنشطة في الجدول الزمني بعد.</p>`;
+        }
+
+        let lateCount = 0;
+        const rows = activities.map(activity => {
+            const startMonth = Number(activity?.startMonth) || 1;
+            const duration = Number(activity?.duration) || 1;
+            const plannedEnd = startMonth + duration - 1;
+            const rawActual = completions[activity.id];
+            const actualMonth = (rawActual !== '' && rawActual != null && !Number.isNaN(parseFloat(rawActual))) ? parseFloat(rawActual) : null;
+
+            let statusLabel, badgeClass;
+            if (actualMonth == null) {
+                statusLabel = 'لم يُسجَّل الإنجاز بعد';
+                badgeClass = 'status-badge--neutral';
+            } else {
+                const delta = actualMonth - plannedEnd;
+                if (delta === 0) {
+                    statusLabel = 'على الموعد';
+                    badgeClass = 'status-badge--positive';
+                } else if (delta > 0) {
+                    statusLabel = `متأخر ${delta} شهر`;
+                    badgeClass = 'status-badge--negative';
+                    lateCount++;
+                } else {
+                    statusLabel = `مبكر ${Math.abs(delta)} شهر`;
+                    badgeClass = 'status-badge--positive';
+                }
+            }
+
+            return `
+                <tr>
+                    <td>${escapeHtml(activity.name || '')}</td>
+                    <td>شهر ${startMonth}–${plannedEnd}</td>
+                    <td><input type="number" min="1" class="input-actual" data-activity-id="${escapeHtml(activity.id)}" data-field="timelineActual" value="${actualMonth ?? ''}"></td>
+                    <td><span class="status-badge ${badgeClass}">${statusLabel}</span></td>
+                </tr>
+            `;
+        }).join('');
+
+        const warning = lateCount >= 2 ? `
+            <div class="alert alert--warning mt-3" style="font-size: 0.85rem;">
+                ${icon('i-warning')} ${lateCount} أنشطة (أو أكثر) من الجدول الزمني متأخرة عن موعدها المخطط.
+            </div>` : '';
+
+        return `
+            <div class="table-container">
+                <table class="data-table small">
+                    <thead>
+                        <tr>
+                            <th>النشاط</th>
+                            <th>الشهر المخطط</th>
+                            <th>شهر الإنجاز الفعلي</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timelineComparisonBody">
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+            ${warning}
+        `;
+    }
+
     bindEvents() {
-        this.container.querySelectorAll('.input-actual').forEach(input => {
+        this.container.querySelectorAll('[data-field="timelineActual"]').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const activityId = e.target.dataset.activityId;
+                const value = e.target.value === '' ? null : parseFloat(e.target.value);
+                this.updateTimelineActual(activityId, value);
+            });
+        });
+
+        this.container.querySelectorAll('.input-actual:not([data-field="timelineActual"])').forEach(input => {
             input.addEventListener('change', (e) => {
                 const id = parseInt(e.target.dataset.id);
                 const field = e.target.dataset.field;
@@ -168,6 +258,11 @@ export class PostLaunchTracker {
         // We don't full render to avoid losing focus, but summary needs update
         // For simplicity in this demo, we re-render chart/summary
         setTimeout(() => this.render(), 100);
+    }
+
+    updateTimelineActual(activityId, value) {
+        this.store.updatePath(SECTIONS.ACTUALS, `timelineCompletions.${activityId}`, value);
+        this.render();
     }
 
     renderChart(actuals, plannedMonthlyRev) {

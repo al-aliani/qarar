@@ -35,6 +35,39 @@ export function rateOrDefault(v, dflt) {
     return Number.isFinite(n) ? n : dflt;
 }
 
+// معدل GOSI الوافد (مخاطر مهنية فقط) — نفس الرقم الحرفي 0.02 المستخدم في gosiCost
+// أدناه وفي schema.js (positions.annualCost)؛ لا ثابت مُصدَّر مشترك بينهما بعد (تعديل
+// ذلك الكود القائم خارج نطاق هذه المهمة) — يُصدَّر هنا فقط ليستهلكه computeAnnualEmployeeCost
+// دون طباعة رقم ثالث منفصل قد ينحرف عن القيمتين الحاليتين.
+export const EXPAT_GOSI_RATE = 0.02;
+
+/**
+ * تكلفة سنوية تقديرية لموظف واحد (سعودي أو وافد) — نفس صيغة positions.reduce داخل
+ * calculateStudy أدناه (راتب أساسي + GOSI حسب الجنسية + تأمين صحي للفرد + رسوم حكومية
+ * للوافد فقط) لكن لموظف واحد افتراضي (count=1) بدل مجموع جدول الرواتب كاملاً — تستهلكها
+ * بطاقة مقارنة «سعودي مقابل وافد» في واجهة الموارد البشرية (nitaqatHrCard.js) دون طباعة
+ * صيغة GOSI/رسوم موازية. إضافية بحتة: لا تُستدعى من calculateStudy ولا تُغيّر مخرجاً قائماً.
+ * @param {{salary?:number, months?:number, nationality?:'saudi'|'expat', gosiRate?:number, healthInsurancePerHead?:number, govtFees?:{workCard?:number, ticket?:number, iqama?:number}}} [params]
+ * @returns {number}
+ */
+export function computeAnnualEmployeeCost({
+    salary = 0,
+    months = 12,
+    nationality = 'expat',
+    gosiRate = SAUDI_GOSI_RATE_2026,
+    healthInsurancePerHead = 1500,
+    govtFees = {}
+} = {}) {
+    const basic = Number(salary || 0) * Number(months || 12);
+    const rate = nationality === 'expat' ? EXPAT_GOSI_RATE : Number(gosiRate ?? SAUDI_GOSI_RATE_2026);
+    const gosi = basic * rate;
+    const insurance = Number(healthInsurancePerHead || 1500);
+    const expatFees = nationality === 'expat'
+        ? (Number(govtFees.workCard || 0) + Number(govtFees.ticket || 0) + Number(govtFees.iqama || 0))
+        : 0;
+    return basic + gosi + insurance + expatFees;
+}
+
 export function calculateFinancingWACC(study) {
     const financing = study?.[SECTIONS.FINANCING] || {};
     const sources = financing.sources || {};
@@ -1233,6 +1266,90 @@ export function calculateStudy(study, overrides) {
     result.decisionExplanation = explainDecisionBreakers(study, result);
     result.partnerNeeds = analyzePartnerNeeds(study, result);
     return result;
+}
+
+/**
+ * أثر تأخير الافتتاح N شهر على NPV — نفس مبدأ CentralAssumptionsView._commitRampUpMonths
+ * (استنساخ الدراسة + تعديل rampUpMonths + إعادة حساب كامل)، مُصدَّر هنا ليُستهلك من أي
+ * شاشة (خطة التنفيذ) بلا تكرار منطق الاستنساخ. يُضيف delayMonths فوق rampUpMonths
+ * الحالي (لا يستبدله) لأن تأخير الافتتاح يمدّد فترة التصاعد الفعلية للسنة الأولى.
+ * @param {Object} study
+ * @param {number} delayMonths
+ * @returns {{delayMonths:number, baselineNpv:number, delayedNpv:number, npvImpact:number}}
+ */
+export function calculateDelayedLaunchImpact(study, delayMonths) {
+    const delay = Math.max(0, Number(delayMonths) || 0);
+    const baseline = calculateStudy(study);
+    if (delay === 0) {
+        return { delayMonths: 0, baselineNpv: baseline.indicators.npv, delayedNpv: baseline.indicators.npv, npvImpact: 0 };
+    }
+    const currentRamp = Number(study?.assumptions?.rampUpMonths) || 0;
+    const delayedStudy = {
+        ...study,
+        assumptions: { ...(study.assumptions || {}), rampUpMonths: currentRamp + delay }
+    };
+    const delayed = calculateStudy(delayedStudy);
+    return {
+        delayMonths: delay,
+        baselineNpv: baseline.indicators.npv,
+        delayedNpv: delayed.indicators.npv,
+        npvImpact: delayed.indicators.npv - baseline.indicators.npv
+    };
+}
+
+/**
+ * أفضل مزيج دين/ملكية (ضمن استثمار إجمالي ثابت) يعظّم NPV دون خفض أدنى DSCR عن
+ * الهدف — بحث على مجموعة نسب دين مرشَّحة ثابتة (لا بحث مستمر) لأن العلاقة بين
+ * نسبة الدين وNPV غير أحادية الاتجاه بالضرورة (فائدة أعلى تخفض NPV، لكن الدين
+ * أرخص من حقوق الملكية في WACC غالباً) — تشغيل calculateStudy الفعلي لكل مرشّح
+ * أدق من صيغة مغلقة تفترض علاقة خطية. يُستهلك من CentralAssumptionsView.
+ * @param {Object} study
+ * @param {number} [targetDSCR] - افتراضي: عتبة الدراسة نفسها (thresholds.targetDSCR)
+ * @returns {{candidates:Array, best:Object}|null}
+ */
+export function findOptimalFinancingMix(study, targetDSCR) {
+    const base = calculateStudy(study);
+    if (!base) return null;
+    const totalInvestment = Number(base.capex?.total) || 0;
+    if (totalInvestment <= 0) return null;
+    const target = Number.isFinite(targetDSCR)
+        ? targetDSCR
+        : Number(base.assumptionsApplied?.thresholds?.targetDSCR) || 1.25;
+
+    const debtFractions = [0, 0.25, 0.5, 0.65, 0.75, 0.9];
+    const candidates = debtFractions.map(debtFraction => {
+        const loanAmount = Math.round(totalInvestment * debtFraction);
+        const equityAmount = totalInvestment - loanAmount;
+        const variant = {
+            ...study,
+            financing: {
+                ...(study.financing || {}),
+                sources: {
+                    ...(study.financing?.sources || {}),
+                    equity: { ...(study.financing?.sources?.equity || {}), amount: equityAmount },
+                    bankLoan: { ...(study.financing?.sources?.bankLoan || {}), amount: loanAmount }
+                }
+            }
+        };
+        const r = calculateStudy(variant);
+        if (!r) return null;
+        const dscrValues = (r.dscrAnalysis || []).map(d => d.dscr).filter(Number.isFinite);
+        const minDscr = dscrValues.length ? Math.min(...dscrValues) : null;
+        return {
+            debtFraction,
+            loanAmount,
+            equityAmount,
+            npv: r.indicators?.npv,
+            minDscr,
+            meetsTarget: minDscr == null || minDscr >= target
+        };
+    }).filter(Boolean);
+
+    if (!candidates.length) return null;
+    const feasible = candidates.filter(c => c.meetsTarget);
+    const pool = feasible.length ? feasible : candidates;
+    const best = pool.reduce((a, b) => (Number(b.npv) > Number(a.npv) ? b : a), pool[0]);
+    return { candidates, best, targetDSCR: target };
 }
 
 /**

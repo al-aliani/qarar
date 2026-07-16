@@ -65,6 +65,31 @@ export async function listShares(studyId) {
 }
 
 /**
+ * كل روابط المشاركة التي أنشأها المستخدم الحالي، عبر كل دراساته (للوحة
+ * الرئيسية — "روابط المشاركة التي أنشأتها"، انظر migration
+ * 20260716000002_dashboard_experience.sql دالة list_my_share_links). بخلاف
+ * listShares أعلاه (دراسة واحدة محدَّدة)، هذه تحتاج JOIN عبر كل دراساتك.
+ * @returns {Promise<Array<{id:string, shareToken:string, studyId:string, studyTitle:string, permission:string, revoked:boolean, expiresAt:string|null, createdAt:string}>>}
+ */
+export async function listAllMyShares() {
+    const { supabase, ok } = await getSupabaseClient();
+    if (!ok || !supabase) return [];
+
+    const { data, error } = await supabase.rpc('list_my_share_links');
+    if (error || !data) return [];
+    return data.map((row) => ({
+        id: row.id,
+        shareToken: row.share_token,
+        studyId: row.study_id,
+        studyTitle: row.study_title,
+        permission: row.permission,
+        revoked: row.revoked,
+        expiresAt: row.expires_at,
+        createdAt: row.created_at,
+    }));
+}
+
+/**
  * إلغاء رابط مشاركة (لا يحذفه — يُبقي الأثر للتدقيق، فقط يمنع الوصول).
  * @param {string} shareId
  * @returns {Promise<{ok: boolean, error?: string}>}

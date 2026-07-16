@@ -92,6 +92,8 @@ class AuthGuardClass {
 
             if (event === 'SIGNED_IN') {
                 auditLog(ACTIONS.LOGIN, { email: this.currentUser?.email });
+                this._notifyIfJustConfirmedEmail();
+                this._runOnboardingGates();
             } else if (event === 'SIGNED_OUT') {
                 auditLog(ACTIONS.LOGOUT, {});
             } else if (event === 'PASSWORD_RECOVERY') {
@@ -116,6 +118,73 @@ class AuthGuardClass {
                 isAuthenticated: this.isAuthenticated
             });
         });
+    }
+
+    /**
+     * سلسلة إكمال الحساب بعد كل دخول ناجح — ثلاث حالات مستقلة، بالترتيب:
+     * 1) رقم الجوال (واتساب) مطلوب على كل حساب — حسابات Google OAuth لا تُرجعه
+     *    إطلاقاً (بخلاف البريد/كلمة المرور التي تجمعه أصلاً عند التسجيل، انظر
+     *    AuthModalStub.js) → CompletePhoneModal إن كان ناقصاً.
+     * 2) دعوة تواصل واتساب (2026-07-17: تحقق يدوي بدل رمز آلي عبر ميتا — انظر
+     *    migration 20260717020000) → WhatsAppContactModal إن لم تُعرَض بعد
+     *    (profile.whatsapp_contact_prompted لا يزال false). قابلة للتخطي
+     *    عمداً (بخلاف بقية السلسلة) — التأكيد الفعلي (phone_verified) يدوي من
+     *    الأدمن لاحقاً، قد يستغرق وقتاً، فلا تُحجب هذه الخطوة المستخدم عن
+     *    التطبيق ولا تُعرَض عليه مرة ثانية.
+     * 3) تفضيل باقة غير مُلزم → PackagePreferenceModal إن لم يُختَر بعد.
+     * كل خطوة تُكمَل بنداء صريح لـ_runOnboardingGates() من داخل النافذة نفسها
+     * (تحديث عمود واحد بـUPDATE لا يُطلق حدث SIGNED_IN جديد يُعيد تشغيل السلسلة
+     * تلقائياً) — لا اعتماد على انتظار حدث مصادقة آخر. تفشل بصمت إذا تعذّر جلب
+     * profiles (مثلاً هجرات لم تُطبَّق بعد) — لا نمنع الدخول بسبب هذا.
+     */
+    async _runOnboardingGates() {
+        try {
+            await this._continueOnboardingGates();
+        } catch (_) {}
+    }
+
+    /**
+     * صفحة تأكيد البريد الإلكتروني (نسخة آمنة داخل التطبيق، بلا تعديل
+     * emailRedirectTo ولا مسار مخصّص يتطلب تحديث Redirect URLs في لوحة
+     * Supabase): تمييز "هذا الدخول هو تحديداً لحظة تأكيد البريد" اعتماداً على
+     * email_confirmed_at الحديث جداً (أقل من دقيقتين) بدل قراءة معاملات الرابط
+     * (التي يُزيلها عميل Supabase تلقائياً قبل أن يصل التطبيق لهذا المستمع).
+     * دخول عادي لاحق لنفس المستخدم سيكون confirmed_at قديماً فلن يُطلق التوست.
+     */
+    async _notifyIfJustConfirmedEmail() {
+        try {
+            const confirmedAt = this.currentUser?.email_confirmed_at
+                ? new Date(this.currentUser.email_confirmed_at).getTime()
+                : 0;
+            if (!confirmedAt) return;
+            const justConfirmed = (Date.now() - confirmedAt) < 2 * 60 * 1000;
+            if (!justConfirmed) return;
+            const { toast } = await import('../utils/toast.js');
+            toast.success('تم تأكيد بريدك الإلكتروني بنجاح — أهلاً بك في قرار.');
+        } catch (_) {}
+    }
+
+    async _continueOnboardingGates() {
+        const { getUserProfile } = await import('../../supabaseClient.js');
+        const { ok, profile } = await getUserProfile();
+        if (!ok) return;
+
+        if (!profile?.phone) {
+            const { CompletePhoneModal } = await import('../ui/CompletePhoneModal.js');
+            new CompletePhoneModal({ onSaved: () => this._runOnboardingGates() }).open();
+            return;
+        }
+
+        if (!profile.whatsapp_contact_prompted) {
+            const { WhatsAppContactModal } = await import('../ui/WhatsAppContactModal.js');
+            new WhatsAppContactModal({ onDismissed: () => this._runOnboardingGates() }).open();
+            return;
+        }
+
+        if (!profile.preferred_tier) {
+            const { PackagePreferenceModal } = await import('../ui/PackagePreferenceModal.js');
+            new PackagePreferenceModal({}).open();
+        }
     }
 
     /**

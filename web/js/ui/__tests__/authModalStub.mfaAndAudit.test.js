@@ -49,10 +49,12 @@ async function waitUntil(predicate, { timeout = 2000, interval = 10 } = {}) {
     }
 }
 
-async function fillAndSubmit(overlay, { email = 'a@b.com', password = 'Str0ng!Pass1', signUp = false } = {}) {
+async function fillAndSubmit(overlay, { email = 'a@b.com', password = 'Str0ng!Pass1', signUp = false, phone = '0512345678', name = 'أحمد السالم' } = {}) {
     overlay.querySelector('#authEmail').value = email;
     overlay.querySelector('#authPassword').value = password;
     if (signUp) {
+        overlay.querySelector('#authName').value = name;
+        overlay.querySelector('#authPhone').value = phone;
         overlay.querySelector('#authBtnSignUp').click();
         await waitUntil(() => signUpSdkMock.mock.calls.length > 0 || overlay.querySelector('#authModalError')?.textContent);
     } else {
@@ -133,17 +135,29 @@ describe('AuthModalStub — تحدي 2FA (AAL) + auditLog للتسجيل/OAuth',
         expect(modal.overlay.querySelector('#authMfaError').textContent).toContain('Invalid TOTP code');
     });
 
-    it('تسجيل حساب جديد (signUp) ناجح: يسجّل ACTIONS.SIGNUP في auditLog الحقيقي', async () => {
+    it('تسجيل حساب جديد (signUp) ناجح: يسجّل ACTIONS.SIGNUP في auditLog الحقيقي ويمرّر الجوال بصيغة E.164', async () => {
         const { AuthModal } = await import('../AuthModalStub.js');
         const modal = new AuthModal('c', {});
         modal.open();
         await fillAndSubmit(modal.overlay, { signUp: true });
 
-        expect(signUpSdkMock).toHaveBeenCalled();
+        expect(signUpSdkMock).toHaveBeenCalledWith(
+            expect.objectContaining({ email: 'a@b.com', options: { data: { phone: '+966512345678', full_name: 'أحمد السالم' } } })
+        );
         const entries = getAuditLog(5);
         expect(entries[0]).toMatchObject({ action: 'signup', email: 'a@b.com' });
         // signUp لا يمر بتحدي 2FA إطلاقاً (لا يوجد بعد عند إنشاء حساب جديد)
         expect(getAALMock).not.toHaveBeenCalled();
+    });
+
+    it('تسجيل حساب جديد بجوال غير صالح: يُرفض ولا يستدعي signUp إطلاقاً', async () => {
+        const { AuthModal } = await import('../AuthModalStub.js');
+        const modal = new AuthModal('c', {});
+        modal.open();
+        await fillAndSubmit(modal.overlay, { signUp: true, phone: '123' });
+
+        expect(signUpSdkMock).not.toHaveBeenCalled();
+        expect(modal.overlay.querySelector('#authModalError').textContent).toContain('رقم جوال سعودي صحيح');
     });
 
     it('الدخول بـ Google: يسجّل ACTIONS.OAUTH في auditLog الحقيقي قبل التوجيه', async () => {

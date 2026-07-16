@@ -263,6 +263,12 @@ export async function renderStepComponent(step, containerId, index, ctx) {
         instance.render(index);
         return { instance };
     }
+    if (step.isTechnicalAssetsView) {
+        const { TechnicalAssetsView } = await import('./TechnicalAssetsView.js');
+        const instance = get('technicalAssets', TechnicalAssetsView, containerId, store, onNavigate, wizardFactory());
+        instance.render(index);
+        return { instance };
+    }
 
     // المسار العام: لا علَم مخصّص — يُرسم عبر Wizard.renderStep (حقول/جداول تلقائية).
     const wizardInstance = wizardFactory();

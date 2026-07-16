@@ -1353,6 +1353,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+  // سجل الفواتير (2026-07-16) — عرض مغمور بلا شريط جانبي، محمي بالدخول داخل
+  // BillingHistoryView نفسها (نفس مبدأ renderReviewerRoute/renderAdminRoute).
+  const renderBillingRoute = async () => {
+    const sidebarEl = document.querySelector('.sidebar');
+    const stepperNavEl = document.getElementById('stepperNav');
+    const breadcrumbBar = document.getElementById('breadcrumbBar');
+    if (sidebarEl) sidebarEl.style.display = 'none';
+    if (stepperNavEl) stepperNavEl.style.display = 'none';
+    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+    try {
+      const { BillingHistoryView } = await import('./js/ui/BillingHistoryView.js');
+      const view = new BillingHistoryView(wizardContainer, { onBack: () => showLandingDashboard() });
+      await view.render();
+    } catch (e) {
+      console.error('BillingHistoryView load failed:', e);
+      toast.error('تعذر فتح سجل الفواتير');
+    }
+  };
+
+  // مركز التنزيلات (2026-07-16) — عرض مغمور بلا شريط جانبي، محمي بالدخول داخل
+  // DownloadsCenterView نفسها (نفس مبدأ renderBillingRoute).
+  const renderDownloadsRoute = async () => {
+    const sidebarEl = document.querySelector('.sidebar');
+    const stepperNavEl = document.getElementById('stepperNav');
+    const breadcrumbBar = document.getElementById('breadcrumbBar');
+    if (sidebarEl) sidebarEl.style.display = 'none';
+    if (stepperNavEl) stepperNavEl.style.display = 'none';
+    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+    try {
+      const { DownloadsCenterView } = await import('./js/ui/DownloadsCenterView.js');
+      const view = new DownloadsCenterView(wizardContainer, { onBack: () => showLandingDashboard() });
+      await view.render();
+    } catch (e) {
+      console.error('DownloadsCenterView load failed:', e);
+      toast.error('تعذر فتح مركز التنزيلات');
+    }
+  };
+
   // رسم الواجهة المطابقة للعنوان — بدون كتابة تاريخ جديد (يُستدعى عند الرجوع/التقديم)
   const routeToView = async (route) => {
     _isRestoring = true;
@@ -1375,6 +1413,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         await renderReviewerRoute();
       } else if (route.startsWith('admin')) {
         await renderAdminRoute();
+      } else if (route.startsWith('billing')) {
+        await renderBillingRoute();
+      } else if (route.startsWith('downloads')) {
+        await renderDownloadsRoute();
       } else if (route.startsWith('payment-return')) {
         // Moyasar/Stripe يُعيدان توجيه المتصفح هنا بعد الدفع (انظر create-checkout
         // Edge Function: returnUrl يبني هذا الرابط تحديداً بمعامل order=<orderId>).
@@ -1389,7 +1431,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (SUBVIEW_ROUTES[route]) {
         SUBVIEW_ROUTES[route]();
       } else {
-        await showLandingDashboard();
+        // عنوان غير معروف تماماً (لا '' ولا home، ولا يطابق أي بادئة/SUBVIEW_ROUTES
+        // أعلاه) — سابقاً كان يتراجع بصمت للرئيسية بلا أي إشارة للمستخدم.
+        const { NotFoundView } = await import('./js/ui/NotFoundView.js');
+        const view = new NotFoundView(wizardContainer, { onHome: () => showLandingDashboard() });
+        await view.render();
       }
     } catch (e) {
       console.error('[Router] routeToView failed:', e);

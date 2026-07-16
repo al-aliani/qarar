@@ -59,6 +59,13 @@ export class IntroductionView {
                     `).join('')}
                 </div>
 
+                <details class="card analysis-card version-history-panel">
+                    <summary class="card-title" style="cursor:pointer;">سجل التغييرات</summary>
+                    <div class="text-sm" style="margin-top:var(--s-2);">
+                        ${this.renderHistoryPanel()}
+                    </div>
+                </details>
+
                 <div class="wizard-nav margin-top-lg">
                     <button type="button" class="btn btn--secondary btn-prev-step">السابق</button>
                     <button type="button" class="btn btn--primary btn-next-step">التالي</button>
@@ -66,6 +73,32 @@ export class IntroductionView {
             </div>
         `;
         this.bindEvents();
+    }
+
+    /**
+     * سجل التغييرات مبني على سجل الإصدارات العام في store.js (آخر 10 حفظات للدراسة كاملة)،
+     * لكن يُستخرَج منه هنا فقط حقل الفرضية — عرض فرق كامل للدراسة كلها سيكون ضجيجاً لا فائدة منه هنا.
+     */
+    renderHistoryPanel() {
+        const history = this.store.getVersionHistory?.() || [];
+        if (!history.length) {
+            return `<p class="text-muted">لا يوجد سجل تغييرات بعد. سيظهر هنا بعد أول حفظ للدراسة.</p>`;
+        }
+        return history.map((entry, index) => {
+            const h = entry.state?.projectInfo?.startupHypothesis || {};
+            const when = entry.timestamp ? new Date(entry.timestamp).toLocaleString('ar-SA') : '—';
+            return `
+                <div class="version-history-entry" data-history-index="${index}" style="padding:8px 0;border-top:1px solid var(--c-border);">
+                    <div class="flex-between mb-1">
+                        <span class="text-xs text-muted">${when}</span>
+                        <button type="button" class="btn-xs btn--secondary btn-restore-hypothesis" data-history-index="${index}">استرجع هذه النسخة</button>
+                    </div>
+                    <p class="mb-1"><strong>المشكلة:</strong> ${escapeHtml(h.problem || '—')}</p>
+                    <p class="mb-1"><strong>الحل:</strong> ${escapeHtml(h.solution || '—')}</p>
+                    <p class="mb-1"><strong>سبب الاختيار:</strong> ${escapeHtml(h.insight || '—')}</p>
+                </div>
+            `;
+        }).reverse().join('');
     }
 
     bindEvents() {
@@ -83,6 +116,9 @@ export class IntroductionView {
         this.container.querySelectorAll('.btn-ai-suggest').forEach(button => {
             button.addEventListener('click', () => this.suggest(button));
         });
+        this.container.querySelectorAll('.btn-restore-hypothesis').forEach(button => {
+            button.addEventListener('click', () => this.restoreHypothesisVersion(button));
+        });
     }
 
     save() {
@@ -94,6 +130,32 @@ export class IntroductionView {
         });
         projectInfo.startupHypothesis = current;
         this.store.update('projectInfo', projectInfo);
+    }
+
+    async restoreHypothesisVersion(button) {
+        const index = parseInt(button.dataset.historyIndex, 10);
+        const history = this.store.getVersionHistory?.() || [];
+        const entry = history[index];
+        if (!entry) return;
+        const snapshotHypothesis = entry.state?.projectInfo?.startupHypothesis || {};
+
+        const result = await Swal.fire({
+            title: 'استرجاع هذه النسخة؟',
+            text: 'سيتم استبدال المشكلة والحل وسبب الاختيار الحاليين بنص هذه النسخة. باقي بيانات الدراسة (المنتجات، الأرقام المالية، ...) لن تتأثر.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، استرجع',
+            cancelButtonText: 'إلغاء',
+            customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+            buttonsStyling: false
+        });
+        if (!result.isConfirmed) return;
+
+        const projectInfo = { ...(this.store.getState().projectInfo || {}) };
+        projectInfo.startupHypothesis = { ...snapshotHypothesis };
+        this.store.update('projectInfo', projectInfo);
+        toast.success('تم استرجاع النسخة المحددة.');
+        this.render(this.stepIndex);
     }
 
     async suggest(button) {

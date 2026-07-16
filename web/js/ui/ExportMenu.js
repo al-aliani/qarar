@@ -566,6 +566,8 @@ export class ExportMenu {
                     if (result.success) {
                         downloadBlob(result.blob, result.fileName);
                         toast.success(`تم تصدير Word: ${result.fileName}`);
+                        const { trackExport } = await import('../../export/exportTracking.js');
+                        trackExport(result.blob, { fileType: 'word', fileName: result.fileName, studyId: state.projectInfo?.id, studyName: state.projectInfo?.name });
                     } else {
                         toast.error('فشل تصدير Word: ' + (result.error || 'خطأ غير معروف'));
                     }

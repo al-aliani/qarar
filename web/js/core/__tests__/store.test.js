@@ -171,3 +171,53 @@ describe('StudyStore — validateState وسجل الإصدارات', () => {
         expect(ok).toBe(false);
     });
 });
+
+describe('StudyStore — استمرارية سجل الإصدارات عبر localStorage (persist/_loadVersionHistory)', () => {
+    beforeEach(() => {
+        store.state = store.mergeWithDefaults({});
+        store._versionHistory = [];
+        memoryStorage.delete('qarar_version_history');
+    });
+
+    it('saveLocal يحفظ سجل الإصدارات في التخزين، ويُستعاد كاملاً بعد محاكاة إعادة تحميل', async () => {
+        store.state.projectInfo.name = 'نسخة 1';
+        await store.saveLocal();
+        store.state.projectInfo.name = 'نسخة 2';
+        await store.saveLocal();
+
+        expect(store.getVersionHistory().length).toBe(2);
+
+        // محاكاة إعادة تحميل الصفحة: امسح الذاكرة وأعد القراءة من نفس مخزن localStorage المزيّف
+        store._versionHistory = [];
+        await store._loadVersionHistory();
+
+        const restored = store.getVersionHistory();
+        expect(restored.length).toBe(2);
+        expect(restored[0].state.projectInfo.name).toBe('نسخة 1');
+        expect(restored[1].state.projectInfo.name).toBe('نسخة 2');
+    });
+
+    it('يبقى سقف الـ10 نسخ محفوظاً في localStorage وصحيحاً بعد محاكاة إعادة التحميل', async () => {
+        for (let i = 0; i < 12; i++) {
+            store.state.projectInfo.name = `نسخة ${i}`;
+            await store.saveLocal();
+        }
+        expect(store.getVersionHistory().length).toBe(10);
+
+        store._versionHistory = [];
+        await store._loadVersionHistory();
+
+        const restored = store.getVersionHistory();
+        expect(restored.length).toBe(10);
+        // أقدم نسخة يجب أن تكون رقم 2 (٠ و١ سقطتا خارج السقف)، وآخر نسخة رقم 11
+        expect(restored[0].state.projectInfo.name).toBe('نسخة 2');
+        expect(restored[restored.length - 1].state.projectInfo.name).toBe('نسخة 11');
+    });
+
+    it('_loadVersionHistory لا يرمي ولا يغيّر الذاكرة إن لم يوجد سجل محفوظ بعد', async () => {
+        store._versionHistory = [{ timestamp: 't', state: {} }];
+        memoryStorage.delete('qarar_version_history');
+        await store._loadVersionHistory();
+        expect(store._versionHistory).toEqual([{ timestamp: 't', state: {} }]);
+    });
+});

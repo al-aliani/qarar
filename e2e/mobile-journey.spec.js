@@ -71,7 +71,7 @@ test('mobile journey keeps wizard and wide tables usable', async ({ page }) => {
     await btnNew.click();
     const galleryOverlay = page.locator('#templateGalleryOverlay');
     await expect(galleryOverlay).toBeVisible({ timeout: 8000 });
-    await galleryOverlay.locator('.template-card[data-id="empty"]').click();
+    await galleryOverlay.locator('#btnStartBlank').click();
     const advancedMode = page.locator('.mode-card[data-mode="advanced"]');
     await expect(advancedMode).toBeVisible({ timeout: 5000 });
     await advancedMode.click();

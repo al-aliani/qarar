@@ -21,7 +21,7 @@ test.describe('دورة حياة المشروع الكاملة', () => {
         await btnNew.click();
         await expect(page.locator('#templateGalleryOverlay')).toBeVisible({ timeout: 8000 });
         const galleryOverlay = page.locator('#templateGalleryOverlay');
-        await galleryOverlay.locator('.template-card[data-id="empty"]').click();
+        await galleryOverlay.locator('#btnStartBlank').click();
         const advancedMode = galleryOverlay.locator('.mode-card[data-mode="advanced"]');
         if (await advancedMode.isVisible().catch(() => false)) {
             await advancedMode.click();

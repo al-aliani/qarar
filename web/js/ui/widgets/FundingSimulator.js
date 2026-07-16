@@ -5,6 +5,104 @@
  */
 
 import { getLabel } from '../../core/labels.js';
+import { calculateStudy as runFullModel } from '../../core/engine.js';
+
+/**
+ * دالة تقييم نقية (بلا DOM/متجر) — نفس قواعد بنك التنمية الاجتماعية الأصلية كما هي
+ * تماماً، بالإضافة اختيارياً لمؤشرات حقيقية من دراسة المستخدم (DSCR محسوب من المحرك +
+ * قيمة الضمانات المُدخلة في خطوة التمويل). المدخلات الإضافية اختيارية بالكامل: غيابها
+ * (كالاستدعاء القديم) يترك النتيجة مطابقة تماماً لسلوك ما قبل هذا التعديل.
+ */
+export function computeEligibilityScore({
+    age,
+    nationality,
+    isEmployed,
+    hasDefaults,
+    sector,
+    computedDscr = null,
+    targetDSCR = null,
+    guaranteesValue = 0
+} = {}) {
+    let score = 100;
+    let reasons = [];
+    let status = 'high'; // high, medium, low, rejected
+
+    // 2. Rules Engine (Based on SDB / Nufath)
+
+    // Rule: Nationality
+    if (nationality !== 'saudi') {
+        score = 0;
+        status = 'rejected';
+        reasons.push('❌ التمويل متاح للسعوديين فقط حالياً.');
+    }
+
+    // Rule: Age (18-65) - some products 21-60
+    if (age < 18) {
+        score = 0;
+        status = 'rejected';
+        reasons.push('❌ العمر أقل من 18 سنة.');
+    } else if (age > 65) {
+        score = 0;
+        status = 'rejected';
+        reasons.push('❌ العمر تجاوز 65 سنة.');
+    } else if (age < 21) {
+        score -= 20; // Risk
+        reasons.push('⚠️ العمر أقل من 21 (قد يتطلب كفيلاً أو منتجات محدودة).');
+    } else if (age > 60) {
+        score -= 20; // Risk
+        reasons.push('⚠️ العمر فوق 60 (قد يتطلب شروطاً إضافية).');
+    } else {
+        reasons.push('✅ العمر مناسب (18-65).');
+    }
+
+    // Rule: Credit Defaults
+    if (hasDefaults) {
+        score -= 50; // Major impact
+        status = score > 0 ? 'low' : 'rejected';
+        reasons.push('🛑 وجود تعثرات مالية يقلل فرص القبول بشكل كبير (يجب المعالجة).');
+    } else {
+        reasons.push('✅ السجل الائتماني سليم.');
+    }
+
+    // Rule: Employment
+    if (isEmployed) {
+        // New rules allow employed but with specific products (Mumars Plus)
+        score -= 10;
+        reasons.push('ℹ️ الموظفون مؤهلون لمنتجات محددة (ممارسة) وليس التفرغ الكامل.');
+    } else {
+        reasons.push('✅ التفرغ يعزز فرص تمويل المشاريع الناشئة (ريادة).');
+    }
+
+    // Sector Check (Basic)
+    if (/مقاولات|عقار|تأمين/i.test(sector)) {
+        score -= 10;
+        reasons.push('⚠️ بعض النشاطات (مقاولات/عقار) قد تكون مقيدة أو تتطلب خبرة محددة.');
+    }
+
+    // امتداد إضافي: مؤشرات حقيقية من نموذج الدراسة المالي (DSCR محسوب/ضمانات موثّقة) —
+    // تُحسّن السجل فقط إن لم يكن مرفوضاً أصلاً بقاعدة أساسية، ولا تُطبَّق إطلاقاً حين تغيب
+    // (توافق خلفي كامل مع أي استدعاء لا يمرّرها).
+    if (status !== 'rejected') {
+        if (computedDscr != null && targetDSCR != null) {
+            if (computedDscr >= targetDSCR) {
+                score += 10;
+                reasons.push(`✅ نسبة تغطية خدمة الدين المحسوبة من نموذجك المالي ${computedDscr.toFixed(2)}x تفوق المستهدف ${targetDSCR.toFixed(2)}x.`);
+            } else {
+                score -= 10;
+                reasons.push(`⚠️ نسبة تغطية خدمة الدين المحسوبة ${computedDscr.toFixed(2)}x أقل من المستهدف ${targetDSCR.toFixed(2)}x.`);
+            }
+        }
+        if (guaranteesValue > 0) {
+            score += 5;
+            reasons.push('✅ وجود ضمانات موثّقة (رهن/كفالة) في خطوة التمويل يعزز فرص القبول.');
+        }
+    }
+
+    if (score < 0) score = 0;
+    if (score > 100) score = 100;
+
+    return { score, status, reasons };
+}
 
 export class FundingSimulator {
     constructor(containerId, store) {
@@ -105,65 +203,33 @@ export class FundingSimulator {
         const hasDefaults = this.container.querySelector('#simDefaults').checked;
         const sector = this.container.querySelector('#simSector').value;
 
-        let score = 100;
-        let reasons = [];
-        let status = 'high'; // high, medium, low, rejected
-
-        // 2. Rules Engine (Based on SDB / Nufath)
-
-        // Rule: Nationality
-        if (nationality !== 'saudi') {
-            score = 0;
-            status = 'rejected';
-            reasons.push('❌ التمويل متاح للسعوديين فقط حالياً.');
+        // مدخلات حقيقية اختيارية من دراسة المستخدم نفسها: DSCR محسوب فعلياً من المحرك المالي
+        // (فقط إن وُجد قرض بنكي مُدخل) + إجمالي قيمة الضمانات المسجَّلة في خطوة التمويل.
+        // تعذّر أيٍّ منها (لا قرض/لا محرك/لا متجر) يُبقي التقييم على القواعد الأساسية فقط.
+        let computedDscr = null;
+        let targetDSCR = null;
+        let guaranteesValue = 0;
+        try {
+            const state = this.store?.get ? this.store.get() : null;
+            const financing = state?.financing || {};
+            const guarantees = Array.isArray(financing.guarantees) ? financing.guarantees : [];
+            guaranteesValue = guarantees.reduce((sum, g) => sum + (Number(g?.value) || 0), 0);
+            const loanAmount = Number(financing.sources?.bankLoan?.amount || 0);
+            if (state && loanAmount > 0) {
+                const results = runFullModel(state);
+                computedDscr = results?.indicators?.dscr ?? null;
+                targetDSCR = Number.isFinite(Number(financing.targetDSCR)) ? Number(financing.targetDSCR) : 1.25;
+            }
+        } catch (_) {
+            computedDscr = null;
         }
 
-        // Rule: Age (18-65) - some products 21-60
-        if (age < 18) {
-            score = 0;
-            status = 'rejected';
-            reasons.push('❌ العمر أقل من 18 سنة.');
-        } else if (age > 65) {
-            score = 0;
-            status = 'rejected';
-            reasons.push('❌ العمر تجاوز 65 سنة.');
-        } else if (age < 21) {
-            score -= 20; // Risk
-            reasons.push('⚠️ العمر أقل من 21 (قد يتطلب كفيلاً أو منتجات محدودة).');
-        } else if (age > 60) {
-            score -= 20; // Risk
-            reasons.push('⚠️ العمر فوق 60 (قد يتطلب شروطاً إضافية).');
-        } else {
-            reasons.push('✅ العمر مناسب (18-65).');
-        }
-
-        // Rule: Credit Defaults
-        if (hasDefaults) {
-            score -= 50; // Major impact
-            status = score > 0 ? 'low' : 'rejected';
-            reasons.push('🛑 وجود تعثرات مالية يقلل فرص القبول بشكل كبير (يجب المعالجة).');
-        } else {
-            reasons.push('✅ السجل الائتماني سليم.');
-        }
-
-        // Rule: Employment
-        if (isEmployed) {
-            // New rules allow employed but with specific products (Mumars Plus)
-            score -= 10;
-            reasons.push('ℹ️ الموظفون مؤهلون لمنتجات محددة (ممارسة) وليس التفرغ الكامل.');
-        } else {
-            reasons.push('✅ التفرغ يعزز فرص تمويل المشاريع الناشئة (ريادة).');
-        }
-
-        // Sector Check (Basic)
-        if (/مقاولات|عقار|تأمين/i.test(sector)) {
-            score -= 10;
-            reasons.push('⚠️ بعض النشاطات (مقاولات/عقار) قد تكون مقيدة أو تتطلب خبرة محددة.');
-        }
+        const { score, status, reasons } = computeEligibilityScore({
+            age, nationality, isEmployed, hasDefaults, sector,
+            computedDscr, targetDSCR, guaranteesValue
+        });
 
         // 3. Render Result
-        if (score < 0) score = 0;
-
         let colorClass = 'text-green-500';
         let statusText = 'فرصة ممتازة';
 

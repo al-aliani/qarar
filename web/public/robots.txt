@@ -9,5 +9,6 @@ Disallow: /smoke_test.html
 Disallow: /coverage/
 Disallow: /report/
 Disallow: /export/
+Disallow: /dashboard.html
 
 Sitemap: https://qarar.sa/sitemap.xml

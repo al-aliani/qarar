@@ -129,6 +129,13 @@ export class FinancingStructure {
                     ${this.renderWACC(financing, totalCapex)}
                 </div>
 
+                <!-- Financing Scenario Comparison: مقارنة "ماذا-لو" إضافية بحتة — لا تمسّ financing.sources الحية -->
+                <div class="card analysis-card" id="scenarioComparisonCard">
+                    <h3 class="card-title">${icon('i-chart')} مقارنة سيناريوهات التمويل (ماذا-لو)</h3>
+                    <p class="text-muted text-sm mb-3">عرّف هيكل تمويل بديل (بنكي، صندوق تنمية صناعي، حقوق ملكية أعلى...) وقارنه بالوضع الحالي دون تعديل بيانات الدراسة الفعلية.</p>
+                    ${this.renderScenarioComparison(state)}
+                </div>
+
                 <!-- Loan Schedule -->
                 <div class="card analysis-card" id="loanScheduleCard" style="${loanAmount > 0 ? '' : 'display:none'}">
                     <h3 class="card-title">جدول سداد القرض</h3>
@@ -141,6 +148,13 @@ export class FinancingStructure {
                     <h3 class="card-title">${icon('i-shield')} الضمانات وتغطية خدمة الدين</h3>
                     <p class="text-muted text-sm mb-3">البنوك تطلب ضمانات مقابل القرض ونسبة تغطية كافية لخدمة الدين. حدّدها لتقوية ملف التمويل.</p>
                     ${this.renderGuaranteesAndDSCR(financing)}
+                </div>
+
+                <!-- Lender Criteria Comparison: جدول مرجعي (بنك/صندوق تنمية/مستثمر ملاك) — ليس قراراً حياً -->
+                <div class="card analysis-card" id="lenderCriteriaCard">
+                    <h3 class="card-title">${icon('i-scale')} معايير القبول لدى جهات التمويل (مرجعية)</h3>
+                    <p class="text-muted text-sm mb-3">مقارنة نموذجية بين بنك تجاري وصندوق التنمية الاجتماعية ومستثمر ملاك (Angel) — إلى جانب أرقام دراستك الفعلية.</p>
+                    ${this.renderLenderCriteriaComparison(state)}
                 </div>
 
                 <!-- Navigation -->
@@ -402,14 +416,33 @@ export class FinancingStructure {
                     ? `<span class="text-danger">${icon('i-warning')} زائد ${this.formatCurrency(Math.abs(gap))} عن الاستثمار المطلوب — خفّض أحد المصادر أو استخدم زر «سدّ الفجوة»</span>`
                     : `<span class="text-danger">${icon('i-warning')} زائد ${this.formatCurrency(Math.abs(gap))} عن الاستثمار المطلوب — الفائض ناتج عن القرض/المستثمرين/الدعم الحكومي لا التمويل الذاتي، خفّض أحد هذه المصادر مباشرة</span>`;
         const showAutoBalanceBtn = !isBalanced && (gap > 0 || surplusFixableByEquity);
+        const sourceRecommendation = gap > 0 ? this.recommendFundingSource(gap, totalCapex) : '';
         return `
             <div class="funding-validation" id="fundingValidation">
                 <span class="validation-label">إجمالي التمويل:</span>
                 <span class="validation-value" id="totalFunding">${this.formatCurrency(totalFunded)} / ${this.formatCurrency(totalCapex)}</span>
                 <span class="validation-status" id="fundingStatus">${statusHtml}</span>
                 ${showAutoBalanceBtn ? `<button type="button" class="btn btn--sm btn--secondary" id="btnAutoBalanceFunding" data-gap="${gap}">${icon('i-scale')} سدّ الفجوة من التمويل الذاتي</button>` : ''}
+                ${sourceRecommendation}
             </div>
         `;
+    }
+
+    /**
+     * توصية استرشادية بنوع مصدر التمويل الأنسب لسدّ فجوة بحجم معيّن — لا تُصدّر رقماً
+     * نهائياً، فقط تقترح أي أداة تناسب حجم الفجوة نسبةً للاستثمار الكلي (فجوة صغيرة
+     * ← تمويل ذاتي واقعي؛ فجوة كبيرة ← تحتاج أداة تمويل خارجية، ليس تعديل حصة الملّاك
+     * فقط). مرجع نسبي بسيط، ليس قراراً ائتمانياً.
+     */
+    recommendFundingSource(gap, totalCapex) {
+        if (!(gap > 0) || !(totalCapex > 0)) return '';
+        const gapRatio = gap / totalCapex;
+        const text = gapRatio <= 0.15
+            ? 'الفجوة صغيرة نسبياً — تمويل ذاتي إضافي غالباً كافٍ.'
+            : gapRatio <= 0.40
+                ? 'الفجوة متوسطة — فكّر في قرض بنكي إضافي أو صندوق التنمية الصناعية/الاجتماعية بدل تحميلها كاملة على التمويل الذاتي.'
+                : 'الفجوة كبيرة نسبة للاستثمار الكلي — تحتاج على الأرجح مستثمرين/شريكاً أو تمويلاً حكومياً داعماً، لا تعديل حصة الملّاك فقط.';
+        return `<p class="text-xs text-muted funding-source-hint">${icon('i-lightbulb')} ${text}</p>`;
     }
 
     getLoanReadinessDiagnostics(state) {
@@ -594,6 +627,219 @@ export class FinancingStructure {
                 </tbody>
             </table>
             <button type="button" class="btn btn--sm btn--secondary mt-2" id="btnAddGuarantee">+ إضافة ضمان</button>
+        `;
+    }
+
+    /**
+     * يحسب WACC/NPV/IRR/DSCR سنة 1 لهيكل تمويل بديل بلا أي تعديل على state.financing.sources
+     * الحيّة — يستنسخ الحالة محلياً فقط لتشغيل المحرك عليها. sourcesOverride=null يعني «الوضع
+     * الحالي كما هو» (تُستخدم نفس الحالة الحية دون استنساخ).
+     * @param {object} state
+     * @param {{equity:{amount:number}, bankLoan:{amount:number, interestRate:number, termYears:number}}|null} sourcesOverride
+     */
+    computeScenarioMetrics(state, sourcesOverride) {
+        let studyForCalc = state;
+        if (sourcesOverride) {
+            const liveSources = state.financing?.sources || {};
+            studyForCalc = {
+                ...state,
+                financing: {
+                    ...(state.financing || {}),
+                    sources: {
+                        ...liveSources,
+                        equity: { ...(liveSources.equity || {}), amount: Number(sourcesOverride.equity?.amount || 0) },
+                        bankLoan: {
+                            ...(liveSources.bankLoan || {}),
+                            amount: Number(sourcesOverride.bankLoan?.amount || 0),
+                            interestRate: Number.isFinite(Number(sourcesOverride.bankLoan?.interestRate))
+                                ? Number(sourcesOverride.bankLoan.interestRate)
+                                : rateOrDefault(liveSources.bankLoan?.interestRate, 0.08),
+                            termYears: Number(sourcesOverride.bankLoan?.termYears || liveSources.bankLoan?.termYears || 5)
+                        }
+                    }
+                }
+            };
+        }
+
+        let wacc = null, npv = null, irr = null, dscr = null;
+        try { wacc = calculateFinancingWACC(studyForCalc); } catch (_) { wacc = null; }
+        try {
+            const results = runFullModel(studyForCalc);
+            npv = results?.indicators?.npv ?? null;
+            irr = results?.indicators?.irr ?? null;
+            dscr = results?.indicators?.dscr ?? null;
+        } catch (_) { /* تبقى null — الجدول يعرض "غير متاح" */ }
+
+        return { wacc, npv, irr, dscr };
+    }
+
+    renderScenarioComparison(state) {
+        const financing = state.financing || {};
+        const scenarios = Array.isArray(financing.comparisonScenarios) ? financing.comparisonScenarios : [];
+
+        const fmtPct = (v) => Number.isFinite(v) ? `${(v * 100).toFixed(2)}%` : 'غير متاح';
+        const fmtDscr = (v) => Number.isFinite(v) ? `${v.toFixed(2)}x` : 'غير متاح';
+
+        const liveRow = { label: 'الوضع الحالي (المُدخل فعلياً)', metrics: this.computeScenarioMetrics(state, null), isLive: true };
+        const scenarioRows = scenarios.map((sc, i) => ({
+            label: sc.label,
+            metrics: this.computeScenarioMetrics(state, sc.sources),
+            index: i
+        }));
+
+        const rowHtml = (r) => `
+            <tr>
+                <td>${r.label}</td>
+                <td>${fmtPct(r.metrics.wacc)}</td>
+                <td>${this.formatCurrency(r.metrics.npv)}</td>
+                <td>${fmtPct(r.metrics.irr)}</td>
+                <td>${fmtDscr(r.metrics.dscr)}</td>
+                <td>${r.isLive ? '' : `<button type="button" class="btn btn--sm btn--danger scenario-remove" data-index="${r.index}">حذف</button>`}</td>
+            </tr>
+        `;
+
+        return `
+            <table class="data-table">
+                <thead>
+                    <tr><th>السيناريو</th><th>WACC</th><th>NPV</th><th>IRR</th><th>DSCR سنة 1</th><th></th></tr>
+                </thead>
+                <tbody>
+                    ${rowHtml(liveRow)}
+                    ${scenarioRows.map(rowHtml).join('')}
+                </tbody>
+            </table>
+            <div class="scenario-add-form mt-3" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.75rem;align-items:end;">
+                <div>
+                    <label for="scenario-label">اسم السيناريو</label>
+                    <input type="text" id="scenario-label" class="input input--sm" placeholder="مثال: بنكي">
+                </div>
+                <div>
+                    <label for="scenario-equity">التمويل الذاتي (ريال)</label>
+                    <input type="number" id="scenario-equity" class="input input--sm" min="0" value="0">
+                </div>
+                <div>
+                    <label for="scenario-loan-amount">القرض البنكي (ريال)</label>
+                    <input type="number" id="scenario-loan-amount" class="input input--sm" min="0" value="0">
+                </div>
+                <div>
+                    <label for="scenario-loan-rate">فائدة القرض %</label>
+                    <input type="number" id="scenario-loan-rate" class="input input--sm" min="0" step="0.5" value="8">
+                </div>
+                <div>
+                    <label for="scenario-loan-term">مدة القرض (سنوات)</label>
+                    <input type="number" id="scenario-loan-term" class="input input--sm" min="1" max="20" value="5">
+                </div>
+                <div>
+                    <button type="button" class="btn btn--sm btn--secondary" id="btnAddScenario">+ إضافة سيناريو للمقارنة</button>
+                </div>
+            </div>
+        `;
+    }
+
+    addComparisonScenario() {
+        const label = (this.container.querySelector('#scenario-label')?.value || '').trim();
+        if (!label) return;
+        const equityAmount = parseFloat(this.container.querySelector('#scenario-equity')?.value) || 0;
+        const loanAmount = parseFloat(this.container.querySelector('#scenario-loan-amount')?.value) || 0;
+        const loanRatePct = parseFloat(this.container.querySelector('#scenario-loan-rate')?.value);
+        const loanTermYears = parseInt(this.container.querySelector('#scenario-loan-term')?.value, 10) || 5;
+
+        const state = this.store.getState();
+        const financing = { ...(state.financing || {}) };
+        const scenarios = Array.isArray(financing.comparisonScenarios) ? [...financing.comparisonScenarios] : [];
+        scenarios.push({
+            label,
+            sources: {
+                equity: { amount: equityAmount },
+                bankLoan: {
+                    amount: loanAmount,
+                    interestRate: Number.isFinite(loanRatePct) ? loanRatePct / 100 : 0.08,
+                    termYears: loanTermYears
+                }
+            }
+        });
+        financing.comparisonScenarios = scenarios;
+        this.store.update('financing', financing);
+        this.render();
+    }
+
+    removeComparisonScenario(index) {
+        const state = this.store.getState();
+        const financing = { ...(state.financing || {}) };
+        const scenarios = Array.isArray(financing.comparisonScenarios) ? [...financing.comparisonScenarios] : [];
+        scenarios.splice(index, 1);
+        financing.comparisonScenarios = scenarios;
+        this.store.update('financing', financing);
+        this.render();
+    }
+
+    /**
+     * جدول مرجعي (بنك تجاري نموذجي / صندوق التنمية الاجتماعية / مستثمر ملاك) مقابل أرقام
+     * الدراسة الفعلية — تقديري وليس قرار إقراض حقيقي من أي جهة (يختلف فعلياً حسب سياسة كل جهة).
+     */
+    renderLenderCriteriaComparison(state) {
+        const financing = state.financing || {};
+        const loanAmount = Number(financing.sources?.bankLoan?.amount || 0);
+        const guarantees = Array.isArray(financing.guarantees) ? financing.guarantees : [];
+        const guaranteesValue = guarantees.reduce((sum, g) => sum + (Number(g?.value) || 0), 0);
+
+        let dscr = null, npv = null, irr = null;
+        try {
+            const results = runFullModel(state);
+            dscr = results?.indicators?.dscr ?? null;
+            npv = results?.indicators?.npv ?? null;
+            irr = results?.indicators?.irr ?? null;
+        } catch (_) { /* تبقى null — الجدول يعرض "غير متاح" */ }
+
+        const BANK_MIN_DSCR = 1.25;
+        const ANGEL_MIN_IRR = 0.25;
+
+        const bankDscrOk = loanAmount > 0 && dscr != null ? dscr >= BANK_MIN_DSCR : null;
+        const bankCollateralOk = loanAmount > 0 ? guaranteesValue >= loanAmount : null;
+        const angelReturnOk = (npv != null && irr != null) ? (npv > 0 && irr >= ANGEL_MIN_IRR) : null;
+
+        const yesNo = (b) => b == null
+            ? '<span class="text-muted">لا ينطبق</span>'
+            : (b ? `<span class="text-success">${icon('i-check')} يحقّقه</span>` : `<span class="text-danger">${icon('i-warning')} لا يحقّقه</span>`);
+        const fmtPct = (v) => Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : 'غير متاح';
+        const fmtDscr = (v) => Number.isFinite(v) ? `${v.toFixed(2)}x` : 'غير متاح';
+
+        return `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>المعيار</th>
+                        <th>بنك تجاري (نموذجي)</th>
+                        <th>صندوق التنمية الاجتماعية (SDB)</th>
+                        <th>مستثمر ملاك (Angel)</th>
+                        <th>رقم دراستك</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>تغطية خدمة الدين (DSCR)</td>
+                        <td>≥ ${BANK_MIN_DSCR.toFixed(2)}x — ${yesNo(bankDscrOk)}</td>
+                        <td>قواعد أهلية مختلفة (راجع محاكي بنك التنمية بالأسفل)</td>
+                        <td>لا يُشترط عادة (يُستبدل بعائد المشروع)</td>
+                        <td>${fmtDscr(dscr)}</td>
+                    </tr>
+                    <tr>
+                        <td>الضمانات/الرهن</td>
+                        <td>عادة مطلوبة بتغطية كاملة تقريباً — ${yesNo(bankCollateralOk)}</td>
+                        <td>حسب المنتج، غالباً أخف من البنك التجاري</td>
+                        <td>غير مطلوبة عادة (مقابلها حصة ملكية)</td>
+                        <td>${this.formatCurrency(guaranteesValue)}</td>
+                    </tr>
+                    <tr>
+                        <td>عتبة العائد/الجدوى</td>
+                        <td>يهتم بالتغطية والسداد لا بالعائد المرتفع</td>
+                        <td>نفس اهتمام البنك (تغطية وسداد)</td>
+                        <td>عادة IRR ≥ ${(ANGEL_MIN_IRR * 100).toFixed(0)}% وNPV موجب — ${yesNo(angelReturnOk)}</td>
+                        <td>NPV: ${this.formatCurrency(npv || 0)} · IRR: ${fmtPct(irr)}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="text-xs text-muted mt-2">جدول مرجعي تقديري لمقارنة معايير شائعة — ليس قراراً حقيقياً من أي جهة تمويل، ويختلف فعلياً حسب سياسة كل جهة وملفك الائتماني.</p>
         `;
     }
 
@@ -951,6 +1197,12 @@ export class FinancingStructure {
         // سدّ فجوة التمويل تلقائياً (يضيف/يخصم الفرق من التمويل الذاتي)
         this.container.querySelector('#btnAutoBalanceFunding')?.addEventListener('click', () => {
             this.autoBalanceFunding(totalCapex);
+        });
+
+        // مقارنة سيناريوهات التمويل: إضافة/حذف سيناريو "ماذا-لو"
+        this.container.querySelector('#btnAddScenario')?.addEventListener('click', () => this.addComparisonScenario());
+        this.container.querySelectorAll('.scenario-remove').forEach(btn => {
+            btn.addEventListener('click', (e) => this.removeComparisonScenario(parseInt(e.target.dataset.index, 10)));
         });
 
         // Render funding chart

@@ -99,6 +99,41 @@ export const GENERIC_BENCHMARK = {
     netProfitToRevenue: [0.05, 0.25]
 };
 
+/**
+ * مضاعفات تقييم مرجعية (EV/EBITDA) لمنشآت صغيرة بسوق سعودي/خليجي — نطاقات تقديرية
+ * (ASSUMPTION، بلا تغذية سوقية حية) بنفس مفتاح قطاعات SECTOR_BENCHMARKS كي لا يُكتب
+ * كاشف قطاع ثانٍ. الأرقام مقاربات محافظة: تجزئة/مطاعم منخفضة الهامش أدنى (2.5×)،
+ * الخدمات/الصناعي أعلى قليلاً لثبات العميل، وSaaS الأعلى لتكرار الإيراد.
+ */
+export const SECTOR_VALUATION_MULTIPLES = {
+    fnb: 2.5,
+    retailHighMargin: 3.5,
+    retail: 2.5,
+    service: 4,
+    industrial: 3.5,
+    logistics: 3,
+    saas: 6
+};
+
+/** الافتراضي عند تعذّر اكتشاف القطاع — نفس القيمة المستخدمة سابقاً كثابت وحيد (3×) لكل القطاعات. */
+export const GENERIC_VALUATION_MULTIPLE = 3;
+
+/**
+ * يحسم مضاعف التقييم المرجعي لدراسة ما، بإعادة استخدام detectSectorBenchmark نفسه
+ * (لا كاشف قطاع مستقل) ثم مطابقة مفتاحه في جدول المضاعفات أعلاه.
+ * @param {object} state
+ * @returns {{multiple:number, label:string, isGeneric:boolean}}
+ */
+export function resolveValuationMultiple(state) {
+    const text = state?.projectInfo?.sector || state?.projectInfo?.concept || state?.projectInfo?.activity;
+    const bench = detectSectorBenchmark(text);
+    if (!bench) {
+        return { multiple: GENERIC_VALUATION_MULTIPLE, label: GENERIC_BENCHMARK.label, isGeneric: true };
+    }
+    const sectorKey = Object.keys(SECTOR_BENCHMARKS).find(k => SECTOR_BENCHMARKS[k] === bench);
+    return { multiple: SECTOR_VALUATION_MULTIPLES[sectorKey] ?? GENERIC_VALUATION_MULTIPLE, label: bench.label, isGeneric: false };
+}
+
 /** يكتشف قطاع الدراسة من نص القطاع/الفكرة — null إن لم يُطابق */
 export function detectSectorBenchmark(sectorText) {
     const t = String(sectorText || '');

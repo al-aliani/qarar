@@ -253,9 +253,72 @@ export class AdminDashboardView {
             </div>
             <h3 class="admin-card__title">حسب الباقة</h3>
             ${this._table(['الباقة', 'العدد'], (data.by_tier || []).map((r) => [r.tier || '—', r.count]))}
+            <div class="admin-card">
+                <h3 class="admin-card__title">جوالات بانتظار تأكيد واتساب</h3>
+                <div id="unverifiedPhonesList"><p class="admin-loading">جارٍ التحميل…</p></div>
+            </div>
         `;
         const daily = data.daily_signups || [];
         this._renderTrendChart('chartUsersDaily', 'مستخدمون جدد', daily.map((d) => ({ label: d.day, value: d.count })));
+        this._loadUnverifiedPhones(contentEl);
+    }
+
+    /**
+     * قائمة عملاء بانتظار تأكيد يدوي لجوالهم (تواصلوا أو لم يتواصلوا عبر
+     * واتساب — انظر WhatsAppContactModal.js وmigration 20260717020000).
+     * مستقلة عن تخزين this.cache المؤقت للتبويب (بخلاف بقية بيانات هذا
+     * التبويب) لأنها تحتاج تحديثاً فورياً بعد كل تأكيد، لا مرة واحدة فقط.
+     */
+    async _loadUnverifiedPhones(contentEl) {
+        const listEl = contentEl.querySelector('#unverifiedPhonesList');
+        if (!listEl) return;
+        listEl.innerHTML = '<p class="admin-loading">جارٍ التحميل…</p>';
+
+        const result = await AdminService.getUnverifiedPhones();
+        if (!result.ok) {
+            listEl.innerHTML = `<p class="admin-error">تعذّر تحميل القائمة: ${this._esc(result.error)}</p>`;
+            return;
+        }
+
+        const rows = result.data || [];
+        if (!rows.length) {
+            listEl.innerHTML = '<p class="admin-table__empty">لا يوجد جوالات بانتظار التأكيد حالياً.</p>';
+            return;
+        }
+
+        listEl.innerHTML = `
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead><tr><th>الاسم</th><th>الجوال</th><th>تاريخ التسجيل</th><th></th></tr></thead>
+                    <tbody>
+                        ${rows.map((r) => `
+                            <tr>
+                                <td>${this._esc(r.full_name || '—')}</td>
+                                <td dir="ltr">${this._esc(r.phone)}</td>
+                                <td>${this._esc(new Date(r.created_at).toLocaleDateString('ar-SA'))}</td>
+                                <td><button class="btn btn--sm btn--primary btn-confirm-phone" data-id="${this._esc(r.id)}">تأكيد</button></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        listEl.querySelectorAll('.btn-confirm-phone').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                btn.textContent = 'جارٍ التأكيد...';
+                const res = await AdminService.confirmPhoneVerified(btn.dataset.id);
+                if (!res.ok) {
+                    toast.error(res.error || 'فشل التأكيد');
+                    btn.disabled = false;
+                    btn.textContent = 'تأكيد';
+                    return;
+                }
+                toast.success('تم تأكيد الجوال');
+                this._loadUnverifiedPhones(contentEl);
+            });
+        });
     }
 
     _renderRevenue(contentEl, data) {

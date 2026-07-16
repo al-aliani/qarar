@@ -31,6 +31,20 @@ create policy "reviewers_select_own"
   on public.reviewers for select
   using (auth.uid() = id);
 
+-- 2) أعمدة سير عمل المراجعة على orders (إضافية بحتة — لا تُغيّر أي عمود قائم)
+-- يجب أن يسبق سياسة reviewers_select_via_certified_order أدناه، لأنها تشير
+-- إلى orders.reviewer_id/review_status (اكتُشف الترتيب الخاطئ 2026-07-16 عند
+-- أول تطبيق فعلي لهذا الملف على مشروع فارغ تماماً — "column o.reviewer_id
+-- does not exist" — لم يظهر سابقاً لأن أي تطبيق حي وقع بعد أن كانت الأعمدة
+-- موجودة أصلاً من محاولة يدوية سابقة).
+alter table public.orders
+  add column if not exists review_status text not null default 'none'
+    check (review_status in ('none', 'queued', 'in_review', 'certified', 'rejected')),
+  add column if not exists reviewer_id uuid references public.reviewers(id),
+  add column if not exists reviewer_notes text,
+  add column if not exists reviewed_at timestamptz,
+  add column if not exists certificate_id text;
+
 -- العميل صاحب دراسة مُعتمَدة يحتاج رؤية اسم المراجع الحقيقي (هذا هو صلب ميزة
 -- التوثيق — بدونها لا يمكن لـ ReviewerService.getCertificationForStudy عرض
 -- reviewers(display_name) عبر PostgREST embed، لأن RLS يُطبَّق أيضاً على
@@ -46,15 +60,6 @@ create policy "reviewers_select_via_certified_order"
         and o.user_id = auth.uid()
     )
   );
-
--- 2) أعمدة سير عمل المراجعة على orders (إضافية بحتة — لا تُغيّر أي عمود قائم)
-alter table public.orders
-  add column if not exists review_status text not null default 'none'
-    check (review_status in ('none', 'queued', 'in_review', 'certified', 'rejected')),
-  add column if not exists reviewer_id uuid references public.reviewers(id),
-  add column if not exists reviewer_notes text,
-  add column if not exists reviewed_at timestamptz,
-  add column if not exists certificate_id text;
 
 -- عمود مولَّد (generated/stored): يحوّل study_id (text ليّن، بلا FK — انظر
 -- تعليق 20260709120000_create_orders_payments.sql) إلى uuid فقط عند صحة

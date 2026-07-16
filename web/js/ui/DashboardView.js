@@ -1,6 +1,9 @@
 import Swal from 'sweetalert2';
 import { ProjectManager } from '../services/ProjectManager.js';
-import { getAuthUser, signOut } from '../../supabaseClient.js';
+import { getAuthUser, signOut, getUserProfile } from '../../supabaseClient.js';
+import { listOrders } from '../services/PaymentService.js';
+import { unreadCount } from '../services/NotificationService.js';
+import { getAuditLog, ACTIONS } from '../utils/auditLogger.js';
 import { toast } from '../utils/toast.js';
 import { PRICING_DISPLAY, buildWhatsAppLink } from '../config.js';
 import { PRICING_PACKAGES, formatPrice, CURRENCY_SYMBOL } from '../core/pricing.js';
@@ -72,7 +75,9 @@ const INLINE_PATHS = {
     // صاروخ — «نصائح المسرّعات»
     rocket: '<path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2M9 12a12 12 0 0 1 8-9c2 0 3 1 3 3a12 12 0 0 1-9 8Z"/><circle cx="14.5" cy="9.5" r="1.5"/><path d="M9 12l-3 .5 5.5 5.5.5-3"/>',
     // كتاب — «نصائح للمبتدئين / مركز المعرفة»
-    book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2Z"/><path d="M19 3v18"/>'
+    book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2Z"/><path d="M19 3v18"/>',
+    // جرس — «الإشعارات»
+    bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>'
 };
 
 const inlineIcon = (name, cls = '') =>
@@ -148,6 +153,43 @@ export class DashboardView {
 
         const hasProjects = filtered.length > 0;
         const userEmail = this.currentUser ? this.currentUser.email : null;
+        const displayName = this.currentUser
+            ? ((this.currentUser.user_metadata?.full_name || '').trim() || userEmail || 'صديقنا')
+            : null;
+
+        // بطاقات حساب سريعة (حالة اشتراك، اكتمال ملف شخصي، شارة الإشعارات) — بيانات
+        // شبكية إضافية لا تُنتظَر هنا أبداً (نفس مبدأ hydrateProjectCompleteness أدناه:
+        // رسم فوري بحالة "جاري التحقق"، ثم ترقيع الفعلي عبر hydrateAccountTiles() بعد
+        // أول رسم مباشرة — بلا إبطاء ظهور بقية اللوحة، خصوصاً زر «حسابي» الحيوي).
+        const ORDER_STATUS_LABEL = { pending: 'قيد المعالجة', paid: 'مدفوع', failed: 'فشل', refunded: 'مسترَد' };
+
+        // إحصائيات استخدام + آخر الدراسات المُشاهَدة — من بيانات "دراساتك" الموجودة أصلاً،
+        // بلا أي جلب إضافي.
+        const recentStudies = [...filtered]
+            .sort((a, b) => new Date(b.lastModified || b.updated_at || 0) - new Date(a.lastModified || a.updated_at || 0))
+            .slice(0, 3);
+        const lastActivityDate = recentStudies[0]
+            ? new Date(recentStudies[0].lastModified || recentStudies[0].updated_at).toLocaleDateString('ar-SA-u-nu-latn')
+            : null;
+
+        // سجل نشاط — من auditLogger.js (localStorage، هذا الجهاز فقط، لا مزامنة عبر
+        // الأجهزة). نوضّح هذا القيد بالنص نفسه بدل الإيحاء بسجل حسابي شامل.
+        const ACTIVITY_LABEL = {
+            [ACTIONS.LOGIN]: 'تسجيل دخول', [ACTIONS.SIGNUP]: 'إنشاء حساب', [ACTIONS.LOGOUT]: 'تسجيل خروج',
+            [ACTIONS.SAVE]: 'حفظ دراسة', [ACTIONS.LOAD]: 'تحميل دراسة', [ACTIONS.EXPORT]: 'تصدير',
+            [ACTIONS.RESET]: 'إعادة تعيين', [ACTIONS.OAUTH]: 'دخول عبر Google',
+            [ACTIONS.MFA_ENROLL]: 'تفعيل 2FA', [ACTIONS.MFA_VERIFY]: 'تحقق 2FA',
+        };
+        const recentActivity = this.currentUser ? getAuditLog(5) : [];
+
+        // مقارنة سريعة — من بيانات مُحمَّلة أصلاً فقط (project.data.engineResults)،
+        // بلا تحميل إضافي لأي دراسة لمجرد هذه المقارنة (يفادي نفس مشكلة التأخير التي
+        // ظهرت واختُبرت في hydrateAccountTiles أعلاه — لا يستحق الأمر جولة شبكة إضافية).
+        const comparableStudies = filtered
+            .filter(p => p.data?.projectInfo && p.data?.engineResults?.indicators)
+            .map(p => ({ name: p.name, npv: p.data.engineResults.indicators.npv, irr: p.data.engineResults.indicators.irr }))
+            .filter(p => Number.isFinite(p.npv))
+            .sort((a, b) => b.npv - a.npv);
         // تدقيق 2026-07-08 (ملاحظة حرجة UX+معماري): Number(null) يساوي 0 في جافاسكربت —
         // فكان الزر يظهر لأي زائر جديد بلا أي مشروع محفوظ لأن Number.isInteger(0) صحيح
         // وSTEPS[0] موجود دائماً. الآن: نتحقق من وجود المفتاح فعلياً، ونتطلّب مشروعاً
@@ -323,6 +365,14 @@ export class DashboardView {
             ? this.activeHomePanel
             : 'studies';
         const allSupportTools = toolkitGroups.flatMap(group => group.tools);
+        // بحث موحّد (2026-07-16): dashboardSearch كان يبحث بأسماء الدراسات فقط — نضيف
+        // مطابقة الأدوات/الأدلة من نفس القائمة الموجودة أصلاً (allSupportTools)، بلا
+        // أي فهرسة أو بنية جديدة.
+        const matchingTools = this.searchQuery
+            ? allSupportTools.filter(t =>
+                t.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                (t.desc || '').toLowerCase().includes(this.searchQuery.toLowerCase()))
+            : [];
         const journeyToolsCount = allSupportTools.filter(tool => Number.isFinite(tool.step)).length;
         const independentToolsCount = allSupportTools.length - journeyToolsCount;
         const supportToolsCount = allSupportTools.length;
@@ -355,7 +405,7 @@ export class DashboardView {
                         <span class="dv-brand__mark">ق</span>
                         <span class="dv-brand__name">قرار</span>
                     </button>
-                    <span class="dv-brand__ctx">مساحة العمل — دراسة الجدوى</span>
+                    <span class="dv-brand__ctx">${displayName ? `أهلاً ${escapeHtml(displayName)}` : 'مساحة العمل — دراسة الجدوى'}</span>
                     <!-- Resource Menu Anchor (ResourcesMenu يملؤها) -->
                     <div id="resources-menu-root" class="dv-resources"></div>
                     <span class="dv-topbar__sp"></span>
@@ -367,12 +417,28 @@ export class DashboardView {
                         <span data-theme-icon="light" style="${currentTheme === 'light' ? '' : 'display:none'}"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg></span>
                         <span data-theme-icon="auto" style="display:none"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
                     </button>
+                    ${this.currentUser ? `
+                    <div class="dv-notif" style="position:relative;">
+                        <button type="button" id="dvNotifBell" class="btn-icon" aria-label="الإشعارات" title="الإشعارات" style="position:relative;">
+                            ${inlineIcon('bell')}
+                        </button>
+                        <div id="dvNotifPanel" class="card" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:320px;max-width:calc(100vw - 32px);max-height:400px;overflow-y:auto;z-index:50;padding:0;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--c-border);">
+                                <strong class="text-sm">الإشعارات</strong>
+                                <button type="button" id="dvNotifMarkAll" class="btn--text text-xs text-muted">تعليم الكل كمقروء</button>
+                            </div>
+                            <div id="dvNotifList" style="padding:8px;"><p class="text-xs text-muted" style="padding:8px;">جاري التحميل...</p></div>
+                        </div>
+                    </div>
+                    ` : ''}
                     <div class="dv-topbar__auth">
                         ${!this.currentUser ? `
                             <button type="button" id="dashboardLogin" class="btn btn--sm btn--secondary">${icon('i-user')} تسجيل الدخول</button>
                         ` : `
                             <span class="dv-userchip"><span class="dv-userchip__dot"></span> ${userEmail}</span>
                             <button type="button" id="btnUserProfile" class="btn btn--sm btn--ghost" title="حسابي">${icon('i-user')} حسابي</button>
+                            <button type="button" id="btnDashboardBilling" class="btn btn--sm btn--ghost" title="سجل الفواتير">سجل الفواتير</button>
+                            <a href="./help.html" target="_blank" rel="noopener" class="btn btn--sm btn--ghost" title="مركز المساعدة">مساعدة</a>
                             <button type="button" id="btnLogout" class="btn btn--sm btn--ghost dv-logout">خروج</button>
                         `}
                     </div>
@@ -408,7 +474,87 @@ export class DashboardView {
                                 ${homeNavButton('support', 'clipboard', 'أدوات مساندة للدراسة', 'جمع بيانات، تحقق، تصدير، وربط', supportToolsCount)}
                                 ${homeNavButton('additional', 'book', 'دراسات جدوى جاهزة', 'ملفات جاهزة للتحميل', 'ملفات')}
                                 ${homeNavButton('databases', 'list', 'قواعد بيانات', 'أدلة وبيانات القطاعات', 'ملفات')}
+
+                                ${this.currentUser ? `
+                                <button type="button" id="dvTileSubscription" class="dv-bento-tile dv-bento-tile--small">
+                                    <span class="dv-bento-tile__label"><span class="dv-bento-tile__ic">${inlineIcon('bank')}</span> اشتراكك</span>
+                                    <span class="dv-bento-tile__count dv-num">…</span>
+                                    <span class="dv-bento-tile__hint">جاري التحقق...</span>
+                                </button>
+                                ${hasProjects ? `
+                                <button type="button" id="dvTileUsageStats" class="dv-bento-tile dv-bento-tile--small">
+                                    <span class="dv-bento-tile__label"><span class="dv-bento-tile__ic">${inlineIcon('chart')}</span> إحصائياتك</span>
+                                    <span class="dv-bento-tile__count dv-num">${filtered.length}</span>
+                                    <span class="dv-bento-tile__hint">${lastActivityDate ? `آخر نشاط: ${lastActivityDate}` : 'لا نشاط بعد'}</span>
+                                </button>
+                                ` : ''}
+                                <button type="button" id="dvTileTemplateGallery" class="dv-bento-tile dv-bento-tile--small">
+                                    <span class="dv-bento-tile__label"><span class="dv-bento-tile__ic">${inlineIcon('clipboard')}</span> معرض القوالب</span>
+                                    <span class="dv-bento-tile__count dv-num">${inlineIcon('chev')}</span>
+                                    <span class="dv-bento-tile__hint">ابدأ من قالب قطاع جاهز بدل الصفر</span>
+                                </button>
+                                ` : ''}
                             </div>
+
+                            ${recentStudies.length > 1 ? `
+                            <div class="dv-toolrow--compact dv-recent-strip" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                                <span class="text-xs text-muted" style="align-self:center;">آخر ما فتحته:</span>
+                                ${recentStudies.map(p => `
+                                    <button type="button" class="btn btn--sm btn--ghost dv-recent-strip__item" data-recent-id="${p.id}">${escapeHtml(p.name || 'مشروع')}</button>
+                                `).join('')}
+                            </div>
+                            ` : ''}
+
+                            ${recentActivity.length > 0 ? `
+                            <details class="dv-toolkit" style="margin-top:8px;">
+                                <summary class="dv-toolkit__head">
+                                    <h3 class="dv-toolkit__title">نشاطك الأخير</h3>
+                                    <span class="dv-toolkit__note">على هذا الجهاز فقط</span>
+                                </summary>
+                                <div class="dv-toolkit__items">
+                                    ${recentActivity.map(a => `
+                                        <div class="dv-toolrow dv-toolrow--compact">
+                                            <span class="dv-toolrow__ic">${inlineIcon('activity')}</span>
+                                            <span class="dv-toolrow__body">
+                                                <span class="dv-toolrow__name">${ACTIVITY_LABEL[a.action] || a.action}</span>
+                                                <span class="dv-toolrow__desc">${new Date(a.ts).toLocaleString('ar-SA-u-nu-latn')}</span>
+                                            </span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </details>
+                            ` : ''}
+
+                            ${comparableStudies.length > 1 ? `
+                            <details class="dv-toolkit" style="margin-top:8px;">
+                                <summary class="dv-toolkit__head">
+                                    <h3 class="dv-toolkit__title">مقارنة سريعة بين دراساتك</h3>
+                                    <span class="dv-toolkit__note">حسب القيمة الحالية الصافية (NPV)</span>
+                                </summary>
+                                <div class="dv-toolkit__items">
+                                    ${comparableStudies.map(p => `
+                                        <div class="dv-toolrow dv-toolrow--compact">
+                                            <span class="dv-toolrow__ic">${inlineIcon('chart')}</span>
+                                            <span class="dv-toolrow__body">
+                                                <span class="dv-toolrow__name">${escapeHtml(p.name || 'دراسة')}</span>
+                                                <span class="dv-toolrow__desc">NPV: <span class="dv-num">${Math.round(p.npv).toLocaleString('en-US')}</span> ريال${Number.isFinite(p.irr) ? ` — IRR: <span class="dv-num">${(p.irr * 100).toFixed(1)}%</span>` : ''}</span>
+                                            </span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </details>
+                            ` : ''}
+
+                            ${this.currentUser ? `
+                            <details class="dv-toolkit" id="dvShareLinksSection" style="margin-top:8px;">
+                                <summary class="dv-toolkit__head">
+                                    <h3 class="dv-toolkit__title">روابط المشاركة التي أنشأتها</h3>
+                                </summary>
+                                <div class="dv-toolkit__items" id="dvShareLinksList">
+                                    <p class="text-xs text-muted" style="padding:8px;">جاري التحميل...</p>
+                                </div>
+                            </details>
+                            ` : ''}
 
                             <div class="dv-section__head dv-section__head--row">
                                 <h2 class="dv-section__title">دراساتك <span class="dv-count dv-num">(${filtered.length})</span></h2>
@@ -423,6 +569,13 @@ export class DashboardView {
                                 </div>
                                 ` : ''}
                             </div>
+
+                            ${matchingTools.length > 0 ? `
+                            <div class="dv-section" style="margin-bottom:12px;">
+                                <p class="text-xs text-muted" style="margin-bottom:6px;">نتائج من الأدوات والأدلة (${matchingTools.length}):</p>
+                                ${matchingTools.map(t => toolButton(t)).join('')}
+                            </div>
+                            ` : ''}
 
                             <!-- تدقيق محتوى: باقتا «مراجَع بخبير»/«خدمة كاملة» لم تكونا مذكورتين
                                  إطلاقاً في مساحة العمل — الفرصة البيعية الوحيدة كانت مؤجَّلة لحظة
@@ -556,6 +709,92 @@ export class DashboardView {
         // الوحيد لتوجيه أول زيارة نحو «جدوى سريعة» أو «دراسة احترافية» بعد حذف الهيرو.
         if (!hasProjects) this.maybeShowOnboarding();
         this.hydrateProjectCompleteness(filtered);
+        if (this.currentUser) this.hydrateAccountTiles();
+    }
+
+    // تحميل مؤجَّل لبطاقات الحساب (اشتراك، شارة إشعارات، اكتمال ملف شخصي) — بعد أول
+    // رسم فوري (نفس مبدأ hydrateProjectCompleteness تماماً): لا يُنتظَر أي منها قبل
+    // ظهور اللوحة نفسها (كانت هذه الانتظارات المتسلسلة سبب تأخير ظهور زر «حسابي»
+    // نفسه محسوسًا، واكتشف اختبار dashboardView.userProfileButton.test.js هذا فعلياً).
+    async hydrateAccountTiles() {
+        // safe(): يلتقط الرفض غير المتزامن (promise rejection) والاستثناء المتزامن
+        // (مثلاً الدالة نفسها undefined في سياق اختبار لا يُموِّهها) بنفس الآلية —
+        // استدعاء fn() داخل try بدل الاعتماد على .catch() وحده (لا يلتقط استثناء
+        // متزامناً يقع قبل إرجاع أي Promise أصلاً).
+        const safe = async (fn, fallback) => {
+            try { return await fn(); } catch (_) { return fallback; }
+        };
+        const [profileResult, orders, notifCount, shareLinks] = await Promise.all([
+            safe(() => getUserProfile(), { ok: false }),
+            safe(() => listOrders(), []),
+            safe(() => unreadCount(), 0),
+            safe(async () => (await import('../services/ShareService.js')).listAllMyShares(), []),
+        ]);
+
+        const subTile = this.container.querySelector('#dvTileSubscription');
+        if (subTile) {
+            const latestOrder = orders[0] || null;
+            const ORDER_STATUS_LABEL = { pending: 'قيد المعالجة', paid: 'مدفوع', failed: 'فشل', refunded: 'مسترَد' };
+            subTile.querySelector('.dv-bento-tile__count').textContent = latestOrder ? (ORDER_STATUS_LABEL[latestOrder.status] || latestOrder.status) : '—';
+            subTile.querySelector('.dv-bento-tile__hint').textContent = latestOrder ? 'اضغط لعرض سجل الفواتير الكامل' : 'لا يوجد اشتراك نشط بعد';
+        }
+
+        const notifBell = this.container.querySelector('#dvNotifBell');
+        if (notifBell && notifCount > 0) {
+            const badge = document.createElement('span');
+            badge.className = 'badge badge--danger';
+            badge.style.cssText = 'position:absolute;top:-4px;left:-4px;font-size:.65rem;padding:1px 5px;border-radius:999px;';
+            badge.textContent = notifCount > 9 ? '9+' : String(notifCount);
+            notifBell.appendChild(badge);
+        }
+
+        const profile = profileResult.ok ? profileResult.profile : null;
+
+        const checklistPhone = this.container.querySelector('[data-checklist-phone]');
+        if (checklistPhone && profile?.phone) checklistPhone.textContent = '✓ إضافة رقم الجوال';
+
+        const bento = this.container.querySelector('.dv-bento');
+        if (bento && profile && !profile.phone && !this.container.querySelector('#dvTileProfileIncomplete')) {
+            const tile = document.createElement('button');
+            tile.type = 'button';
+            tile.id = 'dvTileProfileIncomplete';
+            tile.className = 'dv-bento-tile dv-bento-tile--small';
+            tile.innerHTML = `
+                <span class="dv-bento-tile__label"><span class="dv-bento-tile__ic">${icon('i-user')}</span> أكمل ملفك</span>
+                <span class="dv-bento-tile__count dv-num">1</span>
+                <span class="dv-bento-tile__hint">أضف رقم جوالك لتفعيل كل ميزات الحساب</span>
+            `;
+            tile.addEventListener('click', () => window.dispatchEvent(new CustomEvent('feasibility:showUserProfile')));
+            bento.appendChild(tile);
+        }
+
+        const shareLinksList = this.container.querySelector('#dvShareLinksList');
+        if (shareLinksList) {
+            const active = (shareLinks || []).filter(s => !s.revoked);
+            if (active.length === 0) {
+                shareLinksList.innerHTML = '<p class="text-xs text-muted" style="padding:8px;">لا توجد روابط مشاركة نشطة.</p>';
+            } else {
+                shareLinksList.innerHTML = active.map(s => `
+                    <div class="dv-toolrow dv-toolrow--compact">
+                        <span class="dv-toolrow__ic">${icon('i-share')}</span>
+                        <span class="dv-toolrow__body">
+                            <span class="dv-toolrow__name">${escapeHtml(s.studyTitle || 'دراسة')}</span>
+                            <span class="dv-toolrow__desc">أُنشئ: ${new Date(s.createdAt).toLocaleDateString('ar-SA-u-nu-latn')}${s.expiresAt ? ` — ينتهي: ${new Date(s.expiresAt).toLocaleDateString('ar-SA-u-nu-latn')}` : ''}</span>
+                        </span>
+                        <button type="button" class="btn btn--sm btn--ghost dv-share-revoke" data-share-id="${s.id}">إلغاء</button>
+                    </div>
+                `).join('');
+                shareLinksList.querySelectorAll('.dv-share-revoke').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const { revokeShare } = await import('../services/ShareService.js');
+                        btn.disabled = true;
+                        const result = await revokeShare(btn.dataset.shareId);
+                        if (result.ok) { toast.success('تم إلغاء رابط المشاركة'); this.hydrateAccountTiles(); }
+                        else { toast.error(result.error || 'فشل إلغاء الرابط'); btn.disabled = false; }
+                    });
+                });
+            }
+        }
     }
 
     // تحميل مؤجَّل لشارة «جودة المسودة» للبطاقات التي وصلت بلا بيانات كاملة (غالباً
@@ -685,8 +924,22 @@ export class DashboardView {
         }
 
         // الحالة الفارغة الحقيقية: لا دراسات إطلاقاً — دعوة قوية لبدء أول دراسة
+        // + checklist ترحيبي لمستخدم مسجّل دخول جديد (بند «جوال» يُرقَّع لاحقاً عبر
+        // hydrateAccountTiles، بنفس مبدأ التأجيل — لا نُعطّل الرسم الفوري لأجله).
+        const checklistHTML = this.currentUser ? `
+            <div class="card" style="max-width:360px;margin:0 auto 16px;padding:14px;text-align:right;">
+                <p class="text-sm font-bold" style="margin-bottom:8px;">قبل ما تبدأ:</p>
+                <div class="dv-toolrow--compact" style="display:flex;flex-direction:column;gap:6px;">
+                    <span class="text-xs">${this.currentUser.email_confirmed_at ? '✓' : '☐'} تأكيد البريد الإلكتروني</span>
+                    <span class="text-xs" data-checklist-phone>☐ إضافة رقم الجوال</span>
+                    <span class="text-xs">☐ ابدأ أول دراسة (بالأسفل)</span>
+                </div>
+            </div>
+        ` : '';
+
         return `
             <div class="empty-state dv-empty dvh-empty">
+                ${checklistHTML}
                 <span class="dv-empty__ic">${icon('i-folder')}</span>
                 <h3 class="dv-empty__title">ابدأ أول دراسة جدوى لمشروعك</h3>
                 <p class="dv-empty__sub">لا توجد دراسات محفوظة بعد. ابدأ دراسة احترافية كاملة.</p>
@@ -865,6 +1118,64 @@ export class DashboardView {
             });
         }
 
+        // جرس الإشعارات (2026-07-16) — قائمة كاملة تُجلب كسولاً عند أول فتح فقط،
+        // والشارة تتحدّث بـpolling كل 60 ثانية طالما الجرس لا يزال بالـDOM (يتوقف
+        // تلقائياً إن استُبدلت اللوحة برسمة لاحقة، بلا حاجة لدورة حياة destroy() رسمية).
+        const notifBell = this.container.querySelector('#dvNotifBell');
+        const notifPanel = this.container.querySelector('#dvNotifPanel');
+        if (notifBell && notifPanel) {
+            const renderNotifList = async () => {
+                const { listNotifications } = await import('../services/NotificationService.js');
+                const items = await listNotifications();
+                const listEl = notifPanel.querySelector('#dvNotifList');
+                if (!listEl) return;
+                if (items.length === 0) {
+                    listEl.innerHTML = '<p class="text-xs text-muted" style="padding:8px;">لا توجد إشعارات بعد.</p>';
+                    return;
+                }
+                listEl.innerHTML = items.map(n => `
+                    <div class="dv-toolrow--compact" style="padding:8px;border-radius:8px;${n.read_at ? '' : 'background:var(--c-p-subtle);'}">
+                        <div class="text-sm font-bold">${escapeHtml(n.title)}</div>
+                        ${n.body ? `<div class="text-xs text-muted">${escapeHtml(n.body)}</div>` : ''}
+                        <div class="text-xs text-muted" style="margin-top:2px;">${new Date(n.created_at).toLocaleDateString('ar-SA-u-nu-latn')}</div>
+                    </div>
+                `).join('');
+            };
+            notifBell.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const isOpen = notifPanel.style.display !== 'none';
+                notifPanel.style.display = isOpen ? 'none' : 'block';
+                if (!isOpen) await renderNotifList();
+            });
+            document.addEventListener('click', (e) => {
+                if (!notifPanel.contains(e.target) && e.target !== notifBell) notifPanel.style.display = 'none';
+            });
+            notifPanel.querySelector('#dvNotifMarkAll')?.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const { markAllRead } = await import('../services/NotificationService.js');
+                await markAllRead();
+                notifBell.querySelector('.badge')?.remove();
+                await renderNotifList();
+            });
+            this._notifPollInterval = setInterval(async () => {
+                if (!this.container.contains(notifBell)) { clearInterval(this._notifPollInterval); return; }
+                const { unreadCount: getUnread } = await import('../services/NotificationService.js');
+                const count = await getUnread();
+                let badge = notifBell.querySelector('.badge');
+                if (count > 0) {
+                    const label = count > 9 ? '9+' : String(count);
+                    if (badge) badge.textContent = label;
+                    else {
+                        badge = document.createElement('span');
+                        badge.className = 'badge badge--danger';
+                        badge.style.cssText = 'position:absolute;top:-4px;left:-4px;font-size:.65rem;padding:1px 5px;border-radius:999px;';
+                        badge.textContent = label;
+                        notifBell.appendChild(badge);
+                    }
+                } else if (badge) badge.remove();
+            }, 60000);
+        }
+
         // تبديل المظهر (تدقيق محتوى: كان زرا #btnThemeToggle/#headerThemeToggle بلا أي
         // وسيلة وصول في وضع اللوحة لأن حاويتيهما مخفيتان بالكامل بـ dashboard-mode).
         // زر مكافئ هنا يبدّل نفس مفتاح localStorage['feas_theme'] المستخدم في theme-init.js.
@@ -887,6 +1198,12 @@ export class DashboardView {
         // (UserProfileView.js) لم تكن قابلة للوصول إطلاقاً من أي مسار حي.
         this.container.querySelector('#btnUserProfile')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showUserProfile'));
+        });
+
+        // سجل الفواتير (2026-07-16): كان الوصول الوحيد لها عبر زر داخل UserProfileView
+        // نفسها — خطوة إضافية غير ضرورية لمستخدم يريد فقط مراجعة فواتيره.
+        this.container.querySelector('#btnDashboardBilling')?.addEventListener('click', () => {
+            window.location.hash = '#/billing';
         });
 
         // Logout
@@ -965,6 +1282,21 @@ export class DashboardView {
         this.container.querySelector('#btnContinueLastStep')?.addEventListener('click', () => {
             const index = Number(localStorage.getItem('feas_last_step_index'));
             if (Number.isInteger(index) && STEPS[index]) this.options.onShowStudyStep?.(index);
+        });
+
+        // بطاقات الحساب السريعة الجديدة (2026-07-16)
+        this.container.querySelector('#dvTileSubscription')?.addEventListener('click', () => {
+            window.location.hash = '#/billing';
+        });
+        this.container.querySelector('#dvTileUsageStats')?.addEventListener('click', () => {
+            this.container.querySelector('#projectsGrid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        this.container.querySelector('#dvTileTemplateGallery')?.addEventListener('click', async () => {
+            const { TemplateGallery } = await import('./TemplateGallery.js');
+            new TemplateGallery('templateGalleryOverlay', this.store).open();
+        });
+        this.container.querySelectorAll('.dv-recent-strip__item').forEach(btn => {
+            btn.addEventListener('click', () => this.loadProject(btn.dataset.recentId));
         });
 
         // Funding Simulator Toggle

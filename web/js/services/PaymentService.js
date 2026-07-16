@@ -81,6 +81,31 @@ export async function getOrderStatus(orderId) {
 }
 
 /**
+ * كل طلبات الدفع الخاصة بالمستخدم الحالي (لصفحة سجل الفواتير) — بالاعتماد على
+ * RLS وحدها (سياسة orders_select_own) تماماً كـgetOrderStatus/hasActivePayment
+ * أعلاه، لا فلترة user_id يدوية مكرِّرة لما تضمنه السياسة أصلاً.
+ * @returns {Promise<Array<{id:string, tier:string, amount_sar:number, currency:string, status:string, study_id:string|null, created_at:string, paid_at:string|null}>>}
+ */
+export async function listOrders() {
+    const { supabase, ok } = await getSupabaseClient();
+    if (!ok || !supabase) return [];
+
+    const { user } = await getAuthUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+        .from('orders')
+        .select('id, tier, amount_sar, currency, status, study_id, created_at, paid_at')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.warn('[PaymentService] فشل جلب سجل الطلبات:', error.message);
+        return [];
+    }
+    return Array.isArray(data) ? data : [];
+}
+
+/**
  * حالة مراجعة الخبير لهذه الدراسة (إن وُجد طلب tier='reviewed' لها) — تُستخدم
  * لعرض ReviewStatusBadge للعميل بدل تركه ينتظر بلا أي مؤشّر داخل الموقع.
  * أحدث طلب "مراجَع بخبير" لهذه الدراسة فقط (قد تتكرر الدراسة بين عدة طلبات

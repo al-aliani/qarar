@@ -1,8 +1,22 @@
 import { SECTIONS } from '../core/schema.js';
-import { calculateStudy, rateOrDefault } from '../core/engine.js';
+import { calculateStudy, rateOrDefault, findOptimalFinancingMix } from '../core/engine.js';
 import { calculateProjectScore } from '../core/scoring.js';
+import { checkDriversAgainstBenchmarks } from '../core/sectorBenchmarks.js';
+import { MonteCarloEngine } from '../core/MonteCarloEngine.js';
 import { DynamicTable } from './DynamicTable.js';
+import { ExportMenu } from './ExportMenu.js';
 import { escapeHtml } from '../utils/escape.js';
+
+/** نطاقات فائدة معتادة (مرجعية — بحث لمرة واحدة، ليست تغذية حية؛ لا API عام لمقارنة
+ * أسعار البنوك السعودية مجاناً) — تُعرض كسياق عند تعديل معدل الفائدة يدوياً. */
+const FINANCING_RATE_REFERENCE = [
+    { label: 'بنك تجاري (تمويل منشآت صغيرة)', range: '6% – 12%' },
+    { label: 'صندوق التنمية الصناعية السعودي', range: '0% – 4%' },
+    { label: 'تمويل جماعي/دين خاص', range: '10% – 18%' }
+];
+/** علاوة مخاطر السوق المرجعية لتقدير تكلفة حقوق الملكية — متوسط تاريخي طويل الأمد
+ * تقريبي (بحث لمرة واحدة)، وليس عائد تاسي حياً (لا تغذية سوقية حية متاحة مجاناً). */
+const MARKET_RISK_PREMIUM_REFERENCE = 0.08; // 8% تقريباً فوق العائد الخالي من المخاطر
 
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
 
@@ -88,10 +102,45 @@ export class CentralAssumptionsView {
                         <div id="caAssumptionsRows" class="ca-rows">${this._renderAssumptionsRows(state)}</div>
                     </section>
                 </div>
+
+                <div class="ca-groups ca-groups--secondary">
+                    <section class="card ca-group">
+                        <h3 class="ca-group__title">${icon('i-bank')} مراجع ومعايير</h3>
+                        <div id="caReferenceRows">${this._renderReferenceRows()}</div>
+                        <div id="caBenchmarkAlerts" class="mt-2"></div>
+                    </section>
+
+                    <section class="card ca-group">
+                        <h3 class="ca-group__title">${icon('i-chart')} رأس المال العامل والزكاة</h3>
+                        <div id="caWorkingCapital">${this._renderWorkingCapitalRow(state)}</div>
+                        <div id="caZakatTax" class="mt-2">${this._renderZakatTaxRows(state)}</div>
+                    </section>
+
+                    <section class="card ca-group">
+                        <h3 class="ca-group__title">${icon('i-sparkle')} تحليل سريع</h3>
+                        <div id="caQuickTornado"></div>
+                        <div class="ca-row mt-2">
+                            <button type="button" id="caRunOptimalMix" class="btn btn--ghost btn--sm">${icon('i-bank')} أفضل مزيج دين/ملكية</button>
+                            <button type="button" id="caRunMiniMonteCarlo" class="btn btn--ghost btn--sm">${icon('i-sparkle')} معاينة مونت كارلو سريعة</button>
+                        </div>
+                        <div id="caOptimalMixResult" class="mt-2"></div>
+                        <div id="caMiniMonteCarloResult" class="mt-2"></div>
+                    </section>
+
+                    <section class="card ca-group">
+                        <h3 class="ca-group__title">${icon('i-doc')} تصدير وسجل</h3>
+                        <button type="button" id="caOpenBankExport" class="btn btn--ghost btn--sm">${icon('i-doc')} افتح قائمة التصدير (يشمل الملف البنكي)</button>
+                        <details class="mt-2">
+                            <summary>سجل الافتراضات والقرار</summary>
+                            <div id="caHistoryPanel"></div>
+                        </details>
+                    </section>
+                </div>
             </div>
         `;
 
         this.bindEvents();
+        this._renderHistoryPanel();
         // اشتراك حي: أي كتابة (من هذه اللوحة أو من أي كاتب آخر لنفس المخزن) تعيد جدولة
         // حساب ملخّص الأثر — خنق 400ms يمنع تشغيل calculateStudy (17 تشغيلة داخلية) على
         // كل تغيير متتابع سريع (تدقيق خطة 2026-07-12، البند 0.2).
@@ -107,11 +156,57 @@ export class CentralAssumptionsView {
             btn.addEventListener('click', () => this.onNavigateToStep?.(btn.dataset.caGoto));
         });
 
+        this.container.querySelector('#caApplyWorkingCapital')?.addEventListener('click', (e) => {
+            const months = Number(e.currentTarget.dataset.months) || 0;
+            this.store.updatePath(SECTIONS.ASSUMPTIONS, 'workingCapitalMonths', Math.round(months * 10) / 10);
+        });
+
+        this.container.querySelector('#caRunOptimalMix')?.addEventListener('click', () => this._runOptimalMix());
+        this.container.querySelector('#caRunMiniMonteCarlo')?.addEventListener('click', () => this._runMiniMonteCarlo());
+        this.container.querySelector('#caOpenBankExport')?.addEventListener('click', () => {
+            new ExportMenu('exportMenuOverlay', this.store).open();
+        });
+
+        this.container.querySelector('#caHistoryPanel')?.addEventListener('click', (e) => {
+            const btn = e.target.closest?.('.ca-restore-assumptions');
+            if (!btn) return;
+            const idx = parseInt(btn.dataset.historyIndex, 10);
+            const history = this.store.getVersionHistory?.() || [];
+            const snap = history[idx];
+            if (!snap?.state?.assumptions) return;
+            this.store.update(SECTIONS.ASSUMPTIONS, { ...snap.state.assumptions });
+            this.render();
+        });
+
         // تفويض حدث change واحد على الحاوية (لا مستمع لكل حقل) — يلتقط أيضاً الحقول
         // المُضافة لاحقاً بلا إعادة ربط. change يطلق عند فقد التركيز/تأكيد القيمة فقط،
         // لا لكل ضغطة مفتاح (فخّ 0.1 الموثَّق).
         this.container.removeEventListener('change', this._onContainerChange);
         this.container.addEventListener('change', this._onContainerChange);
+    }
+
+    _runOptimalMix() {
+        const slot = this.container.querySelector('#caOptimalMixResult');
+        if (!slot) return;
+        slot.textContent = 'جارٍ الحساب…';
+        const state = this.store.getState();
+        let mix = null;
+        try { mix = findOptimalFinancingMix(state); } catch (_) { mix = null; }
+        if (!mix) { slot.textContent = 'تعذّر الحساب — تحقق من وجود استثمار وإيراد على الأقل.'; return; }
+        const fmt = (n) => new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n || 0);
+        slot.innerHTML = `أفضل مزيج: ${Math.round(mix.best.debtFraction * 100)}% دين (${fmt(mix.best.loanAmount)}) / ${Math.round((1 - mix.best.debtFraction) * 100)}% ملكية (${fmt(mix.best.equityAmount)}) — NPV ${fmt(mix.best.npv)}${mix.best.meetsTarget ? '' : ' (تحذير: لا يحقق هدف DSCR)'}`;
+    }
+
+    _runMiniMonteCarlo() {
+        const slot = this.container.querySelector('#caMiniMonteCarloResult');
+        if (!slot) return;
+        slot.textContent = 'جارٍ التشغيل…';
+        const state = this.store.getState();
+        let result = null;
+        try { result = MonteCarloEngine.runSimulation(state, 80, 0.20); } catch (_) { result = null; }
+        if (!result?.ok) { slot.textContent = 'تعذّر تشغيل المعاينة السريعة.'; return; }
+        const fmt = (n) => new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n || 0);
+        slot.innerHTML = `معاينة سريعة (80 تكراراً — للاستكشاف فقط، استخدم محاكاة مونت كارلو الكاملة للتقرير النهائي): P10 ${fmt(result.stats.p10)} · P50 ${fmt(result.stats.p50)} · P90 ${fmt(result.stats.p90)} · احتمال نجاح ${Math.round(result.stats.successProbability * 100)}%`;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -214,6 +309,109 @@ export class CentralAssumptionsView {
         `;
     }
 
+    _renderReferenceRows() {
+        const rows = FINANCING_RATE_REFERENCE.map(r => `
+            <div class="ca-row"><span>${escapeHtml(r.label)}</span><strong>${escapeHtml(r.range)}</strong></div>
+        `).join('');
+        return `
+            <p class="text-xs text-muted">نطاقات فائدة معتادة (مرجع بحثي — ليست تغذية حية):</p>
+            ${rows}
+            <p class="text-xs text-muted mt-2">علاوة مخاطر السوق المرجعية لتكلفة حقوق الملكية: <strong>${Math.round(MARKET_RISK_PREMIUM_REFERENCE * 100)}%</strong> تقريباً (متوسط تاريخي، لا عائد تاسي حيّ).</p>
+        `;
+    }
+
+    _renderWorkingCapitalRow(state) {
+        const policy = state.assumptions?.workingCapitalPolicy || {};
+        const dso = Number(policy.dsoDays) || 0;
+        const dpo = Number(policy.dpoDays) || 0;
+        const dio = Number(policy.dioDays) || 0;
+        const minMonths = Math.max(0, ((dso + dio - dpo) / 30));
+        return `
+            <p class="text-xs text-muted">من دورة التحويل النقدي الحالية (تحصيل ${dso} يوم + مخزون ${dio} يوم − سداد ${dpo} يوم):</p>
+            <div class="ca-row">
+                <span>الحد الأدنى المقترح لرأس المال العامل</span>
+                <strong>${minMonths.toFixed(1)} شهر</strong>
+                <button type="button" id="caApplyWorkingCapital" data-months="${minMonths.toFixed(1)}" class="btn btn--ghost btn--sm">طبّق كشهور رأس المال العامل</button>
+            </div>
+        `;
+    }
+
+    _renderZakatTaxRows(state) {
+        const a = state.assumptions || {};
+        const foreignPct = (Number(a.foreignOwnershipRate ?? 0)) * 100;
+        const taxPct = (Number(a.taxRate ?? 0.20)) * 100;
+        return `
+            <div class="ca-row">
+                <label class="ca-row__field">
+                    <span>نسبة الملكية الأجنبية %</span>
+                    <input type="text" inputmode="decimal" class="input ca-input" id="caForeignOwnershipRate" value="${escapeHtml(String(foreignPct))}">
+                </label>
+                <label class="ca-row__field">
+                    <span>معدل الضريبة %</span>
+                    <input type="text" inputmode="decimal" class="input ca-input" id="caTaxRate" value="${escapeHtml(String(taxPct))}">
+                </label>
+            </div>
+            <p id="caZakatTaxResult" class="text-xs text-muted mt-1">أضف مصدر إيراد لعرض الزكاة/الضريبة المحسوبة فعلياً للسنة الأولى.</p>
+        `;
+    }
+
+    _renderBenchmarkAlerts(state, results) {
+        const slot = this.container?.querySelector('#caBenchmarkAlerts');
+        if (!slot) return;
+        let warnings = [];
+        try { warnings = checkDriversAgainstBenchmarks(state, results) || []; } catch (_) { warnings = []; }
+        if (!warnings.length) { slot.innerHTML = ''; return; }
+        slot.innerHTML = `<ul class="ca-alerts">${warnings.map(w => `<li class="text-xs text-warning">${escapeHtml(w.message || '')}</li>`).join('')}</ul>`;
+    }
+
+    _renderQuickTornado(results) {
+        const slot = this.container?.querySelector('#caQuickTornado');
+        if (!slot) return;
+        const tornado = Array.isArray(results?.tornado) ? results.tornado.slice(0, 3) : [];
+        if (!tornado.length) { slot.innerHTML = `<p class="text-xs text-muted">أضف مصدر إيراد لعرض أكثر 3 متغيرات تأثيراً على NPV.</p>`; return; }
+        const maxSwing = Math.max(...tornado.map(t => t.swing || 0), 1);
+        slot.innerHTML = `
+            <p class="text-xs text-muted">أكثر 3 متغيرات تأثيراً على NPV (±10%):</p>
+            ${tornado.map(t => `
+                <div class="ca-tornado-row">
+                    <span class="text-xs">${escapeHtml(t.variable)}</span>
+                    <div class="ca-tornado-bar"><span style="width:${Math.round((t.swing / maxSwing) * 100)}%"></span></div>
+                </div>
+            `).join('')}
+        `;
+    }
+
+    _renderZakatTaxResult(results) {
+        const el = this.container?.querySelector('#caZakatTaxResult');
+        if (!el) return;
+        const y1 = results?.incomeStatement?.[0];
+        if (!y1) { el.textContent = 'أضف مصدر إيراد لعرض الزكاة/الضريبة المحسوبة فعلياً للسنة الأولى.'; return; }
+        const fmt = (n) => new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n || 0);
+        el.textContent = `السنة الأولى: زكاة ${fmt(y1.zakat)} + ضريبة ${fmt(y1.tax)} = صافي ربح ${fmt(y1.netIncome)} (من نفس محرك الحساب الفعلي، لا تقدير موازٍ).`;
+    }
+
+    _renderHistoryPanel() {
+        const slot = this.container?.querySelector('#caHistoryPanel');
+        if (!slot) return;
+        const history = typeof this.store.getVersionHistory === 'function' ? this.store.getVersionHistory() : [];
+        if (!history.length) { slot.innerHTML = `<p class="text-xs text-muted">لا يوجد سجل بعد.</p>`; return; }
+        slot.innerHTML = history.slice().reverse().map((snap, revIdx) => {
+            const idx = history.length - 1 - revIdx;
+            const a = snap.state?.assumptions || {};
+            const decision = (() => {
+                try { return calculateStudy(snap.state)?.decision || '—'; } catch (_) { return '—'; }
+            })();
+            const when = new Date(snap.timestamp).toLocaleString('ar-SA');
+            return `
+                <div class="ca-row" data-history-index="${idx}">
+                    <span class="text-xs text-muted">${escapeHtml(when)}</span>
+                    <span class="text-xs">خصم ${Math.round((a.discountRate ?? 0) * 100)}% · ضريبة ${Math.round((a.taxRate ?? 0) * 100)}% · القرار: ${escapeHtml(decision)}</span>
+                    <button type="button" class="btn btn--ghost btn--sm ca-restore-assumptions" data-history-index="${idx}">استرجع افتراضات هذه اللحظة</button>
+                </div>
+            `;
+        }).join('');
+    }
+
     // ═══════════════════════════════════════════════════════════
     // الالتزام للمخزن — كل دالة تقرأ getState() طازجة وقت التنفيذ (لا تعتمد لقطة
     // رسم قديمة)، ثم تكتب عبر store.updatePath/update على نفس المسار الذي تقرؤه
@@ -241,6 +439,10 @@ export class CentralAssumptionsView {
             this._commitPercentAssumption('inflationRate', el.value, el);
         } else if (el.id === 'caRampUpMonths') {
             this._commitRampUpMonths(el.value, el);
+        } else if (el.id === 'caForeignOwnershipRate') {
+            this._commitPercentAssumption('foreignOwnershipRate', el.value, el);
+        } else if (el.id === 'caTaxRate') {
+            this._commitPercentAssumption('taxRate', el.value, el);
         }
     }
 
@@ -338,6 +540,9 @@ export class CentralAssumptionsView {
         const hasRevenue = Array.isArray(state.revenue?.streams) && state.revenue.streams.length > 0;
         if (!hasRevenue) {
             this._renderImpactSummary(null, null);
+            this._renderBenchmarkAlerts(state, null);
+            this._renderQuickTornado(null);
+            this._renderZakatTaxResult(null);
             return;
         }
         let results = null;
@@ -349,6 +554,9 @@ export class CentralAssumptionsView {
             console.error('[CentralAssumptionsView] تعذّر حساب الأثر:', e);
         }
         this._renderImpactSummary(results, evaluation);
+        this._renderBenchmarkAlerts(state, results);
+        this._renderQuickTornado(results);
+        this._renderZakatTaxResult(results);
     }
 
     _renderImpactSummary(results, evaluation) {

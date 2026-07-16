@@ -92,7 +92,7 @@ export class PaywallModal {
                 ? `${payButtons}<div class="mt-2">${waButton}</div>`
                 : `${waButton}<div class="mt-2">${payButtons}</div>`;
             return `
-                <div class="card paywall-package-card" style="padding:16px;border-radius:12px;">
+                <div class="card paywall-package-card" data-package-card="${pkg.id}" style="padding:16px;border-radius:12px;">
                     <h4 style="margin:0 0 4px;">${escapeHtml(pkg.name)}</h4>
                     <div class="text-gold" style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">${formatPrice(pkg.price)} <span style="font-size:0.9rem;font-weight:400;">${escapeHtml(pkg.unit)}</span></div>
                     <ul style="margin:0 0 12px;padding-inline-start:18px;font-size:0.85rem;color:var(--c-text-muted,#94a3b8);">
@@ -129,6 +129,30 @@ export class PaywallModal {
         this.overlay.querySelectorAll('.btn-pay-now').forEach(btn => {
             btn.addEventListener('click', () => this._handlePayNow(btn));
         });
+
+        this._applyPreferredTierHighlight();
+    }
+
+    /**
+     * تمييز بصري بحت للباقة المفضّلة (اختيار غير مُلزم يحفظه PackagePreferenceModal
+     * عند التسجيل، إن وُجد) — لا يغيّر مسار الشراء الفعلي إطلاقاً، ولا يمنع/يؤخّر
+     * فتح النافذة (يُشغَّل بعد render() لا قبله، ويفشل بصمت عند أي خطأ).
+     */
+    async _applyPreferredTierHighlight() {
+        try {
+            const { getUserProfile } = await import('../../supabaseClient.js');
+            const { ok, profile } = await getUserProfile();
+            const tier = profile?.preferred_tier;
+            if (!ok || !['self', 'reviewed', 'full'].includes(tier)) return;
+
+            const card = this.overlay?.querySelector(`[data-package-card="${tier}"]`);
+            if (!card) return;
+            card.style.borderColor = 'var(--c-gold-500, #8a5f1c)';
+            const badge = document.createElement('div');
+            badge.className = 'text-xs text-gold mb-1';
+            badge.textContent = 'اختيارك المفضّل';
+            card.insertBefore(badge, card.firstChild);
+        } catch (_) {}
     }
 
     async _handlePayNow(btn) {

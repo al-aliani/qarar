@@ -55,3 +55,20 @@ export function getEventsStats(eventName = null, days = 30, groupByPropKey = nul
         group_by_prop_key: groupByPropKey,
     });
 }
+
+/**
+ * قائمة العملاء اللي عندهم جوال مُدخَل لكن بانتظار تأكيد يدوي (تواصل واتساب
+ * — انظر migration 20260717020000_whatsapp_manual_confirm.sql). دالة ضيّقة
+ * النطاق عمداً — تُرجع أعمدة دنيا فقط (لا صف profiles كاملاً).
+ */
+export function getUnverifiedPhones() {
+    return callAdminRpc('admin_list_unverified_phones');
+}
+
+/**
+ * تأكيد جوال مستخدم واحد محدَّد يدوياً (بعد استلام رسالة واتساب فعلية منه).
+ * @param {string} userId
+ */
+export function confirmPhoneVerified(userId) {
+    return callAdminRpc('admin_confirm_phone_verified', { target_user_id: userId });
+}

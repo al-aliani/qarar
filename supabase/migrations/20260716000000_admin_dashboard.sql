@@ -126,7 +126,7 @@ begin
     'daily_created', (
       select coalesce(jsonb_agg(jsonb_build_object('day', day, 'count', cnt) order by day), '[]'::jsonb)
       from (
-        select date_trunc('day', created_at)::date day, count(*) cnt
+        select date_trunc('day', created_at)::date AS day, count(*) cnt
         from public.studies
         where created_at > now() - interval '90 days'
         group by 1
@@ -163,7 +163,7 @@ begin
     'daily_signups', (
       select coalesce(jsonb_agg(jsonb_build_object('day', day, 'count', cnt) order by day), '[]'::jsonb)
       from (
-        select date_trunc('day', created_at)::date day, count(*) cnt
+        select date_trunc('day', created_at)::date AS day, count(*) cnt
         from public.profiles
         where created_at > now() - interval '90 days'
         group by 1
@@ -215,7 +215,7 @@ begin
     'daily_revenue', (
       select coalesce(jsonb_agg(jsonb_build_object('day', day, 'revenue_sar', revenue) order by day), '[]'::jsonb)
       from (
-        select date_trunc('day', paid_at)::date day, sum(amount_sar) revenue
+        select date_trunc('day', paid_at)::date AS day, sum(amount_sar) revenue
         from public.orders
         where status = 'paid' and paid_at > now() - interval '90 days'
         group by 1
@@ -323,7 +323,7 @@ begin
     'daily', (
       select coalesce(jsonb_agg(jsonb_build_object('day', day, 'count', cnt) order by day), '[]'::jsonb)
       from (
-        select date_trunc('day', created_at)::date day, count(*) cnt
+        select date_trunc('day', created_at)::date AS day, count(*) cnt
         from public.events
         where created_at > now() - (days || ' days')::interval
           and (event_name_filter is null or event_name = event_name_filter)

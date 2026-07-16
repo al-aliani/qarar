@@ -26,7 +26,7 @@ export const STEPS = [
   // الأصلية (projectInfo.* و revenue.streams)؛ خطوة «مصادر الإيرادات» تُخفى من
   // المسار المبسّط (flow=advanced) لأنها تُدخَل هنا.
   { id: 'projectDetails', dataSection: SECTIONS.PROJECT_INFO, label: "المنتجات والخدمات", tables: ['products', 'introServices', 'customerValues'], isOfferingView: true, gridSize: 'full', stepType: 'جدول', icon: 'i-box' },
-  { id: SECTIONS.KEY_PEOPLE, label: "الأشخاص الرئيسون", tables: ['keyPeople', 'partnershipContracts'], gridSize: 'half', stepType: 'جدول', icon: 'i-users' },
+  { id: SECTIONS.KEY_PEOPLE, label: "الأشخاص الرئيسون", tables: ['keyPeople', 'partnershipContracts', 'suppliers'], gridSize: 'half', stepType: 'جدول', icon: 'i-users' },
   { id: 'projectIntro', label: "فرضية المشروع", isIntroduction: true, isAdvancedStep: true, gridSize: 'half', stepType: 'نص', icon: 'i-lightbulb' },
   { id: SECTIONS.SMART_GOALS, label: "الأهداف الذكية", isSmartGoals: true, isAdvancedStep: true, gridSize: 'full', stepType: 'تطبيق فرعي', icon: 'i-target' },
 
@@ -45,7 +45,10 @@ export const STEPS = [
   { id: SECTIONS.SERVICES, label: "تحليل الخدمات", isServiceAnalysis: true, isAdvancedStep: true, gridSize: 'full', stepType: 'تحليل', icon: 'i-settings' },
 
   // الفنية والقانونية (12-19)
-  { id: SECTIONS.TECHNICAL, label: "الأصول والتجهيزات", tables: ['establishmentCosts', 'capacityModel', 'capacityUtilization', 'buildings', 'equipment', 'furniture', 'locationAssessment'], gridSize: 'full', stepType: 'جدول', icon: 'i-factory' },
+  // شاشة «الأصول والتجهيزات» المخصّصة (TechnicalAssetsView, 2026-07): دمج بصري فوق نفس
+  // الجداول السبعة (عروض أسعار حقيقية للمعدات، حاسبة إيجار/شراء، فجوة معدات شائعة،
+  // تقدير مرافق، جدول صيانة) — تماماً كـisOfferingView/isOperatingCosts، بلا تغيير في تخزين البيانات.
+  { id: SECTIONS.TECHNICAL, label: "الأصول والتجهيزات", tables: ['establishmentCosts', 'capacityModel', 'capacityUtilization', 'buildings', 'equipment', 'furniture', 'locationAssessment'], isTechnicalAssetsView: true, gridSize: 'full', stepType: 'جدول', icon: 'i-factory' },
   { id: 'operational_sim', label: "محاكاة التشغيل", isOperationalSim: true, isAdvancedStep: true, gridSize: 'full', stepType: 'محاكاة', icon: 'i-play' },
   { id: SECTIONS.HR, label: "الفريق والرواتب", tables: ['positions', 'advisoryBoard'], gridSize: 'full', stepType: 'جدول', icon: 'i-users' },
   // شاشة «المصاريف التشغيلية» المدموجة (2026-07-11): تجمع الأقسام الثلاثة بصرياً عبر

@@ -10,6 +10,7 @@ import { monitoring } from '../utils/monitoring.js';
 
 const STORAGE_KEY = 'mac_blash_study_v2';
 const STORAGE_KEY_BACKUP = 'mac_blash_study_v2_backup';
+const VERSION_HISTORY_KEY = 'qarar_version_history';
 
 /**
  * Storage strategy (توحيد الحفظ):
@@ -57,6 +58,9 @@ class StudyStore {
 
     async load() {
         try {
+            // يُحمَّل أولاً وبمعزل عن حالة الدراسة نفسها كي يكون جاهزاً قبل أي saveLocal لاحق في هذه الدالة
+            await this._loadVersionHistory();
+
             // 1. Load local draft first (fast) - using StorageManager
             const raw = await storageManager.getItem(STORAGE_KEY);
             if (raw) {
@@ -327,6 +331,7 @@ class StudyStore {
             if (this._versionHistory.length > this._versionHistoryMax) {
                 this._versionHistory = this._versionHistory.slice(-this._versionHistoryMax);
             }
+            await this._persistVersionHistory();
 
             // ملاحظة (2026-07-04): أُزيل تشفير الحقول قبل الحفظ نهائياً.
             // كان المفتاح يعيش في sessionStorage فيفنى بإغلاق التبويب، فتُرفع نسخة
@@ -430,6 +435,35 @@ class StudyStore {
         await this.saveLocal();
         this.notify();
         return true;
+    }
+
+    /**
+     * يُحمَّل مرة واحدة عند التهيئة (من load()) كي يبقى سجل الإصدارات حياً بعد إعادة تحميل الصفحة.
+     */
+    async _loadVersionHistory() {
+        try {
+            const raw = await storageManager.getItem(VERSION_HISTORY_KEY);
+            if (!raw) return;
+            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            if (Array.isArray(parsed)) {
+                this._versionHistory = parsed.slice(-this._versionHistoryMax);
+            }
+        } catch (e) {
+            console.warn('[Store] Failed to load persisted version history:', e);
+            monitoring.captureException(e, { source: 'store._loadVersionHistory' });
+        }
+    }
+
+    /**
+     * يُستدعى بعد كل تحديث لـ _versionHistory في saveLocal() كي يبقى متزامناً مع localStorage.
+     */
+    async _persistVersionHistory() {
+        try {
+            await storageManager.setItem(VERSION_HISTORY_KEY, JSON.stringify(this._versionHistory));
+        } catch (e) {
+            console.warn('[Store] Failed to persist version history:', e);
+            monitoring.captureException(e, { source: 'store._persistVersionHistory' });
+        }
     }
 
     get() {

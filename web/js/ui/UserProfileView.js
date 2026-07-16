@@ -3,7 +3,7 @@
  * تعرض في المنطقة الرئيسية عند طلب "حسابي"
  */
 
-import { getSupabaseClient, getAuthUser, updateUserDisplayName, signOut } from '../../supabaseClient.js';
+import { getSupabaseClient, getAuthUser, updateUserDisplayName, getUserProfile, updateUserProfile, signOut } from '../../supabaseClient.js';
 import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
 import { toast } from '../utils/toast.js';
 
@@ -35,6 +35,15 @@ export class UserProfileView {
             : '—';
         const displayName = getDisplayName(user);
         const initial = (displayName !== '—' ? displayName[0] : (user.email || user.phone || '?')[0]).toUpperCase();
+        const { ok: profileOk, profile } = await getUserProfile();
+        const currentPhone = profileOk ? (profile?.phone || '') : '';
+
+        // حذف الحساب: نُحيله لطلب عبر الدعم بدل حذف تلقائي فوري — بعض بياناتك
+        // (الفواتير) يجب الاحتفاظ بها نظاماً حتى بعد طلب الحذف (انظر privacy.html
+        // §6 "الاحتفاظ والأمان")، فالحذف الفوري الكامل قد يخالف هذا الالتزام نفسه.
+        const deleteAccountMailto = 'mailto:bin.sahib.est@gmail.com'
+            + '?subject=' + encodeURIComponent('طلب حذف حسابي — منصة قرار')
+            + '&body=' + encodeURIComponent('أرغب في حذف حسابي نهائياً من منصة قرار.\nالبريد المرتبط بالحساب: ' + (user.email || user.phone || ''));
 
         this.container.innerHTML = `
             <div class="user-profile-page" style="max-width: 560px; margin: 0 auto; padding: var(--s-4) 0;">
@@ -62,7 +71,23 @@ export class UserProfileView {
                         <button type="button" id="btnSaveDisplayName" class="btn btn--primary mt-2 text-sm">حفظ الاسم</button>
                     </div>
 
+                    <div class="form-group mb-4">
+                        <label class="block text-sm font-medium mb-1">رقم الجوال (واتساب)</label>
+                        <input type="tel" id="inpPhone" class="form-input w-full" placeholder="05xxxxxxxx" dir="ltr" inputmode="numeric" value="${currentPhone.replace(/"/g, '&quot;')}">
+                        <div id="phoneError" class="text-danger text-sm mt-1" style="display:none;"></div>
+                        <button type="button" id="btnSavePhone" class="btn btn--primary mt-2 text-sm">حفظ الجوال</button>
+                    </div>
+
                     <div class="space-y-3">
+                        <button type="button" id="btnUserProfileChangePassword" class="btn btn--secondary w-full">
+                            تغيير كلمة المرور
+                        </button>
+                        <button type="button" id="btnUserProfileBilling" class="btn btn--secondary w-full">
+                            سجل الفواتير
+                        </button>
+                        <button type="button" id="btnUserProfileDownloads" class="btn btn--secondary w-full">
+                            مركز التنزيلات
+                        </button>
                         <button type="button" id="btnUserProfileIntegrations" class="btn btn--secondary w-full" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                             🔗 التكاملات (Google Sheets، reCAPTCHA، إلخ)
                         </button>
@@ -73,13 +98,37 @@ export class UserProfileView {
                             🚪 تسجيل الخروج
                         </button>
                     </div>
+
+                    <p class="text-xs text-center mt-3">
+                        <a href="${deleteAccountMailto}" class="text-danger">حذف حسابي نهائياً</a>
+                    </p>
                 </div>
 
                 <p class="text-xs text-muted">دراساتك تُحفظ سحابياً وتظهر في القائمة الجانبية عند فتح "تحميل دراسة".</p>
+
+                <p class="text-xs text-muted mt-2">
+                    تحتاج مساعدة؟
+                    <a href="./help.html" target="_blank" rel="noopener">مركز المساعدة</a>
+                    ·
+                    <a href="./contact.html" target="_blank" rel="noopener">تواصل معنا</a>
+                </p>
             </div>
         `;
 
         document.getElementById('btnUserProfileBack')?.addEventListener('click', () => this.onBack());
+
+        document.getElementById('btnUserProfileBilling')?.addEventListener('click', () => {
+            window.location.hash = '#/billing';
+        });
+
+        document.getElementById('btnUserProfileDownloads')?.addEventListener('click', () => {
+            window.location.hash = '#/downloads';
+        });
+
+        document.getElementById('btnUserProfileChangePassword')?.addEventListener('click', async () => {
+            const { NewPasswordModal } = await import('./NewPasswordModal.js');
+            new NewPasswordModal({ description: 'أدخل كلمة مرور جديدة لحسابك.' }).open();
+        });
 
         document.getElementById('btnUserProfileIntegrations')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showIntegrations', { detail: { onBackToProfile: true } }));
@@ -95,6 +144,26 @@ export class UserProfileView {
                 await this.render();
             } else {
                 toast.error(result.error || 'فشل حفظ الاسم');
+            }
+        });
+
+        const inpPhone = document.getElementById('inpPhone');
+        const phoneError = document.getElementById('phoneError');
+        document.getElementById('btnSavePhone')?.addEventListener('click', async () => {
+            const { normalizeSaudiPhone } = await import('../utils/phoneUtils.js');
+            const e164 = normalizeSaudiPhone(inpPhone?.value || '');
+            if (!e164) {
+                phoneError.textContent = 'أدخل رقم جوال سعودي صحيح (مثال: 0512345678)';
+                phoneError.style.display = 'block';
+                return;
+            }
+            phoneError.style.display = 'none';
+            const result = await updateUserProfile({ phone: e164 });
+            if (result.ok) {
+                toast.success('تم حفظ رقم الجوال');
+                await this.render();
+            } else {
+                toast.error(result.error || 'فشل حفظ رقم الجوال');
             }
         });
 

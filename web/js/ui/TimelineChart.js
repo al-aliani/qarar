@@ -48,8 +48,9 @@ export class TimelineChart {
 
     /**
      * @param {Array<{ id: number|string, name: string, startMonth: number, duration?: number, category?: string }>} activities
+     * @param {Set<string>} [criticalIds] معرّفات المراحل على المسار الحرج (timelineScheduling.computeCriticalPath) — تمييز بصري فقط.
      */
-    render(activities = []) {
+    render(activities = [], criticalIds = null) {
         if (!this.container) return;
 
         const sorted = [...activities].sort((a, b) => (a.startMonth || 1) - (b.startMonth || 1));
@@ -63,7 +64,7 @@ export class TimelineChart {
                 </div>
                 <div class="timeline-chart__track" data-track>
                     <div class="timeline-chart__line" aria-hidden="true"></div>
-                    ${sorted.map(act => this._renderNode(act)).join('')}
+                    ${sorted.map(act => this._renderNode(act, criticalIds)).join('')}
                 </div>
             </div>
         `;
@@ -72,21 +73,22 @@ export class TimelineChart {
         this._bindDragDrop();
     }
 
-    _renderNode(act) {
+    _renderNode(act, criticalIds) {
         const month = Math.max(1, Math.min(MONTHS, Number(act.startMonth) || 1));
         const pct = monthToPercent(month);
         const cat = (act.category || 'technical');
         const label = (act.name || '').trim() || 'نشاط';
         const duration = act.duration ? ` (${act.duration} شهر)` : '';
+        const isCritical = criticalIds instanceof Set && criticalIds.has(String(act.id));
 
         return `
-            <div class="timeline-chart__node timeline-chart__node--${cat}"
-                 data-id="${act.id}" 
+            <div class="timeline-chart__node timeline-chart__node--${cat}${isCritical ? ' timeline-chart__node--critical' : ''}"
+                 data-id="${act.id}"
                  data-month="${month}"
                  style="left: ${pct}%;"
                  role="button"
                  tabindex="0"
-                 title="${escapeAttr(label)}${duration}"
+                 title="${escapeAttr(label)}${duration}${isCritical ? ' — على المسار الحرج' : ''}"
                  aria-label="${escapeAttr(label)}، شهر ${month}">
                 <span class="timeline-chart__dot"></span>
                 <span class="timeline-chart__label">${escapeHtml(label)}</span>

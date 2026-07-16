@@ -17,6 +17,21 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://qarar.sa/about.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://qarar.sa/help.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://qarar.sa/contact.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
     <loc>https://qarar.sa/investor.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

@@ -72,7 +72,19 @@ export class PPTXExporter {
 
             const projName = (this.state.projectInfo?.name || 'دراسة').replace(/[/\\*?:[\]<>|]/g, '_');
             const fileName = `${projName}_عرض_تقديمي.pptx`;
+
+            // نسخة Blob لمركز التنزيلات (2026-07-16) — قبل writeFile عمداً: PptxGenJS
+            // لا توثّق صراحة أمان استدعاء write()/writeFile() معاً على نفس الكائن بعد
+            // أن يفعل أحدهما شيئاً داخلياً، فنطلب الـBlob أولاً حين الحالة الأصلية مضمونة.
+            // فشل هذا السطر تحديداً لا يمنع writeFile (التنزيل الفعلي) من إتمام عمله.
+            let trackingBlob = null;
+            try { trackingBlob = await this.pptx.write({ outputType: 'blob' }); } catch (_) {}
+
             await this.pptx.writeFile({ fileName });
+            if (trackingBlob) {
+                const { trackExport } = await import('./exportTracking.js');
+                trackExport(trackingBlob, { fileType: 'pptx', fileName, studyId: this.state.projectInfo?.id, studyName: this.state.projectInfo?.name });
+            }
             return { success: true, fileName };
         } catch (error) {
             console.error('[PPTX Export]', error);

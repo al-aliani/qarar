@@ -55,10 +55,18 @@ export default defineConfig({
                 landing: resolve(__dirname, 'web/landing.html'),
                 terms: resolve(__dirname, 'web/terms.html'),
                 privacy: resolve(__dirname, 'web/privacy.html'),
+                about: resolve(__dirname, 'web/about.html'),
+                contact: resolve(__dirname, 'web/contact.html'),
+                help: resolve(__dirname, 'web/help.html'),
                 // investor.html: صفحة عرض المستثمر (للقراءة فقط) — أُصلح الاستيراد المكسور (getPitchFromStorage)
                 investor: resolve(__dirname, 'web/investor.html'),
+                partners: resolve(__dirname, 'web/partners.html'),
                 charts: resolve(__dirname, 'web/financial_charts.html'),
-                dashboard: resolve(__dirname, 'web/dashboard.html'),
+                // dashboard.html (لوحة "Premium"): أُوقف بناؤها للإنتاج (2026-07-16) — نموذج React
+                // تجريبي منفصل تمامًا عن محرك الحسابات الحقيقي (بيانات وهمية ثابتة)، وزر الدفع
+                // فيه وهمي بالكامل (يستدعي /api/pay غير الموجود، السعر 199$ لا علاقة له بالتسعير
+                // الحقيقي بالريال). الكود المصدري (src/App.jsx وغيره) باقٍ في المستودع لو
+                // احتاج تطويرها بشكل صحيح لاحقاً — فقط لم تعد تُنسخ لمجلد الإنتاج dist/.
             },
         },
     },

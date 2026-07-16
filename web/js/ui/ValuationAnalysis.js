@@ -3,6 +3,7 @@
  * Calculates Pre-money and Post-money valuation using DCF and Multiples
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
+import { resolveValuationMultiple, GENERIC_VALUATION_MULTIPLE } from '../core/sectorBenchmarks.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -76,10 +77,11 @@ export class ValuationAnalysis {
                             <span class="val-price">${this.formatCurrency(valuation.multiples.ev)}</span>
                         </div>
                         <div class="valuation-details mt-4">
-                            <div class="val-row"><span>مضاعف الأرباح</span> <span>${valuation.multiples.multiple}x</span></div>
+                            <div class="val-row"><span>مضاعف الأرباح (مرجعي)</span> <span>${valuation.multiples.multiple}x</span></div>
+                            <div class="val-row"><span>القطاع المستخدَم للمضاعف</span> <span>${valuation.multiples.isGenericSector ? 'عام (غير مصنّف)' : valuation.multiples.sectorLabel}</span></div>
                             <div class="val-row"><span>الأرباح السنوية (السنة 1)</span> <span>${this.formatCurrency(valuation.multiples.ebitda)}</span></div>
-                            <div class="val-row"><span>مقارنة بمتوسط السوق</span> <span>مقبول</span></div>
                         </div>
+                        <p class="text-xs text-muted mt-2">مضاعف افتراضي تقديري لقطاعات المنشآت الصغيرة، وليس بيانات سوق حية أو تسعيراً رسمياً.</p>
                     </div>
                 </div>
 
@@ -115,7 +117,7 @@ export class ValuationAnalysis {
 
     calculateValuation(state, results) {
         if (!results || !Array.isArray(results.incomeStatement) || results.incomeStatement.length === 0) {
-            return { dcf: { ev: 0, wacc: 0.18, growth: 0.02, pvCashFlows: 0, terminalValue: 0 }, multiples: { ev: 0, multiple: 3, ebitda: 0 }, postMoney: 0, equityOffer: 0, impliedMultiple: 0, bankLoan: 0 };
+            return { dcf: { ev: 0, wacc: 0.18, growth: 0.02, pvCashFlows: 0, terminalValue: 0 }, multiples: { ev: 0, multiple: GENERIC_VALUATION_MULTIPLE, ebitda: 0, sectorLabel: '', isGenericSector: true }, postMoney: 0, equityOffer: 0, impliedMultiple: 0, bankLoan: 0 };
         }
 
         // B4: معدل الخصم من فروض الدراسة نفسها + علاوة حجم وسيولة لمنشأة صغيرة خاصة
@@ -140,9 +142,10 @@ export class ValuationAnalysis {
 
         const enterpriseValue = Math.max(0, pvCashFlows + pvTerminal);
 
-        // 2. مضاعف السوق — نطاق واقعي لمطعم/مقهى صغير في السعودية (≈2–3.5×)، كان 6× مبالغاً
+        // 2. مضاعف السوق — لكل قطاع مضاعفه المرجعي التقديري بدل ثابت 3× واحد لكل الأنشطة
+        //    (كان 6× مبالغاً قبل ذلك). القيم مقاربات ASSUMPTION، تُعرض كمرجع لا كبيانات سوق حية.
         const ebitdaY1 = results.incomeStatement[0].ebitda;
-        const multiple = 3;
+        const { multiple, label: sectorLabel, isGeneric: isGenericSector } = resolveValuationMultiple(state);
         const multipleValue = Math.max(0, ebitdaY1 * multiple);
 
         // 3. صافي الدَّين: قيمة حقوق الملكية = قيمة المنشأة − رصيد القرض (لا تُعرض القيمة قبل خصم الدين كقيمة للمالك)
@@ -169,7 +172,9 @@ export class ValuationAnalysis {
             multiples: {
                 ev: multipleValue,
                 multiple,
-                ebitda: ebitdaY1
+                ebitda: ebitdaY1,
+                sectorLabel,
+                isGenericSector
             },
             postMoney,
             equityOffer,

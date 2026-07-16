@@ -2,6 +2,9 @@
  * Operational Simulation Component (Queueing Theory)
  * Simulates customer flow to detect bottlenecks and wait times.
  */
+import { toast } from '../utils/toast.js';
+import { escapeHtml } from '../utils/escape.js';
+
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
 
@@ -114,8 +117,11 @@ export class OperationalSim {
                     <strong>ملاحظة:</strong> هذه محاكاة استرشادية (نظرية الطوابير) لأوقات الانتظار والازدحام
                     فقط، لاستكشاف الأثر التقريبي لعدد نقاط الخدمة — <strong>لا تُحدّث تلقائياً</strong> خطة
                     التوظيف الفعلية أو الرواتب في قسم «الموارد البشرية» بالدراسة. إن قررت تغيير عدد
-                    الموظفين بناءً على النتيجة هنا، حدِّثه يدوياً هناك.
+                    الموظفين بناءً على النتيجة هنا، حدِّثه يدوياً هناك، أو استخدم زر «طبّق التوصية» أدناه
+                    (إن ظهر) بعد تشغيل المحاكاة.
                 </p>
+
+                <div id="applyToHrPanel"></div>
 
                 <!-- Navigation -->
                 <div class="wizard-nav margin-top-lg">
@@ -126,6 +132,7 @@ export class OperationalSim {
         `;
 
         this.bindEvents();
+        this._renderApplyToHrPanel();
     }
 
     bindEvents() {
@@ -134,10 +141,27 @@ export class OperationalSim {
         const serversInput = this.container.querySelector('#servers');
         const peakFactorInput = this.container.querySelector('#peakFactor');
 
+        // مهمة C (دفعة 4): إعادة حساب حية عند تحريك أي سلايدر — بلا حاجة لزر «تشغيل
+        // المحاكاة». تأخير خفيف (150ms) ليس لثقل حساب Erlang-C نفسه (رخيص) بل لتفادي
+        // تحديث DOM على كل حركة أثناء السحب المتواصل. لا تكتب إلى المخزن (store) ولا
+        // تُعيد رسم القماش/الرسوم المتحركة — ذلك يبقى محصوراً بزر التشغيل الصريح الذي
+        // "يُثبّت" (commit) lastResult (راجع runSimulation).
+        const scheduleLiveUpdate = () => {
+            clearTimeout(this._liveUpdateTimer);
+            this._liveUpdateTimer = setTimeout(() => {
+                this._updateSimDisplay({
+                    arrivalRate: parseInt(arrivalInput.value),
+                    serviceTime: parseInt(serviceInput.value),
+                    servers: parseInt(serversInput.value),
+                    peakFactor: peakFactorInput ? parseFloat(peakFactorInput.value) : 1.5
+                });
+            }, 150);
+        };
+
         [arrivalInput, serviceInput, serversInput].forEach(inp => {
             inp.addEventListener('input', (e) => {
                 e.target.nextElementSibling.querySelector('span').textContent = e.target.value;
-                // Live update if you want, but btnRun is better for sim
+                scheduleLiveUpdate();
             });
         });
 
@@ -149,6 +173,7 @@ export class OperationalSim {
             const labelEl = this.container.querySelector('#peakFactorLabelVal');
             if (valEl) valEl.textContent = v;
             if (labelEl) labelEl.textContent = v;
+            scheduleLiveUpdate();
         });
 
         this.container.querySelector('#btnRunSim').addEventListener('click', () => {
@@ -199,7 +224,14 @@ export class OperationalSim {
         return { rho, waitTime, queueLen };
     }
 
-    runSimulation(params) {
+    /**
+     * يحسب ويعرض نتائج المحاكاة (متوسط + ذروة + تنبيه/اقتراح التوظيف) دون لمس القماش
+     * (canvas) أو المخزن (store) — منطق مشترك بين زر «تشغيل المحاكاة» (runSimulation،
+     * الذي يُكمل بعدها الرسم والحفظ) والتحديث الحي عند سحب السلايدرات (مهمة C، دفعة 4)
+     * كي لا تتكرر صيغة Erlang-C/التنبيه في مكانين قد يتباعدان.
+     * @returns {{avg: object, optimal: number, avgWaitTimeResult: number|null}}
+     */
+    _updateSimDisplay(params) {
         const avg = this.computeQueueStats(params.arrivalRate, params.serviceTime, params.servers);
 
         // تدقيق دفعة 3 (2026-07-12، اختبار عميل بقالة): معدل الوصول وحده لا يعكس ضغط
@@ -209,16 +241,10 @@ export class OperationalSim {
         const peakFactor = Number(params.peakFactor) > 0 ? Number(params.peakFactor) : 1.5;
         const peak = this.computeQueueStats(params.arrivalRate * peakFactor, params.serviceTime, params.servers);
 
-        // Display visuals... (keep as is)
-        const canvas = document.getElementById('simCanvas');
-        const overlay = document.getElementById('simOverlay');
-        overlay.style.display = 'none';
-
-        if (this.simInterval) clearInterval(this.simInterval);
-        this.animateDots(canvas, params);
-
         document.getElementById('simResults').style.opacity = '1';
+        document.getElementById('simResults').style.pointerEvents = 'auto';
         document.getElementById('simResultsPeak').style.opacity = '1';
+        document.getElementById('simResultsPeak').style.pointerEvents = 'auto';
         this.showResults(avg.waitTime, avg.queueLen, avg.rho);
         this.showPeakResults(peak.waitTime, peak.queueLen, peak.rho);
 
@@ -253,10 +279,25 @@ export class OperationalSim {
             }
         }
 
+        return { avg, optimal, avgWaitTimeResult };
+    }
+
+    runSimulation(params) {
+        const { avg, optimal, avgWaitTimeResult } = this._updateSimDisplay(params);
+
+        // Display visuals... (keep as is)
+        const canvas = document.getElementById('simCanvas');
+        const overlay = document.getElementById('simOverlay');
+        overlay.style.display = 'none';
+
+        if (this.simInterval) clearInterval(this.simInterval);
+        this.animateDots(canvas, params);
+
         // Save to store — نضيف lastResult (اقتراح نقاط الخدمة الأمثل) بجانب معاملات
         // المحاكاة نفسها. هذا لا يزال محلياً بالكامل لقسم operational ولا يكتب لأي
         // مكان آخر في الدراسة (hr.positions تبقى بمنأى — راجع batch6.operationalSimDisclosure).
-        // جدول الرواتب (OrgStructure/Wizard) يقرأ lastResult ويعرضه كاقتراح بزر صريح فقط.
+        // جدول الرواتب (OrgStructure/Wizard) يقرأ lastResult ويعرضه كاقتراح بزر صريح فقط،
+        // وهذه الشاشة نفسها تعرض زر «طبّق التوصية» (مهمة B، دفعة 4) بعد هذا الاستدعاء.
         this.store.update('operational', {
             ...params,
             lastResult: {
@@ -265,6 +306,75 @@ export class OperationalSim {
                 avgWaitTime: avgWaitTimeResult
             }
         });
+
+        this._renderApplyToHrPanel();
+    }
+
+    /**
+     * لوحة «طبّق التوصية» على جدول الرواتب (مهمة B، دفعة 4) — تظهر فقط بعد تشغيل
+     * المحاكاة (state.operational.lastResult.recommendedServers موجود)، ولا تخمّن أي
+     * صف تطبّق عليه العدد: تعرض قائمة منسدلة بكل الوظائف الحالية في hr.positions
+     * فتترك الاختيار صراحة للمستخدم (لا اتفاقية تسمية قائمة تربط وظيفة بعينها بالمحاكاة).
+     */
+    _renderApplyToHrPanel() {
+        const panel = this.container.querySelector('#applyToHrPanel');
+        if (!panel) return;
+
+        const state = this.store.getState();
+        const recommended = state.operational?.lastResult?.recommendedServers;
+        if (!recommended || !Number.isFinite(recommended) || recommended <= 0) {
+            panel.innerHTML = '';
+            return;
+        }
+
+        const positions = Array.isArray(state.hr?.positions) ? state.hr.positions : [];
+        if (positions.length === 0) {
+            panel.innerHTML = `
+                <div class="alert alert--info mt-4" id="applyToHrEmptyNote">
+                    ${icon('i-info')} لا توجد وظائف بعد في جدول «الوظائف والرواتب» لتطبيق توصية المحاكاة
+                    (${recommended} ${recommended === 1 ? 'موظف' : 'موظفين'}) عليها — أضف وظيفة هناك أولاً.
+                </div>`;
+            return;
+        }
+
+        const optionsHtml = positions.map((p, i) =>
+            `<option value="${i}">${escapeHtml(p.position || ('وظيفة ' + (i + 1)))} (الحالي: ${Number(p.count) || 0})</option>`
+        ).join('');
+
+        panel.innerHTML = `
+            <div class="card mt-4">
+                <h3 class="card-title mb-2">${icon('i-users')} تطبيق التوصية على جدول الرواتب</h3>
+                <p class="text-sm text-muted mb-3">آخر توصية من المحاكاة: <strong>${recommended}</strong> ${recommended === 1 ? 'موظف خدمة' : 'موظفي خدمة'}. اختر الوظيفة التي تريد تحديث عددها في جدول «الموارد البشرية»:</p>
+                <div class="form-group flex gap-2 flex-wrap items-end">
+                    <select class="input" id="applyToHrSelect">${optionsHtml}</select>
+                    <button type="button" class="btn btn--secondary" id="btnApplyToHr">${icon('i-check')} طبّق التوصية</button>
+                </div>
+            </div>
+        `;
+
+        panel.querySelector('#btnApplyToHr').addEventListener('click', () => {
+            const idx = Number(panel.querySelector('#applyToHrSelect').value);
+            this._applyRecommendedCountToPosition(idx, recommended);
+        });
+    }
+
+    /** يكتب العدد الموصى به إلى صف الوظيفة المختار في hr.positions — بتأكيد صريح قبل استبدال عدد حالي غير صفري. */
+    _applyRecommendedCountToPosition(index, recommended) {
+        const state = this.store.getState();
+        const positions = Array.isArray(state.hr?.positions) ? [...state.hr.positions] : [];
+        const target = positions[index];
+        if (!target) return;
+
+        const existingCount = Number(target.count) || 0;
+        if (existingCount > 0 && existingCount !== recommended) {
+            const ok = confirm(`سيستبدل هذا عدد وظيفة «${target.position || 'غير مسمّاة'}» الحالي (${existingCount}) بتوصية المحاكاة (${recommended}). هل تريد المتابعة؟`);
+            if (!ok) return;
+        }
+
+        positions[index] = { ...target, count: recommended };
+        this.store.updatePath('hr', 'positions', positions);
+        toast.success(`حُدِّث عدد «${target.position || 'الوظيفة'}» إلى ${recommended} في جدول الرواتب.`);
+        this._renderApplyToHrPanel();
     }
 
     showResults(wait, queue, rho) {
