@@ -194,6 +194,11 @@ export class PreliminaryCheckView {
         }
 
         // 2. Swiper.js
+        // observer/observeParents: بلا هذين الخيارين، عرض الشرائح المحسوب عند
+        // التهيئة يبقى ثابتاً حتى لو تغيّر عرض الحاوية لاحقاً (تبديل حجم نافذة
+        // المتصفح، تدوير الجهاز، أو تغيّر تخطيط البطاقة الأب) — تحقّق حي 2026-07-16:
+        // عرض الشريحة بقي 445px بعد تصغير النافذة لعرض 375px رغم أن حاوية Swiper
+        // الفعلية أصبحت 240px، لأن Swiper لا يراقب تغيّر الحجم افتراضياً.
         new Swiper(this.container.querySelector('.swiper-container'), {
             modules: [Navigation, Pagination],
             navigation: {
@@ -205,7 +210,9 @@ export class PreliminaryCheckView {
                 clickable: true,
             },
             spaceBetween: 30,
-            autoHeight: true
+            autoHeight: true,
+            observer: true,
+            observeParents: true
         });
 
         // 4. Vanilla-Tilt.js

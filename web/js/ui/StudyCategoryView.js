@@ -9,6 +9,8 @@ import 'driver.js/dist/driver.css';
 import tippy from 'tippy.js';
 import 'tippy.js/dist/tippy.css';
 
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 /**
  * يعرض جميع أقسام التصنيف في صفحة واحدة. تظل معرّفات الأقسام الـ41 وبياناتها
  * كما هي؛ التغيير في طريقة العرض والتنقل فقط.
@@ -120,13 +122,20 @@ export class StudyCategoryView {
                     </div>
                 </nav>
 
-                <div class="category-page__sections">
-                    ${stepIndexes.length ? stepIndexes.map(index => `
-                        <section class="category-step" id="category-section-${index}" data-step-index="${index}">
-                            <div class="category-step__number">الخطوة ${stepPosition(index)} من ${stepTotal}</div>
+                <div class="category-page__sections${stepIndexes.some(index => this.steps[index].gridSize) ? ' category-page__sections--adaptive' : ''}">
+                    ${stepIndexes.length ? stepIndexes.map(index => {
+                        const step = this.steps[index];
+                        return `
+                        <section class="category-step" id="category-section-${index}" data-step-index="${index}"${step.gridSize ? ` data-size="${step.gridSize}"` : ''}>
+                            <div class="category-step__meta">
+                                ${step.icon ? icon(step.icon) : ''}
+                                <div class="category-step__number">الخطوة ${stepPosition(index)} من ${stepTotal}</div>
+                                ${step.stepType ? `<span class="category-step__type">${step.stepType}</span>` : ''}
+                            </div>
                             <div id="category-step-content-${index}" class="category-step__content" tabindex="-1"></div>
                         </section>
-                    `).join('') : '<div class="empty-state">لا توجد أقسام ظاهرة في هذا التصنيف ضمن وضع العرض الحالي.</div>'}
+                    `;
+                    }).join('') : '<div class="empty-state">لا توجد أقسام ظاهرة في هذا التصنيف ضمن وضع العرض الحالي.</div>'}
                 </div>
 
                 <footer class="category-page__nav">

@@ -209,6 +209,13 @@
   display: inline-flex; align-items: center; gap: .45rem; flex: 0 0 auto; min-height: 38px;
   padding: .45rem .7rem; border: 1px solid var(--c-border); border-radius: 999px;
   color: var(--c-text-main); background: var(--c-surface-2); text-decoration: none; font-size: .82rem;
+  /* يلغي transition: color من القاعدة العالمية :where(a) في polish.css — تحقّق حي
+     2026-07-16: بعد تبديل الوضع الليلي/النهاري أثناء وجود المستخدم على صفحة تصنيف،
+     لون هذا الرابط تحديداً يبقى عالقاً بقيمة الوضع القديم (خلفيته تتحدث بشكل صحيح،
+     لونه لا) حتى بعد أكثر من ثانية — إعادة رسم التصنيف من جديد يصحّحه فوراً، ما يؤكد
+     أن القيم/المتغيرات سليمة وأن العلة في الانتقال (transition) نفسه لا في القيمة.
+     أُلغي هنا فقط (لا تعديل على polish.css العام) لأنه المكوّن الوحيد المؤكَّد تأثّره. */
+  transition: none;
 }
 .category-toc__links a:hover, .category-toc__links a:focus-visible { border-color: var(--c-p-500); color: var(--c-p-500); }
 .category-toc__links a span { color: var(--c-p-500); font-weight: 800; }
@@ -227,6 +234,11 @@
    جدول عريض فعلاً يبقى قابلاً للتمرير داخل غلافه الخاص (.table-wrapper/.competitor-matrix) كما
    هو مصمَّم، دون أن يُكبّر الصفحة كلها. */
 .category-page__sections { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-5); }
+/* «الشبكة التكيّفية» (2026-07-16، تصنيف١ فقط): تُفعَّل فقط عبر الفئة المضافة من
+   StudyCategoryView عندما تحمل إحدى خطوات التصنيف gridSize — minmax(0,1fr) لكل عمود
+   (لا 1fr وحدها) لنفس سبب علة الانكماش الموثّقة أعلى هذا الملف بالضبط. */
+.category-page__sections--adaptive { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.category-page__sections--adaptive .category-step[data-size="full"] { grid-column: 1 / -1; }
 .category-step {
   min-width: 0;
   scroll-margin-top: 112px; padding: var(--s-5); border: 1px solid var(--c-border);
@@ -236,6 +248,12 @@
   display: inline-flex; margin-bottom: var(--s-3); padding: .25rem .55rem; border-radius: 999px;
   color: var(--c-text-muted); background: var(--c-surface-2); font-size: .75rem; font-weight: 700;
 }
+/* غلاف اختياري (أيقونة + الرقم + نوع الخطوة) — يظهر فقط للخطوات التي تحمل icon/stepType
+   (تصنيف١ حالياً)؛ بلا هذه الحقول يبقى .category-step__number وحده كما كان تماماً. */
+.category-step__meta { display: flex; align-items: center; gap: .5rem; margin-bottom: var(--s-3); }
+.category-step__meta .category-step__number { margin-bottom: 0; }
+.category-step__meta > .ic { color: var(--c-p-500); width: 1.1rem; height: 1.1rem; }
+.category-step__type { color: var(--c-text-muted); background: var(--c-surface-2); border-radius: var(--r-sm); padding: .2rem .5rem; font-size: .72rem; font-weight: 700; }
 .category-step .wizard-nav, .category-step .wizard-completion { display: none !important; }
 .category-step__content > :first-child { margin-top: 0; }
 .category-page__nav {
@@ -248,6 +266,7 @@
 .study-map__steps--categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 @media (max-width: 640px) {
+  .category-page__sections--adaptive { grid-template-columns: minmax(0, 1fr); }
   .category-page__header, .category-step { padding: var(--s-4); }
   .category-toc { top: 48px; margin-inline: calc(var(--s-3) * -1); border-radius: 0; flex-wrap: wrap; }
   .category-toc__progress { flex-basis: 100%; padding-inline-end: 0; margin-inline-end: 0; border-inline-end: none; border-bottom: 1px solid var(--c-border); padding-bottom: .4rem; }

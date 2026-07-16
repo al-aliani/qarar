@@ -15,6 +15,7 @@ tmp/
 # لقطات مولّدة من سكربتات e2e للالتقاط — تُعاد توليدها عند الحاجة
 figma_screenshots/
 لقطات_الموقع/
+e2e/screenshots/
 
 # === Environment & secrets ===
 .env

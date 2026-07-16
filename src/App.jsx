@@ -1,14 +1,14 @@
 import React, { Suspense, lazy } from 'react';
-import { Card, Metric, Text, AreaChart, BadgeDelta, Flex, Grid, Title, Divider } from '@tremor/react';
+import { AreaChart, BadgeDelta, Divider } from '@tremor/react';
 import { motion } from 'framer-motion';
 import ScenarioSimulator from './components/ScenarioSimulator';
 import LiveCollab from './components/LiveCollab';
 import Checkout from './components/Checkout';
 import { formatCurrency } from './utils/currency';
+import { Card, CardHeader, CardTitle, CardContent } from './components/ui/card';
+import { Button } from './components/ui/button';
 
-// تحميل كسول للمكوّنات الثقيلة (react-pdf/renderer، react-leaflet+leaflet،
-// ag-grid) — كانت الثلاثة تُحمَّل بشكل ساكن فتُدمَج في حزمة dashboard واحدة
-// (~3.4MB قبل الضغط)، رغم أنها ليست فوق الطية ولا تحتاج فوراً عند أول رسم.
+// تحميل كسول للمكوّنات الثقيلة
 const PDFReport = lazy(() => import('./components/PDFReport'));
 const LocationAnalysis = lazy(() => import('./components/LocationAnalysis'));
 const FinancialDataGrid = lazy(() => import('./components/FinancialDataGrid'));
@@ -16,7 +16,7 @@ const FinancialDataGrid = lazy(() => import('./components/FinancialDataGrid'));
 function CardSkeleton({ height = 200 }) {
   return (
     <div
-      className="animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800"
+      className="animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800/50"
       style={{ height }}
     />
   );
@@ -40,7 +40,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { duration: 0.5, ease: "easeOut" } }
+  visible: { y: 0, opacity: 1, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }
 };
 
 function ThemeToggle() {
@@ -56,113 +56,156 @@ function ThemeToggle() {
   };
 
   return (
-    <button
+    <Button
+      variant="outline"
+      size="icon"
       onClick={cycle}
-      className="w-10 h-10 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-brand-600 dark:text-brand-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+      className="w-10 h-10 rounded-full"
       title="تبديل المظهر"
       aria-label="تبديل المظهر"
     >
       {theme === 'dark' ? '☀️' : '🌙'}
-    </button>
+    </Button>
   );
 }
 
 export default function App() {
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="p-8 min-h-screen bg-slate-50 dark:bg-brand-darkBg"
-      dir="rtl"
-    >
-      <motion.div variants={itemVariants} className="flex justify-between items-center mb-8 flex-wrap gap-4">
-        <div>
-          <Title className="text-3xl font-bold text-slate-900 dark:text-white">لوحة المستثمر الذكية</Title>
-          <Text>دراسة الجدوى - البيانات الحية والتحليل الجغرافي</Text>
+    <div dir="rtl" className="min-h-screen bg-slate-50/50 dark:bg-[#060c0a] font-cairo">
+      {/* Sticky Header */}
+      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/80 dark:bg-[#0b1512]/80 border-b border-slate-200 dark:border-slate-800 transition-all">
+        <div className="container mx-auto px-4 md:px-8 h-20 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-brand-600 to-brand-500 dark:from-brand-400 dark:to-emerald-300">
+              لوحة المستثمر الذكية
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 hidden sm:block">
+              دراسة الجدوى - البيانات الحية والتحليل الجغرافي
+            </p>
+          </div>
+          <div className="flex gap-3 items-center">
+            <LiveCollab studyId="101" />
+            <ThemeToggle />
+            <Button onClick={() => window.location.href = '?auth=true'}>
+              تسجيل الدخول
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-4 items-center">
-          <LiveCollab studyId="101" />
-          <ThemeToggle />
-          <button onClick={() => window.location.href = '?auth=true'} className="px-4 py-2 bg-brand-600 text-white rounded-lg font-bold hover:bg-brand-700 transition-colors">
-            تسجيل الدخول
-          </button>
-        </div>
-      </motion.div>
-      
-      <Grid numItemsSm={1} numItemsLg={3} className="gap-6 mb-8">
-        <motion.div variants={itemVariants}>
-          <Card decoration="top" decorationColor="amber">
-            <Text>إجمالي التكاليف (SAR)</Text>
-            <Metric>{formatCurrency(150000, 'SAR')}</Metric>
-          </Card>
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <Card decoration="top" decorationColor="emerald">
-            <Flex alignItems="start">
-              <div>
-                <Text>العائد المتوقع (ROI)</Text>
-                <Metric>34.5%</Metric>
-              </div>
-              <BadgeDelta deltaType="increase">إيجابي</BadgeDelta>
-            </Flex>
-          </Card>
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <Card decoration="top" decorationColor="blue">
-            <Text>فترة الاسترداد المتوقعة</Text>
-            <Metric>18 شهر</Metric>
-          </Card>
-        </motion.div>
-      </Grid>
+      </header>
 
-      <Grid numItemsSm={1} numItemsLg={3} className="gap-6 mb-8">
-        <motion.div variants={itemVariants} className="col-span-1 lg:col-span-2">
-          <Card className="h-full">
-            <Title>مسار الإيرادات والتكاليف (Break-even)</Title>
-            <AreaChart
-              className="h-80 mt-4"
-              data={chartdata}
-              index="year"
-              categories={["الإيرادات المتوقعة", "التكاليف التراكمية"]}
-              colors={["emerald", "red"]}
-              yAxisWidth={80}
-            />
-          </Card>
+      {/* Main Content */}
+      <main className="container mx-auto px-4 md:px-8 py-8">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 md:grid-cols-12 gap-6"
+        >
+          
+          {/* Top Metrics Bento */}
+          <motion.div variants={itemVariants} className="md:col-span-4">
+            <Card className="h-full border-t-4 border-t-amber-500">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-slate-500 text-sm font-medium">إجمالي التكاليف (SAR)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold text-slate-900 dark:text-white">
+                  {formatCurrency(150000, 'SAR')}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="md:col-span-4">
+            <Card className="h-full border-t-4 border-t-emerald-500">
+              <CardHeader className="pb-2 flex-row justify-between items-center space-y-0">
+                <CardTitle className="text-slate-500 text-sm font-medium">العائد المتوقع (ROI)</CardTitle>
+                <BadgeDelta deltaType="increase" size="sm">إيجابي</BadgeDelta>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold text-slate-900 dark:text-white">
+                  34.5%
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="md:col-span-4">
+            <Card className="h-full border-t-4 border-t-blue-500">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-slate-500 text-sm font-medium">فترة الاسترداد المتوقعة</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold text-slate-900 dark:text-white">
+                  18 شهر
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Main Chart Section */}
+          <motion.div variants={itemVariants} className="md:col-span-8">
+            <Card className="h-full">
+              <CardHeader>
+                <CardTitle>مسار الإيرادات والتكاليف (Break-even)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AreaChart
+                  className="h-80"
+                  data={chartdata}
+                  index="year"
+                  categories={["الإيرادات المتوقعة", "التكاليف التراكمية"]}
+                  colors={["emerald", "red"]}
+                  yAxisWidth={80}
+                  showAnimation={true}
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Side Panel for Simulator & PDF */}
+          <motion.div variants={itemVariants} className="md:col-span-4 flex flex-col gap-6">
+            <Card className="flex-1">
+              <CardContent className="pt-6">
+                <ScenarioSimulator baseCost={150000} baseRevenue={200000} />
+              </CardContent>
+            </Card>
+            <Suspense fallback={<CardSkeleton height={80} />}>
+              <PDFReport />
+            </Suspense>
+          </motion.div>
+
+          {/* Map and Data Grid (Bento Large Elements) */}
+          <motion.div variants={itemVariants} className="md:col-span-7">
+            <Card className="h-full overflow-hidden">
+              <Suspense fallback={<CardSkeleton height={430} />}>
+                <LocationAnalysis />
+              </Suspense>
+            </Card>
+          </motion.div>
+          
+          <motion.div variants={itemVariants} className="md:col-span-5">
+            <Card className="h-full">
+              <Suspense fallback={<CardSkeleton height={370} />}>
+                <FinancialDataGrid />
+              </Suspense>
+            </Card>
+          </motion.div>
+
         </motion.div>
+
+        <Divider className="my-10" />
         
-        <motion.div variants={itemVariants} className="flex flex-col gap-6">
-          <Card>
-            <ScenarioSimulator baseCost={150000} baseRevenue={200000} />
-          </Card>
-          <Suspense fallback={<CardSkeleton height={80} />}>
-            <PDFReport />
-          </Suspense>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="flex justify-center"
+        >
+          <Checkout reportId="101" price={199} />
         </motion.div>
-      </Grid>
-
-      <Grid numItemsSm={1} numItemsLg={2} className="gap-6 mb-8">
-        <motion.div variants={itemVariants}>
-          <Card>
-            <Suspense fallback={<CardSkeleton height={430} />}>
-              <LocationAnalysis />
-            </Suspense>
-          </Card>
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <Card>
-            <Suspense fallback={<CardSkeleton height={370} />}>
-              <FinancialDataGrid />
-            </Suspense>
-          </Card>
-        </motion.div>
-      </Grid>
-
-      <Divider />
-      
-      <motion.div variants={itemVariants} className="flex justify-center py-4">
-        <Checkout reportId="101" price={199} />
-      </motion.div>
-    </motion.div>
+      </main>
+    </div>
   );
 }

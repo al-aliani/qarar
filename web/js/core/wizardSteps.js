@@ -9,77 +9,85 @@ export { SECTIONS };
 
 export const STEPS = [
   // البداية والتعريف (0-6) — نقطة البداية (اختيار القالب/الوضع) صارت في نافذة «اختر نقطة البداية» قبل المسار
-  { id: 'preliminaryCheck', label: "الدراسة المبدئية", isPreliminaryCheck: true }, // اختيارية، يمكن تخطيها
-  { id: 'projectAlternatives', label: "مقارنة الأفكار", isProjectAlternatives: true, isAdvancedStep: true }, // مقارنة أفكار مبدئية (د. الروضي)
-  { id: SECTIONS.PROJECT_INFO, label: "معلومات المشروع", isForm: true, tables: [], optionalTables: ['dataGatheringChecklist'] }, // الحقول أولاً؛ قائمة التجهيز اختيارية ومطوية
+  // «الشبكة التكيّفية» (2026-07-16، بطلب المالك — بدأت تجربة على تصنيف١ ثم عُممت على
+  // الخطوات الـ42 كلها بعد الموافقة): gridSize ('half'|'full') وstepType وicon حقول
+  // اختيارية تُفعّل تخطيطاً شبكياً في StudyCategoryView لأي خطوة تحملها؛ خطوة بلا هذه
+  // الحقول تُعرض بعمود واحد كسابقاً تماماً (لا خطوة حالياً بلا هذه الحقول، لكن الآلية
+  // تبقى تراجعية الأمان لأي خطوة تُضاف مستقبلاً بلا تصنيف حجم صريح).
+  // gridSize قرار تحريري تقديري (لا فحص بصري مباشر لكل خطوة) استناداً لعدد/ثقل الجداول
+  // وتخصص الشاشة — نفس مبدأ تصنيف١؛ راجعه ميدانياً إن بدت خطوة مزدحمة أو فارغة بصرياً.
+  // الأيقونات من مكتبة السبرايت الموحّدة في index.html (لا SVG جديد).
+  { id: 'preliminaryCheck', label: "الدراسة المبدئية", isPreliminaryCheck: true, gridSize: 'half', stepType: 'سؤال', icon: 'i-check' }, // اختيارية، يمكن تخطيها
+  { id: 'projectAlternatives', label: "مقارنة الأفكار", isProjectAlternatives: true, isAdvancedStep: true, gridSize: 'half', stepType: 'جدول', icon: 'i-scale' }, // مقارنة أفكار مبدئية (د. الروضي)
+  { id: SECTIONS.PROJECT_INFO, label: "معلومات المشروع", isForm: true, tables: [], optionalTables: ['dataGatheringChecklist'], gridSize: 'full', stepType: 'نموذج', icon: 'i-info' }, // الحقول أولاً؛ قائمة التجهيز اختيارية ومطوية
   // معرّف فريد للتنقل مع بقاء البيانات في قسم projectInfo (dataSection يستهلكه Wizard.js)
   // شاشة «ماذا تبيع وبكم» المدموجة (2026-07-11): تجمع المنتجات/الخدمات/القيمة للعميل
   // مع مصادر الإيرادات في شاشة واحدة عبر OfferingView. البيانات تبقى في أقسامها
   // الأصلية (projectInfo.* و revenue.streams)؛ خطوة «مصادر الإيرادات» تُخفى من
   // المسار المبسّط (flow=advanced) لأنها تُدخَل هنا.
-  { id: 'projectDetails', dataSection: SECTIONS.PROJECT_INFO, label: "المنتجات والخدمات", tables: ['products', 'introServices', 'customerValues'], isOfferingView: true },
-  { id: SECTIONS.KEY_PEOPLE, label: "الأشخاص الرئيسون", tables: ['keyPeople', 'partnershipContracts'] },
-  { id: 'projectIntro', label: "فرضية المشروع", isIntroduction: true, isAdvancedStep: true },
-  { id: SECTIONS.SMART_GOALS, label: "الأهداف الذكية", isSmartGoals: true, isAdvancedStep: true },
+  { id: 'projectDetails', dataSection: SECTIONS.PROJECT_INFO, label: "المنتجات والخدمات", tables: ['products', 'introServices', 'customerValues'], isOfferingView: true, gridSize: 'full', stepType: 'جدول', icon: 'i-box' },
+  { id: SECTIONS.KEY_PEOPLE, label: "الأشخاص الرئيسون", tables: ['keyPeople', 'partnershipContracts'], gridSize: 'half', stepType: 'جدول', icon: 'i-users' },
+  { id: 'projectIntro', label: "فرضية المشروع", isIntroduction: true, isAdvancedStep: true, gridSize: 'half', stepType: 'نص', icon: 'i-lightbulb' },
+  { id: SECTIONS.SMART_GOALS, label: "الأهداف الذكية", isSmartGoals: true, isAdvancedStep: true, gridSize: 'full', stepType: 'تطبيق فرعي', icon: 'i-target' },
 
   // السوقية والاستراتيجية (8-12) — السوق يحدد الطلب قبل الطاقة والأصول
   // تحجيم السوق (TAM/SAM/SOM) — ركن معياري (IFC/UNIDO) يغذّي جاهزية السوق في لوحة القرار (marketSizing.som)
-  { id: 'marketSizing', label: "تحجيم السوق", isMarketAnalysis: true },
+  { id: 'marketSizing', label: "تحجيم السوق", isMarketAnalysis: true, gridSize: 'full', stepType: 'تحليل', icon: 'i-target' },
   // تدقيق 2026-07-11: أُزيل جدول 'competitors' من هنا — كان تكراراً حرفياً لبطاقة
   // «مصفوفة المنافسين» في خطوة «تحجيم السوق» (MarketAnalysis.js)، ونفس مسار البيانات
   // (marketing.competitors). أُبقيت البطاقة هناك لأنها أغنى (بحث OSM حي + مولّد داخلي +
   // AI)، وأُضيف لها الحقلان الناقصان (estimatedDailyCustomers/estimatedAvgTicket) كي لا
   // يُفقد أي عمود تقرير كان يقرأهما من نسخة الجدول القديمة.
-  { id: SECTIONS.MARKETING, label: "الدراسة السوقية", tables: ['marketAnalysis', 'historicalData', 'supplyDemandBalance', 'competitorBenchmarking', 'marketingPlan'] },
-  { id: 'pricingOptimizer', label: "التسعير المثالي", isPricingOptimizer: true },
-  { id: SECTIONS.STRATEGIC, label: "التحليل الاستراتيجي", isStrategic: true },
-  { id: SECTIONS.REVENUE, label: "مصادر الإيرادات", tables: ['revenueStreams'] },
-  { id: SECTIONS.SERVICES, label: "تحليل الخدمات", isServiceAnalysis: true, isAdvancedStep: true },
+  { id: SECTIONS.MARKETING, label: "الدراسة السوقية", tables: ['marketAnalysis', 'historicalData', 'supplyDemandBalance', 'competitorBenchmarking', 'marketingPlan'], gridSize: 'full', stepType: 'جدول', icon: 'i-chart' },
+  { id: 'pricingOptimizer', label: "التسعير المثالي", isPricingOptimizer: true, gridSize: 'half', stepType: 'أداة', icon: 'i-bolt' },
+  { id: SECTIONS.STRATEGIC, label: "التحليل الاستراتيجي", isStrategic: true, gridSize: 'full', stepType: 'تحليل', icon: 'i-scale' },
+  { id: SECTIONS.REVENUE, label: "مصادر الإيرادات", tables: ['revenueStreams'], gridSize: 'full', stepType: 'جدول', icon: 'i-bank' },
+  { id: SECTIONS.SERVICES, label: "تحليل الخدمات", isServiceAnalysis: true, isAdvancedStep: true, gridSize: 'full', stepType: 'تحليل', icon: 'i-settings' },
 
   // الفنية والقانونية (12-19)
-  { id: SECTIONS.TECHNICAL, label: "الأصول والتجهيزات", tables: ['establishmentCosts', 'capacityModel', 'capacityUtilization', 'buildings', 'equipment', 'furniture', 'locationAssessment'] },
-  { id: 'operational_sim', label: "محاكاة التشغيل", isOperationalSim: true, isAdvancedStep: true },
-  { id: SECTIONS.HR, label: "الفريق والرواتب", tables: ['positions', 'advisoryBoard'] },
+  { id: SECTIONS.TECHNICAL, label: "الأصول والتجهيزات", tables: ['establishmentCosts', 'capacityModel', 'capacityUtilization', 'buildings', 'equipment', 'furniture', 'locationAssessment'], gridSize: 'full', stepType: 'جدول', icon: 'i-factory' },
+  { id: 'operational_sim', label: "محاكاة التشغيل", isOperationalSim: true, isAdvancedStep: true, gridSize: 'full', stepType: 'محاكاة', icon: 'i-play' },
+  { id: SECTIONS.HR, label: "الفريق والرواتب", tables: ['positions', 'advisoryBoard'], gridSize: 'full', stepType: 'جدول', icon: 'i-users' },
   // شاشة «المصاريف التشغيلية» المدموجة (2026-07-11): تجمع الأقسام الثلاثة بصرياً عبر
   // OperatingCostsView. القسم يبقى techResources (المحرّك يقرؤه كما هو)؛ logistics
   // وadministrative تبقيان خطوتين مستقلتين للوضع الكامل/المتقدم، لكن المسار المبسّط
   // (INPUT_STEPS) يخفيهما لأنهما تُدخلان داخل هذه الشاشة الواحدة.
-  { id: SECTIONS.TECH_RESOURCES, label: "المصاريف التشغيلية", tables: ['techResources'], isOperatingCosts: true },
-  { id: SECTIONS.LOGISTICS, label: "الموارد اللوجستية", tables: ['logistics'] },
-  { id: SECTIONS.ADMINISTRATIVE, label: "الموارد الإدارية", tables: ['administrative'] },
-  { id: SECTIONS.ORG_STRUCTURE, label: "الهيكل التنظيمي والحوكمة", tables: ['operationalKpis'], isOrgStructure: true },
-  { id: SECTIONS.LEGAL, label: "الدراسة القانونية", tables: ['licenses'] },
+  { id: SECTIONS.TECH_RESOURCES, label: "المصاريف التشغيلية", tables: ['techResources'], isOperatingCosts: true, gridSize: 'full', stepType: 'جدول', icon: 'i-box' },
+  { id: SECTIONS.LOGISTICS, label: "الموارد اللوجستية", tables: ['logistics'], gridSize: 'half', stepType: 'جدول', icon: 'i-link' },
+  { id: SECTIONS.ADMINISTRATIVE, label: "الموارد الإدارية", tables: ['administrative'], gridSize: 'half', stepType: 'جدول', icon: 'i-folder' },
+  { id: SECTIONS.ORG_STRUCTURE, label: "الهيكل التنظيمي والحوكمة", tables: ['operationalKpis'], isOrgStructure: true, gridSize: 'full', stepType: 'نموذج', icon: 'i-shield' },
+  { id: SECTIONS.LEGAL, label: "الدراسة القانونية", tables: ['licenses'], gridSize: 'half', stepType: 'جدول', icon: 'i-doc' },
 
   // التنفيذ والجدولة (20) — بعد اكتمال المتطلبات الفنية والقانونية وقبل التمويل
-  { id: SECTIONS.TIMELINE, label: "خطة التنفيذ", isTimeline: true },
+  { id: SECTIONS.TIMELINE, label: "خطة التنفيذ", isTimeline: true, gridSize: 'full', stepType: 'جدول زمني', icon: 'i-calendar' },
 
   // الدراسة المالية (21-28) — الافتراضات والمدخلات أولاً، ثم التمويل والمخرجات
-  { id: SECTIONS.ASSUMPTIONS, label: "الافتراضات المالية", tables: [] },
-  { id: SECTIONS.FINANCING, label: "التمويل", isFinancing: true },
-  { id: SECTIONS.FINANCIAL_STATEMENTS, label: "القوائم المالية التقديرية", isFinancialStatements: true },
-  { id: 'balance_sheet', label: "الميزانية العمومية", isBalanceSheet: true, isAdvancedStep: true },
-  { id: SECTIONS.BREAK_EVEN, label: "تحليل نقطة التعادل", isBreakEven: true },
-  { id: SECTIONS.ZAKAT_TAX, label: "الزكاة والضريبة", isZakatTax: true, isAdvancedStep: true },
-  { id: 'investor_analysis', label: "تحليل الجدوى الاستثمارية", isInvestorAnalysis: true, isAdvancedStep: true },
-  { id: SECTIONS.VALUATION, label: "تقييم الشركة", isValuation: true, isAdvancedStep: true },
+  { id: SECTIONS.ASSUMPTIONS, label: "الافتراضات المالية", tables: [], gridSize: 'full', stepType: 'نموذج', icon: 'i-pen' },
+  { id: SECTIONS.FINANCING, label: "التمويل", isFinancing: true, gridSize: 'full', stepType: 'نموذج', icon: 'i-bank' },
+  { id: SECTIONS.FINANCIAL_STATEMENTS, label: "القوائم المالية التقديرية", isFinancialStatements: true, gridSize: 'full', stepType: 'جدول', icon: 'i-chart' },
+  { id: 'balance_sheet', label: "الميزانية العمومية", isBalanceSheet: true, isAdvancedStep: true, gridSize: 'full', stepType: 'جدول', icon: 'i-scale' },
+  { id: SECTIONS.BREAK_EVEN, label: "تحليل نقطة التعادل", isBreakEven: true, gridSize: 'half', stepType: 'تحليل', icon: 'i-target' },
+  { id: SECTIONS.ZAKAT_TAX, label: "الزكاة والضريبة", isZakatTax: true, isAdvancedStep: true, gridSize: 'half', stepType: 'نموذج', icon: 'i-doc' },
+  { id: 'investor_analysis', label: "تحليل الجدوى الاستثمارية", isInvestorAnalysis: true, isAdvancedStep: true, gridSize: 'full', stepType: 'تحليل', icon: 'i-rocket' },
+  { id: SECTIONS.VALUATION, label: "تقييم الشركة", isValuation: true, isAdvancedStep: true, gridSize: 'full', stepType: 'تحليل', icon: 'i-trophy' },
 
   // المخاطر (29-33) — من العام إلى السيناريوهات ثم الاختبارات الأعمق
-  { id: SECTIONS.RISK_ANALYSIS, label: "تحليل المخاطر", isRiskMatrix: true },
-  { id: SECTIONS.SCENARIOS, label: "السيناريوهات", isScenarios: true, isAdvancedStep: true },
-  { id: 'sensitivity', label: "تحليل الحساسية", isSensitivity: true, isAdvancedStep: true },
-  { id: 'stress_test', label: "اختبار التحمل", isStressTest: true, isAdvancedStep: true },
-  { id: SECTIONS.MONTE_CARLO, label: "محاكاة مونت كارلو", isMonteCarlo: true, isAdvancedStep: true },
+  { id: SECTIONS.RISK_ANALYSIS, label: "تحليل المخاطر", isRiskMatrix: true, gridSize: 'full', stepType: 'تحليل', icon: 'i-warning' },
+  { id: SECTIONS.SCENARIOS, label: "السيناريوهات", isScenarios: true, isAdvancedStep: true, gridSize: 'full', stepType: 'تحليل', icon: 'i-chart' },
+  { id: 'sensitivity', label: "تحليل الحساسية", isSensitivity: true, isAdvancedStep: true, gridSize: 'half', stepType: 'تحليل', icon: 'i-settings' },
+  { id: 'stress_test', label: "اختبار التحمل", isStressTest: true, isAdvancedStep: true, gridSize: 'half', stepType: 'اختبار', icon: 'i-hand-stop' },
+  { id: SECTIONS.MONTE_CARLO, label: "محاكاة مونت كارلو", isMonteCarlo: true, isAdvancedStep: true, gridSize: 'full', stepType: 'محاكاة', icon: 'i-sparkle' },
 
   // الملاحق والمصادر (34)
-  { id: SECTIONS.APPENDICES, label: "الأدلة والمرفقات", tables: ['references', 'reviewers'], isAppendices: true, isAdvancedStep: true },
+  { id: SECTIONS.APPENDICES, label: "الأدلة والمرفقات", tables: ['references', 'reviewers'], isAppendices: true, isAdvancedStep: true, gridSize: 'full', stepType: 'جدول', icon: 'i-folder' },
 
   // النتائج والقرار النهائي (35-40)
-  { id: SECTIONS.BUSINESS_MODEL, label: "نموذج العمل", isBusinessModel: true },
-  { id: 'dashboard', label: "لوحة المؤشرات المالية", isDashboard: true },
-  { id: SECTIONS.DECISION_DASHBOARD, label: "لوحة القرار الاستثماري", isDecisionDashboard: true, isAdvancedStep: true },
-  { id: SECTIONS.EXECUTIVE_SUMMARY, label: "الملخص التنفيذي", isExecutiveSummary: true },
-  { id: 'reportBuilder', label: "بناء التقرير", isReportBuilder: true, isAdvancedStep: true },
-  { id: SECTIONS.ACTUALS, label: "مراقبة الأداء الفعلي", isPostLaunch: true, isAdvancedStep: true }, // ما بعد الافتتاح — تبقى الأخيرة
+  { id: SECTIONS.BUSINESS_MODEL, label: "نموذج العمل", isBusinessModel: true, gridSize: 'full', stepType: 'نموذج', icon: 'i-clipboard' },
+  { id: 'dashboard', label: "لوحة المؤشرات المالية", isDashboard: true, gridSize: 'full', stepType: 'لوحة', icon: 'i-chart' },
+  { id: SECTIONS.DECISION_DASHBOARD, label: "لوحة القرار الاستثماري", isDecisionDashboard: true, isAdvancedStep: true, gridSize: 'full', stepType: 'لوحة', icon: 'i-target' },
+  { id: SECTIONS.EXECUTIVE_SUMMARY, label: "الملخص التنفيذي", isExecutiveSummary: true, gridSize: 'full', stepType: 'تقرير', icon: 'i-doc' },
+  { id: 'reportBuilder', label: "بناء التقرير", isReportBuilder: true, isAdvancedStep: true, gridSize: 'full', stepType: 'أداة', icon: 'i-slides' },
+  { id: SECTIONS.ACTUALS, label: "مراقبة الأداء الفعلي", isPostLaunch: true, isAdvancedStep: true, gridSize: 'full', stepType: 'متابعة', icon: 'i-history' }, // ما بعد الافتتاح — تبقى الأخيرة
 ];
 
 /** Ranges [start, end] inclusive; must match STEPS indices. Update when adding steps. */
