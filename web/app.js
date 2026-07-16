@@ -23,7 +23,6 @@ import { AuthGuard } from './js/middleware/AuthGuard.js';
 import './js/services/connectors/index.js';
 import { initShellController } from './js/app-controller.js';
 import { ModeSelector } from './js/ui/ModeSelector.js';
-import { startFullStudyFromQuick } from './js/core/quickFeasibilityProject.js';
 import { trackEvent } from './js/utils/analytics.js';
 import { enhanceFieldHelp, observeFieldHelp } from './js/ui/components/FieldHelpEnhancer.js';
 
@@ -315,7 +314,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         enterWorkspaceMode();
         navigateTo(index);
       },
-      onStartQuickFeasibility: () => startQuickFeasibilityWizard(),
       // خطوة القوالب أُزيلت من المسار — «اختيار نقطة البداية» صار نافذةً (TemplateGallery)
       onShowTemplateSelector: () => window.dispatchEvent(new CustomEvent('feasibility:newStudy')),
       onShowPreliminaryCheck: () => goToStudyStep(s => s.isPreliminaryCheck, 0),
@@ -703,9 +701,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (breadcrumbBar) breadcrumbBar.style.removeProperty('display');
           showLandingDashboard();
         },
-        onStartQuick: () => {
-          startQuickFeasibilityWizard();
-        },
         onStartFull: () => {
           if (sidebarEl) sidebarEl.style.removeProperty('display');
           if (stepperNavEl) stepperNavEl.style.removeProperty('display');
@@ -721,42 +716,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
-  const startQuickFeasibilityWizard = () => {
-    syncHash('quickwizard');
-    const sidebarEl = document.querySelector('.sidebar');
-    const stepperNavEl = document.getElementById('stepperNav');
-    const breadcrumbBar = document.getElementById('breadcrumbBar');
-    if (sidebarEl) sidebarEl.style.display = 'none';
-    if (stepperNavEl) stepperNavEl.style.display = 'none';
-    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
-    import('./js/ui/QuickFeasibilityWizard.js').then(({ QuickFeasibilityWizard }) => {
-      const quickWizard = new QuickFeasibilityWizard('wizardContainer', store, {
-        onExit: () => {
-          if (sidebarEl) sidebarEl.style.removeProperty('display');
-          if (stepperNavEl) stepperNavEl.style.removeProperty('display');
-          if (breadcrumbBar) breadcrumbBar.style.removeProperty('display');
-          showLandingDashboard();
-        },
-        onFinish: async (quickData) => {
-          try {
-            await startFullStudyFromQuick(store, quickData);
-            if (sidebarEl) sidebarEl.style.removeProperty('display');
-            if (stepperNavEl) stepperNavEl.style.removeProperty('display');
-            if (breadcrumbBar) breadcrumbBar.style.display = 'flex';
-            enterWorkspaceMode();
-            await navigateTo(3);
-          } catch (err) {
-            console.error('Failed to start full study from quick feasibility:', err);
-            toast.error('تعذر إنشاء الدراسة الكاملة');
-          }
-        }
-      });
-      quickWizard.render();
-    }).catch(err => {
-      console.error('QuickFeasibilityWizard load failed:', err);
-      toast.error('تعذر فتح مسار الجدوى السريعة');
-    });
-  };
 
   const categoryNavigationEnabled = window.__FEASIBILITY_LEGACY_STEPS__ !== true;
   const categoryIndexForStep = (stepIndex) => SIDEBAR_SECTIONS.findIndex(category => (
@@ -1317,8 +1276,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     knowledge: showKnowledgeCenterView,
     accelerator: showAcceleratorTipsView,
     postfeasibility: showPostFeasibilityView,
-    quickstart: showQuickStartGuideView,
-    quickwizard: startQuickFeasibilityWizard
+    quickstart: showQuickStartGuideView
   };
 
   // قراءة العنوان من الرابط (بدون '#/')

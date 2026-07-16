@@ -7,7 +7,7 @@ import fs from 'fs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const assetsDir = resolve(__dirname, 'assets');
 
-// build فقط: configureServer أعلاه يخدم /studies /databases /hr-files محلياً
+// build فقط: configureServer أعلاه يخدم /studies /databases محلياً
 // في وضع dev فقط (middleware لا يعمل أثناء vite build) — بدونها كانت روابط
 // التحميل/العرض الثلاثة تُرجع 404 في الإنتاج (أو تُبتلع بواسطة SPA fallback في
 // netlify.toml/vercel.json فيُنزَّل index.html باسم .pdf). ننسخ فقط الملفات
@@ -186,7 +186,6 @@ export default defineConfig({
                 
                 serveDir('/studies', 'درسات جدوى');
                 serveDir('/databases', 'ملفات قواعد البيانات');
-                serveDir('/hr-files', 'ملفات الموارد البشرية/الموارد البشرية');
             }
         },
         {
@@ -205,12 +204,6 @@ export default defineConfig({
                     resolve(__dirname, 'ملفات قواعد البيانات'),
                     '/databases',
                     resolve(distDir, 'databases'),
-                );
-                copyCatalogFiles(
-                    resolve(__dirname, 'web/public/data/hr-files.json'),
-                    resolve(__dirname, 'ملفات الموارد البشرية/الموارد البشرية'),
-                    '/hr-files',
-                    resolve(distDir, 'hr-files'),
                 );
             }
         }

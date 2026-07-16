@@ -1,6 +1,5 @@
 import Swal from 'sweetalert2';
 import { ProjectManager } from '../services/ProjectManager.js';
-import { createEmptyStudy } from '../core/schema.js';
 import { getAuthUser, signOut } from '../../supabaseClient.js';
 import { toast } from '../utils/toast.js';
 import { PRICING_DISPLAY, buildWhatsAppLink } from '../config.js';
@@ -11,9 +10,7 @@ import { calculateStudyCompleteness } from '../utils/studyCompleteness.js';
 import { FundingSimulator } from './widgets/FundingSimulator.js';
 import { FounderCardGenerator } from './widgets/FounderCardGenerator.js';
 import { SensitivityWidget } from './widgets/SensitivityWidget.js';
-import { SampleReportModal } from './SampleReportModal.js';
 import { ReadyStudiesView } from './ReadyStudiesView.js';
-import { HRFilesView } from './HRFilesView.js';
 import { DatabaseFilesView } from './DatabaseFilesView.js';
 import { STEPS, SIDEBAR_SECTIONS } from '../core/wizardSteps.js';
 import { stepReportType, stepCanReport, STEP_TYPE_BADGE } from '../core/stepReportType.js';
@@ -93,10 +90,9 @@ export class DashboardViewV2 {
         this.searchQuery = '';
         this.activeHomePanel = options.activeHomePanel || 'studies';
         this.options = options;
-        Object.assign(this, options); // for template: this.onShowX, this.onStartQuickFeasibility, etc.
+        Object.assign(this, options); // for template: this.onShowX, etc.
         this.currentUser = null;
         this.readyStudiesView = null;
-        this.hrFilesView = null;
         this.databaseFilesView = null;
     }
 
@@ -122,10 +118,6 @@ export class DashboardViewV2 {
                         <button class="dv2-nav-btn">
                             <svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg>
                             المستودعات
-                        </button>
-                        <button class="dv2-nav-btn">
-                            <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
-                            الموارد البشرية
                         </button>
                     </div>
                     
@@ -160,10 +152,6 @@ export class DashboardViewV2 {
                             <button type="button" id="cardFullStudy" class="dv2-btn-primary">
                                 <svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>
                                 دراسة جديدة
-                            </button>
-                            <button type="button" id="cardQuickFeasibility" class="dv2-btn-secondary">
-                                <svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg>
-                                جدوى سريعة
                             </button>
                         </div>
                     </section>
@@ -204,7 +192,6 @@ export class DashboardViewV2 {
                 <div id="databaseFilesRoot" class="hidden"></div>
                 <div id="warehouseDatabaseFilesRoot" class="hidden"></div>
                 <div id="warehouseHrFilesRoot" class="hidden"></div>
-                <div id="hrFilesRoot" class="hidden"></div>
                 <div id="sensitivity-widget-root" class="hidden"></div>
                 <div id="funding-sim-root" class="dv-modal hidden">
                     <div class="dv-modal__panel">
@@ -247,10 +234,6 @@ export class DashboardViewV2 {
                             <svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg>
                             المستودعات
                         </button>
-                        <button class="dv2-nav-btn">
-                            <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
-                            الموارد البشرية
-                        </button>
                     </div>
                     
                     <div style="margin-top: auto;">
@@ -284,10 +267,6 @@ export class DashboardViewV2 {
                             <button type="button" id="cardFullStudy" class="dv2-btn-primary">
                                 <svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>
                                 دراسة جديدة
-                            </button>
-                            <button type="button" id="cardQuickFeasibility" class="dv2-btn-secondary">
-                                <svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg>
-                                جدوى سريعة
                             </button>
                         </div>
                     </section>
@@ -328,7 +307,6 @@ export class DashboardViewV2 {
                 <div id="databaseFilesRoot" class="hidden"></div>
                 <div id="warehouseDatabaseFilesRoot" class="hidden"></div>
                 <div id="warehouseHrFilesRoot" class="hidden"></div>
-                <div id="hrFilesRoot" class="hidden"></div>
                 <div id="sensitivity-widget-root" class="hidden"></div>
                 <div id="funding-sim-root" class="dv-modal hidden">
                     <div class="dv-modal__panel">
@@ -539,7 +517,7 @@ export class DashboardViewV2 {
                 return stored === 'dark' ? 'dark' : 'light';
             } catch (_) { return 'light'; }
         })();
-        const activeHomePanel = ['studies', 'engines', 'support', 'additional', 'databases', 'hr'].includes(this.activeHomePanel)
+        const activeHomePanel = ['studies', 'engines', 'support', 'additional', 'databases'].includes(this.activeHomePanel)
             ? this.activeHomePanel
             : 'studies';
         const allSupportTools = toolkitGroups.flatMap(group => group.tools);
@@ -551,8 +529,7 @@ export class DashboardViewV2 {
             engines: 'toolsAndEngines',
             support: 'studyToolkits',
             additional: 'additionalReadyStudies',
-            databases: 'databaseFilesRootPanel',
-            hr: 'hrFilesRootPanel'
+            databases: 'databaseFilesRootPanel'
         }[panel] || 'homePanel-studies');
         const homeNavButton = (panel, iconName, title, desc, badge) => `
             <button type="button"
@@ -592,10 +569,6 @@ export class DashboardViewV2 {
                             <svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg>
                             المستودعات
                         </button>
-                        <button class="dv2-nav-btn">
-                            <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
-                            الموارد البشرية
-                        </button>
                     </div>
                     
                     <div style="margin-top: auto;">
@@ -629,10 +602,6 @@ export class DashboardViewV2 {
                             <button type="button" id="cardFullStudy" class="dv2-btn-primary">
                                 <svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>
                                 دراسة جديدة
-                            </button>
-                            <button type="button" id="cardQuickFeasibility" class="dv2-btn-secondary">
-                                <svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg>
-                                جدوى سريعة
                             </button>
                         </div>
                     </section>
@@ -673,7 +642,6 @@ export class DashboardViewV2 {
                 <div id="databaseFilesRoot" class="hidden"></div>
                 <div id="warehouseDatabaseFilesRoot" class="hidden"></div>
                 <div id="warehouseHrFilesRoot" class="hidden"></div>
-                <div id="hrFilesRoot" class="hidden"></div>
                 <div id="sensitivity-widget-root" class="hidden"></div>
                 <div id="funding-sim-root" class="dv-modal hidden">
                     <div class="dv-modal__panel">
@@ -720,14 +688,6 @@ export class DashboardViewV2 {
             this.databaseFilesView = new DatabaseFilesView('databaseFilesRoot');
             if (this.activeHomePanel === 'databases') {
                 this.databaseFilesView.render();
-            }
-        }
-
-        const hrFilesRoot = this.container.querySelector('#hrFilesRoot');
-        if (hrFilesRoot) {
-            this.hrFilesView = new HRFilesView('hrFilesRoot');
-            if (this.activeHomePanel === 'hr') {
-                this.hrFilesView.render();
             }
         }
 
@@ -780,10 +740,6 @@ export class DashboardViewV2 {
                     <p class="text-muted dv-onb__lead">ابدأ بأسرع طريق للوصول لقرار واضح، ثم صدّر تقريرك.</p>
                     <ol class="dv-onb__steps">
                         <li>
-                            <b>جدوى سريعة</b>
-                            <span>3 خطوات لقرار أولي سريع. مناسبة لاختبار الفكرة.</span>
-                        </li>
-                        <li>
                             <b>دراسة احترافية</b>
                             <span>تفاصيل مناسبة للتمويل والتقديم للجهات.</span>
                         </li>
@@ -793,7 +749,6 @@ export class DashboardViewV2 {
                         </li>
                     </ol>
                     <div class="dv-onb__actions">
-                        <button type="button" id="btnOnboardingQuick" class="btn btn--secondary btn--sm">${icon('i-bolt')} ابدأ جدوى سريعة</button>
                         <button type="button" id="btnOnboardingFull" class="btn btn--primary btn--sm">${inlineIcon('briefcase')} ابدأ دراسة احترافية</button>
                         <button type="button" id="btnOnboardingDismiss" class="btn btn--ghost btn--sm">فهمت</button>
                     </div>
@@ -813,7 +768,6 @@ export class DashboardViewV2 {
 
         const closeBtn = overlay.querySelector('.btn-close');
         const btnDismiss = overlay.querySelector('#btnOnboardingDismiss');
-        const btnQuick = overlay.querySelector('#btnOnboardingQuick');
         const btnFull = overlay.querySelector('#btnOnboardingFull');
 
         const restoreOverflow = () => { document.body.style.overflow = previousBodyOverflow; };
@@ -824,7 +778,7 @@ export class DashboardViewV2 {
             overlay.remove();
             restoreOverflow();
             this.dismissOnboardingTip = null;
-            const focusBack = this.container.querySelector('#cardFullStudy') || this.container.querySelector('#cardQuickFeasibility');
+            const focusBack = this.container.querySelector('#cardFullStudy');
             if (focusBack) setTimeout(() => focusBack.focus(), 0);
         };
 
@@ -842,16 +796,12 @@ export class DashboardViewV2 {
         btnDismiss?.addEventListener('click', closeAndCleanup);
         overlay.addEventListener('click', (e) => { if (e.target === overlay) closeAndCleanup(); });
 
-        btnQuick?.addEventListener('click', () => {
-            closeAndCleanup();
-            this.container.querySelector('#cardQuickFeasibility')?.click();
-        });
         btnFull?.addEventListener('click', () => {
             closeAndCleanup();
             this.container.querySelector('#cardFullStudy')?.click();
         });
 
-        setTimeout(() => (closeBtn || btnFull || btnQuick || btnDismiss)?.focus(), 0);
+        setTimeout(() => (closeBtn || btnFull || btnDismiss)?.focus(), 0);
     }
 
 
@@ -879,17 +829,16 @@ export class DashboardViewV2 {
             <div class="empty-state dv-empty dvh-empty">
                 <span class="dv-empty__ic">${icon('i-folder')}</span>
                 <h3 class="dv-empty__title">ابدأ أول دراسة جدوى لمشروعك</h3>
-                <p class="dv-empty__sub">لا توجد دراسات محفوظة بعد. جرّب «جدوى سريعة» للوصول لقرار أولي في ٣ خطوات، أو ابدأ دراسة احترافية كاملة.</p>
+                <p class="dv-empty__sub">لا توجد دراسات محفوظة بعد. ابدأ دراسة احترافية كاملة.</p>
                 <ul class="dvh-empty__benefits">
                     <li>${inlineIcon('chart')} توقعات مالية ٥ سنوات</li>
                     <li>${inlineIcon('trend')} مؤشرات القرار: عائد وقيمة</li>
                     <li>${inlineIcon('download')} تقرير وجداول قابلة للتصدير</li>
                     <li>${inlineIcon('shield')} ضريبة القيمة المضافة والزكاة والتأمينات محسوبة تلقائياً</li>
                 </ul>
-                <p class="dv-empty__price">${PRICING_DISPLAY?.startPrice || 'ابدأ مجاناً'} — جدوى سريعة في 3 خطوات</p>
+                <p class="dv-empty__price">${PRICING_DISPLAY?.startPrice || 'ابدأ مجاناً'}</p>
                 <div class="dv-empty__actions">
-                    <button type="button" id="btnQuickFeasibilityEmpty" class="btn btn--primary">${icon('i-bolt')} ابدأ مجاناً — جدوى سريعة (3 خطوات)</button>
-                    <button type="button" id="btnNewProjectEmpty" class="btn btn--secondary">${icon('i-plus')} دراسة جديدة (كاملة)</button>
+                    <button type="button" id="btnNewProjectEmpty" class="btn btn--primary">${icon('i-plus')} دراسة جديدة (كاملة)</button>
                 </div>
             </div>
         `;
@@ -1108,15 +1057,8 @@ export class DashboardViewV2 {
             handleNew();
         });
 
-        // Card: Quick Feasibility
-        this.container.querySelector('#cardQuickFeasibility')?.addEventListener('click', () => {
-            this.dismissOnboardingTip?.();
-            if (this.onStartQuickFeasibility) this.onStartQuickFeasibility();
-            else toast.info('الخدمة غير متوفرة حالياً');
-        });
-
         const switchHomePanel = (panel, { scroll = false, focusSelector = null } = {}) => {
-            if (!['studies', 'engines', 'support', 'additional', 'databases', 'hr'].includes(panel)) return;
+            if (!['studies', 'engines', 'support', 'additional', 'databases'].includes(panel)) return;
             this.activeHomePanel = panel;
             
             if (panel === 'additional' && this.readyStudiesView && !this.readyStudiesView.loaded) {
@@ -1124,9 +1066,6 @@ export class DashboardViewV2 {
             }
             if (panel === 'databases' && this.databaseFilesView && !this.databaseFilesView.loaded) {
                 this.databaseFilesView.render();
-            }
-            if (panel === 'hr' && this.hrFilesView && !this.hrFilesView.loaded) {
-                this.hrFilesView.render();
             }
             this.container.querySelectorAll('[data-dv-panel-button]').forEach(btn => {
                 const isActive = btn.dataset.dvPanelButton === panel;
@@ -1163,42 +1102,6 @@ export class DashboardViewV2 {
             if (Number.isInteger(index) && STEPS[index]) this.options.onShowStudyStep?.(index);
         });
 
-        // تحميل عينة تقرير (يُستدعى من داخل modal عينة التقرير)
-        const runDownloadSample = async () => {
-            try {
-                const emptyStudy = createEmptyStudy();
-                const dummyState = {
-                    ...emptyStudy,
-                    projectInfo: {
-                        ...emptyStudy.projectInfo,
-                        name: 'عينة هيكل تقرير دراسة جدوى',
-                        description: 'عينة شكلية لهيكل التقرير فقط، بدون أرقام قطاعية افتراضية.'
-                    }
-                };
-
-                const { PDFGenerator } = await import('../../export/pdfGenerator.js');
-                const mockStore = { getState: () => dummyState, get: () => dummyState };
-                const generator = new PDFGenerator(mockStore);
-                await generator.generate();
-
-                toast.success('تم تحميل عينة هيكل التقرير بنجاح!');
-            } catch (e) {
-                console.error('Sample export failed:', e);
-                toast.error('فشل تحميل العينة. حاول لاحقاً.');
-            }
-        };
-
-        // Card: عينة تقرير (المهمة 1 — خطة التفوق)
-        this.container.querySelector('#cardSampleReport')?.addEventListener('click', () => {
-            const modal = new SampleReportModal({
-                onDownloadSample: async () => {
-                    await runDownloadSample();
-                    modal.close();
-                }
-            });
-            modal.open();
-        });
-
         // Funding Simulator Toggle
         // تدقيق بصري: .dv-modal بلا أي transition — تظهر النافذة بقفزة جافة. الآن حالة
         // "is-entering" (opacity:0) تُضاف أولاً، وتُزال بعد رسم فعلي (rAF مزدوج) فيتلاشى الظهور.
@@ -1219,10 +1122,6 @@ export class DashboardViewV2 {
             if (e.target.id === 'funding-sim-root') {
                 e.target.classList.add('hidden');
             }
-        });
-
-        this.container.querySelector('#btnQuickFeasibilityEmpty')?.addEventListener('click', () => {
-            if (this.onStartQuickFeasibility) this.onStartQuickFeasibility();
         });
 
         // زر «دراسة جديدة (كاملة)» في الحالة الفارغة — كان بلا معالج

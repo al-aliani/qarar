@@ -1,7 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    onboarding-polish.css
    تلميع «مرحلة البداية الموجّهة»:
-   - نافذة عيّنة التقرير (SampleReportModal) — كانت تعتمد أصناف Tailwind غير معرّفة
    - معرض القوالب (TemplateGallery)
    - مقارنة الأفكار (ProjectAlternativesView)
    كل الأنماط تستخدم رموز variables.css، خصائص منطقية RTL، بلا ألوان مثبّتة حيث يوجد رمز.
@@ -26,7 +25,6 @@
 }
 
 /* رمز الأيقونة داخل هذه الشاشات — بحجم متّسق مع النص */
-.sample-report-modal .ic,
 .template-gallery .ic,
 .project-alternatives-view .ic {
     width: 1em;
@@ -41,123 +39,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   1) نافذة عيّنة التقرير — SampleReportModal
-   البُنية تعتمد على .modal-overlay / .modal-card / .modal-header / .modal-body
-   المعرّفة في components.css؛ هنا فقط المحتوى الداخلي.
-   ═══════════════════════════════════════════════════════════════════════════ */
-.sample-report-modal {
-    width: 560px;
-    max-width: min(560px, 92vw);
-}
-
-.sample-report-modal .modal-header h3 {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--s-2);
-    color: var(--c-gold-500);
-}
-
-.sample-report-lead {
-    color: var(--c-text-muted);
-    margin: 0 0 var(--s-3);
-    line-height: 1.7;
-}
-
-.sample-report-panel {
-    border: 1px solid var(--c-border);
-    border-radius: var(--r-md);
-    padding: var(--s-3);
-    margin-bottom: var(--s-3);
-}
-
-.sample-report-panel--gold {
-    background: var(--c-gold-subtle);
-    border-color: var(--c-gold-border);
-}
-
-.sample-report-panel--muted {
-    background: var(--c-surface-2);
-}
-
-.sample-report-panel__title {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--s-2);
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--c-gold-500);
-    margin: 0 0 var(--s-2);
-}
-
-.sample-report-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    color: var(--c-text-muted);
-    font-size: 0.875rem;
-}
-
-.sample-report-list li {
-    position: relative;
-    padding-inline-start: 1.5rem;
-    line-height: 1.6;
-}
-
-/* علامة ✓ خضراء بديلاً عن الأصناف المفقودة */
-.sample-report-list li::before {
-    content: "✓";
-    position: absolute;
-    inset-inline-start: 0;
-    top: 0;
-    color: var(--c-success);
-    font-weight: 700;
-}
-
-.sample-report-compare__label {
-    display: block;
-    color: var(--c-text-main);
-    font-weight: 700;
-    font-size: 0.85rem;
-    margin-bottom: 4px;
-}
-
-.sample-report-compare__text {
-    margin: 0;
-    color: var(--c-text-muted);
-    font-size: 0.8rem;
-    line-height: 1.7;
-}
-
-.sample-report-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--s-2);
-    margin-top: var(--s-4);
-}
-
-.sample-report-actions__primary {
-    flex: 1 1 220px;
-}
-
-.sample-report-actions .btn {
-    min-height: 44px;
-}
-
-/* على الجوال: زر التحميل أولاً بعرض كامل ثم الإغلاق تحته */
-@media (max-width: 520px) {
-    .sample-report-actions {
-        flex-direction: column;
-    }
-    .sample-report-actions .btn {
-        width: 100%;
-    }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   2) معرض القوالب — TemplateGallery (.template-gallery)
+   1) معرض القوالب — TemplateGallery (.template-gallery)
    نطاق مقصور على .template-gallery حتى لا يمسّ .template-card المشترك في
    TemplateSelector (شاشة القوالب الكاملة).
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -178,13 +60,6 @@
     color: var(--c-text-muted);
     margin: 0 0 var(--s-4);
     line-height: 1.7;
-}
-
-.template-gallery .templates-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: var(--s-3);
-    margin: 0;
 }
 
 /* بطاقات اختيار الوضع (مصغّر/بسيط/مفصل) في نموذج البداية */
@@ -215,86 +90,154 @@
 .mode-card__name { font-weight: 700; font-size: 0.95rem; }
 .mode-card__desc { font-size: 0.78rem; color: var(--c-text-muted); line-height: 1.5; }
 
-/* بطاقة القالب داخل المعرض: زر أفقي بأيقونة قطاعية + نص */
-.template-gallery .template-card {
+/* لوحة «مشروع فارغ» الرئيسية — الفعل الوحيد الحقيقي حالياً، فتُعرض بوزن بصري
+   يوازي ذلك بدل بطاقة صغيرة ضمن شبكة تُوحي بوجود عدّة خيارات متكافئة. */
+.template-gallery .tg-hero {
+    position: relative;
+    overflow: hidden;
+    padding: var(--s-4);
+    border-radius: var(--r-xl);
+    margin-bottom: var(--s-4);
+    background: linear-gradient(165deg, var(--c-p-subtle), transparent 60%), var(--c-bg-card);
+    border: 1px solid var(--c-border);
+    text-align: center;
+}
+.template-gallery .tg-hero__icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 14px;
+    border-radius: var(--r-lg);
+    background: linear-gradient(180deg, var(--c-p-500), var(--c-p-600));
+    color: var(--c-p-contrast);
     display: flex;
-    flex-direction: row;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: var(--shadow-btn);
+}
+.template-gallery .tg-hero__icon .ic { width: 26px; height: 26px; }
+.template-gallery .tg-hero__title {
+    margin: 0 0 8px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--c-text-main);
+}
+.template-gallery .tg-hero__desc {
+    margin: 0 auto 18px;
+    max-width: 46ch;
+    color: var(--c-text-muted);
+    font-size: 0.87rem;
+    line-height: 1.75;
+}
+.template-gallery .tg-benefits {
+    list-style: none;
+    margin: 0 0 22px;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 18px;
+}
+.template-gallery .tg-benefits li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--c-text-main);
+}
+.template-gallery .tg-benefits .ic { color: var(--c-success); width: 16px; height: 16px; }
+.template-gallery .tg-hero__cta { padding: 0.75rem 2.1rem; font-size: 0.95rem; }
+
+/* صفوف الموارد الثانوية (قوالب المختصين + الموارد البشرية) — أصغر وزناً من اللوحة الرئيسية */
+.template-gallery .tg-rows-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--c-text-muted);
+    margin: 0 0 10px;
+    padding: 0 2px;
+}
+.template-gallery .tg-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.template-gallery .tg-row {
+    display: flex;
+    align-items: center;
     gap: var(--s-3);
-    text-align: start;
-    padding: var(--s-3);
+    width: 100%;
+    padding: 12px 14px;
     background: var(--c-bg-card);
     border: 1px solid var(--c-border);
-    border-radius: var(--r-lg);
-    cursor: pointer;
+    border-radius: var(--r-md);
+    text-align: start;
     font-family: inherit;
     color: var(--c-text-main);
-    transition: transform 0.2s cubic-bezier(.2,.7,.2,1), border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
-
-.template-gallery .template-card:hover {
-    transform: translateY(-3px);
+button.tg-row.tg-row--clickable {
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+button.tg-row.tg-row--clickable:hover {
     border-color: var(--c-p-500);
-    box-shadow: var(--shadow-lg);
-    background: var(--c-bg-card);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
 }
-
-.template-gallery .template-card:focus-visible {
+button.tg-row.tg-row--clickable:focus-visible {
     outline: 2px solid var(--c-p-500);
     outline-offset: 2px;
     border-color: var(--c-p-500);
 }
-
-.template-gallery .t-icon {
+.template-gallery .tg-row--muted { color: inherit; }
+.template-gallery .tg-row__icon {
     flex: none;
-    width: 48px;
-    height: 48px;
-    display: inline-flex;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--r-md);
+    background: var(--c-surface-2);
+    display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem;
-    line-height: 1;
-    background: var(--c-bg-panel);
-    border: 1px solid var(--c-border);
-    border-radius: var(--r-md);
-}
-
-.template-gallery .t-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-
-.template-gallery .t-name {
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--c-p-500);
-    line-height: 1.3;
-}
-
-.template-gallery .t-desc {
-    font-size: 0.8rem;
     color: var(--c-text-muted);
-    line-height: 1.6;
 }
-
-/* «مشروع فارغ» يبرز كخيار محايد */
-.template-gallery .template-card[data-id="empty"] .t-icon {
-    background: var(--c-surface-2);
+.template-gallery .tg-row__body { flex: 1; min-width: 0; }
+.template-gallery .tg-row__title {
+    display: block;
+    font-weight: 700;
+    font-size: 0.88rem;
+    margin: 0 0 2px;
 }
+.template-gallery .tg-row__desc {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--c-text-muted);
+    line-height: 1.5;
+}
+.template-gallery .tg-row__tag {
+    flex: none;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--c-gold-500);
+    background: var(--c-gold-subtle);
+    border: 1px solid var(--c-gold-border);
+    border-radius: var(--r-pill);
+    padding: 3px 10px;
+}
+.template-gallery .tg-row__btn { flex: none; }
 
 @media (max-width: 480px) {
-    .template-gallery .templates-grid {
-        grid-template-columns: 1fr;
+    .template-gallery .tg-benefits {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
     }
-    .template-gallery .template-card {
-        min-height: 44px;
+    .template-gallery .tg-row {
+        flex-wrap: wrap;
     }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   3) مقارنة الأفكار — ProjectAlternativesView (.project-alternatives-view)
+   2) مقارنة الأفكار — ProjectAlternativesView (.project-alternatives-view)
    ═══════════════════════════════════════════════════════════════════════════ */
 .project-alternatives-view .section-title {
     display: flex;

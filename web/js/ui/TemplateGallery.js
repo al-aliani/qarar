@@ -12,7 +12,6 @@ import {
     applyExpertTemplate,
     getExpertTemplates
 } from '../services/ExpertTemplateService.js';
-import { HRFilesView } from './HRFilesView.js';
 import { STEPS, isStepVisibleInStudyMode, STEPS_ABSORBED_IN_CATEGORY_VIEW } from '../core/wizardSteps.js';
 import { trackEvent } from '../utils/analytics.js';
 
@@ -55,7 +54,6 @@ export class TemplateGallery {
             {
                 id: 'empty',
                 name: 'مشروع فارغ (من الصفر)',
-                icon: '📄',
                 description: 'ابدأ دراسة جديدة ببياناتك الفعلية، ثم عدّل كل قسم حسب مشروعك.',
                 data: null
             }
@@ -81,8 +79,8 @@ export class TemplateGallery {
     }
 
     render() {
-        this._hrFilesView = null;
         const expertTemplates = getExpertTemplates();
+        const emptyTemplate = this.templates[0];
         this.overlay.innerHTML = `
             <div class="modal-card template-modal template-gallery animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="template-gallery-title">
                 <div class="modal-header">
@@ -93,46 +91,38 @@ export class TemplateGallery {
                     <button class="btn-close" type="button" aria-label="إغلاق النافذة">×</button>
                 </div>
                 <div class="modal-body">
-                    <p class="template-gallery__lead">القوالب القطاعية الكاملة ستكون فقط من مختصين معتمدين. حالياً ابدأ من الصفر ببيانات مشروعك الفعلية.</p>
+                    <div class="tg-hero">
+                        <span class="tg-hero__icon" aria-hidden="true"><svg class="ic"><use href="#i-doc"/></svg></span>
+                        <h4 class="tg-hero__title">${escapeHtml(emptyTemplate.name)}</h4>
+                        <p class="tg-hero__desc">القوالب القطاعية الكاملة ستكون فقط من مختصين معتمدين لاحقاً. ${escapeHtml(emptyTemplate.description)}</p>
+                        <ul class="tg-benefits">
+                            <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> بياناتك الفعلية من أول خطوة</li>
+                            <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> عدّل أي قسم لاحقاً بحرية</li>
+                            <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> بلا أرقام افتراضية جاهزة</li>
+                        </ul>
+                        <button type="button" class="btn btn--primary tg-hero__cta" id="btnStartBlank">ابدأ الآن ←</button>
+                    </div>
 
-                    <div class="templates-grid" role="list">
-                        ${this.templates.map(t => `
-                            <button class="template-card" type="button" data-id="${t.id}" role="listitem" aria-label="${escapeAttribute(t.name)}: ${escapeAttribute(t.description)}">
-                                <span class="t-icon" aria-hidden="true">${t.icon}</span>
-                                <span class="t-info">
-                                    <span class="t-name">${t.name}</span>
-                                    <span class="t-desc">${t.description}</span>
+                    <p class="tg-rows-label">موارد إضافية</p>
+                    <div class="tg-rows">
+                        ${expertTemplates.length ? expertTemplates.map(t => `
+                            <button type="button" class="tg-row tg-row--clickable btn-apply-expert-template" data-id="${escapeAttribute(t.id)}" aria-label="${escapeAttribute(t.title)}: ${escapeAttribute(t.expertName)} — ${escapeAttribute(t.specialty)} — ${Number(t.yearsExperience) || 0} سنة خبرة">
+                                <span class="tg-row__icon" aria-hidden="true"><svg class="ic"><use href="#i-star"/></svg></span>
+                                <span class="tg-row__body">
+                                    <span class="tg-row__title">${escapeHtml(t.title)}</span>
+                                    <span class="tg-row__desc">${escapeHtml(t.expertName)} — ${escapeHtml(t.specialty)} — ${Number(t.yearsExperience) || 0} سنة خبرة</span>
                                 </span>
                             </button>
-                        `).join('')}
-                    </div>
-
-                    <div class="card mt-4" style="border:1px solid var(--c-border); background:rgba(255,255,255,0.03);">
-                        <h4 class="card-title mb-1">قوالب المختصين المعتمدة</h4>
-                        ${expertTemplates.length ? `
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                                ${expertTemplates.map(t => `
-                                    <button type="button" class="template-card btn-apply-expert-template" data-id="${escapeAttribute(t.id)}" style="text-align:right;" aria-label="${escapeAttribute(t.title)}: ${escapeAttribute(t.expertName)} — ${escapeAttribute(t.specialty)} — ${Number(t.yearsExperience) || 0} سنة خبرة">
-                                        <span class="t-icon" aria-hidden="true">✓</span>
-                                        <span class="t-info">
-                                            <span class="t-name">${escapeHtml(t.title)}</span>
-                                            <span class="t-desc">${escapeHtml(t.expertName)} — ${escapeHtml(t.specialty)} — ${Number(t.yearsExperience) || 0} سنة خبرة</span>
-                                        </span>
-                                    </button>
-                                `).join('')}
+                        `).join('') : `
+                            <div class="tg-row tg-row--muted">
+                                <span class="tg-row__icon" aria-hidden="true"><svg class="ic"><use href="#i-star"/></svg></span>
+                                <span class="tg-row__body">
+                                    <span class="tg-row__title">قوالب المختصين المعتمدة</span>
+                                    <span class="tg-row__desc">لا توجد قوالب معتمدة حالياً — تظهر هنا لاحقاً مع اسم الخبير وسنوات خبرته وسعرها.</span>
+                                </span>
+                                <span class="tg-row__tag">قريباً</span>
                             </div>
-                        ` : `<p class="text-sm text-muted mb-0">لا توجد قوالب معتمدة حالياً. لاحقاً يظهر هنا قالب الخبير مع اسمه، سنوات خبرته، نطاق القطاع، تاريخ التحديث، وسعر القالب أو الاستشارة.</p>`}
-                    </div>
-
-                    <div class="card mt-4" style="border:1px solid var(--c-border); background:rgba(255,255,255,0.03);">
-                        <div class="flex-between" style="align-items:flex-start; gap:12px; flex-wrap:wrap;">
-                            <div>
-                                <h4 class="card-title mb-1">الموارد البشرية</h4>
-                                <p class="text-sm text-muted mb-0">نماذج ووصف وظيفي وملفات إدارية جاهزة — هياكل تنظيمية، رواتب، تقييم أداء، وتوظيف.</p>
-                            </div>
-                            <button type="button" class="btn btn--ghost btn--sm" id="btnToggleHrFiles" aria-expanded="false" aria-controls="galleryHrFilesRoot">تصفّح الملفات</button>
-                        </div>
-                        <div id="galleryHrFilesRoot" class="mt-3" hidden></div>
+                        `}
                     </div>
                 </div>
             </div>
@@ -141,31 +131,7 @@ export class TemplateGallery {
         this.overlay.querySelector('.btn-close').onclick = () => this.close();
         this.overlay.onclick = (e) => { if (e.target === this.overlay) this.close(); };
 
-        const hrToggle = this.overlay.querySelector('#btnToggleHrFiles');
-        const hrRoot = this.overlay.querySelector('#galleryHrFilesRoot');
-        if (hrToggle && hrRoot) {
-            hrToggle.addEventListener('click', async () => {
-                const willOpen = hrRoot.hidden;
-                hrRoot.hidden = !willOpen;
-                hrToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-                hrToggle.textContent = willOpen ? 'إخفاء الملفات' : 'تصفّح الملفات';
-                if (willOpen && !this._hrFilesView) {
-                    this._hrFilesView = new HRFilesView('galleryHrFilesRoot');
-                    await this._hrFilesView.render();
-                }
-            });
-        }
-
-        this.overlay.querySelectorAll('.template-card').forEach(btn => {
-            btn.onclick = () => {
-                const id = btn.dataset.id;
-                if (id === 'empty') {
-                    this.renderBlankAttributionForm();
-                    return;
-                }
-                this.selectTemplate(id);
-            };
-        });
+        this.overlay.querySelector('#btnStartBlank').onclick = () => this.renderBlankAttributionForm();
 
         this.overlay.querySelectorAll('.btn-apply-expert-template').forEach(btn => {
             btn.onclick = async () => {

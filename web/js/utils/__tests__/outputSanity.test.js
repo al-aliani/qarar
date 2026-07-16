@@ -1,12 +1,11 @@
 /**
  * اختبارات مصححات المخرجات وفلاتر الجودة (تدقيق 2026-07-04)
  * تحمي من عودة: IRR «1.3%» بدل 130%، استرداد «0.0 سنة» للمشروع الخاسر،
- * انحراف شروحات الخطوات، ازدواج خصم القرض في الجدوى السريعة، ومسح الإيرادات اليدوية.
+ * انحراف شروحات الخطوات، ومسح الإيرادات اليدوية.
  */
 import { describe, it, expect } from 'vitest';
 import { safePct, safePayback } from '../../../export/utils.js';
 import { formatPayback, formatFractionAsPercent, roundClean } from '../formatters.js';
-import { quickFeasibilityCalc } from '../quickFeasibilityCalc.js';
 import { STEPS, STEP_HELP, PHASE_LABELS } from '../../core/wizardSteps.js';
 import { bridgeServicesToRevenueStreams } from '../../core/bridge.js';
 import { calculateZakatAndTax } from '../../core/zakatTax.js';
@@ -38,28 +37,6 @@ describe('تنسيق الكسور — لا ضجيج فاصلة عائمة', () =
     });
     it('roundClean يقص الضجيج', () => {
         expect(roundClean(2826920.2500000005)).toBe(2826920.25);
-    });
-});
-
-describe('الجدوى السريعة — منطق التمويل', () => {
-    const base = { monthlyRevenue: 100000, monthlyCosts: 60000, initialInvestment: 500000 };
-
-    it('التمويل بقرض 8% (أرخص من الخصم 10%) لا يجعل NPV أسوأ من الذاتي', () => {
-        const self = quickFeasibilityCalc({ ...base, fundingSource: 'self' });
-        const loan = quickFeasibilityCalc({ ...base, fundingSource: 'loan' });
-        // كان العدّ المزدوج (خصم الاستثمار + الأقساط معاً) يقلب هذه العلاقة
-        expect(loan.npv).toBeGreaterThanOrEqual(self.npv);
-    });
-
-    it('استثمار صفري لا يعطي استرداد 0 سنة', () => {
-        const r = quickFeasibilityCalc({ monthlyRevenue: 50000, monthlyCosts: 30000, initialInvestment: 0, fundingSource: 'self' });
-        expect(r.paybackYears).toBeNull();
-    });
-
-    it('الزكاة 2.5% مخصومة من الصافي', () => {
-        const r = quickFeasibilityCalc({ ...base, fundingSource: 'self' });
-        const grossAnnual = (100000 - 60000) * 12;
-        expect(r.annualNet).toBeCloseTo(Math.round(grossAnnual * 0.975), 0);
     });
 });
 
