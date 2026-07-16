@@ -5,6 +5,7 @@ import { generateBalanceSheets } from '../../../lib/calc/balanceSheet.js';
 import { analyzeSaaSMetrics } from './SaaSEngine.js';
 import { analyzeSaudiMarket } from './SaudiMarketEngine.js';
 import { explainDecisionBreakers } from './DecisionExplainer.js';
+import { analyzePartnerNeeds } from './partnerNeeds.js';
 import { calculateZakatAndTax } from './financial/tax.js';
 import { calculateNPV, calculateIRR, calculateMIRR, calculateTerminalValue } from './financial/cashflow.js';
 import { buildDepreciationModel } from './financial/depreciation.js';
@@ -1230,6 +1231,7 @@ export function calculateStudy(study, overrides) {
     result.saasMetrics = analyzeSaaSMetrics(study, result);
     result.saudiMarket = analyzeSaudiMarket(study, result);
     result.decisionExplanation = explainDecisionBreakers(study, result);
+    result.partnerNeeds = analyzePartnerNeeds(study, result);
     return result;
 }
 

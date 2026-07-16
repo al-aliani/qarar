@@ -550,6 +550,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (breadcrumbBar) breadcrumbBar.style.display = 'none';
     import('./js/ui/PartnerSelectionView.js').then(({ PartnerSelectionView }) => {
       const view = new PartnerSelectionView('wizardContainer', {
+        store,
         onBack: () => {
           if (sidebarEl) sidebarEl.style.removeProperty('display');
           if (stepperNavEl) stepperNavEl.style.removeProperty('display');

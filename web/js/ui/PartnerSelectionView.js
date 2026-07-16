@@ -4,15 +4,37 @@
  */
 
 import { RESOURCES_GUIDANCE_LINKS } from '../config.js';
+import { calculateStudy } from '../core/engine.js';
 
 export class PartnerSelectionView {
     constructor(containerId, options = {}) {
         this.container = document.getElementById(containerId);
         this.onBack = options.onBack || (() => {});
+        this.store = options.store || null;
     }
 
     render() {
         if (!this.container) return;
+
+        let partnerNeeds = [];
+        if (this.store) {
+            try {
+                partnerNeeds = calculateStudy(this.store.getState())?.partnerNeeds || [];
+            } catch (e) {
+                console.error('[PartnerSelectionView] تعذّر حساب احتياجات الشريك الاستراتيجي:', e);
+            }
+        }
+        const personalizedHtml = partnerNeeds.length > 0 ? `
+            <h2 class="text-lg font-bold text-gold mb-3">بناءً على دراستك، الأنواع الأكثر أولوية</h2>
+            <ul class="space-y-3 mb-8">
+                ${partnerNeeds.map(n => `
+                    <li class="card p-4">
+                        <strong>${n.label}</strong>
+                        <p class="text-sm text-muted mt-1">${n.reason}</p>
+                    </li>
+                `).join('')}
+            </ul>
+        ` : '';
 
         const criteria = [
             { title: 'التوافق الاستراتيجي', desc: 'أن تتفق رؤية الشريك/الممول مع رؤية المشروع ومرحلة النمو (بذرة، نمو، توسع).' },
@@ -40,6 +62,8 @@ export class PartnerSelectionView {
                 <h1 class="text-2xl font-bold mb-2">رحلة الشريك — معايير الممول</h1>
                 <p class="text-gold text-sm font-medium mb-2">معايير اختيار شريك أو ممول</p>
                 <p class="text-muted mb-6">رحلة مساعدة لاختيار جهة تمويل أو شريك استثماري بناءً على معايير واضحة. المنصة لا تقدم التمويل ولا تتعهد بنتائج التقديم.</p>
+
+                ${personalizedHtml}
 
                 <h2 class="text-lg font-bold text-gold mb-3">معايير أساسية</h2>
                 <ul class="space-y-3 mb-8">

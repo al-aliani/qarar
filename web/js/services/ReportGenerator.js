@@ -26,6 +26,7 @@ const REPORT_SECTION_LABELS = {
     pestel: 'تحليل البيئة الكلية (PESTEL)',
     porter: 'تحليل قوى بورتر الخمس',
     tows: 'مصفوفة الاستراتيجيات (TOWS)',
+    partner_needs: 'نوع الشريك الاستراتيجي المطلوب',
     capex: 'الاستثمارات الرأسمالية',
     legal: 'الدراسة القانونية والتراخيص',
     income_statement: 'قائمة الدخل',
@@ -841,6 +842,15 @@ export class ReportGenerator {
                     </div>`;
                 break;
             }
+            case 'partner_needs': {
+                const needs = results.partnerNeeds;
+                if (!Array.isArray(needs) || needs.length === 0) return null;
+                html = `<div class="section">
+                        <h3 class="section-title"><span class="section-number">${num}</span>نوع الشريك الاستراتيجي المطلوب</h3>
+                        <div class="section-content">${this.renderPartnerNeeds(needs)}</div>
+                    </div>`;
+                break;
+            }
             case 'capex':
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>الدراسة الفنية (التكاليف الاستثمارية)</h3>
@@ -1612,6 +1622,15 @@ export class ReportGenerator {
             <div class="swot-table">
                 ${rows.map(q => `<div class="swot-box"><h4>${q.label}</h4><p>${escapeHtml(tows[q.key]).replace(/\n/g, '<br>')}</p></div>`).join('')}
             </div>
+        `;
+    }
+
+    /** نوع الشريك الاستراتيجي المطلوب — مصفوفة محسوبة حياً في results.partnerNeeds (partnerNeeds.js) */
+    static renderPartnerNeeds(needs) {
+        return `
+            <table><thead><tr><th>نوع الشريك</th><th>الأولوية</th><th>السبب</th></tr></thead><tbody>
+                ${needs.map(n => `<tr><td>${escapeHtml(n.label)}</td><td>${n.priority === 'high' ? 'عالية' : 'متوسطة'}</td><td>${escapeHtml(n.reason)}</td></tr>`).join('')}
+            </tbody></table>
         `;
     }
 }

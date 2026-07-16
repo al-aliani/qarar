@@ -51,7 +51,8 @@ export class InvestorDashboard {
             // الفريق دائماً في عرض المستثمر (Array.isArray عليه = false دوماً).
             team: state.keyPeople?.keyPeople || [],
             financing: state.financing || {},
-            indicators: financialResults.indicators || {}
+            indicators: financialResults.indicators || {},
+            partnerNeeds: financialResults.partnerNeeds || []
         });
     }
 
@@ -69,7 +70,8 @@ export class InvestorDashboard {
             market: d.market || {},
             team: Array.isArray(d.team) ? d.team : [],
             financing: d.financing || {},
-            indicators: d.indicators || {}
+            indicators: d.indicators || {},
+            partnerNeeds: Array.isArray(d.partnerNeeds) ? d.partnerNeeds : []
         };
     }
 
@@ -213,6 +215,10 @@ export class InvestorDashboard {
                             <p class="text-sm text-muted relative z-10 bg-black/20 inline-block mx-auto px-3 py-1 rounded-full">
                                 مقابل ${data.financing.loanAmount ? 'قرض / تمويل' : 'حصة استثمارية'}
                             </p>
+                            ${(() => {
+                                const need = (data.partnerNeeds || []).find(n => n.type === 'financial_equity');
+                                return need ? `<p class="text-xs text-muted relative z-10 mt-3">${escapeHtml(need.reason)}</p>` : '';
+                            })()}
                         </div>
                     </div>
 
@@ -318,7 +324,8 @@ export function buildPitchPayload(state, results) {
             npv: indicators.npv || 0,
             irr: indicators.irr || 0,
             paybackPeriod: indicators.paybackPeriod ?? null
-        }
+        },
+        partnerNeeds: (results && results.partnerNeeds) || []
     };
 }
 

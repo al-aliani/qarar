@@ -23,6 +23,7 @@ const REPORT_SECTION_LABELS = {
     pestel: 'تحليل البيئة الكلية (PESTEL)',
     porter: 'تحليل قوى بورتر الخمس',
     tows: 'مصفوفة الاستراتيجيات (TOWS)',
+    partner_needs: 'نوع الشريك الاستراتيجي المطلوب',
     capex: 'الاستثمارات الرأسمالية',
     legal: 'الدراسة القانونية والتراخيص',
     income_statement: 'قائمة الدخل',

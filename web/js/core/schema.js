@@ -73,6 +73,7 @@ export const DEFAULT_REPORT_SECTION_ORDER = [
     'pestel',
     'porter',
     'tows',
+    'partner_needs',
     'capex',
     'income_statement',
     'cash_flow',

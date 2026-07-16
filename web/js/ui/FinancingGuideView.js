@@ -4,6 +4,7 @@
  * + فقرة استشارة تمويل متخصصة / ربط شركاء دون التعهد بنتائج.
  */
 import { APP_CONFIG, RESOURCES_GUIDANCE_LINKS } from '../config.js';
+import { calculateStudy } from '../core/engine.js';
 
 /** قائمة تحقق جاهزية التقديم — بنود عامة (بنك التنمية وغيره). تُحمّل من الـ store إن وُجدت. */
 const DEFAULT_READINESS_ITEMS = [
@@ -69,6 +70,14 @@ export class FinancingGuideView {
             ? `للحصول على استشارة تمويل متخصصة أو ربط بمصادر تمويل، يمكنك التواصل مع <a href="${partnerLink.url}" target="_blank" rel="noopener" class="text-gold underline">${partnerLink.name}</a>. المنصة لا تتعهد بنتائج أو اعتماد من جهات التمويل.`
             : 'للحصول على استشارة تمويل متخصصة أو ربط بمصادر تمويل، يمكنك التواصل مع إدارة المنصة أو الجهات المعنية في بلدك. المنصة لا تتعهد بنتائج أو اعتماد من جهات التمويل.';
 
+        let partnerNeeds = [];
+        try {
+            partnerNeeds = calculateStudy(this.store?.getState?.() || {})?.partnerNeeds || [];
+        } catch (e) {
+            console.error('[FinancingGuideView] تعذّر حساب احتياجات الشريك الاستراتيجي:', e);
+        }
+        const fundingNeed = partnerNeeds.find(n => n.type === 'financial_equity');
+
         this.container.innerHTML = `
             <div class="financing-guide-view animate-entry p-6 max-w-3xl mx-auto" dir="rtl">
                 <button type="button" class="btn btn--ghost mb-4" id="financingGuideBack">← رجوع</button>
@@ -112,6 +121,7 @@ export class FinancingGuideView {
                 </div>
 
                 <div class="card card-hover mb-6 p-4">
+                    ${fundingNeed ? `<p class="text-sm mb-3">${fundingNeed.reason}</p>` : ''}
                     <p class="text-sm text-muted">${consultationParagraph}</p>
                 </div>
 

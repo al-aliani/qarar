@@ -7,6 +7,7 @@ import { AIWriter } from '../services/AIWriter.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
+import { calculateStudy } from '../core/engine.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id, cls = '') => `<svg class="ic${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -24,6 +25,13 @@ export class StrategicAnalysis {
         if (typeof stepIndex === 'number') this.stepIndex = stepIndex;
         const state = this.store.getState();
         const strategic = state.strategic || {};
+
+        let partnerNeeds = [];
+        try {
+            partnerNeeds = calculateStudy(state)?.partnerNeeds || [];
+        } catch (e) {
+            console.error('[StrategicAnalysis] تعذّر حساب احتياجات الشريك الاستراتيجي:', e);
+        }
 
         this.container.innerHTML = `
             <div class="strategic-analysis">
@@ -78,6 +86,17 @@ export class StrategicAnalysis {
                         <button type="button" class="btn-xs btn-magic btn-generate-porter" title="توليد تحليل بورتر من بيانات المشروع (بدون اتصال خارجي)">${icon('i-sparkle')} توليد تلقائي من البيانات</button>
                     </div>
                     ${this.renderPorter(strategic.porter || {})}
+                </div>
+
+                <!-- Partner Needs (نوع الشريك الاستراتيجي المطلوب) — قيمة محسوبة حياً، بلا زر توليد -->
+                <div class="card analysis-card">
+                    <div class="flex-between">
+                        <div>
+                            <h3 class="card-title">نوع الشريك الاستراتيجي المطلوب</h3>
+                            <p class="text-muted text-sm mb-3">مُشتق تلقائياً من بيانات الدراسة الفعلية — يتحدّث تلقائياً، لا يحتاج توليداً يدوياً</p>
+                        </div>
+                    </div>
+                    ${this.renderPartnerNeeds(partnerNeeds)}
                 </div>
 
                 <!-- Navigation -->
@@ -231,6 +250,25 @@ export class StrategicAnalysis {
                         </div>
                     `;
         }).join('')}
+            </div>
+        `;
+    }
+
+    renderPartnerNeeds(partnerNeeds) {
+        if (!partnerNeeds || partnerNeeds.length === 0) {
+            return `<p class="text-muted text-sm" style="font-style: italic;">لا توجد إشارات كافية حالياً لتحديد نوع شريك استراتيجي مطلوب — عبّئ الملكية الأجنبية، نموذج العمل، مستوى التقنية، وجدول الموردين في الخطوات السابقة لرصدها هنا.</p>`;
+        }
+        return `
+            <div class="flex flex-col gap-2">
+                ${partnerNeeds.map(n => `
+                    <div class="partner-need-item">
+                        <div class="flex-between mb-2">
+                            <strong>${escapeHtml(n.label)}</strong>
+                            <span class="badge badge--${n.priority === 'high' ? 'warning' : 'neutral'}">${n.priority === 'high' ? 'أولوية عالية' : 'أولوية متوسطة'}</span>
+                        </div>
+                        <p class="text-sm text-muted">${escapeHtml(n.reason)}</p>
+                    </div>
+                `).join('')}
             </div>
         `;
     }
