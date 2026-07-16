@@ -6,11 +6,15 @@
 import { AIWriter } from '../services/AIWriter.js';
 import { generateTableSuggestions } from '../services/AIConnector.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
+import { generateCustomerPersonas } from '../services/InternalAIGenerator.js';
 import { getTAMSuggestion } from '../services/SaudiDemographicsService.js';
-import { buildSectorText } from '../core/marketSizingModel.js';
-import { suggest, isUsable } from '../services/DataConnectors.js';
+import { buildSectorText, forecastDemandTrend } from '../core/marketSizingModel.js';
+import { analyzeSaudiMarket } from '../core/SaudiMarketEngine.js';
+import { compareSiteOptions } from '../core/siteComparison.js';
+import { suggest, isUsable, provenanceLabel } from '../services/DataConnectors.js';
 import '../services/connectors/OverpassConnector.js'; // يسجّل 'market.competitors' ذاتياً عند التحميل
-import { CITY_CENTROIDS } from '../services/connectors/OverpassConnector.js';
+import '../services/connectors/index.js'; // يسجّل بقية الموصّلات (Trends/News/SocialGrowth) ذاتياً
+import { CITY_CENTROIDS, overpassCompetitorsConnector } from '../services/connectors/OverpassConnector.js';
 import { toast } from '../utils/toast.js';
 import { SAUDI_REGIONS } from '../data/SaudiCityStats.js';
 import { fieldHelp } from './components/FieldHelp.js';
@@ -214,6 +218,45 @@ export class MarketAnalysis {
                         <h4 class="card-title text-sm mb-2">${icon('i-pin')} خريطة المنافسين</h4>
                         <div id="competitorMap" class="competitor-map"></div>
                     </div>
+                    <div id="marketComparisonTable" class="mt-3">${this.renderTopCompetitorComparison(marketing.competitors || [])}</div>
+                </div>
+
+                <!-- مصداقية أرقام حجم السوق -->
+                <div class="card analysis-card">
+                    <h3 class="card-title">${icon('i-shield')} مصداقية أرقام حجم السوق</h3>
+                    <div id="marketProvenanceBadges">${this.renderProvenanceBadges(state)}</div>
+                </div>
+
+                <!-- تنبؤ الطلب واتجاه السوق -->
+                <div class="card analysis-card">
+                    <h3 class="card-title">${icon('i-chart')} تنبؤ الطلب (اتجاه تقريبي)</h3>
+                    <div id="demandForecastBox">${this.renderDemandForecast(state)}</div>
+                </div>
+
+                <!-- مقارنة مواقع بديلة -->
+                <div class="card analysis-card">
+                    <h3 class="card-title">${icon('i-pin')} مقارنة مواقع بديلة</h3>
+                    <p class="text-muted text-sm mb-2">قارن عدة مدن مرشَّحة (كثافة سكانية × دخل × عبء إيجار تقديري × منافسة حية من OpenStreetMap) — أداة استرشادية لا خوارزمية حاسمة.</p>
+                    <div class="form-row form-row--2">
+                        <input type="text" id="siteCompareCities" class="input" placeholder="مثال: الرياض، جدة، الدمام">
+                        <button type="button" id="btnRunSiteComparison" class="btn btn--sm btn--secondary">قارن</button>
+                    </div>
+                    <div id="siteComparisonResult" class="mt-2"></div>
+                </div>
+
+                <!-- شخصيات العملاء -->
+                <div class="card analysis-card">
+                    <div class="flex-between mb-2">
+                        <h3 class="card-title mb-0">${icon('i-users')} شخصيات العملاء</h3>
+                        <button type="button" id="btnGeneratePersonas" class="btn-xs btn-magic">${icon('i-sparkle')} توليد من بيانات السوق</button>
+                    </div>
+                    <div id="customerPersonasResult"></div>
+                </div>
+
+                <!-- نمو السوشال ميديا (يحتاج تفعيلاً لاحقاً) -->
+                <div class="card analysis-card">
+                    <h3 class="card-title">${icon('i-chart')} نمو تفاعل السوشال ميديا</h3>
+                    <div id="socialGrowthBox" class="text-sm text-muted">جارٍ التحقق...</div>
                 </div>
 
                 <!-- مواءمة رؤية 2030 واقتصاد الدولة: توثيق اختياري يظهر في التقرير — مطوي كي لا يزاحم جوهر الخطوة -->
@@ -550,6 +593,108 @@ export class MarketAnalysis {
         `;
     }
 
+    /** شارات مصدر أرقام TAM/SAM/SOM (sourced/assumption) — SaudiMarketEngine.analyzeSaudiMarket
+     * تحسبها فعلياً منذ توحيد 2026-07-13، لكن لم تكن معروضة بصرياً في هذه الشاشة. */
+    renderProvenanceBadges(state) {
+        let analysis = null;
+        try { analysis = analyzeSaudiMarket(state, {}); } catch (_) { analysis = null; }
+        if (!analysis) return '<p class="text-muted text-sm">تعذّر تحليل المصداقية حالياً.</p>';
+        const rows = Object.entries(analysis.sources || {}).map(([key, d]) => {
+            const cls = d.provenance === 'sourced' ? 'text-success' : 'text-muted';
+            const labels = { population: 'عدد السكان', incomePerCapita: 'دخل الفرد', sectorShare: 'حصة القطاع من الدخل', samSom: 'نسب SAM/SOM' };
+            return `<li class="${cls}"><strong>${escapeHtml(labels[key] || key)}:</strong> ${escapeHtml(provenanceLabel(d))}</li>`;
+        }).join('');
+        return `<ul class="text-sm mb-0">${rows}</ul>`;
+    }
+
+    renderDemandForecast(state) {
+        const city = state.projectInfo?.city;
+        if (!city || city === 'أخرى') return '<p class="text-muted text-sm">اختر مدينة في بيانات المشروع لعرض تنبؤ الطلب.</p>';
+        let forecast = null;
+        try { forecast = forecastDemandTrend(city, 3); } catch (_) { forecast = null; }
+        if (!forecast?.points?.length) return '<p class="text-muted text-sm">تعذّر حساب التنبؤ لهذه المدينة.</p>';
+        const fmt = (n) => Math.round(n).toLocaleString('ar-SA');
+        const rows = forecast.points.map(p => `<li>سنة +${p.yearOffset}: ${fmt(p.value)} نسمة${p.provenance === 'assumption' ? ' (توقّع)' : ' (فعلي)'}</li>`).join('');
+        return `<ul class="text-sm mb-0">${rows}</ul><p class="text-xs text-muted mt-1">معدل نمو مفترض: ${(forecast.growthRatePct * 100).toFixed(1)}% سنوياً (${escapeHtml(forecast.growthRateSource || '')})</p>`;
+    }
+
+    /** جدول "نحن مقابل أقرب 3 منافسين" — من أول 3 صفوف في مصفوفة المنافسين الحالية
+     * (المسافة تتطلب إحداثيات لكل منافس، متاحة فقط للمنافسين المكتشَفين عبر Overpass). */
+    renderTopCompetitorComparison(competitors) {
+        const top3 = competitors.slice(0, 3);
+        if (!top3.length) return '';
+        return `
+            <h4 class="card-title text-sm mb-2">${icon('i-scale')} نحن مقابل أقرب 3 منافسين</h4>
+            <table class="data-table">
+                <thead><tr><th></th><th>الحصة السوقية</th><th>الميزة التنافسية</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>مشروعك</strong></td><td>—</td><td>حدّده في التحليل الاستراتيجي</td></tr>
+                    ${top3.map(c => `<tr><td>${escapeHtml(c.name || 'منافس')}</td><td>${c.marketShare || 0}%</td><td>${escapeHtml(c.advantage || '—')}</td></tr>`).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    async runSiteComparison() {
+        const resultEl = this.container.querySelector('#siteComparisonResult');
+        const citiesRaw = this.container.querySelector('#siteCompareCities')?.value || '';
+        const cities = citiesRaw.split(/[،,]/).map(c => c.trim()).filter(Boolean);
+        if (!cities.length) { toast.info('اكتب أسماء مدن مفصولة بفاصلة أولاً.'); return; }
+        resultEl.innerHTML = '<p class="text-muted text-sm">جارٍ المقارنة...</p>';
+
+        const state = this.store.getState();
+        const sectorText = buildSectorText(state.projectInfo || {}, state.marketSizing || {});
+        const competitorCounts = {};
+        await Promise.all(cities.map(async (city) => {
+            try {
+                const live = await overpassCompetitorsConnector({ city });
+                if (isUsable(live)) competitorCounts[city] = live.value.count;
+            } catch (_) { /* يبقى بلا عدّ منافسين لهذه المدينة — محايد في التقييم */ }
+        }));
+
+        let comparison = null;
+        try {
+            comparison = compareSiteOptions(cities.map(city => ({ city })), sectorText, competitorCounts);
+        } catch (e) {
+            resultEl.innerHTML = '<p class="text-danger text-sm">تعذّرت المقارنة.</p>';
+            return;
+        }
+        resultEl.innerHTML = `
+            <table class="data-table">
+                <thead><tr><th>المدينة</th><th>الترتيب</th><th>منافسون قريبون</th><th>الدرجة الإجمالية</th></tr></thead>
+                <tbody>
+                    ${comparison.candidates.map(c => `<tr><td>${escapeHtml(c.city)}</td><td>${c.rank}</td><td>${c.competitorCount ?? '—'}</td><td>${Math.round(c.score)}</td></tr>`).join('')}
+                </tbody>
+            </table>
+            <p class="text-xs text-muted mt-1">${escapeHtml(comparison.method || '')}</p>
+        `;
+    }
+
+    generatePersonas() {
+        const resultEl = this.container.querySelector('#customerPersonasResult');
+        const state = this.store.getState();
+        let personas = [];
+        try { personas = generateCustomerPersonas(state) || []; } catch (_) { personas = []; }
+        if (!personas.length) { resultEl.innerHTML = '<p class="text-muted text-sm">أضف مدينة/نشاطاً في بيانات المشروع أولاً.</p>'; return; }
+        resultEl.innerHTML = personas.map(p => `
+            <div class="alert alert--info mt-1">
+                <strong>${escapeHtml(p.name)}</strong> — ${escapeHtml(p.ageBand)}، ${escapeHtml(p.incomeBand)}
+                <p class="text-sm mb-0">${escapeHtml(p.need)}</p>
+            </div>
+        `).join('');
+    }
+
+    async loadSocialGrowthStatus() {
+        const box = this.container.querySelector('#socialGrowthBox');
+        if (!box) return;
+        try {
+            const result = await suggest('market.socialGrowth', {});
+            box.textContent = isUsable(result) ? provenanceLabel(result) : (result?.note || 'غير متاح حالياً.');
+        } catch (_) {
+            box.textContent = 'غير متاح حالياً.';
+        }
+    }
+
     bindEvents() {
         // Navigation
         this.container.querySelector('.btn-prev-step')?.addEventListener('click', () => {
@@ -694,6 +839,10 @@ export class MarketAnalysis {
 
         // اقتراح TAM من بيانات هيئة الإحصاء (عند اختيار المدينة)
         this.loadAndShowTAMSuggestion();
+        this.loadSocialGrowthStatus();
+
+        this.container.querySelector('#btnRunSiteComparison')?.addEventListener('click', () => this.runSiteComparison());
+        this.container.querySelector('#btnGeneratePersonas')?.addEventListener('click', () => this.generatePersonas());
 
         this.container.addEventListener('click', (e) => {
             if (e.target.closest?.('.btn-apply-tam-suggestion')) {

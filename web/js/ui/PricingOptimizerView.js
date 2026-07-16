@@ -11,6 +11,18 @@ const toNumber = (value, fallback = 0) => {
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
+/** سعر ساعة الذروة = السعر المقترح × معامل الذروة (استراتيجية اختيارية، ليست تغييراً مفروضاً). */
+export function computePeakPrice(idealPrice, peakMultiplier) {
+    const price = toNumber(idealPrice, 0);
+    const multiplier = toNumber(peakMultiplier, 1);
+    return price * (multiplier > 0 ? multiplier : 1);
+}
+
+/** تقدير توضيحي لتغيّر الكمية المطلوبة % = معامل المرونة × نسبة تغيّر السعر %. */
+export function computeElasticityVolumeChange(elasticity, priceChangePercent) {
+    return toNumber(elasticity, 0) * toNumber(priceChangePercent, 0);
+}
+
 export class PricingOptimizerView {
     constructor(containerId, store, onNavigate) {
         this.container = document.getElementById(containerId);
@@ -31,10 +43,14 @@ export class PricingOptimizerView {
             competitorAveragePrice: 0,
             positioning: 'balanced',
             notes: '',
+            peakMultiplier: 1.2,
+            elasticity: -1.2,
+            illustrativePriceChangePercent: 10,
             ...(marketing.pricingOptimization || {})
         };
         const streams = Array.isArray(state.revenue?.streams) ? state.revenue.streams : [];
         const rows = streams.map((stream, index) => this.analyzeStream(stream, settings, index));
+        const volumeChangePercent = computeElasticityVolumeChange(settings.elasticity, settings.illustrativePriceChangePercent);
 
         this.container.innerHTML = `
             <div class="pricing-optimizer animate-entry">
@@ -69,9 +85,31 @@ export class PricingOptimizerView {
                         <label for="pricingNotes">ملاحظات التسعير</label>
                         <textarea id="pricingNotes" class="input input--textarea" rows="2" placeholder="مثال: سعّرنا أقل من المنافس الرئيسي لجذب أول 3 أشهر...">${escapeHtml(settings.notes || '')}</textarea>
                     </div>
+                    <div class="form-group mt-3">
+                        <label for="pricingPeakMultiplier">معامل سعر ساعة الذروة (استراتيجية اختيارية)</label>
+                        <input type="range" class="input-range" id="pricingPeakMultiplier" min="1" max="2" step="0.1" value="${toNumber(settings.peakMultiplier, 1.2)}">
+                        <div class="flex-between text-sm text-gold"><span id="pricingPeakMultiplierVal">${toNumber(settings.peakMultiplier, 1.2).toFixed(1)}</span>×</div>
+                        <p class="text-xs text-muted mt-1">اختياري: يرفع سعر أوقات الذروة فقط دون تغيير السعر القياسي أدناه — طبّقه فقط إن ناسب مشروعك.</p>
+                    </div>
                 </div>
 
-                ${rows.length ? this.renderRows(rows) : this.renderEmptyState()}
+                <div class="card mb-4">
+                    <h3 class="text-gold mb-3">حساسية الطلب للسعر (تقدير توضيحي)</h3>
+                    <p class="text-muted text-sm mb-3">افتراض قابل للتعديل وليس قياساً فعلياً من بيانات مشروعك: معامل المرونة السعرية يقدّر نسبة تغيّر الكمية المطلوبة لكل نسبة تغيّر في السعر.</p>
+                    <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+                        <div class="form-group">
+                            <label for="pricingElasticity">معامل المرونة السعرية (افتراض)</label>
+                            <input id="pricingElasticity" class="input" type="number" step="0.1" value="${toNumber(settings.elasticity, -1.2)}">
+                        </div>
+                        <div class="form-group">
+                            <label for="pricingPriceChangePercent">نسبة تغيّر سعر افتراضية %</label>
+                            <input id="pricingPriceChangePercent" class="input" type="number" step="1" value="${toNumber(settings.illustrativePriceChangePercent, 10)}">
+                        </div>
+                    </div>
+                    <p class="text-sm mt-3">عند تغيير السعر بنسبة <strong>${toNumber(settings.illustrativePriceChangePercent, 10)}%</strong>، يقترح هذا الافتراض تغيّراً تقديرياً في الكمية المطلوبة بنحو <strong class="${volumeChangePercent < 0 ? 'text-danger' : 'text-success'}">${Math.round(volumeChangePercent * 10) / 10}%</strong>.</p>
+                </div>
+
+                ${rows.length ? this.renderRows(rows, settings) : this.renderEmptyState()}
 
                 <div class="wizard-nav margin-top-lg">
                     <button class="btn btn--secondary btn-prev-step" type="button">السابق</button>
@@ -106,6 +144,7 @@ export class PricingOptimizerView {
         const margin = finalPrice > 0 ? (finalPrice - unitCost) / finalPrice : 0;
         const monthlyRevenue = toNumber(stream.customersPerMonth, 0) * finalPrice;
         const currentMargin = price > 0 ? (price - unitCost) / price : 0;
+        const peakPrice = computePeakPrice(finalPrice, settings.peakMultiplier);
 
         return {
             index,
@@ -116,12 +155,14 @@ export class PricingOptimizerView {
             floorPrice,
             targetPrice,
             idealPrice: finalPrice,
+            peakPrice,
             margin,
             monthlyRevenue
         };
     }
 
-    renderRows(rows) {
+    renderRows(rows, settings) {
+        const showPeakPrice = toNumber(settings?.peakMultiplier, 1) > 1.001;
         return `
             <div class="card">
                 <div class="table-wrapper">
@@ -157,7 +198,11 @@ export class PricingOptimizerView {
                                     </td>
                                     <td class="text-mono ${row.currentMargin >= 0.25 ? 'text-success' : 'text-danger'}">${this.formatPercent(row.currentMargin)}</td>
                                     <td class="text-mono">${formatCurrency(row.floorPrice)}</td>
-                                    <td class="text-mono text-gold"><strong>${formatCurrency(row.idealPrice)}</strong><br><span class="text-muted text-xs">هامش ${this.formatPercent(row.margin)}</span></td>
+                                    <td class="text-mono text-gold">
+                                        <strong>${formatCurrency(row.idealPrice)}</strong><br>
+                                        <span class="text-muted text-xs">هامش ${this.formatPercent(row.margin)}</span>
+                                        ${showPeakPrice ? `<br><span class="text-muted text-xs">وقت الذروة (اختياري): ${formatCurrency(row.peakPrice)}</span>` : ''}
+                                    </td>
                                     <td class="text-mono">${formatCurrency(row.monthlyRevenue)}</td>
                                     <td><button class="btn btn--secondary btn-sm btn-apply-price" type="button" data-index="${row.index}">تطبيق</button></td>
                                 </tr>
@@ -190,14 +235,24 @@ export class PricingOptimizerView {
                     competitorAveragePrice: toNumber(this.container.querySelector('#pricingCompetitorPrice')?.value, 0),
                     willingnessToPay: toNumber(this.container.querySelector('#pricingWtp')?.value, 0),
                     positioning: this.container.querySelector('#pricingPositioning')?.value || 'balanced',
-                    notes: this.container.querySelector('#pricingNotes')?.value || ''
+                    notes: this.container.querySelector('#pricingNotes')?.value || '',
+                    peakMultiplier: clamp(toNumber(this.container.querySelector('#pricingPeakMultiplier')?.value, 1.2), 1, 2),
+                    elasticity: toNumber(this.container.querySelector('#pricingElasticity')?.value, -1.2),
+                    illustrativePriceChangePercent: toNumber(this.container.querySelector('#pricingPriceChangePercent')?.value, 10)
                 }
             });
             this.render(this.stepIndex);
         };
 
-        ['pricingTargetMargin', 'pricingCompetitorPrice', 'pricingWtp', 'pricingPositioning', 'pricingNotes'].forEach(id => {
+        ['pricingTargetMargin', 'pricingCompetitorPrice', 'pricingWtp', 'pricingPositioning', 'pricingNotes', 'pricingPeakMultiplier', 'pricingElasticity', 'pricingPriceChangePercent'].forEach(id => {
             this.container.querySelector(`#${id}`)?.addEventListener('change', saveSettings);
+        });
+
+        // تحديث حي لتسمية سلايدر الذروة أثناء السحب فقط (بلا حفظ/إعادة رسم كاملة —
+        // نفس مبدأ فصل المعاينة عن الالتزام في OperationalSim.js peakFactor).
+        this.container.querySelector('#pricingPeakMultiplier')?.addEventListener('input', (e) => {
+            const label = this.container.querySelector('#pricingPeakMultiplierVal');
+            if (label) label.textContent = Number(e.target.value).toFixed(1);
         });
 
         this.container.querySelectorAll('.btn-apply-price').forEach(button => {

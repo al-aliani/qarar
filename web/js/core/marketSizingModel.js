@@ -19,6 +19,7 @@
  */
 import demographicsJson from '../../data/SaudiDemographics.json';
 import { detectSectorBenchmark, SECTOR_BENCHMARKS } from './sectorBenchmarks.js';
+import { datum, PROVENANCE } from '../services/DataConnectors.js';
 
 const num = (value) => {
     const n = Number(value);
@@ -125,4 +126,66 @@ export function deriveMarketSizing({ population, incomeSAR, sectorShare, samRate
     const sam = Math.round(tam * num(samRate));
     const som = Math.round(sam * num(somRate));
     return { tam, sam, som };
+}
+
+/**
+ * معدل نمو سكاني وطني معلن (GASTAT، لقطة web/data/SaudiDemographics.json → populationGrowth) —
+ * نمو السعوديين وحدهم لا الإجمالي (الإجمالي مضخّم بالهجرة الوافدة ومتقلب). يُستخدم حصراً
+ * كافتراض توقع (ASSUMPTION) في forecastDemandTrend أدناه حين لا تتوفر بيانات سكان
+ * متعددة السنوات لمدينة بعينها — وهو الحال حالياً (اللقطة سنة واحدة فقط).
+ */
+export const NATIONAL_POPULATION_GROWTH_RATE = Object.freeze({
+    rate: num(demographicsJson.populationGrowth?.annualGrowthRateSaudiOnly) || 0.02,
+    source: demographicsJson.populationGrowth?.source || 'الهيئة العامة للإحصاء (GASTAT)',
+    year: String(demographicsJson.populationGrowth?.year || '2024'),
+    url: demographicsJson.populationGrowth?.url || 'https://www.stats.gov.sa'
+});
+
+/**
+ * توقع طلب/سكان بسيط لمدينة عبر سنوات قادمة — اتجاه مركّب بمعدل نمو واحد ثابت
+ * (لا بيانات سكان متعددة السنوات فعلية متاحة حالياً لكل مدينة، فاللقطة سنة واحدة).
+ * نقطة الأساس (offset=0) موسومة SOURCED من لقطة GASTAT نفسها؛ كل نقطة توقّع لاحقة
+ * موسومة ASSUMPTION صراحة (تطبيق معدل نمو معلن على المستقبل ليس رقماً مقاساً).
+ * @param {string} city
+ * @param {number} [years=3]  عدد سنوات التوقع بعد سنة الأساس
+ * @returns {{city:string, years:number, baseYear:string, growthRatePct:number, growthRateSource:object, points: Array<Object>}}
+ *          points[i] = Datum (من DataConnectors) + yearOffset؛ points[0] هو سنة الأساس.
+ */
+export function forecastDemandTrend(city, years = 3) {
+    const snapshot = getCitySnapshot(city);
+    const n = Math.max(1, Math.round(num(years)) || 3);
+    const rate = NATIONAL_POPULATION_GROWTH_RATE.rate;
+    const baseYearNum = Number(snapshot.year) || Number(SNAPSHOT_META.year);
+
+    const points = [];
+    for (let i = 0; i <= n; i++) {
+        const population = Math.round(snapshot.population * Math.pow(1 + rate, i));
+        const meta = i === 0
+            ? {
+                unit: 'نسمة',
+                source: SNAPSHOT_META.source,
+                sourceUrl: SNAPSHOT_META.url,
+                year: snapshot.year,
+                provenance: PROVENANCE.SOURCED,
+                note: 'سنة الأساس — من لقطة GASTAT نفسها (لا توقع).'
+            }
+            : {
+                unit: 'نسمة',
+                source: NATIONAL_POPULATION_GROWTH_RATE.source,
+                sourceUrl: NATIONAL_POPULATION_GROWTH_RATE.url,
+                year: String(baseYearNum + i),
+                provenance: PROVENANCE.ASSUMPTION,
+                note: `توقع مركّب بمعدل نمو سكاني وطني ${(rate * 100).toFixed(1)}% سنوياً (${NATIONAL_POPULATION_GROWTH_RATE.source} ${NATIONAL_POPULATION_GROWTH_RATE.year}) — تقدير مستقبلي لا رقم سكان مديني مقاس فعلياً.`
+            };
+        points.push({ yearOffset: i, ...datum(population, meta) });
+    }
+
+    return {
+        city: (city || '').trim(),
+        years: n,
+        baseYear: snapshot.year,
+        growthRatePct: rate,
+        growthRateSource: NATIONAL_POPULATION_GROWTH_RATE,
+        points
+    };
 }

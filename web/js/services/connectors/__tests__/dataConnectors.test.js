@@ -201,18 +201,7 @@ describe('WorldBankConnector — المحلّل والتحويل', () => {
     });
 });
 
-// ── (و) Google Places — الحالة الافتراضية (بلا proxy) ────────────────────────
-describe('GooglePlacesConnector — الحالة الافتراضية بلا proxy', () => {
-    it("suggest('market.competitorsPrecise') مع 404 يعيد unavailable (متوقّع)", async () => {
-        vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: false, status: 404 })));
-        const d = await suggest('market.competitorsPrecise', { coords: { lat: 24.7, lng: 46.6 } });
-        expect(d.provenance).toBe(PROVENANCE.UNAVAILABLE);
-        expect(d.value).toBeNull();
-    });
-
-    it("suggest('market.competitorsPrecise') مع fetch مرفوض يعيد unavailable", async () => {
-        vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('down'))));
-        const d = await suggest('market.competitorsPrecise', { coords: { lat: 24.7, lng: 46.6 } });
-        expect(d.provenance).toBe(PROVENANCE.UNAVAILABLE);
-    });
-});
+// GooglePlacesConnector: مُختبر الآن في ملفه الخاص
+// (__tests__/googlePlacesConnector.test.js) — يستدعي Supabase Edge Function
+// عبر supabase.functions.invoke لا fetch مباشرة، فيحتاج vi.mock لـ
+// supabaseClient.js بدل vi.stubGlobal('fetch', ...) المستخدم هنا لبقية الملف.

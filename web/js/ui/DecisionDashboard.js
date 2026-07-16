@@ -77,6 +77,9 @@ export class DecisionDashboard {
         } catch (e) {
             console.error('Financial Model Error:', e);
         }
+        // نفس نمط ExportMenu.js:513 — نُبقي results.decision (GO/REVISE/NO-GO) بمخزن الحالة
+        // المشترك بعد زيارة لوحة القرار، كي تستطيع شاشات لاحقة (مثل PaywallModal) قراءته.
+        if (results && this.store?.update) this.store.update('results', results);
 
         const evaluation = calculateProjectScore(state, results);
         const readiness = this.calculateReadiness(state, results, evaluation);

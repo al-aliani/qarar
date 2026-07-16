@@ -15,6 +15,9 @@ import './WorldBankConnector.js';       // يسجّل: macro.inflation، macro.g
 import './GastatSnapshotConnector.js';  // يسجّل: demographics.city، market.tam
 import './GooglePlacesConnector.js';    // يسجّل: market.competitorsPrecise
 import './ChamberSuppliersConnector.js'; // يسجّل: market.suppliers
+import './GoogleTrendsConnector.js';    // يسجّل: market.demandTrend (غير مُفعّل بعد)
+import './EconomicNewsConnector.js';    // يسجّل: market.economicNews (غير مُفعّل بعد)
+import './SocialGrowthConnector.js';    // يسجّل: market.socialGrowth (غير مُفعّل بعد)
 
 // ── إعادة تصدير الواجهة العامة للطبقة ────────────────────────────────────────
 export {

@@ -24,6 +24,12 @@
 #   - OTP_HASH_SECRET (سرّ عشوائي جديد خاص بهذا المشروع فقط — غير مرتبط بأي حساب
 #     خارجي، لهاش رموز التحقق قبل تخزينها؛ ولّده بنفسك، مثال: openssl rand -hex 32)
 #
+# مطلوبة لتفعيل موصّل Google Places (منافسون بدقّة — تسويق، 2026-07-17):
+#   - GOOGLE_PLACES_API_KEY (Google Cloud Console → APIs & Services → Credentials؛
+#     فعّل Places API. المفتاح يبقى على الخادم فقط — places-nearby/index.ts لا
+#     GooglePlacesConnector.js في العميل. بدون هذا السرّ يبقى الموصّل يُعيد
+#     unavailable بأمان، لا خطأ نشر)
+#
 # كل سرّ غائب يُتخطّى بتحذير واضح بدل إيقاف النشر بالكامل — يمكن تفعيل مزوّد واحد
 # أولاً (مثلاً Moyasar فقط) وإضافة الآخر لاحقاً بلا أي تعديل كود.
 
@@ -91,6 +97,12 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase functions deploy check-name-availability
 
+      - name: "Deploy places-nearby (JWT مستخدم حقيقي، يتطلب GOOGLE_PLACES_API_KEY)"
+        if: steps.check_link_secrets.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: npx supabase functions deploy places-nearby
+
       - name: Push payment provider secrets to Supabase (skips any missing one safely)
         if: steps.check_link_secrets.outputs.configured == 'true'
         env:
@@ -111,6 +123,7 @@ jobs:
             [WHATSAPP_TEMPLATE_NAME]="${{ secrets.WHATSAPP_TEMPLATE_NAME }}"
             [WHATSAPP_TEMPLATE_LANG]="${{ secrets.WHATSAPP_TEMPLATE_LANG }}"
             [OTP_HASH_SECRET]="${{ secrets.OTP_HASH_SECRET }}"
+            [GOOGLE_PLACES_API_KEY]="${{ secrets.GOOGLE_PLACES_API_KEY }}"
           )
           MISSING=""
           for KEY in "${!SECRET_VALUES[@]}"; do

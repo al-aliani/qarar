@@ -1,10 +1,14 @@
 /**
  * @vitest-environment jsdom
  *
- * سلسلة إكمال الحساب (AuthGuard._runOnboardingGates) — ثلاث خطوات متسلسلة:
- * جوال → دعوة تواصل واتساب (تُعرَض مرة واحدة، انظر WhatsAppContactModal.js
- * وmigration 20260717020000 — تحقق يدوي من الأدمن بدل رمز آلي) → تفضيل باقة.
- * كل نافذة تُفتح فقط إن كانت الخطوات السابقة لها بالسلسلة مكتملة فعلاً.
+ * سلسلة إكمال الحساب — قسمان منفصلان الآن (تدقيق 2026-07-17: تأجيل بوابتَي
+ * واتساب/الباقة لما بعد أول رسم فعلي للرئيسية، تفادي تكديس 3 نوافذ متتالية قبل
+ * أي قيمة من المنتج — انظر AuthGuard.js):
+ * 1) AuthGuard._runOnboardingGates (SIGNED_IN فقط) — يفتح بوابة الجوال الإلزامية
+ *    فقط، ولا يُكمل تلقائياً لبقية السلسلة.
+ * 2) AuthGuard.runDeferredOnboardingGates() (تُستدعى من DashboardView بعد أول
+ *    رسم للرئيسية) — دعوة تواصل واتساب (2026-07-17: تحقق يدوي بدل رمز آلي عبر
+ *    ميتا، انظر migration 20260717020000) ثم تفضيل باقة، كلتاهما قابلة للتخطي.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -57,9 +61,10 @@ async function triggerSignedIn() {
     await AuthGuard.subscribeToAuthChanges(() => {});
     authStateCallback('SIGNED_IN', { user: { id: 'u1', email: 'a@b.com' } });
     await new Promise((r) => setTimeout(r, 0));
+    return AuthGuard;
 }
 
-describe('AuthGuard._runOnboardingGates — سلسلة إكمال الحساب', () => {
+describe('AuthGuard._runOnboardingGates (SIGNED_IN) — بوابة الجوال فقط، متزامنة', () => {
     beforeEach(() => {
         vi.resetModules();
         authStateCallback = null;
@@ -72,7 +77,7 @@ describe('AuthGuard._runOnboardingGates — سلسلة إكمال الحساب',
         whatsappContactOptions = null;
     });
 
-    it('جوال ناقص: يفتح CompletePhoneModal فقط، لا النوافذ الأخرى', async () => {
+    it('جوال ناقص: يفتح CompletePhoneModal فقط', async () => {
         getUserProfileMock.mockResolvedValue({ ok: true, profile: { phone: null, whatsapp_contact_prompted: false, preferred_tier: null } });
         await triggerSignedIn();
 
@@ -81,34 +86,23 @@ describe('AuthGuard._runOnboardingGates — سلسلة إكمال الحساب',
         expect(packagePreferenceOpenMock).not.toHaveBeenCalled();
     });
 
-    it('جوال موجود لكن دعوة واتساب لم تُعرَض بعد: يفتح WhatsAppContactModal فقط', async () => {
+    it('جوال موجود بالفعل: SIGNED_IN وحدها لا تفتح واتساب ولا الباقة (مؤجَّلتان لـrunDeferredOnboardingGates)', async () => {
         getUserProfileMock.mockResolvedValue({ ok: true, profile: { phone: '+966512345678', whatsapp_contact_prompted: false, preferred_tier: null } });
         await triggerSignedIn();
 
         expect(completePhoneOpenMock).not.toHaveBeenCalled();
-        expect(whatsappContactOpenMock).toHaveBeenCalledTimes(1);
-        expect(packagePreferenceOpenMock).not.toHaveBeenCalled();
-    });
-
-    it('دعوة واتساب عُرضت (whatsapp_contact_prompted=true) لكن بلا تفضيل باقة: يفتح PackagePreferenceModal فقط', async () => {
-        getUserProfileMock.mockResolvedValue({ ok: true, profile: { phone: '+966512345678', whatsapp_contact_prompted: true, preferred_tier: null } });
-        await triggerSignedIn();
-
-        expect(completePhoneOpenMock).not.toHaveBeenCalled();
-        expect(whatsappContactOpenMock).not.toHaveBeenCalled();
-        expect(packagePreferenceOpenMock).toHaveBeenCalledTimes(1);
-    });
-
-    it('كل الحالات مكتملة: لا يفتح أي نافذة', async () => {
-        getUserProfileMock.mockResolvedValue({ ok: true, profile: { phone: '+966512345678', whatsapp_contact_prompted: true, preferred_tier: 'self' } });
-        await triggerSignedIn();
-
-        expect(completePhoneOpenMock).not.toHaveBeenCalled();
         expect(whatsappContactOpenMock).not.toHaveBeenCalled();
         expect(packagePreferenceOpenMock).not.toHaveBeenCalled();
     });
 
-    it('استدعاء onSaved من CompletePhoneModal يُعيد تشغيل السلسلة ويفتح الخطوة التالية', async () => {
+    it('getUserProfile فاشلة (ok:false، مثلاً هجرات لم تُطبَّق بعد): لا يفتح أي نافذة، لا يمنع الدخول', async () => {
+        getUserProfileMock.mockResolvedValue({ ok: false, error: 'profiles table missing' });
+        await triggerSignedIn();
+
+        expect(completePhoneOpenMock).not.toHaveBeenCalled();
+    });
+
+    it('onSaved من CompletePhoneModal يستدعي السلسلة المؤجَّلة بـforce:true ويفتح واتساب مباشرة', async () => {
         getUserProfileMock
             .mockResolvedValueOnce({ ok: true, profile: { phone: null, whatsapp_contact_prompted: false, preferred_tier: null } })
             .mockResolvedValueOnce({ ok: true, profile: { phone: '+966512345678', whatsapp_contact_prompted: false, preferred_tier: null } });
@@ -122,12 +116,65 @@ describe('AuthGuard._runOnboardingGates — سلسلة إكمال الحساب',
 
         expect(whatsappContactOpenMock).toHaveBeenCalledTimes(1);
     });
+});
 
-    it('استدعاء onDismissed من WhatsAppContactModal يُعيد تشغيل السلسلة ويفتح الخطوة التالية (مو نفس النافذة ثانية)', async () => {
+describe('AuthGuard.runDeferredOnboardingGates — واتساب/تفضيل الباقة بعد أول رسم للرئيسية', () => {
+    beforeEach(() => {
+        vi.resetModules();
+        authStateCallback = null;
+        onAuthStateChangeMock.mockClear();
+        getUserProfileMock.mockReset();
+        completePhoneOpenMock.mockClear();
+        whatsappContactOpenMock.mockClear();
+        packagePreferenceOpenMock.mockClear();
+        completePhoneOptions = null;
+        whatsappContactOptions = null;
+    });
+
+    it('جوال موجود، دعوة واتساب لم تُعرَض بعد: تفتح WhatsAppContactModal فقط', async () => {
+        getUserProfileMock.mockResolvedValue({ ok: true, profile: { phone: '+966512345678', whatsapp_contact_prompted: false, preferred_tier: null } });
+        const { AuthGuard } = await import('../AuthGuard.js');
+        await AuthGuard.runDeferredOnboardingGates();
+
+        expect(completePhoneOpenMock).not.toHaveBeenCalled();
+        expect(whatsappContactOpenMock).toHaveBeenCalledTimes(1);
+        expect(packagePreferenceOpenMock).not.toHaveBeenCalled();
+    });
+
+    it('دعوة واتساب عُرضت (whatsapp_contact_prompted=true) لكن بلا تفضيل باقة: تفتح PackagePreferenceModal فقط', async () => {
+        getUserProfileMock.mockResolvedValue({ ok: true, profile: { phone: '+966512345678', whatsapp_contact_prompted: true, preferred_tier: null } });
+        const { AuthGuard } = await import('../AuthGuard.js');
+        await AuthGuard.runDeferredOnboardingGates();
+
+        expect(whatsappContactOpenMock).not.toHaveBeenCalled();
+        expect(packagePreferenceOpenMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('كل الحالات مكتملة: لا تفتح أي نافذة', async () => {
+        getUserProfileMock.mockResolvedValue({ ok: true, profile: { phone: '+966512345678', whatsapp_contact_prompted: true, preferred_tier: 'self' } });
+        const { AuthGuard } = await import('../AuthGuard.js');
+        await AuthGuard.runDeferredOnboardingGates();
+
+        expect(whatsappContactOpenMock).not.toHaveBeenCalled();
+        expect(packagePreferenceOpenMock).not.toHaveBeenCalled();
+    });
+
+    it('الجوال لا يزال ناقصاً (سباق: الرئيسية رُسمت قبل بوابة SIGNED_IN): ترجع بصمت بلا فتح أي نافذة', async () => {
+        getUserProfileMock.mockResolvedValue({ ok: true, profile: { phone: null, whatsapp_contact_prompted: false, preferred_tier: null } });
+        const { AuthGuard } = await import('../AuthGuard.js');
+        await AuthGuard.runDeferredOnboardingGates();
+
+        expect(completePhoneOpenMock).not.toHaveBeenCalled();
+        expect(whatsappContactOpenMock).not.toHaveBeenCalled();
+        expect(packagePreferenceOpenMock).not.toHaveBeenCalled();
+    });
+
+    it('استدعاء onDismissed من WhatsAppContactModal يفتح الخطوة التالية (مو نفس النافذة ثانية)', async () => {
         getUserProfileMock
             .mockResolvedValueOnce({ ok: true, profile: { phone: '+966512345678', whatsapp_contact_prompted: false, preferred_tier: null } })
             .mockResolvedValueOnce({ ok: true, profile: { phone: '+966512345678', whatsapp_contact_prompted: true, preferred_tier: null } });
-        await triggerSignedIn();
+        const { AuthGuard } = await import('../AuthGuard.js');
+        await AuthGuard.runDeferredOnboardingGates();
 
         expect(whatsappContactOpenMock).toHaveBeenCalledTimes(1);
         expect(packagePreferenceOpenMock).not.toHaveBeenCalled();
@@ -140,11 +187,20 @@ describe('AuthGuard._runOnboardingGates — سلسلة إكمال الحساب',
         expect(whatsappContactOpenMock).toHaveBeenCalledTimes(1);
     });
 
-    it('getUserProfile فاشلة (ok:false، مثلاً هجرات لم تُطبَّق بعد): لا يفتح أي نافذة، لا يمنع الدخول', async () => {
-        getUserProfileMock.mockResolvedValue({ ok: false, error: 'profiles table missing' });
-        await triggerSignedIn();
+    it('حارس التكرار: نداءان متتاليان بلا force يجلبان البروفايل مرة واحدة فقط (لا يُعاد الفحص عند كل زيارة للرئيسية)', async () => {
+        getUserProfileMock.mockResolvedValue({ ok: true, profile: { phone: '+966512345678', whatsapp_contact_prompted: true, preferred_tier: 'self' } });
+        const { AuthGuard } = await import('../AuthGuard.js');
+        await AuthGuard.runDeferredOnboardingGates();
+        await AuthGuard.runDeferredOnboardingGates();
 
-        expect(completePhoneOpenMock).not.toHaveBeenCalled();
+        expect(getUserProfileMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('getUserProfile فاشلة: لا يفتح أي نافذة، لا ينهار', async () => {
+        getUserProfileMock.mockResolvedValue({ ok: false, error: 'profiles table missing' });
+        const { AuthGuard } = await import('../AuthGuard.js');
+        await expect(AuthGuard.runDeferredOnboardingGates()).resolves.not.toThrow();
+
         expect(whatsappContactOpenMock).not.toHaveBeenCalled();
         expect(packagePreferenceOpenMock).not.toHaveBeenCalled();
     });

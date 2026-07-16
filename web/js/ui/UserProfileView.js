@@ -37,6 +37,15 @@ export class UserProfileView {
         const initial = (displayName !== '—' ? displayName[0] : (user.email || user.phone || '?')[0]).toUpperCase();
         const { ok: profileOk, profile } = await getUserProfile();
         const currentPhone = profileOk ? (profile?.phone || '') : '';
+        // شارة حالة تأكيد الجوال (2026-07-17): phone_verified يُضبطه الأدمن يدوياً بعد
+        // تواصل واتساب (انظر AuthGuard.js) وقد يستغرق وقتاً — كانت هذه الحالة غير مرئية
+        // للعميل إطلاقاً، فتبدو وكأن لا شيء يحدث. لا تُعرض قبل وجود جوال أصلاً.
+        const phoneStatusBadge = !currentPhone ? ''
+            : profile?.phone_verified
+                ? '<span class="badge badge--success"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> مؤكد</span>'
+                : profile?.whatsapp_contact_prompted
+                    ? '<span class="badge badge--warning"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg> بانتظار تأكيد الفريق</span>'
+                    : '';
 
         // حذف الحساب: نُحيله لطلب عبر الدعم بدل حذف تلقائي فوري — بعض بياناتك
         // (الفواتير) يجب الاحتفاظ بها نظاماً حتى بعد طلب الحذف (انظر privacy.html
@@ -72,7 +81,7 @@ export class UserProfileView {
                     </div>
 
                     <div class="form-group mb-4">
-                        <label class="block text-sm font-medium mb-1">رقم الجوال (واتساب)</label>
+                        <label class="block text-sm font-medium mb-1">رقم الجوال (واتساب) ${phoneStatusBadge}</label>
                         <input type="tel" id="inpPhone" class="form-input w-full" placeholder="05xxxxxxxx" dir="ltr" inputmode="numeric" value="${currentPhone.replace(/"/g, '&quot;')}">
                         <div id="phoneError" class="text-danger text-sm mt-1" style="display:none;"></div>
                         <button type="button" id="btnSavePhone" class="btn btn--primary mt-2 text-sm">حفظ الجوال</button>

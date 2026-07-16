@@ -171,3 +171,43 @@ describe('PaywallModal — عرض الباقات الثلاث بأسعار prici
         expect(overlay.classList.contains('is-open')).toBe(false);
     });
 });
+
+describe('PaywallModal — ملاحظة شفافية عند توصية NO-GO/REVISE', () => {
+    beforeEach(() => {
+        document.body.innerHTML = '';
+    });
+
+    it('results.decision = NO-GO: تظهر ملاحظة تحذيرية ولا تمنع عرض الباقات', () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ results: { decision: 'NO-GO' } }));
+        modal.open('تقرير PDF شامل');
+
+        const note = document.querySelector('.alert--danger');
+        expect(note?.textContent).toContain('NO-GO');
+        expect(document.querySelectorAll('.paywall-package-card')).toHaveLength(PRICING_PACKAGES.length);
+    });
+
+    it('results.decision = REVISE: تظهر ملاحظة تنبيه', () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ results: { decision: 'REVISE' } }));
+        modal.open('تقرير PDF شامل');
+
+        const note = document.querySelector('.alert--warning');
+        expect(note?.textContent).toContain('REVISE');
+    });
+
+    it('results.decision = GO: لا تظهر أي ملاحظة', () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ results: { decision: 'GO' } }));
+        modal.open('تقرير PDF شامل');
+
+        expect(document.querySelector('.alert--danger')).toBeNull();
+        expect(document.querySelector('.alert--warning')).toBeNull();
+    });
+
+    it('بلا results إطلاقاً (لم يزر لوحة القرار بعد): لا ملاحظة ولا انهيار', () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore({}));
+        modal.open('تقرير PDF شامل');
+
+        expect(document.querySelector('.alert--danger')).toBeNull();
+        expect(document.querySelector('.alert--warning')).toBeNull();
+        expect(document.querySelectorAll('.paywall-package-card')).toHaveLength(PRICING_PACKAGES.length);
+    });
+});

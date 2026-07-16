@@ -1,5 +1,6 @@
 
 import { SECTIONS, SAUDI_GOSI_RATE_2026 } from './schema.js';
+export { SAUDI_GOSI_RATE_2026 }; // إعادة تصدير — بعض المستهلكين (nitaqatHrCard.js واختباره) يستوردانه من هنا
 import { computeLoanSchedule } from '../../../lib/calc/loanSchedule.js';
 import { generateBalanceSheets } from '../../../lib/calc/balanceSheet.js';
 import { analyzeSaaSMetrics } from './SaaSEngine.js';

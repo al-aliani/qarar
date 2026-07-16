@@ -62,6 +62,16 @@ export class PaywallModal {
         const projectName = state.projectInfo?.name || 'مشروعي';
         this.studyId = state.projectInfo?.id || state.id || null;
 
+        // ملاحظة شفافية: لو زار العميل لوحة القرار قبل التصدير (النسق المعتاد) تكون
+        // results.decision محفوظة بالفعل بمخزن الحالة (انظر DecisionDashboard.js) — لا
+        // تمنع الشراء، تُوضّح فقط أن التقرير سيشرح توصية غير إيجابية لا أن الدفع "يفتح" GO.
+        const decision = state.results?.decision;
+        const decisionNote = decision === 'NO-GO'
+            ? '<div class="alert alert--danger mb-3">دراستك أظهرت توصية عدم المضي (NO-GO) حالياً — هذا التقرير يوضّح لماذا، وهو ما يحميك من قرار استثماري خاطئ لا أنه يمنعك من الشراء.</div>'
+            : decision === 'REVISE'
+                ? '<div class="alert alert--warning mb-3">دراستك تحتاج مراجعة (REVISE) حالياً — هذا التقرير يوضّح النقاط التي تحتاج تعديلاً.</div>'
+                : '';
+
         const cards = PRICING_PACKAGES.map(pkg => {
             const features = PACKAGE_FEATURES[pkg.id] || [];
             const message = `مرحباً، أرغب بترقية دراسة «${projectName}» لباقة «${pkg.name}» (${formatPrice(pkg.price)} ${CURRENCY_SYMBOL}) للحصول على ${this.formatLabel}.`;
@@ -112,6 +122,7 @@ export class PaywallModal {
                 <div class="modal-body">
                     <p class="text-muted mb-4">${escapeHtml(this.formatLabel)} متاح ضمن الباقات المدفوعة. ادفع مباشرة الآن، أو تواصل معنا عبر واتساب.</p>
                     <div id="paywallPayError" class="text-danger text-sm mb-2" style="display:none;"></div>
+                    ${decisionNote}
                     <div class="paywall-packages-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
                         ${cards}
                     </div>

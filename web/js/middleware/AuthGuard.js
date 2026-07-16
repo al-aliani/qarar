@@ -16,6 +16,7 @@ class AuthGuardClass {
         this.initialized = false;
         this._reviewerCache = null; // { userId, value } — يُبطَل عند أي تغيّر بحالة المصادقة
         this._adminCache = null; // { userId, value } — نفس مبدأ _reviewerCache
+        this._deferredGatesTriggered = false; // حارس تكرار runDeferredOnboardingGates — يُبطَل بنفس آلية الكاش أعلاه
     }
 
     /**
@@ -89,6 +90,7 @@ class AuthGuardClass {
             this.isAuthenticated = !!this.currentUser;
             this._reviewerCache = null; // هوية مختلفة (أو خروج) = ذاكرة isReviewer() القديمة غير صالحة
             this._adminCache = null; // نفس السبب — ذاكرة isAdmin() القديمة غير صالحة
+            this._deferredGatesTriggered = false; // نفس السبب — تسجيل دخول جديد يستحق إعادة فحص السلسلة المؤجَّلة
 
             if (event === 'SIGNED_IN') {
                 auditLog(ACTIONS.LOGIN, { email: this.currentUser?.email });
@@ -121,25 +123,66 @@ class AuthGuardClass {
     }
 
     /**
-     * سلسلة إكمال الحساب بعد كل دخول ناجح — ثلاث حالات مستقلة، بالترتيب:
-     * 1) رقم الجوال (واتساب) مطلوب على كل حساب — حسابات Google OAuth لا تُرجعه
-     *    إطلاقاً (بخلاف البريد/كلمة المرور التي تجمعه أصلاً عند التسجيل، انظر
-     *    AuthModalStub.js) → CompletePhoneModal إن كان ناقصاً.
-     * 2) دعوة تواصل واتساب (2026-07-17: تحقق يدوي بدل رمز آلي عبر ميتا — انظر
-     *    migration 20260717020000) → WhatsAppContactModal إن لم تُعرَض بعد
-     *    (profile.whatsapp_contact_prompted لا يزال false). قابلة للتخطي
-     *    عمداً (بخلاف بقية السلسلة) — التأكيد الفعلي (phone_verified) يدوي من
-     *    الأدمن لاحقاً، قد يستغرق وقتاً، فلا تُحجب هذه الخطوة المستخدم عن
-     *    التطبيق ولا تُعرَض عليه مرة ثانية.
-     * 3) تفضيل باقة غير مُلزم → PackagePreferenceModal إن لم يُختَر بعد.
-     * كل خطوة تُكمَل بنداء صريح لـ_runOnboardingGates() من داخل النافذة نفسها
-     * (تحديث عمود واحد بـUPDATE لا يُطلق حدث SIGNED_IN جديد يُعيد تشغيل السلسلة
-     * تلقائياً) — لا اعتماد على انتظار حدث مصادقة آخر. تفشل بصمت إذا تعذّر جلب
-     * profiles (مثلاً هجرات لم تُطبَّق بعد) — لا نمنع الدخول بسبب هذا.
+     * الخطوة الوحيدة المتزامنة مع SIGNED_IN: رقم الجوال (واتساب)، إلزامي على كل
+     * حساب — حسابات Google OAuth لا تُرجعه إطلاقاً (بخلاف البريد/كلمة المرور التي
+     * تجمعه أصلاً عند التسجيل، انظر AuthModalStub.js) → CompletePhoneModal إن كان
+     * ناقصاً، بلا تخطٍّ.
+     *
+     * تدقيق 2026-07-17 (تأجيل بوابتَي واتساب/الباقة): كانت الخطوتان التاليتان
+     * (دعوة واتساب + تفضيل باقة، كلتاهما قابلة للتخطي) تُطلَقان هنا أيضاً فور
+     * تسجيل الدخول — قبل أن يرى المستخدم أي شاشة فيها قيمة فعلية من المنتج. أسوأ
+     * أثر كان على حسابات Google OAuth تحديداً: أسرع مسار تسجيل (نقرة واحدة) يتحول
+     * فوراً لأطول onboarding (حتى 3 نوافذ متتالية). صارتا الآن مؤجَّلتين عمداً
+     * لـrunDeferredOnboardingGates() أدناه، تُستدعى من DashboardView بعد أول رسم
+     * فعلي للوحة الرئيسية. تفشل بصمت إذا تعذّر جلب profiles (مثلاً هجرات لم
+     * تُطبَّق بعد) — لا نمنع الدخول بسبب هذا.
      */
     async _runOnboardingGates() {
         try {
-            await this._continueOnboardingGates();
+            await this._continuePhoneGate();
+        } catch (_) {}
+    }
+
+    async _continuePhoneGate() {
+        const { getUserProfile } = await import('../../supabaseClient.js');
+        const { ok, profile } = await getUserProfile();
+        if (!ok) return;
+
+        if (!profile?.phone) {
+            const { CompletePhoneModal } = await import('../ui/CompletePhoneModal.js');
+            new CompletePhoneModal({ onSaved: () => this.runDeferredOnboardingGates({ force: true }) }).open();
+        }
+    }
+
+    /**
+     * بوابتا واتساب/تفضيل الباقة المؤجَّلتان — تُستدعى من DashboardView.render()
+     * بعد أول رسم فعلي للوحة الرئيسية في الجلسة، لا فور SIGNED_IN. حارس تكرار
+     * (`_deferredGatesTriggered`) يمنع إعادة الفحص عند كل عودة للرئيسية
+     * (DashboardView.render() يُستدعى بعشرات المواضع في app.js، لا مرة واحدة في
+     * الجلسة). `force:true` يتجاوز الحارس — يُستخدم فقط من onSaved/onDismissed
+     * داخل السلسلة نفسها لإعادة المحاولة فوراً بعد إكمال خطوة سابقة، بما فيها حالة
+     * السباق حيث تُرسم الرئيسية قبل أن تُكمل بوابة الجوال (SIGNED_IN) فتح
+     * CompletePhoneModal أصلاً — عندها نرجع بصمت بلا حجز نهائي، وonSaved يعيد
+     * النداء بـforce بعد الحفظ.
+     */
+    async runDeferredOnboardingGates({ force = false } = {}) {
+        if (this._deferredGatesTriggered && !force) return;
+        this._deferredGatesTriggered = true;
+        try {
+            const { getUserProfile } = await import('../../supabaseClient.js');
+            const { ok, profile } = await getUserProfile();
+            if (!ok || !profile?.phone) return;
+
+            if (!profile.whatsapp_contact_prompted) {
+                const { WhatsAppContactModal } = await import('../ui/WhatsAppContactModal.js');
+                new WhatsAppContactModal({ onDismissed: () => this.runDeferredOnboardingGates({ force: true }) }).open();
+                return;
+            }
+
+            if (!profile.preferred_tier) {
+                const { PackagePreferenceModal } = await import('../ui/PackagePreferenceModal.js');
+                new PackagePreferenceModal({}).open();
+            }
         } catch (_) {}
     }
 
@@ -162,29 +205,6 @@ class AuthGuardClass {
             const { toast } = await import('../utils/toast.js');
             toast.success('تم تأكيد بريدك الإلكتروني بنجاح — أهلاً بك في قرار.');
         } catch (_) {}
-    }
-
-    async _continueOnboardingGates() {
-        const { getUserProfile } = await import('../../supabaseClient.js');
-        const { ok, profile } = await getUserProfile();
-        if (!ok) return;
-
-        if (!profile?.phone) {
-            const { CompletePhoneModal } = await import('../ui/CompletePhoneModal.js');
-            new CompletePhoneModal({ onSaved: () => this._runOnboardingGates() }).open();
-            return;
-        }
-
-        if (!profile.whatsapp_contact_prompted) {
-            const { WhatsAppContactModal } = await import('../ui/WhatsAppContactModal.js');
-            new WhatsAppContactModal({ onDismissed: () => this._runOnboardingGates() }).open();
-            return;
-        }
-
-        if (!profile.preferred_tier) {
-            const { PackagePreferenceModal } = await import('../ui/PackagePreferenceModal.js');
-            new PackagePreferenceModal({}).open();
-        }
     }
 
     /**

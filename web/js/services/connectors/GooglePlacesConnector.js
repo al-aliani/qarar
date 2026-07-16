@@ -3,78 +3,62 @@
  *
  * ⚠️ حاسم — لا مفتاح Google في العميل أبداً:
  *   هذا الموصّل لا يحمل ولا يقرأ أي مفتاح Google API إطلاقاً. المفتاح يبقى
- *   على الخادم فقط. يتصل هذا الموصّل بـ proxy خادمي على نفس الأصل (same-origin)
- *   عبر '/api/places/nearby' — والخادم هو الذي يحمل المفتاح ويستدعي Google.
+ *   على الخادم فقط. يستدعي هذا الموصّل Supabase Edge Function باسم
+ *   'places-nearby' (عبر supabase.functions.invoke) — والخادم هو الذي يحمل
+ *   المفتاح (GOOGLE_PLACES_API_KEY) ويستدعي Google.
  *
  * ⚠️ حاسم — الامتثال لشروط استخدام Google Places (ToS):
  *   سياسة Google Places تمنع «تخزين» محتوى المكان (الأسماء، التقييمات، القوائم).
  *   لذلك هذا الموصّل يُرجع فقط قيمة «عدد مُشتقّ» (count) — وربما كثافة —
  *   ولا يُرجع أبداً قائمة خام مُخزّنة من الأماكن (أسماء/تقييمات/عناوين).
- *   الخادم (proxy) هو المسؤول عن اشتقاق العدد فوراً دون تخزين المحتوى الخام.
+ *   الخادم (Edge Function) هو المسؤول عن اشتقاق العدد فوراً دون تخزين المحتوى الخام.
  *
  *   ملاحظة مقصودة: «عدد العملاء اليومي المُقدّر» / «الأوقات الشائعة» (Popular Times)
  *   ليس له أي واجهة API قانونية من Google — ولذلك لا يُقدّمه هذا الموصّل عمداً.
  *   أي رقم من هذا النوع سيكون تخميناً/مخالفة، والمسار الأمين هو عدم تقديمه.
  *
- * الحالة الافتراضية اليوم: الـ proxy غير مُفعّل (المرحلة 2) → يُرجع unavailable.
- * هذا هو السلوك المتوقّع، لا خطأ.
+ * الحالة الافتراضية عند أي عائق (لا جلسة مستخدم، لا مفتاح مضبوط على الخادم،
+ * فشل شبكة): unavailable — لا نُخمّن أبداً، هذا سلوك متوقّع وليس خللاً.
  */
 
 import { datum, unavailable, PROVENANCE, registerConnector } from '../DataConnectors.js';
+import { getSupabaseClient } from '../../../supabaseClient.js';
 
 /** المفتاح الذي يسجّله هذا الموصّل. */
 const KEY = 'market.competitorsPrecise';
 
-/** مسار الـ proxy الخادمي على نفس الأصل — الخادم يحمل المفتاح. */
-const PROXY_PATH = '/api/places/nearby';
+/** اسم Supabase Edge Function التي تحمل مفتاح Google وتستدعيه فعلياً. */
+const FUNCTION_NAME = 'places-nearby';
 
-/** نص التعذّر الموحّد — الحالة الافتراضية المتوقّعة اليوم. */
+/** نص التعذّر الموحّد — يُستخدم لأي عائق (بلا تمييز السبب للمستهلك). */
 const NOT_CONFIGURED_NOTE =
-    'Google Places غير مُفعّل — يتطلب proxy خادمياً يحمل المفتاح (المرحلة 2)';
+    'Google Places غير مُتاح الآن — تعذّر الاتصال بخدمة البحث القريب (تحقق من تسجيل الدخول)';
 
 /**
- * حساب أصل الطلب (base URL) — من window.location.origin إن توفّر، وإلا ''.
- * في بيئة node (الاختبارات) لا يوجد window → نستخدم '' (مسار نسبي).
- * @returns {string}
- */
-function baseUrl() {
-    try {
-        if (typeof window !== 'undefined' && window.location && window.location.origin) {
-            return window.location.origin;
-        }
-    } catch (_) { /* تجاهل — بيئة بلا window */ }
-    return '';
-}
-
-/**
- * الجلب المعزول من الـ proxy — مفصول في دالة مساعدة لسهولة الاختبار.
- * لا يرمي أبداً: يُرجع { ok, data } أو { ok:false } عند أي فشل/غياب fetch.
+ * الاستدعاء المعزول لدالة Edge — مفصول في دالة مساعدة لسهولة الاختبار.
+ * لا يرمي أبداً: يُرجع { ok, data } أو { ok:false } عند أي فشل/غياب جلسة/عميل.
  * @param {{lat:number,lng:number}} coords
  * @param {number} radiusMeters
  * @returns {Promise<{ok:boolean, data?:any}>}
  */
 async function fetchNearby(coords, radiusMeters) {
-    // حارس node/بيئة بلا fetch — لا proxy يعني الحالة الافتراضية (غير مُفعّل).
-    if (typeof fetch !== 'function') return { ok: false };
+    const { supabase, ok: clientOk } = await getSupabaseClient();
+    if (!clientOk || !supabase) return { ok: false };
 
     try {
-        const res = await fetch(`${baseUrl()}${PROXY_PATH}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ coords, radiusMeters })
+        const { data, error } = await supabase.functions.invoke(FUNCTION_NAME, {
+            body: { lat: coords.lat, lng: coords.lng, radiusMeters }
         });
-        // 404 (proxy غير منشور) أو أي حالة غير ناجحة → غير مُفعّل.
-        if (!res || !res.ok) return { ok: false };
-        const data = await res.json();
+        if (error || !data) return { ok: false };
         return { ok: true, data };
     } catch (_) {
-        // فشل الشبكة/التحليل → غير مُفعّل. لا نرمي، لا نُخمّن.
+        // فشل الشبكة/الاتصال → غير مُتاح. لا نرمي، لا نُخمّن.
         return { ok: false };
     }
 }
 
 /**
- * موصّل «المنافسون بدقّة» — عبر proxy خادمي فقط.
+ * موصّل «المنافسون بدقّة» — عبر Supabase Edge Function فقط.
  * @param {{coords?:{lat:number,lng:number}, radiusMeters?:number}} [context]
  * @returns {Promise<import('../DataConnectors.js').Datum>}
  */
@@ -91,16 +75,16 @@ async function googlePlacesConnector(context = {}) {
 
     const { ok, data } = await fetchNearby(coords, radiusMeters);
 
-    // proxy غير مُفعّل (fetch فشل / 404 / غير ناجح) → الحالة الافتراضية المتوقّعة.
+    // فشل الاستدعاء (لا جلسة/شبكة/الدالة أعادت خطأ) → الحالة الافتراضية الآمنة.
     if (!ok) return unavailable(NOT_CONFIGURED_NOTE);
 
-    // الـ proxy يُرجع { count } فقط — عدد مُشتقّ، لا قائمة خام (امتثال ToS).
+    // الدالة تُرجع { count } فقط — عدد مُشتقّ، لا قائمة خام (امتثال ToS).
     const count = data && typeof data.count === 'number' ? data.count : null;
     if (count === null) return unavailable(NOT_CONFIGURED_NOTE);
 
     return datum({ count }, {
         unit: 'منشأة',
-        source: 'Google Places (عبر proxy)',
+        source: 'Google Places (عبر Supabase Edge Function)',
         sourceUrl: 'https://developers.google.com/maps/documentation/places',
         provenance: PROVENANCE.SOURCED,
         note: 'عدد مُشتقّ فقط — لا تُخزّن القائمة الخام (قيد ToS)'

@@ -13,6 +13,7 @@ import { getCityStats, getSuggestion } from '../data/SaudiCityStats.js';
 import { getCostRatios } from '../core/costRatios.js';
 import { resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
 import { analyzeSaudiMarket } from '../core/SaudiMarketEngine.js';
+import { getCitySnapshot, buildSectorText, detectSectorKey } from '../core/marketSizingModel.js';
 
 function or(v, d) { return (v != null && String(v).trim() !== '') ? String(v).trim() : d; }
 
@@ -505,6 +506,70 @@ export function generateCompetitors(state) {
         { name: 'منافس وافد حديثاً', strengths: 'علامة كبيرة، استثمار', weaknesses: 'تكيف محدود مع السوق المحلي', marketShare: null, advantage: 'التمويل' },
         { name: 'مشاريع صغيرة ومتوسطة', strengths: 'مرونة، أسعار', weaknesses: 'محدودية الموارد والوصول', marketShare: null, advantage: 'المرونة' }
     ];
+}
+
+/**
+ * توليد 2-3 شخصيات عميل مقترحة (Persona) من ديموغرافيا SAM الفعلية للمشروع —
+ * المدينة ودخل الفرد من getCitySnapshot، والقطاع عبر نفس كاشف marketSizingModel
+ * الذي تستخدمه لوحة القرار (buildSectorText + detectSectorKey) — لا بيانات مختلَقة
+ * ولا اتصال شبكي؛ النصوص استرشادية سياقية فقط (اسم/فئة عمرية/فئة دخل مشتقة من دخل
+ * المدينة الفعلي/حاجة) وليست إحصاءً منشوراً.
+ * @param {object} state
+ * @returns {Array<{name:string, ageBand:string, incomeBand:string, need:string}>}
+ */
+export function generateCustomerPersonas(state) {
+    const p = state?.projectInfo || {};
+    const concept = shortActivity(p, 'المنتج أو الخدمة');
+    const city = or(p.city, 'المنطقة');
+    const sectorText = buildSectorText(p, state?.marketSizing || {});
+    const sectorKey = detectSectorKey(sectorText);
+    const snapshot = getCitySnapshot(city);
+    const incomeBand = snapshot.perCapitaIncomeSAR >= 95000 ? 'دخل مرتفع'
+        : snapshot.perCapitaIncomeSAR >= 75000 ? 'دخل متوسط إلى مرتفع'
+        : 'دخل متوسط';
+
+    const TEMPLATES = {
+        fnb: [
+            { name: 'سارة', ageBand: '25–34', need: `تبحث عن ${concept} سريع وموثوق الجودة قريب من عملها في ${city}.` },
+            { name: 'أسرة أبو خالد', ageBand: '35–50', need: `أسرة تفضّل مكاناً مناسباً لتجربة ${concept} في نهاية الأسبوع بـ${city}.` },
+            { name: 'فهد', ageBand: '18–24', need: 'شاب يقارن الأسعار وتجربة التقديم قبل تكرار الزيارة.' }
+        ],
+        retailHighMargin: [
+            { name: 'نورة', ageBand: '25–40', need: `تبحث عن ${concept} أصلي بجودة مضمونة وتجربة شراء مميزة في ${city}.` },
+            { name: 'عبدالله', ageBand: '30–45', need: `يشتري ${concept} كهدية أو لمناسبة خاصة ويهتم بالتغليف والخدمة.` },
+            { name: 'ريم', ageBand: '18–29', need: `تتابع صيحات ${concept} وتقارن بين الماركات قبل الشراء.` }
+        ],
+        retail: [
+            { name: 'أم فهد', ageBand: '30–50', need: `تحتاج ${concept} بشكل دوري لأسرتها بأسعار مناسبة وقرب من المنزل في ${city}.` },
+            { name: 'خالد', ageBand: '20–35', need: 'يفضّل التسوق السريع وتوفر المنتج دون انتظار.' },
+            { name: 'منال', ageBand: '25–40', need: `تقارن الأسعار والعروض قبل اختيار ${concept}.` }
+        ],
+        service: [
+            { name: 'عبدالعزيز', ageBand: '28–45', need: `يحتاج ${concept} بموعد مرن وجودة موثوقة في ${city}.` },
+            { name: 'هند', ageBand: '25–40', need: `تبحث عن متابعة مستمرة وخدمة شخصية في ${concept}.` },
+            { name: 'محمد', ageBand: '35–55', need: `يقيّم السمعة والخبرة قبل الالتزام بمزوّد ${concept}.` }
+        ],
+        industrial: [
+            { name: 'مدير مشتريات مصنع محلي', ageBand: '35–55', need: `يحتاج توريداً منتظماً بجودة ثابتة من ${concept} بسعر تنافسي.` },
+            { name: 'وكيل توزيع إقليمي', ageBand: '30–50', need: `يبحث عن شريك تصنيع موثوق في ${city} لتلبية طلبات عملائه.` }
+        ],
+        logistics: [
+            { name: 'مسؤول سلسلة إمداد', ageBand: '30–50', need: `يحتاج تتبعاً دقيقاً ومواعيد تسليم موثوقة لشحنات ${concept}.` },
+            { name: 'صاحب متجر إلكتروني', ageBand: '25–40', need: `يبحث عن تكلفة شحن منافسة وتغطية واسعة من ${city}.` }
+        ],
+        saas: [
+            { name: 'صاحب منشأة صغيرة', ageBand: '28–45', need: 'يريد حلاً رقمياً بسيطاً يوفر عليه الوقت دون تعقيد تقني.' },
+            { name: 'مدير عمليات', ageBand: '30–45', need: 'يحتاج تقارير وتكاملاً موثوقاً مع أنظمته الحالية.' },
+            { name: 'مستخدم فردي مهتم بالتقنية', ageBand: '20–35', need: 'يجرّب النسخة المجانية قبل الاشتراك المدفوع.' }
+        ],
+        default: [
+            { name: 'عميل عائلي', ageBand: '30–50', need: `يبحث عن ${concept} موثوق بجودة مناسبة في ${city}.` },
+            { name: 'عميل شاب', ageBand: '20–35', need: 'يهتم بالسعر والتجربة السريعة أكثر من الولاء لعلامة معينة.' }
+        ]
+    };
+
+    const templates = TEMPLATES[sectorKey] || TEMPLATES.default;
+    return templates.map(t => ({ name: t.name, ageBand: t.ageBand, incomeBand, need: t.need }));
 }
 
 /**

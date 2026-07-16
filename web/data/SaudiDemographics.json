@@ -12,109 +12,127 @@
       "population": 7676654,
       "perCapitaIncomeSAR": 98500,
       "region": "منطقة الرياض",
-      "notes": "تعداد 2022 — مدينة الرياض وضواحيها"
+      "notes": "تعداد 2022 — مدينة الرياض وضواحيها",
+      "zaddOverrides": {}
     },
     "جدة": {
       "population": 4685000,
       "perCapitaIncomeSAR": 92000,
       "region": "منطقة مكة المكرمة",
-      "notes": "تقدير 2022 — محافظة جدة"
+      "notes": "تقدير 2022 — محافظة جدة",
+      "zaddOverrides": {}
     },
     "مكة المكرمة": {
       "population": 2042000,
       "perCapitaIncomeSAR": 78000,
       "region": "منطقة مكة المكرمة",
-      "notes": "تقدير 2022 — مكة والمناطق المجاورة"
+      "notes": "تقدير 2022 — مكة والمناطق المجاورة",
+      "zaddOverrides": {}
     },
     "مكة": {
       "population": 2042000,
       "perCapitaIncomeSAR": 78000,
       "region": "منطقة مكة المكرمة",
-      "notes": "مرجع لمكة المكرمة"
+      "notes": "مرجع لمكة المكرمة",
+      "zaddOverrides": {}
     },
     "المدينة المنورة": {
       "population": 1481000,
       "perCapitaIncomeSAR": 82000,
       "region": "منطقة المدينة المنورة",
-      "notes": "تقدير 2022"
+      "notes": "تقدير 2022",
+      "zaddOverrides": {}
     },
     "المدينة": {
       "population": 1481000,
       "perCapitaIncomeSAR": 82000,
       "region": "منطقة المدينة المنورة",
-      "notes": "مرجع للمدينة المنورة"
+      "notes": "مرجع للمدينة المنورة",
+      "zaddOverrides": {}
     },
     "الدمام": {
       "population": 1208000,
       "perCapitaIncomeSAR": 95000,
       "region": "المنطقة الشرقية",
-      "notes": "تقدير 2022 — الدمام والظهران"
+      "notes": "تقدير 2022 — الدمام والظهران",
+      "zaddOverrides": {}
     },
     "الخبر": {
       "population": 573000,
       "perCapitaIncomeSAR": 102000,
       "region": "المنطقة الشرقية",
-      "notes": "تقدير 2022"
+      "notes": "تقدير 2022",
+      "zaddOverrides": {}
     },
     "الطائف": {
       "population": 993000,
       "perCapitaIncomeSAR": 72000,
       "region": "منطقة مكة المكرمة",
-      "notes": "تقدير 2022"
+      "notes": "تقدير 2022",
+      "zaddOverrides": {}
     },
     "تبوك": {
       "population": 569797,
       "perCapitaIncomeSAR": 68000,
       "region": "منطقة تبوك",
-      "notes": "تقدير 2022"
+      "notes": "تقدير 2022",
+      "zaddOverrides": {}
     },
     "بريدة": {
       "population": 614093,
       "perCapitaIncomeSAR": 75000,
       "region": "منطقة القصيم",
-      "notes": "تقدير 2022"
+      "notes": "تقدير 2022",
+      "zaddOverrides": {}
     },
     "خميس مشيط": {
       "population": 512599,
       "perCapitaIncomeSAR": 71000,
       "region": "منطقة عسير",
-      "notes": "تقدير 2022"
+      "notes": "تقدير 2022",
+      "zaddOverrides": {}
     },
     "أبها": {
       "population": 366551,
       "perCapitaIncomeSAR": 74000,
       "region": "منطقة عسير",
-      "notes": "تقدير 2022"
+      "notes": "تقدير 2022",
+      "zaddOverrides": {}
     },
     "القطيف": {
       "population": 524182,
       "perCapitaIncomeSAR": 88000,
       "region": "المنطقة الشرقية",
-      "notes": "تقدير 2022"
+      "notes": "تقدير 2022",
+      "zaddOverrides": {}
     },
     "حائل": {
       "population": 412758,
       "perCapitaIncomeSAR": 70000,
       "region": "منطقة حائل",
-      "notes": "تقدير 2022"
+      "notes": "تقدير 2022",
+      "zaddOverrides": {}
     },
     "جازان": {
       "population": 173569,
       "perCapitaIncomeSAR": 65000,
       "region": "منطقة جازان",
-      "notes": "تقدير 2022"
+      "notes": "تقدير 2022",
+      "zaddOverrides": {}
     },
     "نجران": {
       "population": 329112,
       "perCapitaIncomeSAR": 66000,
       "region": "منطقة نجران",
-      "notes": "تقدير 2022"
+      "notes": "تقدير 2022",
+      "zaddOverrides": {}
     },
     "أخرى": {
       "population": 5000000,
       "perCapitaIncomeSAR": 70000,
       "region": "مختلف المناطق",
-      "notes": "متوسط تقديري للمدن الأخرى"
+      "notes": "متوسط تقديري للمدن الأخرى",
+      "zaddOverrides": {}
     }
   },
   "national": {
@@ -122,6 +140,33 @@
     "notes": "تعداد 2022 — إجمالي سكان المملكة (18.8م سعوديون + 13.4م غير سعوديين)",
     "url": "https://www.spa.gov.sa/w1911463"
   },
+  "householdIncomeSurvey2023": {
+    "source": "الهيئة العامة للإحصاء (GASTAT) — مسح دخل وإنفاق الأسرة 2023",
+    "sourceEn": "GASTAT Household Income and Consumption Expenditure Survey Publication 2023",
+    "url": "https://www.stats.gov.sa/documents/20117/0/Household+Income+and+Consumption+Expenditure+Survey23+EN.pdf",
+    "year": 2023,
+    "sampleHouseholds": 122325,
+    "granularity": "national",
+    "note": "أحدث نشرة رسمية لدخل وإنفاق الأسرة، لكنها بلا تفصيل معلن على مستوى المدينة/المنطقة في هذا الإصدار (بحث ويب 2026-07-17 لم يجد جدولاً مدينياً/إقليمياً موثوقاً حديثاً) — رقم وطني واحد فقط، لا تُسقطه على مدينة بعينها كأنه رقمها. تُستخدم هذه الأرقام كمرجع تحقق وطني بجانب perCapitaIncomeSAR التقديري لكل مدينة (ASSUMPTION)، لا بديلاً عنه.",
+    "monthlyDisposableIncomeSAR": {
+      "household": { "total": 11839, "saudi": 18056, "nonSaudi": 5428 },
+      "perCapita": { "total": 3195, "saudi": 3977, "nonSaudi": 1908 }
+    },
+    "monthlyConsumptionExpenditureSAR": {
+      "household": { "total": 10884, "saudi": 16028, "nonSaudi": 5574 },
+      "perCapita": { "total": 2939, "saudi": 3533, "nonSaudi": 1961 }
+    }
+  },
+  "populationGrowth": {
+    "source": "الهيئة العامة للإحصاء (GASTAT) — نشرة تقديرات السكان 2024",
+    "sourceEn": "GASTAT Population Estimates Publication 2024",
+    "url": "https://www.stats.gov.sa/documents/20117/2435273/Population+Estimates+Statistics+2024+EN.pdf",
+    "year": 2024,
+    "annualGrowthRateSaudiOnly": 0.02,
+    "annualGrowthRateTotalIncludingResidents": 0.047,
+    "note": "معدل نمو السعوديين وحدهم (~2.0%) أقرب لنمو الطلب المحلي العضوي؛ معدل الإجمالي (4.7%) مضخّم بموجة هجرة وافدة 2023-2024 ومتقلب سياسياً — نستخدم معدل السعوديين كافتراض عام محافظ (ASSUMPTION) في forecastDemandTrend عند غياب بيانات سكان متعددة السنوات لمدينة بعينها، لا كرقم نمو مديني مقاس فعلياً."
+  },
+  "zaddOverridesConvention": "زاد (ZADD، zadd.910ths.sa التابعة لصندوق تنمية الموارد البشرية) تنشر بيانات أدق على مستوى الحي، لكن بلا API عام — لم يُدرَج أي رقم منسوب لها هنا (لا تلفيق). كل مدينة تحمل حقل zaddOverrides:{} فارغاً كمكان محجوز؛ عند توفر رقم حقيقي من زاد مستقبلاً يُضاف بالشكل: zaddOverrides.<حقل> = { value, source:'زاد (ZADD)', url, year, district }، مثال: zaddOverrides.perCapitaIncomeSAR = { value: 91000, source: 'زاد (ZADD)', url: 'https://zadd.910ths.sa/...', year: '2025', district: 'حي العليا' }.",
   "sectorConsumptionShare": {
     "default": 0.02,
     "مطعم": 0.025,

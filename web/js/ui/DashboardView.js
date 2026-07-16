@@ -1,6 +1,7 @@
 import Swal from 'sweetalert2';
 import { ProjectManager } from '../services/ProjectManager.js';
 import { getAuthUser, signOut, getUserProfile } from '../../supabaseClient.js';
+import { AuthGuard } from '../middleware/AuthGuard.js';
 import { listOrders } from '../services/PaymentService.js';
 import { unreadCount } from '../services/NotificationService.js';
 import { getAuditLog, ACTIONS } from '../utils/auditLogger.js';
@@ -709,7 +710,12 @@ export class DashboardView {
         // الوحيد لتوجيه أول زيارة نحو «جدوى سريعة» أو «دراسة احترافية» بعد حذف الهيرو.
         if (!hasProjects) this.maybeShowOnboarding();
         this.hydrateProjectCompleteness(filtered);
-        if (this.currentUser) this.hydrateAccountTiles();
+        if (this.currentUser) {
+            this.hydrateAccountTiles();
+            // بوابتا واتساب/تفضيل الباقة المؤجَّلتان (انظر AuthGuard.js) — أول رسم فعلي
+            // للرئيسية بالجلسة هو نقطة التشغيل المقصودة، لا فور تسجيل الدخول.
+            AuthGuard.runDeferredOnboardingGates();
+        }
     }
 
     // تحميل مؤجَّل لبطاقات الحساب (اشتراك، شارة إشعارات، اكتمال ملف شخصي) — بعد أول
