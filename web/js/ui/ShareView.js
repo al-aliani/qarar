@@ -10,7 +10,7 @@
  * 20260714020000_share_tokens.sql).
  */
 import { generateExecutiveSummary } from '../services/InternalAIGenerator.js'; // Re-use summary logic
-import { getSharedStudy } from '../services/ShareService.js';
+import { getSharedStudy, recordShareView } from '../services/ShareService.js';
 import { toast } from '../utils/toast.js';
 import { getOfficialIndicators } from '../core/resultContract.js';
 
@@ -27,6 +27,9 @@ export class ShareView {
             this._renderInvalidLink();
             return;
         }
+        // مرة واحدة لكل تحميل صفحة (لا لكل تفاعل لاحق) — نمط DocSend لتتبّع "فُتح X مرة".
+        recordShareView(shareToken);
+        this._shareToken = shareToken;
 
         const state = shared.data || {};
         const pi = state.projectInfo || {};
@@ -150,6 +153,9 @@ export class ShareView {
                          <div class="inline-block p-1 rounded-full bg-gray-100">
                             <span class="px-6 py-2 rounded-full bg-white shadow text-sm font-medium text-gray-500">تم إعداد هذه الدراسة عبر منصة الجدوى</span>
                          </div>
+                         <div class="mt-6">
+                            <button type="button" id="btnTryFreeReferral" class="btn btn--primary">جرّب قرار مجاناً لمشروعك الخاص</button>
+                         </div>
                     </div>
                 </section>
             </div>
@@ -196,6 +202,15 @@ export class ShareView {
 
         this.container.querySelector('#btnPrintShare')?.addEventListener('click', () => {
             window.print();
+        });
+
+        // حلقة نمو: يحمل توكن المشاركة كمعامل ?ref= — app.js يلتقطه عند التحميل الكامل
+        // ويحفظه لإرفاقه لاحقاً بأول تسجيل حساب فعلي (AuthModalStub.js → signUp()).
+        this.container.querySelector('#btnTryFreeReferral')?.addEventListener('click', () => {
+            const url = new URL(window.location.href);
+            url.hash = '';
+            if (this._shareToken) url.searchParams.set('ref', this._shareToken);
+            window.location.href = url.toString();
         });
     }
 }

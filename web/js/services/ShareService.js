@@ -50,7 +50,7 @@ export async function listShares(studyId) {
 
     const { data, error } = await supabase
         .from('study_shares')
-        .select('id, share_token, created_at, expires_at, revoked')
+        .select('id, share_token, created_at, expires_at, revoked, view_count, first_viewed_at, last_viewed_at')
         .eq('study_id', studyId)
         .order('created_at', { ascending: false });
 
@@ -61,6 +61,9 @@ export async function listShares(studyId) {
         createdAt: row.created_at,
         expiresAt: row.expires_at,
         revoked: row.revoked,
+        viewCount: row.view_count || 0,
+        firstViewedAt: row.first_viewed_at,
+        lastViewedAt: row.last_viewed_at,
     }));
 }
 
@@ -86,6 +89,9 @@ export async function listAllMyShares() {
         revoked: row.revoked,
         expiresAt: row.expires_at,
         createdAt: row.created_at,
+        viewCount: row.view_count || 0,
+        firstViewedAt: row.first_viewed_at,
+        lastViewedAt: row.last_viewed_at,
     }));
 }
 
@@ -120,4 +126,20 @@ export async function getSharedStudy(shareToken) {
 
     if (error || !data) return null;
     return { title: data.title, sector: data.sector, data: data.data, permission: data.permission };
+}
+
+/**
+ * تسجيل مشاهدة لرابط مشاركة (نمط DocSend: "فُتح X مرة، آخرها كذا") — يُستدعى من
+ * ShareView.js عند أول رسم فعلي للصفحة فقط، لا لكل تفاعل. فشل صامت آمن (لا يُعطِّل
+ * عرض الدراسة نفسها لو تعذّر تسجيل المشاهدة لأي سبب).
+ * @param {string} shareToken
+ * @returns {Promise<void>}
+ */
+export async function recordShareView(shareToken) {
+    if (!shareToken) return;
+    try {
+        const { supabase, ok } = await getSupabaseClient();
+        if (!ok || !supabase) return;
+        await supabase.rpc('record_share_view', { p_token: shareToken });
+    } catch (_) { /* فشل صامت — تتبّع المشاهدات لا يجب أن يمنع عرض الدراسة */ }
 }

@@ -57,6 +57,26 @@ describe('submitTicket', () => {
         expect(result).toEqual({ ok: true, ticketId: 'ticket-1' });
     });
 
+    it('category افتراضية "support" لو لم تُمرَّر', async () => {
+        const insertSpy = vi.fn(() => chainOf({ data: { id: 'ticket-1' }, error: null }));
+        fromMock
+            .mockImplementationOnce(() => ({ ...chainOf({ data: { id: 'ticket-1' }, error: null }), insert: insertSpy }))
+            .mockImplementationOnce(() => chainOf({ error: null }));
+        const { submitTicket } = await import('../TicketService.js');
+        await submitTicket({ subject: 'عنوان', body: 'نص' });
+        expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({ category: 'support' }));
+    });
+
+    it('category صريحة (funding_introduction) تُمرَّر كما هي', async () => {
+        const insertSpy = vi.fn(() => chainOf({ data: { id: 'ticket-1' }, error: null }));
+        fromMock
+            .mockImplementationOnce(() => ({ ...chainOf({ data: { id: 'ticket-1' }, error: null }), insert: insertSpy }))
+            .mockImplementationOnce(() => chainOf({ error: null }));
+        const { submitTicket } = await import('../TicketService.js');
+        await submitTicket({ subject: 'طلب تعريف', body: 'نص', category: 'funding_introduction' });
+        expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({ category: 'funding_introduction' }));
+    });
+
     it('فشل إنشاء الرسالة الأولى بعد نجاح التذكرة: يُعيد ok:false مع ticketId (لا حذف صامت)', async () => {
         fromMock
             .mockImplementationOnce(() => chainOf({ data: { id: 'ticket-1' }, error: null }))

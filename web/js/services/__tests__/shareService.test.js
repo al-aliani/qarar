@@ -69,7 +69,10 @@ describe('listShares', () => {
         chain.select.mockReturnThis();
         chain.eq.mockReturnThis();
         chain.order.mockResolvedValue({
-            data: [{ id: 's1', share_token: 'tok-1', created_at: '2026-07-14', expires_at: null, revoked: false }],
+            data: [{
+                id: 's1', share_token: 'tok-1', created_at: '2026-07-14', expires_at: null, revoked: false,
+                view_count: 3, first_viewed_at: '2026-07-18T01:00:00Z', last_viewed_at: '2026-07-18T02:00:00Z',
+            }],
             error: null,
         });
         fromMock.mockClear();
@@ -81,10 +84,23 @@ describe('listShares', () => {
         expect(fromMock).not.toHaveBeenCalled();
     });
 
-    it('يُعيد الروابط محوَّلة لأسماء camelCase', async () => {
+    it('يُعيد الروابط محوَّلة لأسماء camelCase، بما فيها أعمدة المشاهدة الجديدة', async () => {
         const { listShares } = await import('../ShareService.js');
         const result = await listShares('study-1');
-        expect(result).toEqual([{ id: 's1', shareToken: 'tok-1', createdAt: '2026-07-14', expiresAt: null, revoked: false }]);
+        expect(result).toEqual([{
+            id: 's1', shareToken: 'tok-1', createdAt: '2026-07-14', expiresAt: null, revoked: false,
+            viewCount: 3, firstViewedAt: '2026-07-18T01:00:00Z', lastViewedAt: '2026-07-18T02:00:00Z',
+        }]);
+    });
+
+    it('view_count فارغ من القاعدة (صف لم يُشاهَد بعد) ⇒ viewCount:0 لا undefined', async () => {
+        chain.order.mockResolvedValue({
+            data: [{ id: 's1', share_token: 'tok-1', created_at: '2026-07-14', expires_at: null, revoked: false, view_count: null, first_viewed_at: null, last_viewed_at: null }],
+            error: null,
+        });
+        const { listShares } = await import('../ShareService.js');
+        const result = await listShares('study-1');
+        expect(result[0].viewCount).toBe(0);
     });
 
     it('خطأ الاستعلام ⇒ مصفوفة فارغة (فشل آمن)', async () => {
@@ -143,5 +159,30 @@ describe('getSharedStudy', () => {
         rpcChain.single.mockResolvedValue({ data: null, error: { message: 'no rows' } });
         const { getSharedStudy } = await import('../ShareService.js');
         expect(await getSharedStudy('tok-expired')).toBeNull();
+    });
+});
+
+describe('recordShareView', () => {
+    beforeEach(() => {
+        rpcMock.mockClear();
+        rpcMock.mockResolvedValue({ data: null, error: null });
+    });
+
+    it('بلا shareToken ⇒ لا يستدعي RPC، لا يرمي', async () => {
+        const { recordShareView } = await import('../ShareService.js');
+        await expect(recordShareView(null)).resolves.toBeUndefined();
+        expect(rpcMock).not.toHaveBeenCalled();
+    });
+
+    it('يستدعي record_share_view بالتوكن الصحيح', async () => {
+        const { recordShareView } = await import('../ShareService.js');
+        await recordShareView('tok-abc');
+        expect(rpcMock).toHaveBeenCalledWith('record_share_view', { p_token: 'tok-abc' });
+    });
+
+    it('فشل RPC (استثناء) ⇒ فشل صامت — لا يجب أن يمنع عرض الدراسة', async () => {
+        rpcMock.mockImplementation(() => { throw new Error('network down'); });
+        const { recordShareView } = await import('../ShareService.js');
+        await expect(recordShareView('tok-abc')).resolves.toBeUndefined();
     });
 });

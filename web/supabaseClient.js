@@ -197,13 +197,18 @@ export async function signIn(email, password) {
  * @param {string} [phone] - E.164 سعودي (+9665XXXXXXXX)، اختياري — يُمرَّر إلى
  *   raw_user_meta_data.phone فيلتقطه handle_new_user() ويعبّئ profiles.phone فوراً
  *   (انظر supabase/migrations/20260717000000_profiles_and_phone.sql).
+ * @param {string} [fullName]
+ * @param {string} [referredByToken] - توكن مشاركة (share_token) إن أتى التسجيل من رابط
+ *   مشاركة دراسة — يلتقطه handle_new_user() في profiles.referred_by_token (حلقة نمو،
+ *   انظر supabase/migrations/20260718010000_share_growth_and_tracking.sql).
  */
-export async function signUp(email, password, phone, fullName) {
+export async function signUp(email, password, phone, fullName, referredByToken) {
   const { supabase, ok, error } = await getSupabaseClient();
   if (!ok) return { ok: false, error };
   const metadata = {};
   if (phone) metadata.phone = phone;
   if (fullName) metadata.full_name = fullName;
+  if (referredByToken) metadata.referred_by_token = referredByToken;
   const payload = Object.keys(metadata).length ? { email, password, options: { data: metadata } } : { email, password };
   const { data, error: e } = await supabase.auth.signUp(payload);
   if (e) return { ok: false, error: e.message };

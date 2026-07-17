@@ -272,9 +272,16 @@ export class AuthModal {
                 const { signIn, signUp, getSupabaseClient } = await import('../../supabaseClient.js');
                 const { ok } = await getSupabaseClient();
                 if (!ok) { showErr('Supabase غير مهيأ. لا يمكن الدخول أو إنشاء حساب.'); return; }
-                const { ok: authOk, error } = isSignUp ? await signUp(email, pass, phoneE164, fullName) : await signIn(email, pass);
+                // حلقة نمو (share_token → تسجيل): التقطها app.js من ?ref= عند الوصول من رابط
+                // مشاركة وحفظها بـsessionStorage — نقرأها هنا فقط عند إنشاء حساب فعلي.
+                let referredByToken = null;
+                if (isSignUp) {
+                    try { referredByToken = sessionStorage.getItem('referred_by_token') || null; } catch (_) { /* تجاهل */ }
+                }
+                const { ok: authOk, error } = isSignUp ? await signUp(email, pass, phoneE164, fullName, referredByToken) : await signIn(email, pass);
                 if (authOk) {
                     if (isSignUp) {
+                        try { sessionStorage.removeItem('referred_by_token'); } catch (_) { /* تجاهل */ }
                         const { log: auditLog, ACTIONS } = await import('../utils/auditLogger.js');
                         auditLog(ACTIONS.SIGNUP, { email });
                     } else {

@@ -10,7 +10,7 @@ function escapeHtml(str) {
     return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function buildShareUrl(token) {
+export function buildShareUrl(token) {
     return `${window.location.origin}${window.location.pathname}#/share/${token}`;
 }
 

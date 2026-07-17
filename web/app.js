@@ -245,6 +245,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.history.replaceState({}, '', cleanPackageUrl);
   }
 
+  // حلقة نمو: زائر وصل عبر رابط مشاركة دراسة (index.html?ref=<share_token>) ثم ضغط
+  // "جرّب مجاناً" في ShareView.js — نحفظ التوكن ليُرفق لاحقاً بأول تسجيل حساب فعلي
+  // (AuthModalStub.js → signUp()) عبر profiles.referred_by_token. بلا بصمة شخصية،
+  // فقط ربط توكن-بتسجيل قابل للشرح لأي مستخدم يسأل عنه.
+  const referredByToken = new URLSearchParams(window.location.search).get('ref');
+  if (referredByToken) {
+    try { sessionStorage.setItem('referred_by_token', referredByToken); } catch (_) { /* تجاهل بيئات بلا sessionStorage */ }
+    const cleanRefUrl = new URL(window.location.href);
+    cleanRefUrl.searchParams.delete('ref');
+    window.history.replaceState({}, '', cleanRefUrl);
+  }
+
   const btnToggleSidebar = document.getElementById('btnToggleSidebar');
   const sidebarOverlay = document.getElementById('sidebarOverlay');
   const sidebarDom = document.querySelector('.sidebar');

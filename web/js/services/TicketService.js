@@ -12,10 +12,10 @@ export const TICKET_STATUSES = ['open', 'answered', 'closed'];
 
 /**
  * إنشاء تذكرة جديدة + أول رسالة فيها.
- * @param {{subject: string, body: string}} params
+ * @param {{subject: string, body: string, category?: 'support'|'funding_introduction'}} params
  * @returns {Promise<{ok: boolean, ticketId?: string, error?: string}>}
  */
-export async function submitTicket({ subject, body }) {
+export async function submitTicket({ subject, body, category = 'support' }) {
     const cleanSubject = String(subject || '').trim();
     const cleanBody = String(body || '').trim();
     if (!cleanSubject) return { ok: false, error: 'أدخل عنوان التذكرة.' };
@@ -29,7 +29,7 @@ export async function submitTicket({ subject, body }) {
 
     const { data: ticket, error: ticketError } = await supabase
         .from('support_tickets')
-        .insert({ user_id: user.id, subject: cleanSubject })
+        .insert({ user_id: user.id, subject: cleanSubject, category })
         .select('id')
         .single();
     if (ticketError) return { ok: false, error: ticketError.message };
@@ -78,7 +78,7 @@ export async function listAllTickets() {
 
     const { data, error } = await supabase
         .from('support_tickets')
-        .select('id, user_id, subject, status, created_at, updated_at')
+        .select('id, user_id, subject, status, category, created_at, updated_at')
         .order('status', { ascending: true })
         .order('updated_at', { ascending: false });
     if (error) {

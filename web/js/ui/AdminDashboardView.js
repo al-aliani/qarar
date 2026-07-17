@@ -551,7 +551,9 @@ export class AdminDashboardView {
                     <div class="admin-card" data-ticket-admin-row="${this._esc(t.id)}" style="cursor:pointer;margin-top:12px;">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                             <div>
-                                <div class="font-bold">${this._esc(t.subject)}</div>
+                                <div class="font-bold">
+                                    ${t.category === 'funding_introduction' ? '<span class="badge badge--info" style="margin-inline-end:6px;">طلب تعريف تمويل</span>' : ''}${this._esc(t.subject)}
+                                </div>
                                 <div class="text-xs text-muted mt-1">${this._esc(t.user_id)} — ${new Date(t.updated_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric', numberingSystem: 'latn' })}</div>
                             </div>
                             <span class="badge ${t.status === 'open' ? 'badge--warning' : t.status === 'answered' ? 'badge--success' : 'badge--neutral'}">${statusLabel[t.status] || t.status}</span>

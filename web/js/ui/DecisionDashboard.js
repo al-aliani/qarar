@@ -13,7 +13,8 @@ import { PresentationView } from './PresentationView.js';
 import { BankReportGenerator } from '../../export/BankReportGenerator.js';
 import { PitchDeckExporter } from '../../export/PitchDeckExporter.js';
 import { sanitizeFilename, exportDateISO, downloadBlob } from '../../export/utils.js';
-import { generateInvestorLink } from '../utils/shareUtils.js';
+import { createShareLink } from '../services/ShareService.js';
+import { buildShareUrl } from './ShareModal.js';
 import { exportExcel } from '../../export/excel.js';
 import { animateCounter } from '../utils/ui.js';
 import { runQAChecks } from '../utils/qaChecks.js';
@@ -926,21 +927,27 @@ export class DecisionDashboard {
         }
 
         // رابط لوحة المستثمر (Pitch View — للقراءة فقط، مشاركة عبر token)
+        // تدقيق 2026-07-18: كان يستخدم generateInvestorLink (shareUtils.js) — localStorage
+        // على جهاز المُرسِل فقط، لا يفتح لدى المستلم إطلاقاً (نفس علة ShareStudyView.js
+        // المُصلَحة بنفس التاريخ). يستخدم الآن نظام المشاركة الحقيقي (ShareService.js).
         const btnInvestorLink = this.container.querySelector('#btnInvestorLink');
         if (btnInvestorLink) {
             const handler = async () => {
-                const link = await generateInvestorLink(state, results);
-                if (link?.url) {
+                const studyId = state.projectInfo?.id || state.id;
+                if (!studyId) { toast.error('احفظ الدراسة أولاً لإنشاء رابط مشاركة'); return; }
+                const result = await createShareLink(studyId);
+                if (result.ok) {
+                    const url = buildShareUrl(result.shareToken);
                     try {
-                        await navigator.clipboard.writeText(link.url);
+                        await navigator.clipboard.writeText(url);
                         toast.success('تم نسخ رابط لوحة المستثمر. شاركه مع المستثمر ليفتح الصفحة للقراءة فقط.');
                     } catch (_) {
-                        window.prompt('انسخ الرابط:', link.url);
+                        window.prompt('انسخ الرابط:', url);
                         toast.info('انسخ الرابط من النافذة وأرسله للمستثمر.');
                     }
-                    window.open(link.url, '_blank');
+                    window.open(url, '_blank');
                 } else {
-                    toast.error('فشل إنشاء الرابط. تأكد من اكتمال بيانات المشروع.');
+                    toast.error(result.error || 'فشل إنشاء الرابط.');
                 }
             };
             btnInvestorLink.addEventListener('click', handler);
