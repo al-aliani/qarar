@@ -956,3 +956,208 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
 }
 
+
+/* =========================================
+   [14] ECOSYSTEM VIEWS
+   (Integrations, Funding, Academy)
+   ========================================= */
+
+.integrations-hub,
+.funding-center-view,
+.academy-view {
+    color: #fff !important;
+}
+
+/* Integrations App Cards */
+.integration-card:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Funding Progress Circle */
+.funding-center-view svg {
+    filter: drop-shadow(0 0 12px rgba(250, 204, 21, 0.4)) !important;
+}
+
+/* Academy Cards */
+.course-card:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+.course-card .bg-primary {
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5) !important;
+}
+
+
+/* =========================================
+   [15] UNICORN EXPANSION VIEWS
+   (GlobalAnalytics, DataRoom, Marketplace, InvestorNetwork, Community)
+   ========================================= */
+
+.global-analytics-view,
+.data-room-view,
+.marketplace-view,
+.investor-network-view,
+.community-view {
+    color: #fff !important;
+}
+
+/* Global Analytics */
+.stat-card:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.3s ease;
+}
+
+/* Marketplace Vendors */
+.vendor-card:hover {
+    transform: translateY(-6px) !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Investor Deal-Flow */
+.investor-network-view .btn--primary {
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.4) !important;
+}
+
+
+/* =========================================
+   [16] ADVANCED VIEWS
+   (ExecutionKanban, CompetitorIntel, MandAHub)
+   ========================================= */
+
+.execution-kanban-view,
+.intelligence-view,
+.m-and-a-view {
+    color: #fff !important;
+}
+
+/* Kanban Board */
+.execution-kanban-view .cursor-grab:active {
+    cursor: grabbing !important;
+    transform: scale(0.98);
+}
+
+/* Competitor Radar Matrix */
+.intelligence-view .group:hover .animate-ping {
+    animation: none;
+    transform: scale(1.5);
+    transition: transform 0.3s ease;
+}
+
+/* M&A Hub */
+.m-and-a-view .btn--primary {
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4) !important;
+}
+
+
+/* =========================================
+   [17] OPERATIONS SCALING VIEWS
+   (HRSandbox, FranchiseHub)
+   ========================================= */
+
+.hr-sandbox-view,
+.franchise-hub-view {
+    color: #fff !important;
+}
+
+/* HR Sandbox */
+.hr-sandbox-view .group:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Franchise Hub */
+.franchise-hub-view .btn--primary {
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.4) !important;
+}
+
+
+/* =========================================
+   [18] ULTIMATE SCALING VIEWS
+   (MultiBranch, CrisisRoom, AICopilot, ExpertsMarketplace)
+   ========================================= */
+
+.scaling-view,
+.crisis-management-view,
+.ai-copilot-view,
+.experts-view {
+    color: #fff !important;
+}
+
+/* Crisis Room */
+.crisis-management-view .btn--primary {
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* AI Copilot */
+.ai-copilot-view input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* Experts Marketplace */
+.experts-view .group:hover {
+    border-color: rgba(234, 179, 8, 0.4) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+
+/* =========================================
+   [19] FINTECH & OPS VIEWS
+   (GovTenders, PricingLab, SupplyChain, Tokenization)
+   ========================================= */
+
+.tenders-radar-view,
+.pricing-lab-view,
+.supply-chain-view,
+.tokenization-view {
+    color: #fff !important;
+}
+
+/* Animations */
+.tokenization-view .blur-xl {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.tenders-radar-view .group:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(16, 185, 129, 0.2);
+}
+
+
+/* =========================================
+   [20] GOVERNANCE & KNOWLEDGE VIEWS
+   (IPOReadiness, ComplianceRadar, Academy)
+   ========================================= */
+
+.ipo-readiness-view,
+.compliance-radar-view,
+.academy-view {
+    color: #fff !important;
+}
+
+/* IPO Readiness */
+.ipo-readiness-view .btn--primary {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.4) !important;
+}
+
+/* Animations */
+@keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+    animation: spin-slow 8s linear infinite;
+}
+
+/* Academy View */
+.academy-view .group:hover {
+    transform: scale(1.02);
+    box-shadow: 0 10px 30px rgba(220, 38, 38, 0.3);
+}
+

@@ -1225,6 +1225,342 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // مركز التكاملات (Integrations Hub)
+  window.addEventListener('feasibility:showIntegrationsHub', async () => {
+    try {
+      const { IntegrationsHubView } = await import('./js/ui/IntegrationsHubView.js');
+      const view = new IntegrationsHubView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('IntegrationsHubView load failed:', err);
+      toast.error('تعذر فتح مركز التكاملات');
+    }
+  });
+
+  // منصة التمويل (Funding Center)
+  window.addEventListener('feasibility:showFundingCenter', async () => {
+    try {
+      const { FundingCenterView } = await import('./js/ui/FundingCenterView.js');
+      const view = new FundingCenterView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('FundingCenterView load failed:', err);
+      toast.error('تعذر فتح منصة التمويل');
+    }
+  });
+
+  // أكاديمية قرار (Academy)
+  window.addEventListener('feasibility:showAcademy', async () => {
+    try {
+      const { AcademyView } = await import('./js/ui/AcademyView.js');
+      const view = new AcademyView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('AcademyView load failed:', err);
+      toast.error('تعذر فتح الأكاديمية');
+    }
+  });
+
+  // لوحة الإحصائيات الشاملة (Global Analytics)
+  window.addEventListener('feasibility:showGlobalAnalytics', async () => {
+    try {
+      const { GlobalAnalyticsView } = await import('./js/ui/GlobalAnalyticsView.js');
+      const view = new GlobalAnalyticsView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('GlobalAnalyticsView load failed:', err);
+      toast.error('تعذر فتح لوحة الإحصائيات');
+    }
+  });
+
+  // غرفة البيانات (Data Room)
+  window.addEventListener('feasibility:showDataRoom', async () => {
+    try {
+      const { DataRoomView } = await import('./js/ui/DataRoomView.js');
+      const view = new DataRoomView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('DataRoomView load failed:', err);
+      toast.error('تعذر فتح غرفة البيانات');
+    }
+  });
+
+  // سوق مقدمي الخدمات (Marketplace)
+  window.addEventListener('feasibility:showMarketplace', async () => {
+    try {
+      const { MarketplaceView } = await import('./js/ui/MarketplaceView.js');
+      const view = new MarketplaceView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('MarketplaceView load failed:', err);
+      toast.error('تعذر فتح سوق الخدمات');
+    }
+  });
+
+  // شبكة المستثمرين (Investor Network)
+  window.addEventListener('feasibility:showInvestorNetwork', async () => {
+    try {
+      const { InvestorNetworkView } = await import('./js/ui/InvestorNetworkView.js');
+      const view = new InvestorNetworkView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('InvestorNetworkView load failed:', err);
+      toast.error('تعذر فتح شبكة المستثمرين');
+    }
+  });
+
+  // مجتمع قرار (Community)
+  window.addEventListener('feasibility:showCommunityForum', async () => {
+    try {
+      const { CommunityForumView } = await import('./js/ui/CommunityForumView.js');
+      const view = new CommunityForumView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('CommunityForumView load failed:', err);
+      toast.error('تعذر فتح المجتمع');
+    }
+  });
+
+  // مدير المهام (Execution Kanban)
+  window.addEventListener('feasibility:showExecutionKanban', async () => {
+    try {
+      const { ExecutionKanbanView } = await import('./js/ui/ExecutionKanbanView.js');
+      const view = new ExecutionKanbanView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('ExecutionKanbanView load failed:', err);
+      toast.error('تعذر فتح مدير المهام');
+    }
+  });
+
+  // الذكاء التنافسي (Competitor Intelligence)
+  window.addEventListener('feasibility:showCompetitorIntelligence', async () => {
+    try {
+      const { CompetitorIntelligenceView } = await import('./js/ui/CompetitorIntelligenceView.js');
+      const view = new CompetitorIntelligenceView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('CompetitorIntelligenceView load failed:', err);
+      toast.error('تعذر فتح رادار المنافسين');
+    }
+  });
+
+  // محاكي الموارد البشرية (HR Sandbox)
+  window.addEventListener('feasibility:showHRSandbox', async () => {
+    try {
+      const { HRSandboxView } = await import('./js/ui/HRSandboxView.js');
+      const view = new HRSandboxView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('HRSandboxView load failed:', err);
+      toast.error('تعذر فتح محاكي الموارد البشرية');
+    }
+  });
+
+  // منصة الامتياز التجاري (Franchise Hub)
+  window.addEventListener('feasibility:showFranchiseHub', async () => {
+    try {
+      const { FranchiseHubView } = await import('./js/ui/FranchiseHubView.js');
+      const view = new FranchiseHubView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('FranchiseHubView load failed:', err);
+      toast.error('تعذر فتح منصة الامتياز التجاري');
+    }
+  });
+
+  // محاكي التوسع والفروع (Multi-Branch Scaling)
+  window.addEventListener('feasibility:showMultiBranchScaling', async () => {
+    try {
+      const { MultiBranchScalingView } = await import('./js/ui/MultiBranchScalingView.js');
+      const view = new MultiBranchScalingView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('MultiBranchScalingView load failed:', err);
+      toast.error('تعذر فتح محاكي التوسع');
+    }
+  });
+
+  // إدارة الأزمات (Crisis Management)
+  window.addEventListener('feasibility:showCrisisManagement', async () => {
+    try {
+      const { CrisisManagementView } = await import('./js/ui/CrisisManagementView.js');
+      const view = new CrisisManagementView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('CrisisManagementView load failed:', err);
+      toast.error('تعذر فتح إدارة الأزمات');
+    }
+  });
+
+  // مساعد الذكاء الاصطناعي (AI Copilot)
+  window.addEventListener('feasibility:showAIAssistantCopilot', async () => {
+    try {
+      const { AIAssistantCopilotView } = await import('./js/ui/AIAssistantCopilotView.js');
+      const view = new AIAssistantCopilotView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('AIAssistantCopilotView load failed:', err);
+      toast.error('تعذر فتح مساعد الذكاء الاصطناعي');
+    }
+  });
+
+  // سوق الخبراء والمستشارين (Experts Marketplace)
+  window.addEventListener('feasibility:showExpertsMarketplace', async () => {
+    try {
+      const { ExpertsMarketplaceView } = await import('./js/ui/ExpertsMarketplaceView.js');
+      const view = new ExpertsMarketplaceView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('ExpertsMarketplaceView load failed:', err);
+      toast.error('تعذر فتح سوق الخبراء');
+    }
+  });
+
+  // رادار المناقصات (Gov Tenders Radar)
+  window.addEventListener('feasibility:showGovTendersRadar', async () => {
+    try {
+      const { GovTendersRadarView } = await import('./js/ui/GovTendersRadarView.js');
+      const view = new GovTendersRadarView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('GovTendersRadarView load failed:', err);
+      toast.error('تعذر فتح رادار المناقصات');
+    }
+  });
+
+  // التجهيز للاكتتاب العام (IPO Readiness)
+  window.addEventListener('feasibility:showIPOReadiness', async () => {
+    try {
+      const { IPOReadinessView } = await import('./js/ui/IPOReadinessView.js');
+      const view = new IPOReadinessView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('IPOReadinessView load failed:', err);
+      toast.error('تعذر فتح منصة الاكتتاب');
+    }
+  });
+
+  // التشريعات والامتثال (Compliance Radar)
+  window.addEventListener('feasibility:showComplianceRadar', async () => {
+    try {
+      const { ComplianceRadarView } = await import('./js/ui/ComplianceRadarView.js');
+      const view = new ComplianceRadarView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('ComplianceRadarView load failed:', err);
+      toast.error('تعذر فتح رادار التشريعات');
+    }
+  });
+
+  // أكاديمية القادة (Academy)
+  window.addEventListener('feasibility:showAcademy', async () => {
+    try {
+      const { AcademyView } = await import('./js/ui/AcademyView.js');
+      const view = new AcademyView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('AcademyView load failed:', err);
+      toast.error('تعذر فتح أكاديمية القادة');
+    }
+  });
+
+  // مختبر التسعير (Pricing Strategy Lab)
+  window.addEventListener('feasibility:showPricingStrategyLab', async () => {
+    try {
+      const { PricingStrategyLabView } = await import('./js/ui/PricingStrategyLabView.js');
+      const view = new PricingStrategyLabView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('PricingStrategyLabView load failed:', err);
+      toast.error('تعذر فتح مختبر التسعير');
+    }
+  });
+
+  // محاكي سلاسل الإمداد (Supply Chain Sandbox)
+  window.addEventListener('feasibility:showSupplyChainSandbox', async () => {
+    try {
+      const { SupplyChainSandboxView } = await import('./js/ui/SupplyChainSandboxView.js');
+      const view = new SupplyChainSandboxView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('SupplyChainSandboxView load failed:', err);
+      toast.error('تعذر فتح محاكي سلاسل الإمداد');
+    }
+  });
+
+  // منصة ترميز الحصص (Tokenization Hub)
+  window.addEventListener('feasibility:showTokenizationHub', async () => {
+    try {
+      const { TokenizationHubView } = await import('./js/ui/TokenizationHubView.js');
+      const view = new TokenizationHubView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('TokenizationHubView load failed:', err);
+      toast.error('تعذر فتح منصة ترميز الحصص');
+    }
+  });
+
+  // مركز صفقات الاستحواذ (M&A Hub)
+  window.addEventListener('feasibility:showMandAHub', async () => {
+    try {
+      const { MandAHubView } = await import('./js/ui/MandAHubView.js');
+      const view = new MandAHubView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('MandAHubView load failed:', err);
+      toast.error('تعذر فتح مركز الاستحواذ');
+    }
+  });
+
   // لوحة المستثمر (Investor Dashboard)
   window.addEventListener('feasibility:showInvestorDashboard', async () => {
     const savedStepIndex = wizard.currentStepIndex;

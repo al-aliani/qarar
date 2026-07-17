@@ -191,9 +191,53 @@ export class DashboardViewV2 {
                     </div>
                     
                     <div style="margin-top: 32px; display: flex; flex-direction: column; gap: 8px;">
-                        <button class="dv2-nav-btn is-active">
+                        <button class="dv2-nav-btn is-active" id="btnSidebarHome">
                             <svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg>
                             مساحة العمل
+                        </button>
+                        <button class="dv2-nav-btn text-indigo-400/90 hover:text-indigo-400 hover:bg-indigo-400/10" id="btnSidebarGlobalAnalytics">
+                            <svg class="ic" aria-hidden="true"><use href="#i-pie-chart"/></svg>
+                            لوحة الإحصائيات الشاملة
+                        </button>
+                        <button class="dv2-nav-btn text-slate-400/90 hover:text-slate-400 hover:bg-slate-400/10" id="btnSidebarDataRoom">
+                            <svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg>
+                            غرفة البيانات
+                        </button>
+                        <button class="dv2-nav-btn text-emerald-400/90 hover:text-emerald-400 hover:bg-emerald-400/10" id="btnSidebarKanban">
+                            <svg class="ic" aria-hidden="true"><use href="#i-check-square"/></svg>
+                            مدير المهام والتنفيذ
+                        </button>
+                        <button class="dv2-nav-btn text-cyan-400/90 hover:text-cyan-400 hover:bg-cyan-400/10" id="btnSidebarCompetitorIntel">
+                            <svg class="ic" aria-hidden="true"><use href="#i-crosshair"/></svg>
+                            رادار الذكاء التنافسي
+                        </button>
+                        <button class="dv2-nav-btn text-blue-400/90 hover:text-blue-400 hover:bg-blue-400/10" id="btnSidebarHRSandbox">
+                            <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
+                            محاكي الموارد البشرية (HR)
+                        </button>
+                        <button class="dv2-nav-btn text-indigo-400/90 hover:text-indigo-400 hover:bg-indigo-400/10" id="btnSidebarMultiBranch">
+                            <svg class="ic" aria-hidden="true"><use href="#i-map"/></svg>
+                            محاكي التوسع والفروع
+                        </button>
+                        <button class="dv2-nav-btn text-red-500/90 hover:text-red-500 hover:bg-red-500/10" id="btnSidebarCrisis">
+                            <svg class="ic" aria-hidden="true"><use href="#i-alert-triangle"/></svg>
+                            غرفة إدارة الأزمات والطوارئ
+                        </button>
+                        <button class="dv2-nav-btn text-rose-400/90 hover:text-rose-400 hover:bg-rose-400/10" id="btnSidebarPricingLab">
+                            <svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg>
+                            مختبر التسعير السيكولوجي
+                        </button>
+                        <button class="dv2-nav-btn text-teal-400/90 hover:text-teal-400 hover:bg-teal-400/10" id="btnSidebarSupplyChain">
+                            <svg class="ic" aria-hidden="true"><use href="#i-truck"/></svg>
+                            محاكي سلاسل الإمداد
+                        </button>
+                        <button class="dv2-nav-btn text-slate-300/90 hover:text-slate-300 hover:bg-slate-300/10" id="btnSidebarComplianceRadar">
+                            <svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>
+                            رادار التشريعات والامتثال
+                        </button>
+                        <button class="dv2-nav-btn text-emerald-400/90 hover:text-emerald-400 hover:bg-emerald-400/10" id="btnSidebarCopilot">
+                            <svg class="ic" aria-hidden="true"><use href="#i-cpu"/></svg>
+                            مساعد الذكاء الاصطناعي (Copilot)
                         </button>
                         <button class="dv2-nav-btn" id="btnSidebarTeam">
                             <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
@@ -210,6 +254,72 @@ export class DashboardViewV2 {
                         <button class="dv2-nav-btn" id="btnSidebarTrash">
                             <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
                             سلة المهملات
+                        </button>
+                    </div>
+
+                    <!-- Business Network Links -->
+                    <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 8px;">
+                        <div class="text-[10px] text-white/40 font-bold px-4 mb-1">مجتمع الأعمال والنمو</div>
+                        <button class="dv2-nav-btn text-emerald-400/90 hover:text-emerald-400 hover:bg-emerald-400/10" id="btnSidebarMarketplace">
+                            <svg class="ic" aria-hidden="true"><use href="#i-shopping-bag"/></svg>
+                            سوق مقدمي الخدمات
+                        </button>
+                        <button class="dv2-nav-btn text-amber-400/90 hover:text-amber-400 hover:bg-amber-400/10" id="btnSidebarInvestorNetwork">
+                            <svg class="ic" aria-hidden="true"><use href="#i-briefcase"/></svg>
+                            شبكة المستثمرين (Deal-Flow)
+                        </button>
+                        <button class="dv2-nav-btn text-pink-400/90 hover:text-pink-400 hover:bg-pink-400/10" id="btnSidebarCommunity">
+                            <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
+                            مجتمع قرار
+                        </button>
+                        <button class="dv2-nav-btn text-purple-400/90 hover:text-purple-400 hover:bg-purple-400/10" id="btnSidebarMandA">
+                            <svg class="ic" aria-hidden="true"><use href="#i-target"/></svg>
+                            مركز صفقات الاستحواذ
+                        </button>
+                        <button class="dv2-nav-btn text-emerald-500/90 hover:text-emerald-500 hover:bg-emerald-500/10" id="btnSidebarGovTenders">
+                            <svg class="ic" aria-hidden="true"><use href="#i-briefcase"/></svg>
+                            رادار المناقصات والعطاءات
+                        </button>
+                        <button class="dv2-nav-btn text-fuchsia-400/90 hover:text-fuchsia-400 hover:bg-fuchsia-400/10" id="btnSidebarTokenization">
+                            <svg class="ic" aria-hidden="true"><use href="#i-layers"/></svg>
+                            منصة ترميز الحصص (Tokenization)
+                        </button>
+                        <button class="dv2-nav-btn text-amber-400/90 hover:text-amber-400 hover:bg-amber-400/10" id="btnSidebarIPOReadiness">
+                            <svg class="ic" aria-hidden="true"><use href="#i-trending-up"/></svg>
+                            منصة الاكتتاب العام (IPO)
+                        </button>
+                    </div>
+
+                    <!-- Ecosystem & Support Links -->
+                    <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 8px;">
+                        <div class="text-[10px] text-white/40 font-bold px-4 mb-1">الخدمات والدعم</div>
+                        <button class="dv2-nav-btn" id="btnSidebarAdvisory">
+                            <svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg>
+                            الاستشارات والدعم
+                        </button>
+                        <button class="dv2-nav-btn text-yellow-400/90 hover:text-yellow-400 hover:bg-yellow-400/10" id="btnSidebarExperts">
+                            <svg class="ic" aria-hidden="true"><use href="#i-star"/></svg>
+                            سوق الخبراء والمستشارين
+                        </button>
+                        <button class="dv2-nav-btn" id="btnSidebarFunding">
+                            <svg class="ic" aria-hidden="true"><use href="#i-dollar-sign"/></svg>
+                            منصة التمويل
+                        </button>
+                        <button class="dv2-nav-btn text-primary/90 hover:text-primary hover:bg-primary/10" id="btnSidebarIntegrations">
+                            <svg class="ic" aria-hidden="true"><use href="#i-grid"/></svg>
+                            التكاملات والذكاء الاصطناعي
+                        </button>
+                        <button class="dv2-nav-btn text-blue-400/90 hover:text-blue-400 hover:bg-blue-400/10" id="btnSidebarAcademy">
+                            <svg class="ic" aria-hidden="true"><use href="#i-book-open"/></svg>
+                            أكاديمية قرار
+                        </button>
+                        <button class="dv2-nav-btn text-purple-400/90 hover:text-purple-400 hover:bg-purple-400/10" id="btnSidebarBilling">
+                            <svg class="ic" aria-hidden="true"><use href="#i-credit-card"/></svg>
+                            الطلبات والفواتير
+                        </button>
+                        <button class="dv2-nav-btn text-red-400/90 hover:text-red-400 hover:bg-red-400/10" id="btnSidebarSupportTickets">
+                            <svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg>
+                            الشكاوى والتذاكر
                         </button>
                     </div>
                     
@@ -567,6 +677,91 @@ export class DashboardViewV2 {
         });
         this.container.querySelector('#btnSidebarTrash')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showTrash'));
+        });
+        
+        // Workspace Additions
+        this.container.querySelector('#btnSidebarHome')?.addEventListener('click', () => {
+            window.location.hash = '#/home';
+        });
+        this.container.querySelector('#btnSidebarGlobalAnalytics')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showGlobalAnalytics'));
+        });
+        this.container.querySelector('#btnSidebarDataRoom')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showDataRoom'));
+        });
+        this.container.querySelector('#btnSidebarKanban')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showExecutionKanban'));
+        });
+        this.container.querySelector('#btnSidebarCompetitorIntel')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showCompetitorIntelligence'));
+        });
+        this.container.querySelector('#btnSidebarHRSandbox')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showHRSandbox'));
+        });
+        this.container.querySelector('#btnSidebarMultiBranch')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showMultiBranchScaling'));
+        });
+        this.container.querySelector('#btnSidebarCrisis')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showCrisisManagement'));
+        });
+        this.container.querySelector('#btnSidebarPricingLab')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showPricingStrategyLab'));
+        });
+        this.container.querySelector('#btnSidebarSupplyChain')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showSupplyChainSandbox'));
+        });
+        this.container.querySelector('#btnSidebarComplianceRadar')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showComplianceRadar'));
+        });
+        this.container.querySelector('#btnSidebarCopilot')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showAIAssistantCopilot'));
+        });
+
+        // Business Network Links
+        this.container.querySelector('#btnSidebarMarketplace')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showMarketplace'));
+        });
+        this.container.querySelector('#btnSidebarInvestorNetwork')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showInvestorNetwork'));
+        });
+        this.container.querySelector('#btnSidebarCommunity')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showCommunityForum'));
+        });
+        this.container.querySelector('#btnSidebarMandA')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showMandAHub'));
+        });
+        this.container.querySelector('#btnSidebarFranchiseHub')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showFranchiseHub'));
+        });
+        
+        this.container.querySelector('#btnSidebarGovTenders')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showGovTendersRadar'));
+        });
+        this.container.querySelector('#btnSidebarTokenization')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showTokenizationHub'));
+        });
+        this.container.querySelector('#btnSidebarIPOReadiness')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showIPOReadiness'));
+        });
+        
+        // Services & Support Links
+        this.container.querySelector('#btnSidebarAdvisory')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showAdvisory'));
+        });
+        this.container.querySelector('#btnSidebarBilling')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showBillingHistory'));
+        });
+        this.container.querySelector('#btnSidebarSupportTickets')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showSupportTickets'));
+        });
+        this.container.querySelector('#btnSidebarIntegrations')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showIntegrationsHub'));
+        });
+        this.container.querySelector('#btnSidebarFunding')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showFundingCenter'));
+        });
+        this.container.querySelector('#btnSidebarAcademy')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showAcademy'));
         });
         this.container.querySelector('#btnSidebarTemplates')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:newStudy'));
