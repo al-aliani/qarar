@@ -235,6 +235,10 @@ export class DashboardViewV2 {
                             <svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>
                             رادار التشريعات والامتثال
                         </button>
+                        <button class="dv2-nav-btn text-stone-400/90 hover:text-stone-400 hover:bg-stone-400/10" id="btnSidebarAssetsPortfolio">
+                            <svg class="ic" aria-hidden="true"><use href="#i-home"/></svg>
+                            محفظة الأصول والعقارات السحابية
+                        </button>
                         <button class="dv2-nav-btn text-emerald-400/90 hover:text-emerald-400 hover:bg-emerald-400/10" id="btnSidebarCopilot">
                             <svg class="ic" aria-hidden="true"><use href="#i-cpu"/></svg>
                             مساعد الذكاء الاصطناعي (Copilot)
@@ -271,6 +275,10 @@ export class DashboardViewV2 {
                         <button class="dv2-nav-btn text-pink-400/90 hover:text-pink-400 hover:bg-pink-400/10" id="btnSidebarCommunity">
                             <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
                             مجتمع قرار
+                        </button>
+                        <button class="dv2-nav-btn text-violet-400/90 hover:text-violet-400 hover:bg-violet-400/10" id="btnSidebarJointVentures">
+                            <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
+                            غرفة التحالفات والمشاريع المشتركة
                         </button>
                         <button class="dv2-nav-btn text-purple-400/90 hover:text-purple-400 hover:bg-purple-400/10" id="btnSidebarMandA">
                             <svg class="ic" aria-hidden="true"><use href="#i-target"/></svg>
@@ -713,6 +721,9 @@ export class DashboardViewV2 {
         this.container.querySelector('#btnSidebarComplianceRadar')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showComplianceRadar'));
         });
+        this.container.querySelector('#btnSidebarAssetsPortfolio')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showAssetsPortfolio'));
+        });
         this.container.querySelector('#btnSidebarCopilot')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showAIAssistantCopilot'));
         });
@@ -729,6 +740,9 @@ export class DashboardViewV2 {
         });
         this.container.querySelector('#btnSidebarMandA')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showMandAHub'));
+        });
+        this.container.querySelector('#btnSidebarJointVentures')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showJointVentures'));
         });
         this.container.querySelector('#btnSidebarFranchiseHub')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showFranchiseHub'));

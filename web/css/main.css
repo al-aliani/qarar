@@ -1161,3 +1161,24 @@
     box-shadow: 0 10px 30px rgba(220, 38, 38, 0.3);
 }
 
+
+/* =========================================
+   [21] ALLIANCES & ASSETS VIEWS
+   (JointVentures, AssetsPortfolio)
+   ========================================= */
+
+.jv-view,
+.assets-portfolio-view {
+    color: #fff !important;
+}
+
+/* Animations */
+.jv-view .animate-pulse {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Assets Portfolio */
+.assets-portfolio-view .btn--primary {
+    box-shadow: 0 0 15px rgba(120, 113, 108, 0.4) !important;
+}
+

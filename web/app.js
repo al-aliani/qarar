@@ -1491,6 +1491,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // التشريعات والامتثال (Compliance Radar)
+  window.addEventListener('feasibility:showComplianceRadar', async () => {
+    try {
+      const { ComplianceRadarView } = await import('./js/ui/ComplianceRadarView.js');
+      const view = new ComplianceRadarView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('ComplianceRadarView load failed:', err);
+      toast.error('تعذر فتح رادار التشريعات');
+    }
+  });
+
+  // التحالفات والمشاريع المشتركة (Joint Ventures)
+  window.addEventListener('feasibility:showJointVentures', async () => {
+    try {
+      const { JointVenturesView } = await import('./js/ui/JointVenturesView.js');
+      const view = new JointVenturesView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('JointVenturesView load failed:', err);
+      toast.error('تعذر فتح غرفة التحالفات');
+    }
+  });
+
+  // محفظة الأصول (Assets Portfolio)
+  window.addEventListener('feasibility:showAssetsPortfolio', async () => {
+    try {
+      const { AssetsPortfolioView } = await import('./js/ui/AssetsPortfolioView.js');
+      const view = new AssetsPortfolioView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('AssetsPortfolioView load failed:', err);
+      toast.error('تعذر فتح محفظة الأصول');
+    }
+  });
+
   // أكاديمية القادة (Academy)
   window.addEventListener('feasibility:showAcademy', async () => {
     try {
