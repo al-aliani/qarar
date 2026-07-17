@@ -96,8 +96,8 @@ export class IntegrationsHubView {
                         html: `
                             <div class="text-right mt-4">
                                 <label class="block text-sm text-white/70 mb-2">أدخل مفتاح API الخاص بك</label>
-                                <input type="password" id="apiKey" class="swal2-input !bg-black/20 !border-white/10 !text-white w-full !mx-0 !text-sm" placeholder="sk-..." value="sk-mocked-key-12345" style="width: 100%; box-sizing: border-box;">
-                                <p class="text-[10px] text-white/40 mt-2">يتم تشفير المفتاح وحفظه بأمان ولا يستخدم إلا لدراساتك الخاصة.</p>
+                                <input type="password" id="apiKey" class="swal2-input !bg-black/20 !border-white/10 !text-white w-full !mx-0 !text-sm" placeholder="sk-..." value="${window.localStorage.getItem('qarar_integration_openai_key') || ''}" style="width: 100%; box-sizing: border-box;">
+                                <p class="text-[10px] text-white/40 mt-2">يُحفظ المفتاح محلياً في متصفحك فقط، ولا يُرسل لأي خادم من هذه الشاشة التجريبية.</p>
                             </div>
                         `,
                         background: 'rgba(30, 41, 59, 0.95)',
@@ -113,7 +113,13 @@ export class IntegrationsHubView {
                         buttonsStyling: false
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            import('../utils/toast.js').then(({ toast }) => toast.success('تم تشفير وحفظ المفتاح بنجاح!'));
+                            const key = document.getElementById('apiKey')?.value?.trim() || '';
+                            if (key) {
+                                window.localStorage.setItem('qarar_integration_openai_key', key);
+                            } else {
+                                window.localStorage.removeItem('qarar_integration_openai_key');
+                            }
+                            import('../utils/toast.js').then(({ toast }) => toast.success('تم حفظ المفتاح محلياً في متصفحك'));
                         }
                     });
                 });

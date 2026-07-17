@@ -19,11 +19,12 @@ export class FranchiseHubView {
                             <svg class="ic w-6 h-6 text-orange-400" aria-hidden="true"><use href="#i-home"/></svg>
                             منصة الامتياز التجاري (Franchise Hub)
                         </h2>
-                        <p class="text-white/60 text-sm">قم بتجهيز علامتك التجارية للانتشار، حدد رسوم الامتياز، واعرضها للمستثمرين الراغبين بافتتاح فروع.</p>
+                        <p class="text-white/60 text-sm">عرض مفاهيمي لما يمكن أن تبدو عليه أداة تجهيز العلامة التجارية للامتياز — لا يوجد حالياً سوق مستثمرين متصل أو نشر فعلي للعلامة، والأرقام أدناه أمثلة توضيحية وليست محسوبة من بيانات مشروعك.</p>
                     </div>
-                    <button class="btn btn--primary !bg-orange-500 hover:!bg-orange-600 font-bold whitespace-nowrap text-white border-0">
-                        طرح العلامة للفرنشايز
-                    </button>
+                    <div class="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
+                        <div class="w-2 h-2 rounded-full bg-amber-500"></div>
+                        <span class="text-xs text-white/80 font-bold">بيانات تجريبية (Demo)</span>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">

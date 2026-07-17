@@ -1,3 +1,14 @@
+/**
+ * منصة التجهيز للاكتتاب العام (IPO Readiness) — شاشة مفاهيمية غير مبنية.
+ * تعمّداً بلا أي نسبة جاهزية أو معلم "مكتمل" مُختلَق: تتبّع اكتتاب حقيقي يحتاج
+ * (1) أرباحاً فعلية تاريخية + قيمة سوقية متداولة فعلية — لا يوجد لهما تمثيل في
+ * schema.js بعد إزالة أداة متابعة الأداء الفعلي من الواجهة (state.actuals لا
+ * يحمل اليوم سوى timelineCompletions)، و(2) معالم حوكمة مؤسسية (مراجع حسابات
+ * خارجي، مجلس إدارة ولجنة مراجعة، مستشار مالي مرخص، ملف هيئة السوق المالية) لا
+ * حقل واحد لها في نموذج بيانات الدراسة، و(3) ValuationAnalysis.js ينتج تقييم
+ * DCF لمشروع لم يُطلق بعد، وهذا ليس قيمة سوقية متداولة فعلية. هذه الشاشة تبقى
+ * غير موصولة بلوحة التحكم الحية إلى أن يُتخذ قرار عمل ببناء البيانات الناقصة.
+ */
 export class IPOReadinessView {
     constructor(containerOrId) {
         if (typeof containerOrId === 'string') {
@@ -11,117 +22,39 @@ export class IPOReadinessView {
         if (!this.container) return;
 
         this.container.innerHTML = `
-            <div class="ipo-readiness-view max-w-5xl mx-auto py-8 px-4 animate-entry relative overflow-hidden">
-                <!-- Background Glow -->
-                <div class="absolute top-0 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-[100px] pointer-events-none"></div>
-                
-                <!-- Header -->
-                <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4 bg-gradient-to-l from-amber-500/10 to-transparent p-6 rounded-2xl border border-amber-500/20 relative z-10">
-                    <div>
-                        <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                            <svg class="ic w-6 h-6 text-amber-400" aria-hidden="true"><use href="#i-trending-up"/></svg>
-                            منصة التجهيز للاكتتاب العام (IPO Readiness)
-                        </h2>
-                        <p class="text-white/60 text-sm">تتبع رحلة انتقال شركتك من مساهمة مغلقة إلى شركة مدرجة في سوق "نمو" الموازي.</p>
-                    </div>
-                    <button class="btn btn--primary !bg-amber-500 hover:!bg-amber-600 font-bold whitespace-nowrap text-black border-0 shadow-[0_0_20px_rgba(245,158,11,0.4)]">
-                        توليد نشرة الإصدار الأولية
-                    </button>
+            <div class="ipo-readiness-view" style="max-width:760px;margin:0 auto;padding:var(--s-4) 0;">
+                <button type="button" id="btnIpoReadinessBack" class="btn btn--ghost mb-4" style="display:inline-flex;align-items:center;gap:8px;">← العودة للوحة التحكم</button>
+
+                <h2 class="section-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <svg class="ic" aria-hidden="true"><use href="#i-trophy"/></svg>
+                    منصة التجهيز للاكتتاب العام (IPO Readiness)
+                    <span class="badge badge--warning">مفهوم — قيد التطوير</span>
+                </h2>
+                <p class="text-muted mb-4">تتبّع جاهزية الاكتتاب يحتاج بيانات فعلية تاريخية لشركة عاملة، وهذا خارج نطاق ما يبنيه "قرار" اليوم.</p>
+
+                <div class="alert alert--info mb-4">
+                    <p><strong>هذه شاشة مفاهيمية فقط ولا تُحسب من بياناتك.</strong> "قرار" يبني دراسات جدوى لمشاريع لم تنطلق بعد، ولا يتابع نتائج فعلية بعد الإطلاق (أداة متابعة الأداء الفعلي أُزيلت من الواجهة سابقاً). جاهزية الاكتتاب الحقيقية على سوق "نمو" تحتاج ما لا يوجد له تمثيل في نموذج بيانات الدراسة حالياً:</p>
+                    <ul class="mb-2">
+                        <li>3 سنوات أرباح فعلية موثّقة، وقيمة سوقية متداولة فعلية تتجاوز 50 مليون ريال — أرقام تاريخية لشركة تعمل فعلياً، لا تقديرات دراسة جدوى قبل الإطلاق.</li>
+                        <li>معالم حوكمة مؤسسية: تعيين مراجع حسابات خارجي معتمد، تشكيل مجلس إدارة ولجنة مراجعة، تعيين مستشار مالي مرخص، تقديم ملف الطرح لهيئة السوق المالية.</li>
+                        <li>قيمة سوقية متداولة فعلية، بخلاف تقييم DCF/توقعات ما قبل الإطلاق الذي تنتجه أداة التقييم الحالية في الدراسة.</li>
+                    </ul>
+                    <p class="mb-0">لذلك لا تعرض هذه الشاشة نسبة جاهزية أو خانات "مكتملة" — أي رقم من هذا النوع هنا سيكون مختلَقاً وليس محسوباً.</p>
                 </div>
 
-                <!-- Main Progress -->
-                <div class="flex flex-col items-center justify-center mb-12 relative z-10">
-                    <div class="relative w-48 h-48 flex items-center justify-center mb-4">
-                        <!-- Circular Progress Background -->
-                        <svg class="w-full h-full transform -rotate-90">
-                            <circle cx="96" cy="96" r="88" stroke="currentColor" stroke-width="12" fill="transparent" class="text-white/5" />
-                            <circle cx="96" cy="96" r="88" stroke="currentColor" stroke-width="12" fill="transparent" class="text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]" stroke-dasharray="552.92" stroke-dashoffset="193.52" stroke-linecap="round" />
-                        </svg>
-                        <!-- Center Text -->
-                        <div class="absolute flex flex-col items-center justify-center text-center">
-                            <span class="text-5xl font-bold text-white drop-shadow-lg">65<span class="text-2xl text-amber-400">%</span></span>
-                            <span class="text-xs text-white/50 mt-1">نسبة الجاهزية</span>
-                        </div>
-                    </div>
-                    <h3 class="text-lg font-bold text-amber-400">المرحلة الحالية: حوكمة الشركة وتدقيق القوائم المالية</h3>
-                    <p class="text-sm text-white/60 mt-2 max-w-lg text-center">أنت على بعد خطوات من تحقيق الحلم، يجب إنهاء تحويل الكيان القانوني لشركة مساهمة وتعيين مستشار مالي مرخص.</p>
+                <div class="card glass-card">
+                    <h3 class="card-title mb-2">ما الذي يلزم لبناء هذه الأداة فعلياً؟</h3>
+                    <p class="text-sm mb-1">قرارات عمل مطلوبة قبل أي برمجة:</p>
+                    <ul class="text-sm mb-0">
+                        <li>إعادة تفعيل تتبّع الأداء الفعلي بعد الإطلاق (أرباح سنوية حقيقية، إيرادات فعلية).</li>
+                        <li>بناء نموذج بيانات جديد لحوكمة الشركة (مراجع الحسابات، مجلس الإدارة، لجنة المراجعة، المستشار المالي، تقديم هيئة السوق المالية).</li>
+                        <li>تأكيد أن جمهور "قرار" الحالي (مشاريع ما قبل الإطلاق) هو فعلاً الفئة المستهدفة لتتبع اكتتاب لاحق.</li>
+                    </ul>
                 </div>
-
-                <!-- Milestones Checklist -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-                    
-                    <!-- Phase 1 (Completed) -->
-                    <div class="p-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 relative">
-                        <div class="absolute top-4 left-4 text-emerald-400">
-                            <svg class="ic w-6 h-6" aria-hidden="true"><use href="#i-check-circle"/></svg>
-                        </div>
-                        <h4 class="text-white font-bold mb-4">المرحلة الأولى: الهيكلة الأساسية</h4>
-                        <ul class="space-y-3">
-                            <li class="flex items-center gap-2 text-sm text-white/70 line-through decoration-emerald-500/50">
-                                <div class="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400"><svg class="ic w-3 h-3" aria-hidden="true"><use href="#i-check"/></svg></div>
-                                تحقيق أرباح لـ 3 سنوات متتالية
-                            </li>
-                            <li class="flex items-center gap-2 text-sm text-white/70 line-through decoration-emerald-500/50">
-                                <div class="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400"><svg class="ic w-3 h-3" aria-hidden="true"><use href="#i-check"/></svg></div>
-                                وصول القيمة السوقية لأكثر من 50 مليون ريال
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Phase 2 (In Progress) -->
-                    <div class="p-5 rounded-2xl border border-amber-500/40 bg-amber-500/10 relative shadow-[0_0_15px_rgba(245,158,11,0.1)]">
-                        <div class="absolute top-4 left-4 text-amber-400 animate-spin-slow">
-                            <svg class="ic w-5 h-5" aria-hidden="true"><use href="#i-loader"/></svg>
-                        </div>
-                        <h4 class="text-white font-bold mb-4">المرحلة الثانية: الحوكمة (قيد العمل)</h4>
-                        <ul class="space-y-3">
-                            <li class="flex items-center gap-2 text-sm text-white/70 line-through decoration-emerald-500/50">
-                                <div class="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400"><svg class="ic w-3 h-3" aria-hidden="true"><use href="#i-check"/></svg></div>
-                                تحويل الكيان إلى (شركة مساهمة مقفلة)
-                            </li>
-                            <li class="flex items-center gap-2 text-sm text-white/90">
-                                <div class="w-4 h-4 rounded border border-white/20"></div>
-                                <span class="font-bold">تعيين مراجع حسابات خارجي معتمد (Big 4)</span>
-                            </li>
-                            <li class="flex items-center gap-2 text-sm text-white/90">
-                                <div class="w-4 h-4 rounded border border-white/20"></div>
-                                تشكيل مجلس الإدارة ولجنة المراجعة
-                            </li>
-                        </ul>
-                        <button class="mt-4 w-full text-xs py-2 bg-amber-500 text-black font-bold rounded-lg hover:bg-amber-400 transition-colors">
-                            البحث عن مراجع حسابات في سوق الخبراء
-                        </button>
-                    </div>
-
-                    <!-- Phase 3 (Locked) -->
-                    <div class="p-5 rounded-2xl border border-white/5 bg-white/5 relative opacity-60">
-                        <div class="absolute top-4 left-4 text-white/30">
-                            <svg class="ic w-5 h-5" aria-hidden="true"><use href="#i-lock"/></svg>
-                        </div>
-                        <h4 class="text-white/60 font-bold mb-4">المرحلة الثالثة: الإدراج</h4>
-                        <ul class="space-y-3">
-                            <li class="flex items-center gap-2 text-sm text-white/40">
-                                <div class="w-4 h-4 rounded border border-white/10"></div>
-                                تعيين مستشار مالي مرخص
-                            </li>
-                            <li class="flex items-center gap-2 text-sm text-white/40">
-                                <div class="w-4 h-4 rounded border border-white/10"></div>
-                                تقديم ملف الطرح لهيئة السوق المالية
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="max-w-5xl mx-auto px-4 mt-6">
-                <button type="button" class="btn btn-secondary btn-back-dashboard">
-                    <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>
-                    العودة للوحة التحكم
-                </button>
             </div>
         `;
 
-        this.container.querySelector('.btn-back-dashboard')?.addEventListener('click', () => {
+        this.container.querySelector('#btnIpoReadinessBack')?.addEventListener('click', () => {
             window.location.hash = '#/home';
         });
 

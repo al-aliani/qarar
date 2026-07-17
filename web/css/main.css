@@ -1234,3 +1234,36 @@
     background: rgba(99, 102, 241, 0.8);
 }
 
+
+/* =========================================
+   [24] DIGITAL REPUTATION RADAR VIEW
+   ========================================= */
+
+.digital-reputation-view {
+    color: #fff !important;
+}
+
+/* Animations */
+@keyframes radar-sweep {
+    from {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+    }
+    to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0;
+    }
+}
+
+.radar-sweep {
+    animation: radar-sweep 3s linear infinite;
+}
+
+.animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-spin {
+    animation: spin linear infinite;
+}
+

@@ -19,12 +19,12 @@ export class MandAHubView {
                             <svg class="ic w-6 h-6 text-purple-400" aria-hidden="true"><use href="#i-target"/></svg>
                             مركز صفقات الاستحواذ والتخارج (M&A Hub)
                         </h2>
-                        <p class="text-white/60 text-sm">قيّم مشروعك الحالي، وتواصل مع صناديق استثمارية تبحث عن الاستحواذ أو الشراكة.</p>
+                        <p class="text-white/60 text-sm">مفهوم توضيحي لشكل تقييم المشروع والتفاوض مع مشترين محتملين — لا يوجد حالياً ربط فعلي بصناديق استثمارية أو مشترين حقيقيين.</p>
                     </div>
-                    <button class="btn btn--primary !bg-purple-500 hover:!bg-purple-600 font-bold whitespace-nowrap">
-                        <svg class="ic w-4 h-4 mr-2" aria-hidden="true"><use href="#i-briefcase"/></svg>
-                        طرح المشروع للاستحواذ
-                    </button>
+                    <div class="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
+                        <div class="w-2 h-2 rounded-full bg-amber-500"></div>
+                        <span class="text-xs text-white/80 font-bold">مفهوم — قيد التطوير (Demo)</span>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -32,10 +32,10 @@ export class MandAHubView {
                     <div class="lg:col-span-1 p-6 rounded-2xl relative overflow-hidden" style="background: linear-gradient(135deg, rgba(88,28,135,0.3) 0%, rgba(15,23,42,0.9) 100%); border: 1px solid rgba(168,85,247,0.3);">
                         <div class="absolute -right-10 -top-10 w-40 h-40 bg-purple-500/20 blur-3xl rounded-full"></div>
                         
-                        <h3 class="text-white font-bold text-sm mb-4">التقييم التقديري (Valuation)</h3>
+                        <h3 class="text-white font-bold text-sm mb-4">مثال توضيحي للتقييم (Valuation)</h3>
                         <div class="text-4xl font-bold text-purple-400 mb-2">4.2M <span class="text-lg">ريال</span></div>
-                        <div class="text-[10px] text-green-400 flex items-center gap-1 mb-6">
-                            <svg class="ic w-3 h-3" aria-hidden="true"><use href="#i-trending-up"/></svg> ارتفاع بنسبة 12% عن الربع السابق
+                        <div class="text-[10px] text-white/40 flex items-center gap-1 mb-6">
+                            <svg class="ic w-3 h-3" aria-hidden="true"><use href="#i-info"/></svg> رقم افتراضي لأغراض العرض فقط، وليس تقييماً فعلياً لمشروعك
                         </div>
                         
                         <div class="space-y-3">
@@ -62,7 +62,7 @@ export class MandAHubView {
                     <div class="lg:col-span-2 space-y-6">
                         <!-- Pipeline -->
                         <div class="p-6 rounded-2xl border border-white/5" style="background: rgba(255,255,255,0.02);">
-                            <h3 class="text-white font-bold text-sm mb-6">مسار صفقة الاستحواذ الحالية</h3>
+                            <h3 class="text-white font-bold text-sm mb-6">مثال توضيحي: مراحل صفقة استحواذ نموذجية</h3>
                             <div class="flex justify-between items-center relative">
                                 <!-- Connecting Line -->
                                 <div class="absolute top-1/2 left-0 w-full h-0.5 bg-white/10 -z-10 -translate-y-1/2"></div>
@@ -93,9 +93,10 @@ export class MandAHubView {
                         <!-- Interested Funds -->
                         <div class="p-6 rounded-2xl border border-white/5" style="background: rgba(255,255,255,0.02);">
                             <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-white font-bold text-sm">عروض الشراء السرية (LOI)</h3>
-                                <span class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse">2 عروض جديدة</span>
+                                <h3 class="text-white font-bold text-sm">أمثلة توضيحية لعروض شراء (LOI)</h3>
+                                <span class="bg-white/5 text-white/40 border border-white/10 text-[10px] px-2 py-0.5 rounded-full">بيانات تجريبية</span>
                             </div>
+                            <p class="text-[11px] text-white/40 mb-4">العروض أدناه أمثلة توضيحية فقط ولا تمثل صناديق أو مشترين حقيقيين تواصلوا مع مشروعك.</p>
                             
                             <div class="space-y-3">
                                 <div class="p-4 rounded-xl border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors flex items-center justify-between cursor-pointer">

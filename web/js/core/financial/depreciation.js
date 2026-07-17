@@ -45,7 +45,13 @@ export function buildDepreciationModel(ctx) {
         const itemRate = rateOrDefault(item.depreciationRate, defaultRate);
         const saving = getSaving(category);
         const depRate = flatRate ? defaultRate : itemRate;
-        return { dep: cost * qty * (1 - saving) * scale * depRate, life: itemRate > 0 ? Math.round(1 / itemRate) : 0 };
+        return {
+            // اسم/فئة العنصر — لبناء جدول إهلاك مسمّى لكل أصل (assetSchedule) بدل تجميعه
+            // في رقم فئة واحد فقط؛ لا يغيّر أي مستهلك حالي (يستخدم فقط .dep/.life).
+            name: item.name || item.label || category,
+            category,
+            dep: cost * qty * (1 - saving) * scale * depRate, life: itemRate > 0 ? Math.round(1 / itemRate) : 0
+        };
     });
 
     const replaceableItems = [
@@ -84,6 +90,9 @@ export function buildDepreciationModel(ctx) {
         annualDepreciation,
         permanentAnnualDep,
         replaceableDepAtYear,
-        getReplacementCostAtYear
+        getReplacementCostAtYear,
+        // مُصدَّرة لأول مرة — تُستهلك في engine.js لبناء result.assetSchedule (جدول
+        // إهلاك مسمّى لكل أصل بدل رقم فئة مجمّع فقط).
+        replaceableItems
     };
 }

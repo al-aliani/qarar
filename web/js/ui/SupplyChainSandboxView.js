@@ -16,10 +16,14 @@ export class SupplyChainSandboxView {
                 <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-gradient-to-l from-teal-500/10 to-transparent p-6 rounded-2xl border border-teal-500/20">
                     <div>
                         <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                            <svg class="ic w-6 h-6 text-teal-400" aria-hidden="true"><use href="#i-truck"/></svg>
+                            <svg class="ic w-6 h-6 text-teal-400" aria-hidden="true"><use href="#i-box"/></svg>
                             محاكي سلاسل الإمداد والمخزون (Supply Chain Sandbox)
                         </h2>
-                        <p class="text-white/60 text-sm">راقب مسار بضائعك، وتلقى تنبيهات استباقية قبل نفاد المواد الخام لضمان عدم توقف المبيعات.</p>
+                        <p class="text-white/60 text-sm">مثال توضيحي لشكل لوحة مراقبة المخزون وسلاسل الإمداد — لا يوجد اتصال فعلي حالياً بأي نظام مخزون أو شحن أو مورد حقيقي، والأرقام هنا افتراضية للتوضيح فقط.</p>
+                    </div>
+                    <div class="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
+                        <div class="w-2 h-2 rounded-full bg-amber-500"></div>
+                        <span class="text-xs text-white/80 font-bold">بيانات تجريبية (Demo)</span>
                     </div>
                 </div>
 
@@ -28,8 +32,8 @@ export class SupplyChainSandboxView {
                     <div class="lg:col-span-1 space-y-6">
                         <div class="p-6 rounded-2xl border border-teal-500/30" style="background: linear-gradient(135deg, rgba(20,184,166,0.1) 0%, rgba(0,0,0,0) 100%);">
                             <h3 class="text-white font-bold text-sm mb-4 flex items-center gap-2">
-                                <svg class="ic w-5 h-5 text-teal-400" aria-hidden="true"><use href="#i-bell"/></svg>
-                                تنبيهات المخزون الذكية
+                                <svg class="ic w-5 h-5 text-teal-400" aria-hidden="true"><use href="#i-warning"/></svg>
+                                مثال على تنبيهات المخزون
                             </h3>
                             
                             <!-- Alert Item -->
@@ -64,17 +68,12 @@ export class SupplyChainSandboxView {
                     <div class="lg:col-span-2 space-y-6">
                         <!-- Logistics Map Simulation -->
                         <div class="p-6 rounded-2xl relative border border-white/5" style="background: rgba(255,255,255,0.02); min-height: 250px;">
-                            <h3 class="text-white font-bold text-sm mb-4">شبكة الإمداد الحية</h3>
-                            
+                            <h3 class="text-white font-bold text-sm mb-4">مثال توضيحي لمسار شحنة (لا يعكس شحنة حقيقية)</h3>
+
                             <div class="relative w-full h-40 mt-4 bg-black/30 rounded-xl overflow-hidden border border-white/10">
-                                <!-- Simulated Route -->
+                                <!-- Illustrative route only — no live tracking connection -->
                                 <svg class="absolute inset-0 w-full h-full" preserveAspectRatio="none">
                                     <path d="M 20,80 Q 150,90 250,50 T 400,20" fill="none" stroke="rgba(20,184,166,0.3)" stroke-width="2" stroke-dasharray="5 5"></path>
-                                    
-                                    <!-- Moving dot (Shipment) -->
-                                    <circle cx="0" cy="0" r="4" fill="#14b8a6">
-                                        <animateMotion path="M 20,80 Q 150,90 250,50 T 400,20" dur="10s" repeatCount="indefinite" />
-                                    </circle>
                                 </svg>
                                 
                                 <!-- Origin (Supplier) -->
@@ -119,7 +118,7 @@ export class SupplyChainSandboxView {
                             
                             <!-- Item -->
                             <div class="p-4 rounded-xl bg-red-500/5 border border-red-500/20 relative overflow-hidden group">
-                                <div class="absolute inset-0 bg-red-500/10 animate-pulse"></div>
+                                <div class="absolute inset-0 bg-red-500/10"></div>
                                 <h4 class="text-white text-xs font-bold mb-3 relative z-10">أكواب ورقية</h4>
                                 <div class="flex justify-between items-end mb-1 relative z-10">
                                     <span class="text-2xl font-bold text-red-500">12%</span>

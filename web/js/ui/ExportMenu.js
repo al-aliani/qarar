@@ -543,9 +543,14 @@ export class ExportMenu {
 
         try {
 
+            // تفضيل اللغة المحفوظ من مفتاح اللغة في dvLanguageToggle — النطاق: القوائم المالية
+            // والمؤشرات فقط تُصدَّر بعناوين إنجليزية (نفس نطاق النسخة الإنجليزية الفعلية لمنافس
+            // حقيقي)، لا واجهة التطبيق نفسها ولا الأقسام النصية التي كتبها المستخدم بالعربية.
+            const exportLang = localStorage.getItem('qarar_language') === 'en' ? 'en' : 'ar';
+
             switch (type) {
                 case 'pdf': {
-                    const pdfName = await this.pdfGenerator.generate();
+                    const pdfName = await this.pdfGenerator.generate({ lang: exportLang });
                     toast.success(pdfName ? `تم تصدير PDF: ${pdfName}` : 'تم تصدير PDF بنجاح!');
                     break;
                 }
@@ -565,7 +570,7 @@ export class ExportMenu {
                 case 'word': {
                     const { WordExporter } = await import('../../export/wordExporter.js');
                     const { downloadBlob } = await import('../../export/utils.js');
-                    const exporter = new WordExporter(this.store);
+                    const exporter = new WordExporter(this.store, { lang: exportLang });
                     const result = await exporter.export();
                     if (result.success) {
                         downloadBlob(result.blob, result.fileName);
@@ -580,14 +585,18 @@ export class ExportMenu {
 
                 case 'excel': {
                     let excelName = null;
+                    // القالب المعياري (excel.js) عربي فقط فيزيائياً — عند اختيار الإنجليزية
+                    // نتحوّل مباشرة للمصدِّر الديناميكي (الوحيد ثنائي اللغة) بنفس منطق تجاوز
+                    // السعة أدناه، بدل تصدير قالب عربي رغم اختيار المستخدم الإنجليزية.
+                    const forceDynamicForLang = exportLang === 'en';
                     // القالب المعياري مُقيَّد فيزيائياً (5 سنوات × 3 منتجات/خدمات كحد أقصى،
                     // بمعادلات SUM/NPV/IRR ثابتة النطاق) — إن تجاوزته الدراسة نتحوّل مباشرة
                     // للمصدِّر الديناميكي بدل محاولة القالب الذي سيقصّ البيانات صامتاً.
                     const capacity = selectExcelExportPath(results, state);
-                    if (capacity.exceedsTemplateCapacity) {
+                    if (capacity.exceedsTemplateCapacity || forceDynamicForLang) {
                         const { exportToExcel } = await import('../../export/excelExporter.js');
                         const fn = state.projectInfo?.name || 'feasibility_study';
-                        excelName = await exportToExcel(state, results, fn);
+                        excelName = await exportToExcel(state, results, fn, { lang: exportLang });
                         toast.success(excelName
                             ? `تم تصدير Excel: ${excelName} — الدراسة تتجاوز سعة القالب المعياري (5 سنوات / 3 منتجات كحد أقصى)، لذا استُخدم تصدير موسَّع يعرض كل السنوات والمنتجات دون أي فقد بيانات.`
                             : 'تم تصدير Excel بنجاح — تم استخدام تصدير موسَّع لأن الدراسة تتجاوز سعة القالب المعياري (5 سنوات / 3 منتجات كحد أقصى)، ولا يوجد فقد بيانات.');
@@ -605,7 +614,7 @@ export class ExportMenu {
                         console.warn('Standard template export failed, using simple export:', templateError);
                         const { exportToExcel } = await import('../../export/excelExporter.js');
                         const fn = state.projectInfo?.name || 'feasibility_study';
-                        excelName = await exportToExcel(state, results, fn);
+                        excelName = await exportToExcel(state, results, fn, { lang: exportLang });
                         toast.success(excelName ? `تم تصدير Excel: ${excelName}` : 'تم تصدير Excel بنجاح!');
                     }
                     break;

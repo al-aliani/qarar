@@ -285,7 +285,8 @@ export class DashboardView {
                     { name: 'حجم السوق والطلب', desc: 'تقدير العملاء والطلب المتوقع', icon: 'chart', step: stepIndexBy(s => s.id === 'marketing', 16), engine: true },
                     { name: 'تحليل المنافسين', desc: 'قارن السعر، القوة، الضعف، والتموضع', icon: 'scale', step: stepIndexBy(s => s.id === 'marketing', 16) },
                     { name: 'العرض والطلب', desc: 'هل السوق فيه فجوة أم تشبع؟', icon: 'trend', step: stepIndexBy(s => s.id === 'marketing', 16), engine: true },
-                    { name: 'استلهام أمثلة', desc: 'نماذج مشاريع وقوالب قريبة من قطاعك', icon: 'bulb', id: 'linkExamplesToolkit' }
+                    { name: 'استلهام أمثلة', desc: 'نماذج مشاريع وقوالب قريبة من قطاعك', icon: 'bulb', id: 'linkExamplesToolkit' },
+                    { name: 'حساسية السعر (ماذا لو؟)', desc: 'معاينة سريعة لأسعارك الحالية وتأثير تغييرها على الطلب، من إعدادات أداة التسعير المثالي', icon: 'target', id: 'linkSurgePricingToolkit', engine: true }
                 ]
             },
             {
@@ -297,7 +298,11 @@ export class DashboardView {
                     { name: 'اختبار التحمل', desc: 'ماذا يحدث لو انخفضت المبيعات؟', icon: 'chart', step: stepIndexBy(s => s.isStressTest, 30), engine: true },
                     { name: 'تحليل الحساسية', desc: 'أكثر متغير يؤثر على الربحية', icon: 'trend', step: stepIndexBy(s => s.isSensitivity, 31), engine: true },
                     { name: 'مونت كارلو', desc: 'احتمالات الربح والخسارة بدل رقم واحد', icon: 'flask', step: stepIndexBy(s => s.isMonteCarlo, 35), engine: true },
-                    { name: 'تقييم الشركة', desc: 'قيمة المشروع للتفاوض مع مستثمر', icon: 'chart', step: stepIndexBy(s => s.isValuation, 36), engine: true }
+                    { name: 'تقييم الشركة', desc: 'قيمة المشروع للتفاوض مع مستثمر', icon: 'chart', step: stepIndexBy(s => s.isValuation, 36), engine: true },
+                    { name: 'التسعير المثالي', desc: 'سعر مقترح من تكلفتك ومنافسيك ورغبة السوق بالدفع', icon: 'bank', step: stepIndexBy(s => s.isPricingOptimizer, 15), engine: true },
+                    { name: 'مؤشر تنافسية الرواتب', desc: 'نسبة إنفاقك على الرواتب مقارنة بنطاق قطاعك', icon: 'scale', id: 'linkTalentCompetitivenessToolkit', engine: true },
+                    { name: 'مختبر تسعير الاستراتيجيات', desc: 'نفس أداة «التسعير المثالي» أعلاه — بنفس بياناتك الحقيقية', icon: 'flask', step: stepIndexBy(s => s.isPricingOptimizer, 15), engine: true },
+                    { name: 'غرفة إدارة الأزمات', desc: 'نفس أداة «اختبار التحمل» — سيناريوهات جاهزة لركود، صدمة تكاليف، وأزمة حادة', icon: 'chart', step: stepIndexBy(s => s.isStressTest, 30), engine: true }
                 ]
             },
             {
@@ -308,6 +313,22 @@ export class DashboardView {
                     { name: 'خطة التوظيف', desc: 'المناصب والرواتب ونسبة التوطين (نطاقات) المطلوبة لنشاطك', icon: 'users', step: stepIndexBy(s => s.id === 'hr', 9) },
                     { name: 'خطة المشتريات والأصول', desc: 'معدات، أثاث، تقنية، وتجهيزات', icon: 'list', step: stepIndexBy(s => s.id === 'technical', 8) },
                     { name: 'خطة التنفيذ', desc: 'مراحل، تواريخ، ومسؤوليات', icon: 'map', step: stepIndexBy(s => s.isTimeline, 20) },
+                    { name: 'محاكي الموارد البشرية والرواتب', desc: 'نطاقات، ومقارنة تكلفة سعودي/وافد على بياناتك الفعلية', icon: 'users', id: 'linkHrSandboxToolkit', engine: true },
+                    { name: 'محفظة الأصول والإهلاك', desc: 'متى تحتاج لاستبدال معداتك وأثاثك', icon: 'briefcase', id: 'linkAssetsPortfolioToolkit', engine: true },
+                    { name: 'لوحة تنفيذ المهام (Kanban)', desc: 'حالة أنشطة خطتك الزمنية على شكل أعمدة', icon: 'list', id: 'linkExecutionKanbanToolkit', engine: true },
+                    { name: 'مخطط توزيع الحصص (ESOP)', desc: 'هيكل الملكية من عقود الشراكة الفعلية، مزيج مصادر التمويل، وحاسبة تخفيف تخطيطية', icon: 'users', id: 'linkOwnershipPlannerToolkit', engine: true },
+                    { name: 'رحلة الشريك', desc: 'نوع الشريك الذي يحتاجه مشروعك فعلياً، من بيانات دراستك', icon: 'users', id: 'linkPartnerSelectionToolkit', engine: true },
+                    { name: 'غرفة التحالفات (Joint Ventures)', desc: 'نفس أداة «رحلة الشريك» أعلاه — بنفس بياناتك الحقيقية', icon: 'users', id: 'linkJointVenturesToolkit', engine: true }
+                ]
+            },
+            {
+                title: 'نظرة عامة وحسابك',
+                note: 'عبر كل دراساتك، لا دراسة واحدة',
+                tools: [
+                    { name: 'لوحة الإحصائيات الشاملة', desc: 'رأس المال والعائد عبر كل دراساتك المحفوظة', icon: 'trend', id: 'linkGlobalAnalyticsToolkit', engine: true },
+                    { name: 'مركز الإشعارات', desc: 'كل التنبيهات المتعلقة بحسابك ودراساتك', icon: 'bell', id: 'linkNotificationsToolkit' },
+                    { name: 'سجل الأنشطة', desc: 'عمليات الدخول والحفظ والتصدير المسجّلة على هذا الجهاز فقط', icon: 'activity', id: 'linkActivityLogToolkit' },
+                    { name: 'محاكي التوسع والفروع', desc: 'نفس «الإحصائيات الشاملة» أعلاه — قارن دراساتك، وانسخ أي دراسة لبدء فرع جديد من قائمة دراساتك', icon: 'map', id: 'linkMultiBranchToolkit', engine: true }
                 ]
             },
             {
@@ -318,7 +339,9 @@ export class DashboardView {
                     { name: 'هل أرقامي منطقية؟', desc: 'مقارنة أرقامك بالقطاع', icon: 'scale', id: 'linkBenchmarkingFromJourneys', engine: true },
                     { name: 'تحليل المخاطر', desc: 'احتمال، أثر، وخطة تخفيف', icon: 'shield', step: stepIndexBy(s => s.isRiskMatrix, 29) },
                     { name: 'توافق منشآت', desc: 'جدول مرجعي يقارن أقسام دراستك بالنموذج الاسترشادي', icon: 'shield', id: 'linkMonshaatToolkit' },
-                    { name: 'معاييرنا', desc: 'كيف تُفحص جودة المخرجات', icon: 'book', id: 'linkTrustCriteriaToolkit' }
+                    { name: 'معاييرنا', desc: 'كيف تُفحص جودة المخرجات', icon: 'book', id: 'linkTrustCriteriaToolkit' },
+                    { name: 'سوق الخبراء والمستشارين', desc: 'نفس صفحة «الاستشارات» — احجز مختصاً أو مستشاراً بسعر ثابت', icon: 'chat', id: 'linkExpertsMarketplaceToolkit' },
+                    { name: 'المساعد الذكي الكامل', desc: 'نفس المستشار الذكي العائم — يفتح نافذة المحادثة أسفل يمين الشاشة', icon: 'bulb', id: 'linkAiCopilotToolkit' }
                 ]
             },
             {
@@ -329,7 +352,30 @@ export class DashboardView {
                     { name: 'تصدير التقرير والجداول', desc: 'نسخ جاهزة للمراجعة والإرسال', icon: 'download', id: 'linkExportToolkit' },
                     { name: 'نسخة التمويل', desc: 'قائمة متطلبات وتقرير مناسب للممول', icon: 'bank', id: 'linkFinancingToolkit' },
                     { name: 'عرض المستثمر', desc: 'عرض تقديمي مختصر للشريك أو المستثمر', icon: 'rocket', step: stepIndexBy(s => s.isDecisionDashboard, 40) },
-                    { name: 'موارد وإرشاد', desc: 'جهات داعمة وروابط مفيدة', icon: 'book', id: 'linkResourcesToolkit' }
+                    { name: 'موارد وإرشاد', desc: 'جهات داعمة وروابط مفيدة', icon: 'book', id: 'linkResourcesToolkit' },
+                    { name: 'الأدلة والمرفقات', desc: 'حفظ ومشاركة مستندات دراستك بأمان', icon: 'folder', step: stepIndexBy(s => s.isAppendices, 41) },
+                    { name: 'غرفة البيانات الافتراضية', desc: 'نفس «الأدلة والمرفقات» أعلاه — حفظ ومشاركة مستنداتك بأمان', icon: 'folder', step: stepIndexBy(s => s.isAppendices, 41) },
+                    { name: 'مركز التمويل والعرض الاستثماري', desc: 'نفس «عرض المستثمر» و«تصدير التقرير» — جاهزية التمويل ومولّدات العروض الحقيقية', icon: 'rocket', step: stepIndexBy(s => s.isDecisionDashboard, 40), engine: true }
+                ]
+            },
+            {
+                title: 'قريباً',
+                note: 'مفاهيم قيد التطوير — بيانات تجريبية فقط، غير مفعّلة بعد',
+                tools: [
+                    { name: 'فريق العمل', desc: 'دعوة شركاء ومراجعين للدراسة (يحتاج نظام دعوات حقيقي)', icon: 'users', id: 'linkTeamManagementToolkit', tag: 'قريباً' },
+                    { name: 'أكاديمية قرار', desc: 'دورات تدريبية مصغّرة (يحتاج إنتاج محتوى فيديو حقيقي)', icon: 'book', id: 'linkAcademyToolkit', tag: 'قريباً' },
+                    { name: 'سوق مقدمي الخدمات', desc: 'موردون ومقاولون معتمدون (يحتاج شراكات تجارية حقيقية)', icon: 'list', id: 'linkMarketplaceToolkit', tag: 'قريباً' },
+                    { name: 'شبكة المستثمرين', desc: 'عرض دراستك على مستثمرين (يحتاج شبكة مستثمرين حقيقية ومراجعة نظامية)', icon: 'bank', id: 'linkInvestorNetworkToolkit', tag: 'قريباً' },
+                    { name: 'مجتمع قرار', desc: 'تبادل خبرات مع رواد أعمال آخرين (يحتاج أعضاء حقيقيين)', icon: 'users', id: 'linkCommunityForumToolkit', tag: 'قريباً' },
+                    { name: 'منصة الامتياز التجاري', desc: 'طرح علامتك للفرنشايز (يحتاج قراراً تجارياً ومستثمرين حقيقيين)', icon: 'briefcase', id: 'linkFranchiseHubToolkit', tag: 'قريباً' },
+                    { name: 'رادار الامتثال', desc: 'تنبيهات تشريعية حية (يحتاج تكاملاً حكومياً حقيقياً)', icon: 'shield', id: 'linkComplianceRadarToolkit', tag: 'قريباً' },
+                    { name: 'محاكي سلاسل الإمداد', desc: 'تتبع مخزون حي (يحتاج ربط نظام مخزون/شحن حقيقي)', icon: 'map', id: 'linkSupplyChainToolkit', tag: 'قريباً' },
+                    { name: 'منصة الاكتتاب العام', desc: 'جاهزية الطرح بسوق نمو (يحتاج نموذج بيانات حوكمة جديد)', icon: 'rocket', id: 'linkIpoReadinessToolkit', tag: 'قريباً' },
+                    { name: 'مجموعة تركيز بالذكاء الاصطناعي', desc: 'محادثة مع عميل افتراضي (يحتاج اشتراك LLM حقيقي)', icon: 'chat', id: 'linkAiFocusGroupToolkit', tag: 'قريباً' },
+                    { name: 'رادار السمعة الرقمية', desc: 'رصد ذكرك بمنصات التواصل (يحتاج اشتراكات API مدفوعة)', icon: 'target', id: 'linkDigitalReputationToolkit', tag: 'قريباً' },
+                    { name: 'مركز صفقات الاستحواذ', desc: 'تواصل مع صناديق استثمارية (يحتاج شبكة مشترين حقيقية)', icon: 'scale', id: 'linkMandAHubToolkit', tag: 'قريباً' },
+                    { name: 'رادار المناقصات الحكومية', desc: 'مناقصات متوافقة مع نشاطك (يحتاج شراكة مع منصة اعتماد الحكومية)', icon: 'briefcase', id: 'linkGovTendersToolkit', tag: 'قريباً' },
+                    { name: 'مركز التكاملات', desc: 'ربط أدوات خارجية بدراستك (يحتاج شراكات تكامل فعلية)', icon: 'list', id: 'linkIntegrationsHubToolkit', tag: 'قريباً' }
                 ]
             }
         ];
@@ -1038,7 +1084,13 @@ export class DashboardView {
             localStorage.setItem('qarar_language', next);
             const button = this.container.querySelector('#dvLanguageToggle');
             if (button) button.textContent = next === 'ar' ? 'العربية' : 'English';
-            import('../utils/toast.js').then(({ toast }) => toast.info(next === 'ar' ? 'تم اختيار العربية' : 'English interface is being prepared for the study engine.'));
+            // النطاق الفعلي: القوائم المالية والمؤشرات في التصديرات (PDF/Word/Excel) فقط تصدر
+            // بعناوين إنجليزية عند التبديل — لا واجهة التطبيق نفسها ولا الأقسام النصية التي
+            // يكتبها المستخدم بالعربية (رسالة الزر السابقة وعدت بترجمة الواجهة كاملة، وهو غير
+            // متوفر بعد — الرسالة الجديدة تصف ما هو متاح فعلياً فقط).
+            import('../utils/toast.js').then(({ toast }) => toast.info(next === 'ar'
+                ? 'تم اختيار العربية'
+                : 'English selected — exported reports (PDF/Word/Excel) will now show financial statements and KPIs with English labels. The app interface itself stays Arabic.'));
         });
         this.container.querySelectorAll('[data-dv-route]').forEach((button) => {
             button.addEventListener('click', () => {
@@ -1306,7 +1358,35 @@ export class DashboardView {
             linkImportCsvToolkit: () => document.getElementById('fileImportCSV')?.click(),
             linkImportCsvSources: () => document.getElementById('fileImportCSV')?.click(),
             linkPythonConnectorDocs: () => toast.info('ربط مصادر بيانات مخصّصة قيد الإعداد — نحفظ مفاتيح الوصول بأمان على خوادمنا بدل تخزينها في متصفحك.'),
-            linkTrustCriteriaStats: () => this.options.onShowTrustCriteria?.()
+            linkTrustCriteriaStats: () => this.options.onShowTrustCriteria?.(),
+            linkHrSandboxToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showHRSandbox')),
+            linkAssetsPortfolioToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showAssetsPortfolio')),
+            linkExecutionKanbanToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showExecutionKanban')),
+            linkGlobalAnalyticsToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showGlobalAnalytics')),
+            linkNotificationsToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showNotifications')),
+            linkActivityLogToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showActivityLog')),
+            linkOwnershipPlannerToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showTokenizationHub')),
+            linkSurgePricingToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showSurgePricingEngine')),
+            linkTalentCompetitivenessToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showTalentPoachingRadar')),
+            linkPartnerSelectionToolkit: () => this.options.onShowPartnerSelection?.(),
+            linkJointVenturesToolkit: () => this.options.onShowPartnerSelection?.(),
+            linkExpertsMarketplaceToolkit: () => this.options.onShowAdvisory?.(),
+            linkAiCopilotToolkit: () => window.aiChatModal?.toggle(),
+            linkMultiBranchToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showGlobalAnalytics')),
+            linkTeamManagementToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showTeamManagement')),
+            linkAcademyToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showAcademy')),
+            linkMarketplaceToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showMarketplace')),
+            linkInvestorNetworkToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showInvestorNetwork')),
+            linkCommunityForumToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showCommunityForum')),
+            linkFranchiseHubToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showFranchiseHub')),
+            linkComplianceRadarToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showComplianceRadar')),
+            linkSupplyChainToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showSupplyChainSandbox')),
+            linkIpoReadinessToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showIPOReadiness')),
+            linkAiFocusGroupToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showAIFocusGroup')),
+            linkDigitalReputationToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showDigitalReputationRadar')),
+            linkMandAHubToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showMandAHub')),
+            linkGovTendersToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showGovTendersRadar')),
+            linkIntegrationsHubToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showIntegrationsHub'))
         };
         this.container.addEventListener('click', (e) => {
             const stepButton = e.target.closest ? e.target.closest('[data-journey-step]') : null;

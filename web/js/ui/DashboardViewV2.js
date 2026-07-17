@@ -243,6 +243,10 @@ export class DashboardViewV2 {
                             <svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>
                             رادار التشريعات والامتثال
                         </button>
+                        <button class="dv2-nav-btn text-blue-500/90 hover:text-blue-500 hover:bg-blue-500/10" id="btnSidebarReputationRadar">
+                            <svg class="ic" aria-hidden="true"><use href="#i-radio"/></svg>
+                            رادار السمعة الرقمية (Reputation)
+                        </button>
                         <button class="dv2-nav-btn text-stone-400/90 hover:text-stone-400 hover:bg-stone-400/10" id="btnSidebarAssetsPortfolio">
                             <svg class="ic" aria-hidden="true"><use href="#i-home"/></svg>
                             محفظة الأصول والعقارات السحابية
@@ -742,6 +746,9 @@ export class DashboardViewV2 {
         });
         this.container.querySelector('#btnSidebarComplianceRadar')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showComplianceRadar'));
+        });
+        this.container.querySelector('#btnSidebarReputationRadar')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showDigitalReputationRadar'));
         });
         this.container.querySelector('#btnSidebarAssetsPortfolio')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showAssetsPortfolio'));

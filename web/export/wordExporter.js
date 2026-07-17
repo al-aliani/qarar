@@ -15,15 +15,20 @@ import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Width
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { calculateProjectScore } from '../js/core/scoring.js';
 import { formatPayback } from '../js/utils/formatters.js';
+import { t } from '../js/i18n/reportStrings.js';
 
 /** أقسام تقرير Word (معرّفات قابلة للربط مع reportSectionOrder). */
-const WORD_SECTION_IDS = ['executive_summary', 'market', 'revenue_breakdown', 'financial_kpis', 'recommendation'];
+const WORD_SECTION_IDS = ['executive_summary', 'market', 'revenue_breakdown', 'financial_kpis', 'income_statement', 'cash_flow', 'balance_sheet', 'competitors', 'asset_schedule', 'working_capital', 'payroll_growth', 'marketing_growth', 'recommendation'];
 
 /** الخط العربي الموحد للمستند — نفس هوية المنصة */
 const AR_FONT = 'IBM Plex Sans Arabic';
 
-function formatCurrency(n) {
+function formatCurrency(n, lang = 'ar') {
     if (!n && n !== 0) return '0';
+    if (lang === 'en') {
+        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M SAR';
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
+    }
     if (n >= 1000000) return (n / 1000000).toFixed(1) + ' مليون ريال';
     return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
 }
@@ -32,9 +37,24 @@ function hasText(s) {
     return String(s || '').trim().length > 0;
 }
 
+/** نسبة كمضاعف (Nx) — نسب السيولة/دوران؛ null/غير محقَّق يبقى «—» لا 0 */
+function formatRatioMultiple(v) {
+    return (v === null || v === undefined || !Number.isFinite(Number(v))) ? '—' : `${Number(v).toFixed(2)}x`;
+}
+
+/** نسبة كنسبة مئوية — الدين/العائد على الأصول والملكية؛ null/غير محقَّق يبقى «—» لا 0 */
+function formatRatioPercent(v) {
+    return (v === null || v === undefined || !Number.isFinite(Number(v))) ? '—' : `${(Number(v) * 100).toFixed(1)}%`;
+}
+
 export class WordExporter {
-    constructor(store) {
+    constructor(store, options = {}) {
         this.store = store;
+        // ثنائي اللغة (المهمة: تصدير إنجليزي) — النطاق مقصود على القوائم المالية والمؤشرات
+        // الكمّية فقط (financial_kpis/income_statement/cash_flow/balance_sheet/ratios)،
+        // بنفس نطاق النسخة الإنجليزية الفعلية لمنافس حقيقي (جدوى كلاود) — لا الأقسام
+        // النصية/الاستراتيجية التي يكتبها المستخدم بلغته، فتلك لا تُترجَم بقاموس تسميات.
+        this.lang = options.lang === 'en' ? 'en' : 'ar';
         const state = store.getState ? store.getState() : store;
         this.state = state;
         this.results = null;
@@ -109,11 +129,85 @@ export class WordExporter {
                     })
                 ];
             }
-            case 'financial_kpis':
-                return [
-                    this.createHeading("المؤشرات المالية"),
+            case 'financial_kpis': {
+                const blocks = [
+                    this.createHeading(t('financial_kpis_title', this.lang)),
                     this.createFinancialTable()
                 ];
+                if ((this.results?.ratios || []).length > 0) {
+                    blocks.push(this.createRatiosTable());
+                }
+                return blocks;
+            }
+            case 'income_statement': {
+                const rows = this.results?.incomeStatement || [];
+                // calculateStudy يعيد صفاً لكل سنة حتى بلا أي إيراد فعلي — لا نطبع قائمة دخل صفرية بالكامل
+                const hasAny = rows.some(r => Number(r.revenue) > 0);
+                if (!hasAny) return [];
+                return [
+                    this.createHeading(t('income_statement_title', this.lang)),
+                    this.createIncomeStatementTable()
+                ];
+            }
+            case 'cash_flow': {
+                const rows = this.results?.cashFlow || [];
+                const hasAny = rows.some(r => Number(r.cashFlow || 0) !== 0 || Number(r.investment || 0) !== 0);
+                if (!hasAny) return [];
+                return [
+                    this.createHeading(t('cash_flow_title', this.lang)),
+                    this.createCashFlowTable()
+                ];
+            }
+            case 'balance_sheet': {
+                const rows = this.results?.balanceSheets || [];
+                const hasAny = rows.some(r => Number(r.assets?.total) > 0);
+                if (!hasAny) return [];
+                return [
+                    this.createHeading(t('balance_sheet_title', this.lang)),
+                    this.createBalanceSheetTable()
+                ];
+            }
+            case 'competitors': {
+                const competitors = (this.state.marketing?.competitors || [])
+                    .filter(c => c && (c.name || c.strengths || c.weaknesses));
+                if (!competitors.length) return [];
+                return [
+                    this.createHeading("تحليل المنافسين"),
+                    this.createCompetitorsTable(competitors)
+                ];
+            }
+            case 'asset_schedule': {
+                const assets = this.results?.assetSchedule || [];
+                if (!assets.length) return [];
+                return [
+                    this.createHeading("جدول إهلاك الأصول"),
+                    this.createAssetScheduleTable(assets)
+                ];
+            }
+            case 'working_capital': {
+                const operating = this.results?.capex?.capitalStructure?.operating;
+                if (!operating?.total) return [];
+                return [
+                    this.createHeading("تفصيل رأس المال العامل"),
+                    this.createWorkingCapitalTable(operating)
+                ];
+            }
+            case 'payroll_growth': {
+                const rows = this.results?.payrollByPosition || [];
+                if (!rows.length) return [];
+                return [
+                    this.createHeading("خطة نمو الرواتب متعددة السنوات"),
+                    this.createPayrollGrowthTable()
+                ];
+            }
+            case 'marketing_growth': {
+                const rows = this.results?.marketingByChannel || [];
+                if (!rows.length) return [];
+                return [
+                    this.createHeading("خطة نمو التسويق حسب القناة"),
+                    this.createMarketingGrowthTable()
+                ];
+            }
             case 'recommendation':
                 return [
                     this.createHeading("التوصية النهائية"),
@@ -262,15 +356,217 @@ export class WordExporter {
 
     createFinancialTable() {
         const ind = this.results?.indicators || {};
+        const lang = this.lang;
         return new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows: [
-                this.createTableRow(["القيمة", "المؤشر"], true),
-                this.createTableRow([formatCurrency(ind.npv), "صافي القيمة الحالية (NPV)"]),
-                this.createTableRow([`${((ind.irr ?? 0) * 100).toFixed(1)}%`, "معدل العائد الداخلي (IRR)"]),
-                this.createTableRow([formatPayback(ind.paybackPeriod), "فترة الاسترداد"]),
-                this.createTableRow([`${((ind.roi ?? 0) * 100).toFixed(1)}%`, "العائد على الاستثمار (ROI)"])
+                this.createTableRow([t('value_column', lang), t('indicator_column', lang)], true),
+                this.createTableRow([formatCurrency(ind.npv, lang), t('npv', lang)]),
+                this.createTableRow([`${((ind.irr ?? 0) * 100).toFixed(1)}%`, t('irr', lang)]),
+                this.createTableRow([formatPayback(ind.paybackPeriod), t('payback_period', lang)]),
+                this.createTableRow([`${((ind.roi ?? 0) * 100).toFixed(1)}%`, t('roi', lang)])
             ]
+        });
+    }
+
+    createIncomeStatementTable() {
+        const rows = this.results?.incomeStatement || [];
+        const lang = this.lang;
+        const header = [t('item_column', lang), ...rows.map(r => `${t('year_prefix', lang)} ${r.year}`)];
+        const lineItems = [
+            [t('revenue', lang), 'revenue'],
+            [t('variable_costs', lang), 'variableCosts'],
+            [t('gross_profit', lang), 'grossProfit'],
+            [t('fixed_costs', lang), 'fixedCosts'],
+            ['EBITDA', 'ebitda'],
+            [t('depreciation', lang), 'depreciation'],
+            [t('interest', lang), 'interest'],
+            [t('zakat', lang), 'zakat'],
+            [t('net_income', lang), 'netIncome']
+        ];
+        const tableRows = [this.createTableRow(header, true)];
+        lineItems.forEach(([label, key]) => {
+            tableRows.push(this.createTableRow([label, ...rows.map(r => formatCurrency(r[key], lang))]));
+        });
+        return new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: tableRows
+        });
+    }
+
+    createCashFlowTable() {
+        const rows = this.results?.cashFlow || [];
+        const lang = this.lang;
+        const header = [t('item_column', lang), ...rows.map(r => `${t('year_prefix', lang)} ${r.year}`)];
+        const lineItems = [
+            [t('capex_investment', lang), 'investment'],
+            [t('loan_inflow', lang), 'loanInflow'],
+            [t('net_income', lang), 'netIncome'],
+            [t('depreciation', lang), 'depreciation'],
+            [t('loan_principal_paid', lang), 'loanPrincipalPaid'],
+            [t('asset_replacement_cost', lang), 'replacementCost'],
+            [t('vat_net_payable', lang), 'vatNetPayable'],
+            [t('net_cash_flow', lang), 'cashFlow'],
+            [t('cash_flow_after_vat', lang), 'cashFlowAfterVat'],
+            [t('cumulative_cash_flow', lang), 'cumulative']
+        ];
+        const tableRows = [this.createTableRow(header, true)];
+        lineItems.forEach(([label, key]) => {
+            tableRows.push(this.createTableRow([label, ...rows.map(r => formatCurrency(r[key], lang))]));
+        });
+        return new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: tableRows
+        });
+    }
+
+    createBalanceSheetTable() {
+        const rows = this.results?.balanceSheets || [];
+        const lang = this.lang;
+        const header = [t('item_column', lang), ...rows.map(r => `${t('year_prefix', lang)} ${r.year}`)];
+        const lineItems = [
+            [t('cash', lang), r => r.assets?.current?.cash],
+            [t('accounts_receivable', lang), r => r.assets?.current?.accountsReceivable],
+            [t('inventory', lang), r => r.assets?.current?.inventory],
+            [t('total_current_assets', lang), r => r.assets?.current?.total],
+            [t('net_fixed_assets', lang), r => r.assets?.fixed?.net],
+            [t('total_assets', lang), r => r.assets?.total],
+            [t('current_liabilities', lang), r => r.liabilities?.current?.total],
+            [t('long_term_liabilities', lang), r => r.liabilities?.longTerm?.total],
+            [t('total_liabilities', lang), r => r.liabilities?.total],
+            [t('share_capital', lang), r => r.equity?.paidInCapital],
+            [t('retained_earnings', lang), r => r.equity?.retainedEarnings],
+            [t('total_equity', lang), r => r.equity?.total]
+        ];
+        const tableRows = [this.createTableRow(header, true)];
+        lineItems.forEach(([label, getter]) => {
+            tableRows.push(this.createTableRow([label, ...rows.map(r => formatCurrency(getter(r), lang))]));
+        });
+        return new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: tableRows
+        });
+    }
+
+    createRatiosTable() {
+        const rows = this.results?.ratios || [];
+        const lang = this.lang;
+        const header = [t('item_column', lang), ...rows.map(r => `${t('year_prefix', lang)} ${r.year}`)];
+        const lineItems = [
+            [t('current_ratio', lang), r => r.currentRatio, formatRatioMultiple],
+            [t('quick_ratio', lang), r => r.quickRatio, formatRatioMultiple],
+            [t('cash_ratio', lang), r => r.cashRatio, formatRatioMultiple],
+            [t('debt_ratio', lang), r => r.debtRatio, formatRatioPercent],
+            [t('debt_to_equity', lang), r => r.debtToEquity, formatRatioPercent],
+            [t('asset_turnover', lang), r => r.assetTurnover, formatRatioMultiple],
+            [t('fixed_asset_turnover', lang), r => r.fixedAssetTurnover, formatRatioMultiple],
+            [t('roa', lang), r => r.roa, formatRatioPercent],
+            [t('roe', lang), r => r.roe, formatRatioPercent]
+        ];
+        const tableRows = [this.createTableRow(header, true)];
+        lineItems.forEach(([label, getter, fmt]) => {
+            tableRows.push(this.createTableRow([label, ...rows.map(r => fmt(getter(r)))]));
+        });
+        return new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: tableRows
+        });
+    }
+
+    createCompetitorsTable(competitors) {
+        const rows = [
+            this.createTableRow(["المنافس", "الحصة السوقية", "نقاط القوة", "نقاط الضعف", "عملاء/يوم", "متوسط الفاتورة"], true)
+        ];
+        competitors.forEach(c => {
+            rows.push(this.createTableRow([
+                c.name || '—',
+                c.marketShare ? `${Number(c.marketShare).toLocaleString('ar-SA')}%` : '—',
+                c.strengths || '—',
+                c.weaknesses || '—',
+                c.estimatedDailyCustomers ? Number(c.estimatedDailyCustomers).toLocaleString('ar-SA') : '—',
+                c.estimatedAvgTicket ? formatCurrency(c.estimatedAvgTicket) : '—'
+            ]));
+        });
+        return new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows
+        });
+    }
+
+    createAssetScheduleTable(assets) {
+        const rows = [
+            this.createTableRow(["الأصل", "الفئة", "الإهلاك السنوي", "العمر الافتراضي"], true)
+        ];
+        assets.forEach(a => {
+            rows.push(this.createTableRow([
+                a.name || '—',
+                a.category || '—',
+                formatCurrency(a.annualDepreciation),
+                a.usefulLifeYears ? `${a.usefulLifeYears} سنة` : '—'
+            ]));
+        });
+        return new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows
+        });
+    }
+
+    createWorkingCapitalTable(operating) {
+        const breakdown = operating.breakdown || {};
+        const labels = [
+            ["الإيجار", 'rent'],
+            ["الرواتب", 'salaries'],
+            ["التسويق", 'marketing'],
+            ["تكلفة البضاعة", 'cogs'],
+            ["المخزون الافتتاحي", 'openingInventory']
+        ];
+        const rows = [this.createTableRow(["البند", "القيمة"], true)];
+        labels.forEach(([label, key]) => {
+            rows.push(this.createTableRow([label, formatCurrency(breakdown[key])]));
+        });
+        rows.push(this.createTableRow(["الإجمالي", formatCurrency(operating.total)], true));
+        return new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows
+        });
+    }
+
+    createPayrollGrowthTable() {
+        const rows = this.results?.payrollByPosition || [];
+        const yearsCount = rows.reduce((max, r) => Math.max(max, (r.byYear || []).length), 0);
+        const header = ["الوظيفة", "الجنسية", "معدل النمو المستخدم", ...Array.from({ length: yearsCount }, (_, i) => `السنة ${i + 1}`)];
+        const tableRows = [this.createTableRow(header, true)];
+        rows.forEach(r => {
+            const nationality = r.nationality === 'saudi' ? 'سعودي' : (r.nationality === 'expat' ? 'غير سعودي' : '—');
+            tableRows.push(this.createTableRow([
+                r.position || '—',
+                nationality,
+                formatRatioPercent(r.growthRateUsed),
+                ...Array.from({ length: yearsCount }, (_, i) => formatCurrency((r.byYear || [])[i]))
+            ]));
+        });
+        return new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: tableRows
+        });
+    }
+
+    createMarketingGrowthTable() {
+        const rows = this.results?.marketingByChannel || [];
+        const yearsCount = rows.reduce((max, r) => Math.max(max, (r.byYear || []).length), 0);
+        const header = ["القناة", "الحملة", "معدل النمو المستخدم", ...Array.from({ length: yearsCount }, (_, i) => `السنة ${i + 1}`)];
+        const tableRows = [this.createTableRow(header, true)];
+        rows.forEach(r => {
+            tableRows.push(this.createTableRow([
+                hasText(r.channel) ? r.channel : '—',
+                r.name || '—',
+                formatRatioPercent(r.growthRateUsed),
+                ...Array.from({ length: yearsCount }, (_, i) => formatCurrency((r.byYear || [])[i]))
+            ]));
+        });
+        return new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: tableRows
         });
     }
 

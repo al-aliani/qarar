@@ -19,12 +19,14 @@ export class PDFGenerator {
 
     /**
      * Open print-ready report in new window (user chooses "Save as PDF").
+     * @param {{lang?: 'ar'|'en'}} [options] - lang يُمرَّر لـReportGenerator (النطاق: القوائم
+     * المالية والمؤشرات فقط تُصدَّر بعناوين إنجليزية عند 'en' — لا الأقسام النصية للمستخدم).
      */
-    async generate() {
+    async generate(options = {}) {
         const state = this._getState();
         const projectName = state?.projectInfo?.name || 'دراسة جدوى';
 
-        const html = ReportGenerator.generateHTML(this.store);
+        const html = ReportGenerator.generateHTML(this.store, options);
         const win = window.open('', '_blank');
 
         if (!win) {

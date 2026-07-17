@@ -1035,6 +1035,10 @@ export const TABLE_SCHEMAS = {
             { key: 'salary', label: 'الراتب الأساسي + السكن', type: 'number' },
             { key: 'months', label: 'أشهر العمل/سنة', type: 'number', default: 12 },
             {
+                key: 'salaryGrowthRate', label: 'نمو الراتب السنوي (اختياري)', type: 'number',
+                placeholder: 'مثال: 0.10 لنمو 10% سنوياً — اتركه فارغاً لاستخدام معدل التضخم العام'
+            },
+            {
                 key: 'annualCost', label: 'إجمالي التكلفة (مع التأمينات)', type: 'computed',
                 // معاينة تقريبية في الجدول قبل حساب المحرك الكامل — تستخدم نفس ثابت GOSI
                 // المُصدَّر (SAUDI_GOSI_RATE_2026) بدل رقم محلي مختلف كان يناقض المحرك فعلياً.
@@ -1108,9 +1112,14 @@ export const TABLE_SCHEMAS = {
         aiPrompt: 'suggest_campaigns',
         columns: [
             { key: 'name', label: 'الحملة', type: 'text' },
+            { key: 'channel', label: 'القناة', type: 'text', placeholder: 'مثال: إعلانات مدفوعة، محتوى، شراكات...' },
             { key: 'type', label: 'النوع', type: 'select', options: [{ value: 'capital', label: 'رأسمالي' }, { value: 'operating', label: 'تشغيلي' }] },
             { key: 'amount', label: 'المبلغ', type: 'number' },
             { key: 'monthly', label: 'شهري (للتشغيلي)', type: 'number' },
+            {
+                key: 'annualGrowthRate', label: 'نمو سنوي مخصص (اختياري)', type: 'number',
+                placeholder: 'مثال: 0.15 لنمو 15% سنوياً — اتركه فارغاً لاستخدام معدل التضخم العام'
+            },
             { key: 'notes', label: 'ملاحظات', type: 'text' }
         ],
         showTotal: false

@@ -1,78 +1,74 @@
+/**
+ * سجل الأنشطة — يقرأ من auditLogger.js (getAuditLog/ACTIONS)، نفس السجل المحلي
+ * الحي المستخدَم فعلياً في AuthGuard.js وAuthModalStub.js وExportMenu.js
+ * وPersistenceService.js وUserProfileView.js، ونفس خريطة التسميات العربية
+ * (ACTIVITY_LABEL) التي يعرضها DashboardView.js في بطاقة "نشاطك الأخير".
+ *
+ * كانت هذه الشاشة سابقاً بيانات وهمية بالكامل: عناوين IP مصطنعة، وأنشطة
+ * منسوبة لأشخاص آخرين ("سارة أحمد"، "محمد الخالد") لا وجود لها في سجل محلي
+ * أحادي الجهاز. حُذف كل ذلك — هذا السجل مخزّن في localStorage على هذا
+ * الجهاز فقط، وليس سجل تدقيق جماعي/خادمي، ونوضّح هذا القيد بالنص أدناه
+ * بنفس أسلوب تعليق DashboardView.js.
+ */
+import { getAuditLog, ACTIONS } from '../utils/auditLogger.js';
+
+const ACTIVITY_LABEL = {
+    [ACTIONS.LOGIN]: 'تسجيل دخول', [ACTIONS.SIGNUP]: 'إنشاء حساب', [ACTIONS.LOGOUT]: 'تسجيل خروج',
+    [ACTIONS.SAVE]: 'حفظ دراسة', [ACTIONS.LOAD]: 'تحميل دراسة', [ACTIONS.EXPORT]: 'تصدير',
+    [ACTIONS.RESET]: 'إعادة تعيين', [ACTIONS.OAUTH]: 'دخول عبر Google',
+    [ACTIONS.MFA_ENROLL]: 'تفعيل 2FA', [ACTIONS.MFA_VERIFY]: 'تحقق 2FA',
+};
+
+const ACTIVITY_ICON = {
+    [ACTIONS.LOGIN]: 'i-shield', [ACTIONS.SIGNUP]: 'i-user', [ACTIONS.LOGOUT]: 'i-shield',
+    [ACTIONS.SAVE]: 'i-save', [ACTIONS.LOAD]: 'i-history', [ACTIONS.EXPORT]: 'i-download',
+    [ACTIONS.RESET]: 'i-history', [ACTIONS.OAUTH]: 'i-shield',
+    [ACTIONS.MFA_ENROLL]: 'i-shield', [ACTIONS.MFA_VERIFY]: 'i-shield',
+};
+
 export class ActivityLogView {
     constructor(containerOrId) {
-        if (typeof containerOrId === 'string') {
-            this.container = document.getElementById(containerOrId);
-        } else {
-            this.container = containerOrId;
-        }
+        this.container = typeof containerOrId === 'string'
+            ? document.getElementById(containerOrId)
+            : containerOrId;
     }
 
     async render() {
         if (!this.container) return;
-        
-        // Mock Data
-        const logs = [
-            { id: 1, action: 'تسجيل دخول جديد', details: 'تم الدخول من متصفح Chrome على نظام Windows.', ip: '192.168.1.5', time: 'اليوم, 10:30 صباحاً', icon: 'i-shield', type: 'security' },
-            { id: 2, action: 'تعديل الصلاحيات', details: 'تمت ترقية "سارة أحمد" إلى دور محرر.', ip: '192.168.1.5', time: 'اليوم, 09:15 صباحاً', icon: 'i-users', type: 'admin' },
-            { id: 3, action: 'تصدير تقرير PDF', details: 'تم تصدير دراسة "مشروع القهوة المختصة".', ip: '192.168.1.5', time: 'أمس, 04:45 مساءً', icon: 'i-download', type: 'action' },
-            { id: 4, action: 'تعديل دراسة', details: 'قام "محمد الخالد" بتعديل قسم التكاليف التشغيلية.', ip: '10.0.0.12', time: 'أمس, 02:20 مساءً', icon: 'i-edit', type: 'action' }
-        ];
+
+        const entries = getAuditLog(50);
+
+        const listHtml = entries.length > 0
+            ? `<div class="card" style="padding:8px;">
+                ${entries.map(e => {
+                    const label = ACTIVITY_LABEL[e.action] || e.action;
+                    const iconId = ACTIVITY_ICON[e.action] || 'i-clock';
+                    const when = e.ts ? new Date(e.ts).toLocaleString('ar-SA-u-nu-latn') : '';
+                    return `
+                        <div class="activity-log-row" style="display:flex;gap:12px;align-items:flex-start;padding:12px;border-bottom:1px solid var(--c-border);">
+                            <span class="badge" style="align-self:flex-start;white-space:nowrap;"><svg class="ic" aria-hidden="true"><use href="#${iconId}"/></svg></span>
+                            <div style="flex:1;min-width:0;">
+                                <div class="text-sm font-bold">${label}</div>
+                                <div class="text-xs text-muted" style="margin-top:2px;">${when}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>`
+            : `<div class="alert alert--info">لا توجد أنشطة مسجّلة على هذا الجهاز بعد.</div>`;
 
         this.container.innerHTML = `
-            <div class="activity-log-view max-w-4xl mx-auto py-8 px-4 animate-entry">
-                <!-- Header -->
-                <div class="flex justify-between items-center mb-8">
-                    <div>
-                        <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                            <svg class="ic w-6 h-6 text-primary" aria-hidden="true"><use href="#i-clock"/></svg>
-                            سجل الأنشطة والتدقيق
-                        </h2>
-                        <p class="text-white/60 text-sm">تتبع جميع العمليات التي تمت على حسابك ومشاريعك لضمان أقصى درجات الأمان.</p>
-                    </div>
+            <div class="activity-log-view" style="max-width:720px;margin:0 auto;padding:var(--s-4) 0;">
+                <button type="button" id="btnActivityLogBack" class="btn btn--ghost mb-4" style="display:inline-flex;align-items:center;gap:8px;">← العودة للملف الشخصي</button>
+                <div class="mb-4">
+                    <h2 class="section-title" style="margin-bottom:4px;"><svg class="ic" aria-hidden="true"><use href="#i-history"/></svg> سجل الأنشطة</h2>
+                    <p class="text-muted" style="margin:0;">عمليات الدخول والحفظ والتصدير المسجّلة على هذا الجهاز فقط — سجل محلي في متصفحك، وليس سجل تدقيق شامل عبر أجهزتك أو فريقك.</p>
                 </div>
-
-                <!-- Timeline -->
-                <div class="activity-timeline bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
-                    <div class="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:ml-[8.5rem] md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent">
-                        ${logs.map(log => `
-                            <div class="relative flex items-center justify-between md:justify-normal group is-active">
-                                <!-- Time (Desktop) -->
-                                <div class="hidden md:block w-32 shrink-0 text-left pr-6 text-white/50 text-xs">
-                                    ${log.time}
-                                </div>
-                                <!-- Icon -->
-                                <div class="flex items-center justify-center w-10 h-10 rounded-full border border-white/20 bg-slate-900 shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.05)] z-10 mx-0 md:mx-4" style="color: ${log.type === 'security' ? '#10b981' : log.type === 'admin' ? '#f59e0b' : '#3b82f6'};">
-                                    <svg class="ic w-4 h-4" aria-hidden="true"><use href="#${log.icon}"/></svg>
-                                </div>
-                                <!-- Content -->
-                                <div class="w-[calc(100%-4rem)] md:w-auto flex-1 p-4 rounded-xl" style="background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); border: 1px solid rgba(255,255,255,0.05);">
-                                    <div class="flex justify-between items-start mb-1">
-                                        <h4 class="text-white font-medium text-sm">${log.action}</h4>
-                                        <span class="md:hidden text-white/40 text-[10px]">${log.time}</span>
-                                    </div>
-                                    <p class="text-white/60 text-xs mb-2">${log.details}</p>
-                                    <div class="flex items-center gap-1 text-white/30 text-[10px]">
-                                        <svg class="ic w-3 h-3" aria-hidden="true"><use href="#i-globe"/></svg>
-                                        IP: ${log.ip}
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Back Button -->
-            <div class="max-w-4xl mx-auto px-4 mt-6">
-                <button type="button" class="btn btn-secondary btn-back-profile">
-                    <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>
-                    العودة للملف الشخصي
-                </button>
+                ${listHtml}
             </div>
         `;
 
-        // Bind events
-        this.container.querySelector('.btn-back-profile')?.addEventListener('click', () => {
+        this.container.querySelector('#btnActivityLogBack')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showUserProfile'));
         });
 

@@ -1,162 +1,154 @@
+/**
+ * حساسية السعر: ماذا لو؟ — معاينة مختصرة، لا أداة تسعير موازية.
+ *
+ * أُعيدت صياغة هذا الملف بالكامل: النسخة السابقة كانت مخطط "محرك تسعير ديناميكي"
+ * يربط الأسعار بالطقس ونفاد مخزون المنافسين لحظياً — لا يوجد أي مصدر بيانات حقيقي
+ * لذلك في هذا المشروع (لا API طقس، لا مراقبة مخزون منافسين)، وكل الأرقام كانت وهمية.
+ *
+ * التدقيق (تريّاج) أكد أن هذا يكرر أداة حقيقية موجودة وشغّالة فعلاً:
+ * web/js/ui/PricingOptimizerView.js (خطوة "التسعير المثالي" في المعالج، id: pricingOptimizer)
+ * تحسب سعراً مقترحاً من بيانات دراستك الفعلية (تكلفة/سعر الوحدة من revenue.streams) + سعر
+ * المنافسين واستعداد الدفع اللذين يُدخلهما المستخدم، وتتضمن أصلاً معامل سعر ذروة اختيارياً
+ * ومعامل مرونة سعرية لتقدير تغيّر الطلب — وهو نفس مفهوم "Surge Pricing" في هذا المخطط، لكن
+ * بلا حاجة لأي API خارجي.
+ *
+ * لذلك هذا الملف لم يعد يبني لوحة موازية لتلك الأداة (كان سيكرر منطقها أو يعرض رقماً
+ * مختلفاً لنفس المفهوم في شاشتين). بدل ذلك هو معاينة للبيانات الحقيقية المحفوظة فعلاً
+ * (أسعارك الحالية من revenue.streams + الافتراضات المحفوظة في marketing.pricingOptimization
+ * إن وُجدت) مع اختصار مباشر لفتح الأداة الكاملة لتعديل أي شيء. حساب تغيّر الطلب المقدّر
+ * يُستورد من الدالة النقية الحقيقية في PricingOptimizerView بدل إعادة كتابته هنا لتفادي رقمين
+ * متعارضين لنفس المفهوم.
+ */
+import { computeElasticityVolumeChange } from './PricingOptimizerView.js';
+import { stepIndexById } from '../core/wizardSteps.js';
+import { formatCurrency, formatPercent, formatNumber } from '../utils/formatters.js';
+import { escapeHtml } from '../utils/escape.js';
+
+const toNumber = (value, fallback = 0) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+};
+
 export class SurgePricingEngineView {
-    constructor(containerOrId) {
-        if (typeof containerOrId === 'string') {
-            this.container = document.getElementById(containerOrId);
-        } else {
-            this.container = containerOrId;
-        }
+    constructor(containerId, store) {
+        this.container = document.getElementById(containerId);
+        this.store = store;
     }
 
     async render() {
         if (!this.container) return;
 
+        const state = this.store.get();
+        const streams = Array.isArray(state?.revenue?.streams) ? state.revenue.streams : [];
+        const settings = state?.marketing?.pricingOptimization || null;
+
         this.container.innerHTML = `
-            <div class="surge-pricing-view max-w-6xl mx-auto py-8 px-4 animate-entry">
-                <!-- Header -->
-                <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-gradient-to-l from-cyan-900/40 to-black p-6 rounded-2xl border border-cyan-500/50 relative overflow-hidden">
-                    <!-- Tech Background -->
-                    <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgc3Ryb2tlPSIjMDBGRkZGIiBzdHJva2Utd2lkdGg9IjEiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIGZpbGw9Im5vbmUiPjxwYXRoIGQ9Ik0wIDIwaDIwTTAgMTBoMjBNMCAwaDIwTTEwIDB2MjBMMCAwdjIwIi8+PC9nPjwvc3ZnPg==')] opacity-30 pointer-events-none"></div>
-                    <div class="absolute right-0 top-0 w-64 h-full bg-gradient-to-l from-cyan-500/20 to-transparent"></div>
-                    
-                    <div class="relative z-10">
-                        <h2 class="text-3xl font-bold text-cyan-400 mb-2 flex items-center gap-3">
-                            <svg class="ic w-8 h-8" aria-hidden="true"><use href="#i-zap"/></svg>
-                            محرك التسعير الديناميكي (Surge Pricing Engine)
-                        </h2>
-                        <p class="text-cyan-100/60 text-sm">اربط أسعارك بمتغيرات السوق اللحظية. ارفع السعر عندما يرتفع الطلب (كالطقس والمواسم) وحقق أقصى ربح.</p>
-                    </div>
-                    
-                    <div class="relative z-10 flex flex-col items-end gap-2">
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" value="" class="sr-only peer" checked>
-                            <div class="w-14 h-7 bg-black border border-cyan-500/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-cyan-400 after:border-cyan-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-cyan-900 shadow-[0_0_15px_rgba(6,182,212,0.5)]"></div>
-                            <span class="ms-3 text-sm font-bold text-cyan-400">المحرك مُفعّل</span>
-                        </label>
-                        <div class="text-[10px] text-cyan-400/50 font-mono">آخر تحديث للأسعار: قبل 12 ثانية</div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Active Rules -->
-                    <div class="lg:col-span-2 space-y-4">
-                        <h3 class="text-white font-bold text-sm mb-4">قواعد التسعير النشطة (Active Rules)</h3>
-                        
-                        <!-- Rule 1: Weather -->
-                        <div class="p-5 rounded-2xl border border-cyan-500/50 bg-black/60 relative overflow-hidden group shadow-[0_0_15px_rgba(6,182,212,0.15)]">
-                            <div class="absolute left-0 top-0 w-1.5 h-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,1)]"></div>
-                            
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl bg-cyan-900/50 flex items-center justify-center text-cyan-400 border border-cyan-500/30">
-                                        <svg class="ic w-5 h-5" aria-hidden="true"><use href="#i-cloud-rain"/></svg>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-white font-bold">قاعدة الطقس (الأمطار)</h4>
-                                        <div class="text-xs text-white/50">تطبق على: خدمات التوصيل، المشروبات الساخنة</div>
-                                    </div>
-                                </div>
-                                <div class="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded text-[10px] font-bold border border-emerald-500/30 flex items-center gap-1 animate-pulse">
-                                    حالة الشرط: متحققة الآن (تمطر)
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center gap-4 bg-cyan-950/30 p-3 rounded-xl border border-cyan-500/20">
-                                <div class="flex-1 text-center border-l border-white/10">
-                                    <div class="text-[10px] text-white/50 mb-1">السعر الأساسي</div>
-                                    <div class="text-lg font-bold text-white/80 line-through">15.00 ر.س</div>
-                                </div>
-                                <div class="flex-1 text-center border-l border-white/10">
-                                    <div class="text-[10px] text-cyan-400 mb-1">مُعامل الزيادة (Surge Multiplier)</div>
-                                    <div class="text-xl font-bold text-cyan-400">1.4x</div>
-                                </div>
-                                <div class="flex-1 text-center">
-                                    <div class="text-[10px] text-emerald-400 mb-1">السعر اللحظي (الآن)</div>
-                                    <div class="text-2xl font-bold text-emerald-400">21.00 ر.س</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Rule 2: Competitor Stock -->
-                        <div class="p-5 rounded-2xl border border-white/10 bg-black/40 relative overflow-hidden group opacity-80">
-                            <div class="absolute left-0 top-0 w-1.5 h-full bg-yellow-500/50"></div>
-                            
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl bg-yellow-900/30 flex items-center justify-center text-yellow-500/70 border border-yellow-500/20">
-                                        <svg class="ic w-5 h-5" aria-hidden="true"><use href="#i-shopping-cart"/></svg>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-white/80 font-bold">نفاد مخزون المنافسين</h4>
-                                        <div class="text-xs text-white/40">تطبق على: المنتجات الأكثر مبيعاً</div>
-                                    </div>
-                                </div>
-                                <div class="bg-white/5 text-white/40 px-3 py-1 rounded text-[10px] border border-white/10">
-                                    الشرط غير متحقق (المنتج متوفر لدى المنافسين)
-                                </div>
-                            </div>
-                            
-                            <div class="text-xs text-white/50 bg-white/5 p-3 rounded-lg border border-white/5 text-center">
-                                سيتم رفع السعر بنسبة <span class="text-yellow-400 font-bold">25%</span> آلياً إذا نفد المنتج من متجر منافسك المباشر.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Impact & Controls -->
-                    <div class="lg:col-span-1 space-y-6">
-                        <!-- Financial Impact -->
-                        <div class="p-6 rounded-2xl border border-cyan-500/30 bg-cyan-950/20 relative overflow-hidden text-center">
-                            <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl"></div>
-                            <h3 class="text-cyan-400 font-bold text-sm mb-4 relative z-10 flex items-center justify-center gap-2">
-                                <svg class="ic w-4 h-4" aria-hidden="true"><use href="#i-dollar-sign"/></svg>
-                                الأرباح الإضافية (Surge Revenue)
-                            </h3>
-                            
-                            <div class="text-4xl font-mono font-bold text-white mb-1 relative z-10">
-                                +4,250 <span class="text-lg text-cyan-400">ر.س</span>
-                            </div>
-                            <div class="text-[10px] text-white/50 relative z-10 mb-6">تم تحصيلها بفضل (التسعير الديناميكي) خلال آخر 24 ساعة.</div>
-                            
-                            <!-- Graph Mockup -->
-                            <div class="h-24 w-full flex items-end gap-1 px-4 relative z-10">
-                                <div class="w-full h-[40%] bg-white/10 rounded-t-sm"></div>
-                                <div class="w-full h-[55%] bg-white/10 rounded-t-sm"></div>
-                                <div class="w-full h-[30%] bg-white/10 rounded-t-sm"></div>
-                                <div class="w-full h-[80%] bg-cyan-500 rounded-t-sm shadow-[0_0_10px_rgba(6,182,212,0.8)] relative">
-                                    <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-cyan-300 font-bold">ذروة (مطر)</div>
-                                </div>
-                                <div class="w-full h-[60%] bg-white/10 rounded-t-sm"></div>
-                            </div>
-                        </div>
-
-                        <!-- Manual Override -->
-                        <div class="p-6 rounded-2xl border border-white/10 bg-black/40">
-                            <h3 class="text-white font-bold text-sm mb-4">التدخل اليدوي السريع</h3>
-                            <div class="space-y-3">
-                                <button class="w-full py-2 bg-red-900/50 hover:bg-red-800 border border-red-500/50 text-red-400 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
-                                    <svg class="ic w-4 h-4" aria-hidden="true"><use href="#i-arrow-down"/></svg>
-                                    تطبيق (Flash Sale) - خصم 20% لمدة ساعة
-                                </button>
-                                <button class="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 text-xs rounded-lg transition-colors">
-                                    إنشاء قاعدة تسعير جديدة
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="max-w-6xl mx-auto px-4 mt-6">
-                <button type="button" class="btn btn-secondary btn-back-dashboard">
-                    <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>
-                    العودة للوحة التحكم
-                </button>
+            <div class="surge-pricing-view" style="max-width:860px;margin:0 auto;padding:var(--s-4) 0;">
+                <button type="button" id="btnSurgePricingBack" class="btn btn--ghost mb-4" style="display:inline-flex;align-items:center;gap:8px;">← العودة للوحة التحكم</button>
+                <h2 class="section-title"><svg class="ic" aria-hidden="true"><use href="#i-scale"/></svg> حساسية السعر: ماذا لو؟</h2>
+                <p class="text-muted mb-4">معاينة سريعة لأسعارك الحالية وتأثير تغيير السعر على الطلب، من نفس البيانات والافتراضات المحفوظة في أداة «التسعير المثالي». لتعديل الأسعار أو الافتراضات افتح الأداة الكاملة أدناه.</p>
+                <div id="surgePricingBody"></div>
             </div>
         `;
 
-        this.container.querySelector('.btn-back-dashboard')?.addEventListener('click', () => {
+        this.container.querySelector('#btnSurgePricingBack')?.addEventListener('click', () => {
             window.location.hash = '#/home';
         });
 
+        const body = this.container.querySelector('#surgePricingBody');
+
+        if (streams.length === 0) {
+            body.innerHTML = `
+                <div class="alert alert--info">
+                    <p>لا توجد مصادر إيراد وأسعار بعد. أضف منتجاتك أو خدماتك وأسعارها، ثم اضبط افتراضات حساسية السعر من أداة «التسعير المثالي».</p>
+                </div>
+                <button type="button" class="btn btn--primary mt-3" id="btnOpenPricingOptimizer">فتح أداة التسعير المثالي</button>
+            `;
+            this.bindOpenTool(body);
+            return this.container;
+        }
+
+        const rows = streams.map((stream, index) => {
+            const price = toNumber(stream.avgPrice ?? stream.price, 0);
+            const storedUnitCost = toNumber(stream.unitCost ?? stream.variableCostPerUnit, NaN);
+            const rate = toNumber(stream.variableCostRate, NaN);
+            let unitCost = null;
+            if (Number.isFinite(storedUnitCost)) unitCost = storedUnitCost;
+            else if (Number.isFinite(rate) && price > 0) unitCost = price * rate;
+            const margin = (unitCost != null && price > 0) ? (price - unitCost) / price : null;
+            return {
+                name: stream.service || stream.name || `مصدر إيراد ${index + 1}`,
+                price,
+                unitCost,
+                margin
+            };
+        });
+
+        const rowsHtml = rows.map(row => `
+            <tr style="border-bottom:1px solid var(--c-border);">
+                <td style="padding:8px 12px;">${escapeHtml(row.name)}</td>
+                <td style="padding:8px 12px;" class="text-mono">${formatCurrency(row.price)}</td>
+                <td style="padding:8px 12px;" class="text-mono">${row.unitCost != null ? formatCurrency(row.unitCost) : '—'}</td>
+                <td style="padding:8px 12px;" class="text-mono">${row.margin != null ? formatPercent(row.margin) : '—'}</td>
+            </tr>
+        `).join('');
+
+        const sensitivityHtml = settings ? this.renderSensitivity(settings) : `
+            <div class="alert alert--info">
+                <p>لم تُضبط بعد افتراضات حساسية السعر (المرونة ومعامل سعر الذروة) — الجدول أعلاه يعرض أسعارك الحالية فقط.</p>
+            </div>
+        `;
+
+        body.innerHTML = `
+            <div class="card" style="padding:0;overflow-x:auto;margin-bottom:16px;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="text-align:right;border-bottom:1px solid var(--c-border);">
+                            <th style="padding:8px 12px;">مصدر الإيراد</th>
+                            <th style="padding:8px 12px;">السعر الحالي</th>
+                            <th style="padding:8px 12px;">تكلفة الوحدة</th>
+                            <th style="padding:8px 12px;">الهامش الحالي</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
+            <div class="card glass-card mb-4">
+                <h3 class="card-title mb-2">حساسية الطلب للسعر</h3>
+                ${sensitivityHtml}
+            </div>
+            <button type="button" class="btn btn--primary" id="btnOpenPricingOptimizer">فتح أداة التسعير المثالي الكاملة</button>
+        `;
+
+        this.bindOpenTool(body);
         return this.container;
+    }
+
+    renderSensitivity(settings) {
+        const elasticity = toNumber(settings.elasticity, NaN);
+        const priceChangePercent = toNumber(settings.illustrativePriceChangePercent, NaN);
+        const peakMultiplier = toNumber(settings.peakMultiplier, NaN);
+        const hasElasticity = Number.isFinite(elasticity) && Number.isFinite(priceChangePercent);
+        const volumeChangePercent = hasElasticity ? computeElasticityVolumeChange(elasticity, priceChangePercent) : null;
+
+        const elasticityHtml = hasElasticity ? `
+            <p class="text-sm mb-2">افتراضك المحفوظ لمعامل المرونة السعرية: <strong class="text-mono">${formatNumber(elasticity)}</strong>.
+            عند تغيير السعر بنسبة <strong>${formatPercent(priceChangePercent / 100)}</strong>، يقدّر هذا الافتراض تغيّراً في الكمية المطلوبة بنحو
+            <strong class="${volumeChangePercent < 0 ? 'text-danger' : 'text-success'}">${formatPercent(volumeChangePercent / 100)}</strong>.</p>
+            <p class="text-xs text-muted mb-0">تقدير توضيحي مبني على افتراض أدخلته أنت في أداة التسعير المثالي، وليس قياساً فعلياً من مبيعاتك.</p>
+        ` : `<p class="text-sm text-muted mb-0">لم يُضبط معامل المرونة السعرية بعد.</p>`;
+
+        const peakHtml = Number.isFinite(peakMultiplier) && peakMultiplier > 1.001 ? `
+            <p class="text-sm mt-3 mb-0">معامل سعر ساعة الذروة المحفوظ: <strong class="text-mono">${formatNumber(peakMultiplier)}×</strong> — يُطبَّق على السعر المقترح داخل أداة التسعير المثالي، وليس على السعر الحالي أعلاه.</p>
+        ` : `<p class="text-sm text-muted mt-3 mb-0">معامل سعر ساعة الذروة غير مُفعّل حالياً.</p>`;
+
+        return elasticityHtml + peakHtml;
+    }
+
+    bindOpenTool(scope) {
+        scope.querySelector('#btnOpenPricingOptimizer')?.addEventListener('click', () => {
+            const idx = stepIndexById('pricingOptimizer');
+            if (idx >= 0) window.location.hash = '#/step/' + idx;
+        });
     }
 }

@@ -11,6 +11,7 @@ import { validateStudy } from '../utils/validation.js';
 import { DEFAULT_REPORT_SECTION_ORDER } from '../core/schema.js';
 import { BANK_COMPLIANCE_SENTENCE } from '../config.js';
 import { getOptionLabel } from '../core/fieldOptions.js';
+import { t, yearColumnLabel } from '../i18n/reportStrings.js';
 
 /** عناوين الأقسام (لفهرس المحتويات وترتيب التصدير) */
 const REPORT_SECTION_LABELS = {
@@ -128,7 +129,13 @@ export class ReportGenerator {
         `;
     }
 
-    static generateHTML(store) {
+    /** يُترجم مفتاحاً من قاموس reportStrings عند lang='en'؛ يُبقي النص العربي الأصلي حرفياً دون تغيير لـ'ar' (توافق رجعي صارم — لا نعتمد على تطابق قاموس reportStrings حرفياً مع كل نص موجود مسبقاً). */
+    static _lbl(lang, key, arText) {
+        return lang === 'en' ? t(key, 'en') : arText;
+    }
+
+    static generateHTML(store, options = {}) {
+        const lang = options.lang === 'en' ? 'en' : 'ar';
         const state = store.getState ? store.getState() : store.get();
         const info = state.projectInfo || {};
         const studyTypeLabel = getOptionLabel('studyType', info.studyType);
@@ -156,7 +163,7 @@ export class ReportGenerator {
             ? `<div class="validation-notice" style="background:#fef5e7;border:1px solid #f59e0b;border-radius:6px;padding:12px 20px;margin:0 20px 20px;font-size:10pt;color:#92400e;"><strong>تحذير:</strong> توجد أخطاء في صحة البيانات قد تؤثر على دقة النتائج. يُفضّل مراجعتها قبل الاعتماد على هذا التقرير.<ul style="margin:8px 0 0 20px;">${v.errors.slice(0, 3).map(e => '<li>' + e + '</li>').join('')}</ul></div>`
             : '';
 
-        const body = this._renderBodyWithOrder(state, results, info);
+        const body = this._renderBodyWithOrder(state, results, info, lang);
 
         return `
             <!DOCTYPE html>
@@ -583,7 +590,7 @@ export class ReportGenerator {
     }
 
     /** يبني فهرس المحتويات وأقسام التقرير حسب ترتيب المستخدم (reportSectionOrder). */
-    static _renderBodyWithOrder(state, results, info) {
+    static _renderBodyWithOrder(state, results, info, lang = 'ar') {
         const baseOrder = (state.reportSectionOrder && state.reportSectionOrder.length)
             ? state.reportSectionOrder
             : [...DEFAULT_REPORT_SECTION_ORDER];
@@ -594,7 +601,7 @@ export class ReportGenerator {
         const ordered = [];
         let num = 1;
         for (const id of order) {
-            const out = this._renderSection(id, state, results, info, num);
+            const out = this._renderSection(id, state, results, info, num, lang);
             if (out) {
                 ordered.push(out);
                 num++;
@@ -614,7 +621,7 @@ export class ReportGenerator {
     }
 
     /** يُرجع قسماً واحداً من التقرير أو null إن كان اختيارياً ولا توجد بيانات. */
-    static _renderSection(id, state, results, info, num) {
+    static _renderSection(id, state, results, info, num, lang = 'ar') {
         const title = REPORT_SECTION_LABELS[id] || id;
         const fmt = (v) => formatCurrency(v, state.assumptions?.currency || 'SAR');
         const financingDiagnostics = this.getFinancingDiagnostics(state, results);
@@ -785,29 +792,52 @@ export class ReportGenerator {
                     </div>`;
                 }
                 break;
-            case 'financial_kpis':
+            case 'financial_kpis': {
+                // النسب المالية (results.ratios): إضافة بحتة من المحرك، صف واحد لكل سنة —
+                // نتبع نفس نمط isRow المستخدم في 'income_statement' (closure على مصفوفة السنوات).
+                const kpiRatios = results.ratios || [];
+                const ratioCell = (v, type) => {
+                    if (v == null || !Number.isFinite(v)) return '—';
+                    return type === 'pct' ? (v * 100).toFixed(1) + '%' : v.toFixed(2) + 'x';
+                };
+                const ratioRow = (label, key, type) => `<tr><td>${label}</td>${kpiRatios.map(r => `<td>${ratioCell(r[key], type)}</td>`).join('')}</tr>`;
+                const ratiosTableHtml = kpiRatios.length === 0 ? '' : `
+                            <h4 style="margin-top:16px;">${t('ratios_section_title', lang)}</h4>
+                            <table><thead><tr><th>النسبة</th>${kpiRatios.map(r => `<th>${yearColumnLabel(r.year, lang)}</th>`).join('')}</tr></thead><tbody>
+                                ${ratioRow(t('current_ratio', lang), 'currentRatio', 'x')}
+                                ${ratioRow(t('quick_ratio', lang), 'quickRatio', 'x')}
+                                ${ratioRow(t('cash_ratio', lang), 'cashRatio', 'x')}
+                                ${ratioRow(t('debt_ratio', lang), 'debtRatio', 'pct')}
+                                ${ratioRow(t('debt_to_equity', lang), 'debtToEquity', 'x')}
+                                ${ratioRow(t('asset_turnover', lang), 'assetTurnover', 'x')}
+                                ${ratioRow(t('fixed_asset_turnover', lang), 'fixedAssetTurnover', 'x')}
+                                ${ratioRow(t('roa', lang), 'roa', 'pct')}
+                                ${ratioRow(t('roe', lang), 'roe', 'pct')}
+                            </tbody></table>`;
                 html = `<div class="section">
-                        <h3 class="section-title"><span class="section-number">${num}</span>الدراسة المالية (المؤشرات الرئيسية)</h3>
+                        <h3 class="section-title"><span class="section-number">${num}</span>${t('financial_kpis_title', lang)}</h3>
                         <div class="section-content">
                             <div class="kpi-grid">
-                                <div class="kpi-card"><div class="kpi-label">صافي القيمة الحالية</div><div class="kpi-value ${(results.indicators?.npv || 0) > 0 ? 'positive' : 'negative'}">${formatCurrency(results.indicators?.npv || 0)}</div></div>
-                                <div class="kpi-card"><div class="kpi-label">معدل العائد الداخلي (IRR)</div><div class="kpi-value ${(results.indicators?.irr || 0) > 0.15 ? 'positive' : ''}">${((results.indicators?.irr || 0) * 100).toFixed(1)}%</div></div>
-                                <div class="kpi-card"><div class="kpi-label">فترة الاسترداد</div><div class="kpi-value">${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</div></div>
+                                <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'npv', 'صافي القيمة الحالية')}</div><div class="kpi-value ${(results.indicators?.npv || 0) > 0 ? 'positive' : 'negative'}">${formatCurrency(results.indicators?.npv || 0)}</div></div>
+                                <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'irr', 'معدل العائد الداخلي (IRR)')}</div><div class="kpi-value ${(results.indicators?.irr || 0) > 0.15 ? 'positive' : ''}">${((results.indicators?.irr || 0) * 100).toFixed(1)}%</div></div>
+                                <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'payback_period', 'فترة الاسترداد')}</div><div class="kpi-value">${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">نقطة التعادل</div><div class="kpi-value">${results.indicators?.breakEvenPointValue != null ? formatCurrency(results.indicators.breakEvenPointValue) : (results.indicators?.breakevenUnitsPerMonth != null ? Math.round(results.indicators.breakevenUnitsPerMonth) + ' وحدة/شهر' : '—')}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">نسبة تغطية خدمة الدين (DSCR)</div><div class="kpi-value">${results.indicators?.dscr != null ? (results.indicators.dscr.toFixed(2) + 'x') : '—'}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">فجوة التمويل</div><div class="kpi-value ${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? 'negative' : 'positive'}">${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? fmt(financingDiagnostics.fundingGap) : financingDiagnostics.fundingGap < -(financingDiagnostics.fundingGapThreshold ?? 1) ? 'فائض ' + fmt(Math.abs(financingDiagnostics.fundingGap)) : 'متوازن'}</div></div>
                             </div>
                             ${this.renderFinancingDiagnostics(financingDiagnostics, fmt)}
                             <table><thead><tr><th>المؤشر المالي</th><th>القيمة</th><th>التقييم</th></tr></thead><tbody>
-                                <tr><td>صافي القيمة الحالية</td><td>${formatCurrency(results.indicators?.npv || 0)}</td><td class="${(results.indicators?.npv || 0) > 0 ? 'status-positive' : 'status-negative'}">${(results.indicators?.npv || 0) > 0 ? '✓ موجب' : '✗ سالب'}</td></tr>
-                                <tr><td>معدل العائد الداخلي</td><td>${((results.indicators?.irr || 0) * 100).toFixed(2)}%</td><td>${(results.indicators?.irr || 0) > 0.15 ? '✓ مرتفع' : 'متوسط'}</td></tr>
-                                <tr><td>فترة الاسترداد</td><td>${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</td><td>${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; if (!Number.isFinite(p) || p <= 0) return 'غير محقق'; return p < 3 ? 'سريع' : 'طويل نسبياً'; })()}</td></tr>
+                                <tr><td>${this._lbl(lang, 'npv', 'صافي القيمة الحالية')}</td><td>${formatCurrency(results.indicators?.npv || 0)}</td><td class="${(results.indicators?.npv || 0) > 0 ? 'status-positive' : 'status-negative'}">${(results.indicators?.npv || 0) > 0 ? '✓ موجب' : '✗ سالب'}</td></tr>
+                                <tr><td>${this._lbl(lang, 'irr', 'معدل العائد الداخلي')}</td><td>${((results.indicators?.irr || 0) * 100).toFixed(2)}%</td><td>${(results.indicators?.irr || 0) > 0.15 ? '✓ مرتفع' : 'متوسط'}</td></tr>
+                                <tr><td>${this._lbl(lang, 'payback_period', 'فترة الاسترداد')}</td><td>${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</td><td>${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; if (!Number.isFinite(p) || p <= 0) return 'غير محقق'; return p < 3 ? 'سريع' : 'طويل نسبياً'; })()}</td></tr>
                                 <tr><td>فجوة التمويل</td><td>${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? fmt(financingDiagnostics.fundingGap) : financingDiagnostics.fundingGap < -(financingDiagnostics.fundingGapThreshold ?? 1) ? 'فائض ' + fmt(Math.abs(financingDiagnostics.fundingGap)) : 'متوازن'}</td><td class="${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? 'status-negative' : 'status-positive'}">${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? 'يجب سدها قبل الاعتماد' : 'مقبولة'}</td></tr>
                                 <tr><td>DSCR السنة الأولى</td><td>${financingDiagnostics.dscr == null ? 'غير قابل للحساب' : financingDiagnostics.dscr.toFixed(2) + 'x'}</td><td class="${financingDiagnostics.dscrBlocked ? 'status-negative' : 'status-positive'}">${financingDiagnostics.dscrBlocked ? 'دون الحد البنكي المستهدف' : 'مقبول مبدئياً'}</td></tr>
                             </tbody></table>
+                            ${ratiosTableHtml}
                         </div>
                     </div>`;
                 break;
+            }
             case 'swot':
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>التحليل الاستراتيجي (التحليل الرباعي)</h3>
@@ -851,7 +881,9 @@ export class ReportGenerator {
                     </div>`;
                 break;
             }
-            case 'capex':
+            case 'capex': {
+                const assetScheduleRows = results.assetSchedule || [];
+                const operatingWC = results.capex?.capitalStructure?.operating;
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>الدراسة الفنية (التكاليف الاستثمارية)</h3>
                         <div class="section-content">
@@ -861,9 +893,14 @@ export class ReportGenerator {
                                 <tr><td>رأس المال العامل</td><td>${formatCurrency(results.capex?.workingCapital || 0)}</td></tr>
                                 <tr class="financial-highlight"><td>إجمالي الاستثمار المطلوب</td><td>${formatCurrency(results.capex?.total || 0)}</td></tr>
                             </tbody></table>
+                            ${this.renderAssetSchedule(assetScheduleRows, fmt)}
+                            ${operatingWC?.total ? this.renderOperatingWorkingCapital(operatingWC, fmt) : ''}
+                            ${this.renderPayrollGrowth(results.payrollByPosition, fmt)}
+                            ${this.renderMarketingGrowth(results.marketingByChannel, fmt)}
                         </div>
                     </div>`;
                 break;
+            }
             case 'legal': {
                 const licenses = state.legal?.licenses || [];
                 if (!licenses.length) return null;
@@ -885,26 +922,26 @@ export class ReportGenerator {
                 const hasHiddenOverheads = isYears.some(y => (y.fixedCostsBreakdown?.hiddenOverheads || 0) > 0);
                 const hasServicesFixed = isYears.some(y => (y.fixedCostsBreakdown?.servicesFixed || 0) > 0);
                 html = `<div class="section">
-                        <h3 class="section-title"><span class="section-number">${num}</span>قائمة الدخل التقديرية (${isYears.length} سنوات)</h3>
+                        <h3 class="section-title"><span class="section-number">${num}</span>${t('income_statement_title', lang)} (${isYears.length} ${lang === 'en' ? 'Years' : 'سنوات'})</h3>
                         <div class="section-content">
-                            ${this.renderIncomeChart(isYears)}
+                            ${this.renderIncomeChart(isYears, lang)}
                             ${this.renderRevenueStreamsBreakdown(state.revenue?.streams)}
-                            <table><thead><tr><th>البند</th>${isYears.map(y => `<th>السنة ${y.year}</th>`).join('')}</tr></thead><tbody>
-                                ${isRow('إجمالي الإيرادات', 'revenue')}
-                                ${isRow('(-) التكاليف المتغيرة', 'variableCosts')}
-                                ${isRow('(=) مجمل الربح', 'grossProfit')}
-                                ${isRow('(-) المصاريف التشغيلية الثابتة', 'fixedCosts')}
+                            <table><thead><tr><th>${t('item_column', lang)}</th>${isYears.map(y => `<th>${yearColumnLabel(y.year, lang)}</th>`).join('')}</tr></thead><tbody>
+                                ${isRow(this._lbl(lang, 'revenue', 'إجمالي الإيرادات'), 'revenue')}
+                                ${isRow(`(-) ${t('variable_costs', lang)}`, 'variableCosts')}
+                                ${isRow(`(=) ${t('gross_profit', lang)}`, 'grossProfit')}
+                                ${isRow(`(-) ${lang === 'en' ? 'Operating ' : ''}${this._lbl(lang, 'fixed_costs', 'المصاريف التشغيلية الثابتة')}`, 'fixedCosts')}
                                 ${bdRow('رواتب وأجور (شامل التأمينات ورسوم العمالة)', 'payroll', { sub: true })}
                                 ${bdRow('إيجار ولوجستيات وإداري', 'rentAndAdmin', { sub: true })}
                                 ${bdRow('تسويق', 'marketing', { sub: true })}
                                 ${hasServicesFixed ? bdRow('تكاليف ثابتة لكل خدمة', 'servicesFixed', { sub: true }) : ''}
                                 ${hasHiddenOverheads ? bdRow('طوارئ تشغيلية مخفية', 'hiddenOverheads', { sub: true }) : ''}
-                                ${isRow('(=) الأرباح قبل الفوائد والضرائب والإهلاك والإطفاء (EBITDA)', 'ebitda')}
-                                ${isRow('(-) الإهلاك والإطفاء', 'depreciation')}
-                                ${isRow('(-) الفوائد', 'interest')}
-                                ${isRow('(-) الزكاة', 'zakat')}
-                                ${isYears.some(y => (y.tax || 0) > 0) ? isRow('(-) ضريبة الدخل (حصة الأجانب)', 'tax') : ''}
-                                ${isRow('(=) صافي الربح', 'netIncome', { highlight: true })}
+                                ${isRow(`(=) ${this._lbl(lang, 'ebitda', 'الأرباح قبل الفوائد والضرائب والإهلاك والإطفاء (EBITDA)')}`, 'ebitda')}
+                                ${isRow(`(-) ${this._lbl(lang, 'depreciation', 'الإهلاك والإطفاء')}${lang === 'en' ? ' & Amortization' : ''}`, 'depreciation')}
+                                ${isRow(`(-) ${t('interest', lang)}`, 'interest')}
+                                ${isRow(`(-) ${t('zakat', lang)}`, 'zakat')}
+                                ${isYears.some(y => (y.tax || 0) > 0) ? isRow(`(-) ${this._lbl(lang, 'tax', 'ضريبة الدخل')} ${lang === 'en' ? "(Foreign Partners' Share)" : '(حصة الأجانب)'}`, 'tax') : ''}
+                                ${isRow(`(=) ${t('net_income', lang)}`, 'netIncome', { highlight: true })}
                             </tbody></table>
                         </div>
                     </div>`;
@@ -912,18 +949,18 @@ export class ReportGenerator {
             }
             case 'cash_flow':
                 html = `<div class="section">
-                        <h3 class="section-title"><span class="section-number">${num}</span>الدراسة المالية (قائمة التدفقات النقدية)</h3>
+                        <h3 class="section-title"><span class="section-number">${num}</span>${lang === 'en' ? t('cash_flow_title', 'en') : `الدراسة المالية (${t('cash_flow_title', 'ar')})`}</h3>
                         <div class="section-content">
                             ${this.renderCumulativeCashChart(results.cashFlow || [])}
-                            ${this.renderCashFlow(results.cashFlow || [])}
+                            ${this.renderCashFlow(results.cashFlow || [], lang)}
                         </div>
                     </div>`;
                 break;
             case 'balance_sheet': {
                 if (!(results.balanceSheets && results.balanceSheets.length > 0)) return null;
                 html = `<div class="section">
-                        <h3 class="section-title"><span class="section-number">${num}</span>الميزانية العمومية التقديرية</h3>
-                        <div class="section-content">${this.renderBalanceSheets(results.balanceSheets)}</div>
+                        <h3 class="section-title"><span class="section-number">${num}</span>${t('balance_sheet_title', lang)}</h3>
+                        <div class="section-content">${this.renderBalanceSheets(results.balanceSheets, lang)}</div>
                     </div>`;
                 break;
             }
@@ -1018,7 +1055,7 @@ export class ReportGenerator {
     }
 
     /** رسم أعمدة SVG داخلي (يعمل في الطباعة بلا مكتبات): الإيرادات وصافي الربح عبر السنوات. */
-    static renderIncomeChart(years) {
+    static renderIncomeChart(years, lang = 'ar') {
         if (!years || years.length === 0) return '';
         const W = 640, H = 200, padX = 40, padB = 26, padT = 16;
         const vals = years.flatMap(y => [Number(y.revenue) || 0, Number(y.netIncome) || 0]);
@@ -1048,8 +1085,8 @@ export class ReportGenerator {
                 ${bars}
             </svg>
             <div style="font-size:9pt;color:#555;display:flex;gap:18px;justify-content:center;">
-                <span><span style="display:inline-block;width:10px;height:10px;background:#0E5B44;border-radius:2px;margin-inline-end:4px;"></span>الإيرادات</span>
-                <span><span style="display:inline-block;width:10px;height:10px;background:#B07D2C;border-radius:2px;margin-inline-end:4px;"></span>صافي الربح</span>
+                <span><span style="display:inline-block;width:10px;height:10px;background:#0E5B44;border-radius:2px;margin-inline-end:4px;"></span>${t('revenue', lang)}</span>
+                <span><span style="display:inline-block;width:10px;height:10px;background:#B07D2C;border-radius:2px;margin-inline-end:4px;"></span>${t('net_income', lang)}</span>
             </div>
         </div>`;
     }
@@ -1114,27 +1151,27 @@ export class ReportGenerator {
     }
 
     /** الميزانية العمومية التقديرية — جدول متعدد السنوات (الأصول = الخصوم + حقوق الملكية). */
-    static renderBalanceSheets(sheets) {
+    static renderBalanceSheets(sheets, lang = 'ar') {
         const ys = sheets || [];
         if (ys.length === 0) return '';
         const row = (label, get, opts = {}) => `<tr class="${opts.highlight ? 'financial-highlight' : ''}"><td>${label}</td>${ys.map(b => `<td>${formatCurrency(get(b) || 0)}</td>`).join('')}</tr>`;
         return `
             <table>
-                <thead><tr><th>البند</th>${ys.map(b => `<th>السنة ${b.year}</th>`).join('')}</tr></thead>
+                <thead><tr><th>${t('item_column', lang)}</th>${ys.map(b => `<th>${yearColumnLabel(b.year, lang)}</th>`).join('')}</tr></thead>
                 <tbody>
                     <tr><td colspan="${ys.length + 1}" style="background:#f3f4f0;font-weight:700;">الأصول</td></tr>
-                    ${row('النقدية وما في حكمها', b => b.assets.current.cash)}
-                    ${row('صافي الأصول الثابتة', b => b.assets.fixed.net)}
-                    ${row('إجمالي الأصول', b => b.assets.total, { highlight: true })}
+                    ${row(this._lbl(lang, 'cash', 'النقدية وما في حكمها'), b => b.assets.current.cash)}
+                    ${row(t('net_fixed_assets', lang), b => b.assets.fixed.net)}
+                    ${row(t('total_assets', lang), b => b.assets.total, { highlight: true })}
                     <tr><td colspan="${ys.length + 1}" style="background:#f3f4f0;font-weight:700;">الخصوم</td></tr>
                     ${row('الجزء المتداول من القرض', b => b.liabilities.current.currentPortionOfDebt)}
-                    ${row('قرض طويل الأجل', b => b.liabilities.longTerm.bankLoan)}
-                    ${row('إجمالي الخصوم', b => b.liabilities.total)}
+                    ${row(this._lbl(lang, 'long_term_liabilities', 'قرض طويل الأجل'), b => b.liabilities.longTerm.bankLoan)}
+                    ${row(this._lbl(lang, 'total_liabilities', 'إجمالي الخصوم'), b => b.liabilities.total)}
                     <tr><td colspan="${ys.length + 1}" style="background:#f3f4f0;font-weight:700;">حقوق الملكية</td></tr>
-                    ${row('رأس المال المدفوع', b => b.equity.paidInCapital)}
-                    ${row('الأرباح المحتجزة', b => b.equity.retainedEarnings)}
-                    ${row('إجمالي حقوق الملكية', b => b.equity.total)}
-                    ${row('إجمالي الخصوم وحقوق الملكية', b => b.totalLiabilitiesAndEquity, { highlight: true })}
+                    ${row(this._lbl(lang, 'share_capital', 'رأس المال المدفوع'), b => b.equity.paidInCapital)}
+                    ${row(this._lbl(lang, 'retained_earnings', 'الأرباح المحتجزة'), b => b.equity.retainedEarnings)}
+                    ${row(t('total_equity', lang), b => b.equity.total)}
+                    ${row(lang === 'en' ? `${t('total_liabilities', 'en')} and ${t('total_equity', 'en')}` : 'إجمالي الخصوم وحقوق الملكية', b => b.totalLiabilitiesAndEquity, { highlight: true })}
                 </tbody>
             </table>
             <p style="font-size:9pt;color:#666;margin-top:8px;">ميزانية تقديرية مبسطة مشتقة من النموذج المالي (حقوق الملكية = إجمالي الاستثمار − التمويل البنكي).</p>`;
@@ -1173,7 +1210,7 @@ export class ReportGenerator {
             <p style="font-size:9pt;color:#666;margin-top:8px;">الأثر المالي المقدّر أعلاه بيان تخطيطي لكل خطر على حدة، ولا يُخصَم مباشرة من صافي القيمة الحالية — احتمالية وأثر كل خطر مُحتسبان فعلياً ضمن علاوة المخاطر المضافة لمعدل الخصم في النموذج المالي (تفادياً لاحتساب نفس الخطر مرتين).</p>`;
     }
 
-    static renderCashFlow(cashFlow) {
+    static renderCashFlow(cashFlow, lang = 'ar') {
         if (!cashFlow || cashFlow.length === 0) return '<p>لا توجد بيانات للتدفقات النقدية.</p>';
 
         // تدقيق 2026-07-09: كانت هذه الدالة تقتصر على أول 5 سنوات فقط كسقف تعسفي،
@@ -1186,17 +1223,17 @@ export class ReportGenerator {
             <table>
                 <thead>
                     <tr>
-                        <th>البند</th>
-                        ${displayFlows.map(c => `<th>السنة ${c.year}</th>`).join('')}
+                        <th>${t('item_column', lang)}</th>
+                        ${displayFlows.map(c => `<th>${yearColumnLabel(c.year, lang)}</th>`).join('')}
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>صافي الربح</td>
+                        <td>${t('net_income', lang)}</td>
                         ${displayFlows.map(c => `<td>${formatCurrency(c.netIncome)}</td>`).join('')}
                     </tr>
                     <tr>
-                        <td>(+) الاستهلاك</td>
+                        <td>(+) ${this._lbl(lang, 'depreciation', 'الاستهلاك')}</td>
                         ${displayFlows.map(c => `<td>${formatCurrency(c.depreciation)}</td>`).join('')}
                     </tr>
                     <tr class="financial-highlight">
@@ -1204,7 +1241,7 @@ export class ReportGenerator {
                         ${displayFlows.map(c => `<td>${formatCurrency(c.cashFlow)}</td>`).join('')}
                     </tr>
                     <tr>
-                        <td>التدفق النقدي التراكمي</td>
+                        <td>${t('cumulative_cash_flow', lang)}</td>
                         ${displayFlows.map(c => `<td class="${c.cumulative >= 0 ? 'status-positive' : 'status-negative'}">${formatCurrency(c.cumulative)}</td>`).join('')}
                     </tr>
                 </tbody>
@@ -1445,6 +1482,85 @@ export class ReportGenerator {
                             <td>${escapeHtml(c.advantage || c.notes || '-')}</td>
                         </tr>`;
                     }).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    static renderAssetSchedule(assetSchedule, fmt) {
+        const rows = (assetSchedule || []).filter(a => a && a.name);
+        if (!rows.length) return '';
+        const categoryLabels = { Equipment: 'معدات', Furniture: 'أثاث', TechResources: 'موارد تقنية', Buildings: 'مبانٍ', Vehicles: 'مركبات' };
+        return `
+            <h4 style="margin-top:16px;">جدول إهلاك الأصول</h4>
+            <table>
+                <thead><tr><th>الأصل</th><th>الفئة</th><th>الإهلاك السنوي</th><th>العمر الافتراضي</th></tr></thead>
+                <tbody>
+                    ${rows.map(a => `<tr>
+                        <td>${escapeHtml(a.name)}</td>
+                        <td>${escapeHtml(categoryLabels[a.category] || a.category || '-')}</td>
+                        <td>${fmt(a.annualDepreciation || 0)}</td>
+                        <td>${a.usefulLifeYears ? escapeHtml(String(a.usefulLifeYears)) + ' سنة' : '—'}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    static renderOperatingWorkingCapital(operating, fmt) {
+        if (!operating || !operating.total) return '';
+        const bd = operating.breakdown || {};
+        const labels = [
+            ['rent', 'الإيجار'],
+            ['salaries', 'الرواتب'],
+            ['marketing', 'التسويق'],
+            ['cogs', 'تكلفة البضاعة'],
+            ['openingInventory', 'المخزون الافتتاحي']
+        ];
+        return `
+            <h4 style="margin-top:16px;">تفصيل رأس المال العامل</h4>
+            <table>
+                <thead><tr><th>البند</th><th>القيمة</th></tr></thead>
+                <tbody>
+                    ${labels.map(([key, label]) => `<tr><td>${label}</td><td>${fmt(bd[key] || 0)}</td></tr>`).join('')}
+                    <tr class="financial-highlight"><td>الإجمالي</td><td>${fmt(operating.total)}</td></tr>
+                </tbody>
+            </table>`;
+    }
+
+    static renderPayrollGrowth(payrollByPosition, fmt) {
+        const rows = (payrollByPosition || []).filter(p => p && p.byYear?.length);
+        if (!rows.length) return '';
+        const nationalityLabels = { saudi: 'سعودي', expat: 'غير سعودي' };
+        const maxYears = Math.max(...rows.map(r => (r.byYear || []).length));
+        return `
+            <h4 style="margin-top:16px;">خطة نمو الرواتب متعددة السنوات</h4>
+            <table>
+                <thead><tr><th>الوظيفة</th><th>الجنسية</th><th>معدل النمو المستخدم</th>${Array.from({ length: maxYears }, (_, i) => `<th>السنة ${i + 1}</th>`).join('')}</tr></thead>
+                <tbody>
+                    ${rows.map(p => `<tr>
+                        <td>${escapeHtml(p.position || '-')}</td>
+                        <td>${escapeHtml(nationalityLabels[p.nationality] || '—')}</td>
+                        <td>${((Number(p.growthRateUsed) || 0) * 100).toFixed(1)}%</td>
+                        ${(p.byYear || []).map(v => `<td>${fmt(v || 0)}</td>`).join('')}
+                    </tr>`).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    static renderMarketingGrowth(marketingByChannel, fmt) {
+        const rows = (marketingByChannel || []).filter(c => c && c.byYear?.length);
+        if (!rows.length) return '';
+        const maxYears = Math.max(...rows.map(r => (r.byYear || []).length));
+        return `
+            <h4 style="margin-top:16px;">خطة نمو التسويق حسب القناة</h4>
+            <table>
+                <thead><tr><th>القناة</th><th>الحملة</th><th>معدل النمو المستخدم</th>${Array.from({ length: maxYears }, (_, i) => `<th>السنة ${i + 1}</th>`).join('')}</tr></thead>
+                <tbody>
+                    ${rows.map(c => `<tr>
+                        <td>${escapeHtml(c.channel || '—')}</td>
+                        <td>${escapeHtml(c.name || '-')}</td>
+                        <td>${((Number(c.growthRateUsed) || 0) * 100).toFixed(1)}%</td>
+                        ${(c.byYear || []).map(v => `<td>${fmt(v || 0)}</td>`).join('')}
+                    </tr>`).join('')}
                 </tbody>
             </table>`;
     }

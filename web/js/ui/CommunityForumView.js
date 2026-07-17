@@ -10,10 +10,11 @@ export class CommunityForumView {
     async render() {
         if (!this.container) return;
 
+        // بيانات تجريبية توضيحية فقط — لا يوجد أعضاء أو منشورات حقيقية، والميزة غير مفعّلة
         const posts = [
-            { id: 1, user: 'أحمد سعيد', time: 'منذ ساعتين', topic: 'رخص البلدية للمطاعم', text: 'السلام عليكم، هل واجه أحدكم صعوبة في استخراج رخصة "مقهى" في الرياض مؤخراً؟ كم تستغرق من الوقت عادة؟', likes: 12, replies: 5 },
-            { id: 2, user: 'نورة الخالد', time: 'منذ 5 ساعات', topic: 'تسويق', text: 'أبحث عن وكالة تسويق ممتازة لإطلاق براند أزياء جديد. الميزانية متوسطة.', likes: 8, replies: 14 },
-            { id: 3, user: 'مستشار مالي (قرار)', time: 'أمس', topic: 'نصيحة', text: 'تذكير لجميع المؤسسين: تأكدوا من احتساب معدل الإهلاك للأصول الثابتة في دراساتكم لتجنب أزمات السيولة.', likes: 45, replies: 2 }
+            { id: 1, user: 'مستخدم (مثال)', time: 'منذ ساعتين', topic: 'رخص البلدية للمطاعم', text: 'السلام عليكم، هل واجه أحدكم صعوبة في استخراج رخصة "مقهى" في الرياض مؤخراً؟ كم تستغرق من الوقت عادة؟', likes: 12, replies: 5 },
+            { id: 2, user: 'مستخدم (مثال)', time: 'منذ 5 ساعات', topic: 'تسويق', text: 'أبحث عن وكالة تسويق ممتازة لإطلاق براند أزياء جديد. الميزانية متوسطة.', likes: 8, replies: 14 },
+            { id: 3, user: 'مستخدم (مثال)', time: 'أمس', topic: 'نصيحة', text: 'تذكير لجميع المؤسسين: تأكدوا من احتساب معدل الإهلاك للأصول الثابتة في دراساتكم لتجنب أزمات السيولة.', likes: 45, replies: 2 }
         ];
 
         this.container.innerHTML = `
@@ -23,13 +24,14 @@ export class CommunityForumView {
                     <div>
                         <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-2">
                             <svg class="ic w-6 h-6 text-pink-400" aria-hidden="true"><use href="#i-users"/></svg>
-                            مجتمع رواد قرار (Community)
+                            مجتمع رواد قرار (مفهوم)
                         </h2>
-                        <p class="text-white/60 text-sm">تبادل الخبرات، اسأل المختصين، وتواصل مع رواد أعمال يشاركونك نفس التحديات.</p>
+                        <p class="text-white/60 text-sm">أمثلة توضيحية لشكل مجتمع نقاش بين مستخدمي المنصة — لا يوجد حالياً أعضاء أو منشورات حقيقية، والميزة غير مفعّلة.</p>
                     </div>
-                    <button class="btn btn--primary !bg-pink-500 hover:!bg-pink-600 font-bold whitespace-nowrap">
-                        + موضوع جديد
-                    </button>
+                    <div class="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
+                        <div class="w-2 h-2 rounded-full bg-amber-500"></div>
+                        <span class="text-xs text-white/80 font-bold">بيانات تجريبية (Demo)</span>
+                    </div>
                 </div>
 
                 <!-- Main Layout -->

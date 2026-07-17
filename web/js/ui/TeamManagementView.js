@@ -21,18 +21,18 @@ export class TeamManagementView {
         this.container.innerHTML = `
             <div class="team-management-view max-w-4xl mx-auto py-8 px-4 animate-entry">
                 <!-- Header -->
-                <div class="flex justify-between items-center mb-8">
+                <div class="flex justify-between items-center mb-8 gap-4 flex-wrap">
                     <div>
                         <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-2">
                             <svg class="ic w-6 h-6 text-primary" aria-hidden="true"><use href="#i-users"/></svg>
                             إدارة الفريق والصلاحيات
                         </h2>
-                        <p class="text-white/60 text-sm">قم بدعوة شركائك ومستشاريك للعمل معاً على دراسات الجدوى في بيئة آمنة.</p>
+                        <p class="text-white/60 text-sm">معاينة توضيحية لشكل إدارة فريق العمل والصلاحيات — لا يوجد حالياً نظام دعوات فعلي عبر البريد الإلكتروني، والأعضاء والبيانات أدناه للتوضيح فقط.</p>
                     </div>
-                    <button class="btn btn--primary btn-invite-team" style="border-radius: 12px; padding: 10px 20px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
-                        <svg class="ic w-4 h-4" aria-hidden="true"><use href="#i-plus"/></svg>
-                        دعوة عضو جديد
-                    </button>
+                    <div class="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
+                        <div class="w-2 h-2 rounded-full bg-amber-500"></div>
+                        <span class="text-xs text-white/80 font-bold">بيانات تجريبية (Demo)</span>
+                    </div>
                 </div>
 
                 <!-- Stats Cards -->
@@ -113,44 +113,6 @@ export class TeamManagementView {
         // Bind events
         this.container.querySelector('.btn-back-dashboard')?.addEventListener('click', () => {
             window.location.hash = '#/home';
-        });
-        
-        this.container.querySelector('.btn-invite-team')?.addEventListener('click', () => {
-            import('sweetalert2').then(({ default: Swal }) => {
-                Swal.fire({
-                    title: 'دعوة عضو جديد',
-                    html: `
-                        <div class="text-right mt-4">
-                            <label class="block text-sm text-white/70 mb-2">البريد الإلكتروني</label>
-                            <input type="email" id="inviteEmail" class="swal2-input !bg-black/20 !border-white/10 !text-white w-full !mx-0 !mb-4" placeholder="name@company.com" style="width: 100%; box-sizing: border-box;">
-                            
-                            <label class="block text-sm text-white/70 mb-2">الصلاحية الممنوحة</label>
-                            <select id="inviteRole" class="swal2-select !bg-black/20 !border-white/10 !text-white w-full !mx-0 !text-sm" style="width: 100%; box-sizing: border-box; display: flex;">
-                                <option value="editor">محرر (تعديل وحفظ)</option>
-                                <option value="reviewer">مراجع (إضافة ملاحظات وتدقيق)</option>
-                                <option value="viewer">مشاهد (قراءة وتصدير فقط)</option>
-                            </select>
-                        </div>
-                    `,
-                    background: 'rgba(30, 41, 59, 0.95)',
-                    color: '#fff',
-                    showCancelButton: true,
-                    confirmButtonText: 'إرسال الدعوة',
-                    cancelButtonText: 'إلغاء',
-                    customClass: {
-                        popup: 'backdrop-blur-xl border border-white/10 rounded-2xl',
-                        confirmButton: 'btn btn--primary !px-6',
-                        cancelButton: 'btn btn--secondary !bg-white/5'
-                    },
-                    buttonsStyling: false
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        import('../utils/toast.js').then(({ toast }) => {
-                            toast.success('تم إرسال دعوة الانضمام بنجاح!');
-                        });
-                    }
-                });
-            });
         });
 
         return this.container;

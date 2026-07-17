@@ -6,11 +6,12 @@
  */
 
 import { sanitizeSheetName, sanitizeFilename, loadXLSX, formatExportDateTime, exportDateISO, SAFE, formatDscr } from './utils.js';
+import { t, yearColumnLabel } from '../js/i18n/reportStrings.js';
 
 /** معرّفات أوراق المحتوى (بعد ورقة الفهرس) — قابلة للربط مع reportSectionOrder. */
 const EXCEL_SHEET_IDS = [
     'summary', 'key_people', 'capex', 'opex', 'revenue', 'income_statement', 'cash_flow',
-    'balance_sheet', 'loan_schedule', 'indicators', 'market', 'location_geo', 'risks', 'timeline', 'scenarios', 'sensitivity'
+    'balance_sheet', 'loan_schedule', 'indicators', 'market', 'competitors', 'growth_plans', 'location_geo', 'risks', 'timeline', 'scenarios', 'sensitivity'
 ];
 
 /** ربط معرّف قسم التقرير بورقة Excel. */
@@ -36,9 +37,14 @@ function formatWaccPct(v) {
 }
 
 export class ExcelExporter {
-    constructor(studyData, financialResults) {
+    constructor(studyData, financialResults, options = {}) {
         this.data = studyData;
         this.results = financialResults;
+        // ثنائي اللغة (المهمة: تصدير إنجليزي) — النطاق مقصود على القوائم المالية والمؤشرات
+        // الكمّية فقط (indicators/income_statement/cash_flow/balance_sheet)، بنفس نطاق
+        // النسخة الإنجليزية الفعلية لمنافس حقيقي (جدوى كلاود) — لا الأقسام النصية/
+        // الاستراتيجية التي يكتبها المستخدم بلغته، فتلك لا تُترجَم بقاموس تسميات.
+        this.lang = options.lang === 'en' ? 'en' : 'ar';
     }
 
     /** ترتيب أوراق المحتوى: يتبع reportSectionOrder إن وُجد، مع إلحاق أي ورقة غير مذكورة. */
@@ -69,6 +75,8 @@ export class ExcelExporter {
             case 'loan_schedule': return this.addLoanScheduleSheet(workbook);
             case 'indicators': return this.addIndicatorsSheet(workbook);
             case 'market': return this.addMarketSheet(workbook);
+            case 'competitors': return this.addCompetitorsSheet(workbook);
+            case 'growth_plans': return this.addGrowthPlansSheet(workbook);
             case 'location_geo': return this.addLocationGeoSheet(workbook);
             case 'risks': return this.addRisksSheet(workbook);
             case 'timeline': return this.addTimelineSheet(workbook);
@@ -128,6 +136,8 @@ export class ExcelExporter {
             'جدول القرض': 'جدول سداد القرض',
             'المؤشرات': 'مؤشرات التقييم المالي',
             'تحليل السوق': 'تحليل السوق TAM/SAM/SOM',
+            'مقارنة المنافسين': 'مقارنة تنافسية مع أبرز المنافسين',
+            'خطط النمو': 'خطة نمو الرواتب والتسويق حسب البند/القناة',
             'التحليل الجغرافي': 'الإحداثيات والمواقع البديلة',
             'المخاطر': 'تحليل المخاطر',
             'الجدول الزمني': 'الجدول الزمني',
@@ -231,6 +241,35 @@ export class ExcelExporter {
             ['الإجمالي الكلي', '', SAFE.num(cap.total), '', ''],
         ];
 
+        // جدول إهلاك الأصول
+        const assetSchedule = Array.isArray(this.results?.assetSchedule) ? this.results.assetSchedule : [];
+        data.push(['', '', '', '', '']);
+        data.push(['جدول إهلاك الأصول', '', '', '', '']);
+        data.push(['اسم الأصل', 'الفئة', 'الإهلاك السنوي', 'العمر الإنتاجي (سنوات)', '']);
+        assetSchedule.forEach((a) => {
+            data.push([(a.name ?? '').toString(), (a.category ?? '').toString(), SAFE.num(a.annualDepreciation), a.usefulLifeYears ?? '—', '']);
+        });
+
+        // رأس المال العامل — التفصيل
+        const operating = this.results?.capex?.capitalStructure?.operating;
+        if (operating?.total) {
+            const b = operating.breakdown || {};
+            const labels = {
+                rent: 'الإيجار',
+                salaries: 'الرواتب',
+                marketing: 'التسويق',
+                cogs: 'تكلفة البضاعة',
+                openingInventory: 'المخزون الافتتاحي',
+            };
+            data.push(['', '', '', '', '']);
+            data.push(['رأس المال العامل — التفصيل', '', '', '', '']);
+            data.push(['البند', 'المبلغ', '', '', '']);
+            Object.entries(b).forEach(([k, v]) => {
+                data.push([labels[k] || k, SAFE.num(v), '', '', '']);
+            });
+            data.push(['الإجمالي', SAFE.num(operating.total), '', '', '']);
+        }
+
         const ws = XLSX.utils.aoa_to_sheet(data);
         ws['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 12 }];
         XLSX.utils.book_append_sheet(workbook, ws, sanitizeSheetName('CAPEX'));
@@ -306,25 +345,26 @@ export class ExcelExporter {
 
     addIncomeStatementSheet(workbook) {
         const statements = this.results?.incomeStatement || [];
-        const headers = ['البند', ...statements.map((s) => `السنة ${s.year}`)];
+        const lang = this.lang;
+        const headers = [t('item_column', lang), ...statements.map((s) => yearColumnLabel(s.year, lang))];
 
         const data = [
-            ['قائمة الدخل التقديرية'],
+            [t('income_statement_title', lang)],
             headers,
-            ['الإيرادات', ...statements.map((s) => SAFE.num(s.revenue))],
-            ['(-) التكاليف المتغيرة', ...statements.map((s) => -SAFE.num(s.variableCosts))],
-            ['مجمل الربح', ...statements.map((s) => SAFE.num(s.grossProfit))],
-            ['(-) التكاليف الثابتة', ...statements.map((s) => -SAFE.num(s.fixedCosts))],
-            ['EBITDA', ...statements.map((s) => SAFE.num(s.ebitda))],
-            ['(-) الاستهلاك', ...statements.map((s) => -SAFE.num(s.depreciation))],
+            [t('revenue', lang), ...statements.map((s) => SAFE.num(s.revenue))],
+            [`(-) ${t('variable_costs', lang)}`, ...statements.map((s) => -SAFE.num(s.variableCosts))],
+            [t('gross_profit', lang), ...statements.map((s) => SAFE.num(s.grossProfit))],
+            [`(-) ${t('fixed_costs', lang)}`, ...statements.map((s) => -SAFE.num(s.fixedCosts))],
+            [t('ebitda', lang), ...statements.map((s) => SAFE.num(s.ebitda))],
+            [`(-) ${t('depreciation', lang)}`, ...statements.map((s) => -SAFE.num(s.depreciation))],
             ['EBIT', ...statements.map((s) => SAFE.num(s.ebit))],
-            ['(-) مصروفات الفوائد', ...statements.map((s) => -SAFE.num(s.interestExpense ?? s.interest))],
+            [`(-) ${t('interest', lang)}`, ...statements.map((s) => -SAFE.num(s.interestExpense ?? s.interest))],
             ['EBT', ...statements.map((s) => SAFE.num(s.ebt ?? s.ebit))],
             // الزكاة والضريبة صفان منفصلان — كان صف واحد يعرض الضريبة فقط
             // فلا يُجمَع العمود إلى صافي الربح أمام محلل الائتمان
-            ['(-) الزكاة', ...statements.map((s) => -SAFE.num(s.zakat))],
-            ['(-) ضريبة الدخل (حصة الأجانب)', ...statements.map((s) => -SAFE.num(s.tax))],
-            ['صافي الربح', ...statements.map((s) => SAFE.num(s.netIncome))],
+            [`(-) ${t('zakat', lang)}`, ...statements.map((s) => -SAFE.num(s.zakat))],
+            [`(-) ${t('tax', lang)}${lang === 'en' ? ' (Non-Saudi Share)' : ' (حصة الأجانب)'}`, ...statements.map((s) => -SAFE.num(s.tax))],
+            [t('net_income', lang), ...statements.map((s) => SAFE.num(s.netIncome))],
             ['', ...statements.map(() => '')],
             [
                 'هامش الربح الصافي',
@@ -342,6 +382,7 @@ export class ExcelExporter {
     addCashFlowSheet(workbook) {
         const cashFlows = this.results?.cashFlow || [];
         const isList = this.results?.incomeStatement || [];
+        const lang = this.lang;
 
         let list = cashFlows;
         if (list.length === 0 && isList.length > 0) {
@@ -362,14 +403,14 @@ export class ExcelExporter {
             return cumulative;
         });
 
-        const headers = ['البند', ...list.map((c) => (c.year === 0 ? 'السنة 0' : `السنة ${c.year}`))];
+        const headers = [t('item_column', lang), ...list.map((c) => yearColumnLabel(c.year, lang))];
         const data = [
-            ['التدفقات النقدية'],
+            [t('cash_flow_title', lang)],
             headers,
-            ['صافي الربح', ...list.map((c) => SAFE.num(c.netIncome))],
-            ['(+) الاستهلاك', ...list.map((c) => SAFE.num(c.depreciation))],
-            ['التدفق النقدي', ...list.map((c) => SAFE.num(c.cashFlow))],
-            ['التدفق التراكمي', ...cum],
+            [t('net_income', lang), ...list.map((c) => SAFE.num(c.netIncome))],
+            [`(+) ${t('depreciation', lang)}`, ...list.map((c) => SAFE.num(c.depreciation))],
+            [t('net_cash_flow', lang), ...list.map((c) => SAFE.num(c.cashFlow))],
+            [t('cumulative_cash_flow', lang), ...cum],
         ];
 
         const ws = XLSX.utils.aoa_to_sheet(data);
@@ -379,22 +420,23 @@ export class ExcelExporter {
     addBalanceSheetSheet(workbook) {
         const sheets = this.results?.balanceSheets || [];
         if (sheets.length === 0) return;
+        const lang = this.lang;
 
-        const headers = ['البند', ...sheets.map((s) => `السنة ${s.year}`)];
+        const headers = [t('item_column', lang), ...sheets.map((s) => yearColumnLabel(s.year, lang))];
         const data = [
-            ['الميزانية العمومية التقديرية'],
+            [t('balance_sheet_title', lang)],
             headers,
             ['الأصول', ...sheets.map(() => '')],
-            ['  الأصول المتداولة', ...sheets.map((s) => SAFE.num(s.assets?.current?.total))],
-            ['  صافي الأصول الثابتة', ...sheets.map((s) => SAFE.num(s.assets?.fixed?.net))],
-            ['إجمالي الأصول', ...sheets.map((s) => SAFE.num(s.assets?.total))],
+            [`  ${t('total_current_assets', lang)}`, ...sheets.map((s) => SAFE.num(s.assets?.current?.total))],
+            [`  ${t('net_fixed_assets', lang)}`, ...sheets.map((s) => SAFE.num(s.assets?.fixed?.net))],
+            [t('total_assets', lang), ...sheets.map((s) => SAFE.num(s.assets?.total))],
             ['', ...sheets.map(() => '')],
             ['الخصوم', ...sheets.map(() => '')],
-            ['  الخصوم المتداولة', ...sheets.map((s) => SAFE.num(s.liabilities?.current?.total))],
-            ['  الخصوم طويلة الأجل', ...sheets.map((s) => SAFE.num(s.liabilities?.longTerm?.total))],
-            ['إجمالي الخصوم', ...sheets.map((s) => SAFE.num(s.liabilities?.total))],
+            [`  ${t('current_liabilities', lang)}`, ...sheets.map((s) => SAFE.num(s.liabilities?.current?.total))],
+            [`  ${t('long_term_liabilities', lang)}`, ...sheets.map((s) => SAFE.num(s.liabilities?.longTerm?.total))],
+            [t('total_liabilities', lang), ...sheets.map((s) => SAFE.num(s.liabilities?.total))],
             ['', ...sheets.map(() => '')],
-            ['حقوق الملكية', ...sheets.map((s) => SAFE.num(s.equity?.total))],
+            [t('total_equity', lang), ...sheets.map((s) => SAFE.num(s.equity?.total))],
             ['', ...sheets.map(() => '')],
             ['الخصوم + حقوق الملكية', ...sheets.map((s) => SAFE.num(s.totalLiabilitiesAndEquity))],
         ];
@@ -437,6 +479,7 @@ export class ExcelExporter {
         const ind = this.results?.indicators || {};
         const wacc = this.results?.wacc || {};
         const dscr = this.results?.dscrAnalysis || [];
+        const lang = this.lang;
 
         const irrVal = SAFE.pct(ind.irr);
         const roiVal = SAFE.pct(ind.roi);
@@ -448,13 +491,13 @@ export class ExcelExporter {
             : (Number.isFinite(Number(ind.breakEvenUnits)) ? Number(ind.breakEvenUnits) / 12 : 0);
 
         const data = [
-            ['مؤشرات التقييم المالي'],
+            [t('financial_kpis_title', lang)],
             ['', ''],
             ['المؤشرات الأساسية', ''],
-            ['صافي القيمة الحالية', SAFE.num(ind.npv)],
-            ['معدل العائد الداخلي', irrVal.toFixed(1) + '%'],
-            ['فترة الاسترداد', SAFE.payback(ind.paybackPeriod ?? ind.payback)],
-            ['العائد على الاستثمار', roiVal.toFixed(1) + '%'],
+            [t('npv', lang), SAFE.num(ind.npv)],
+            [t('irr', lang), irrVal.toFixed(1) + '%'],
+            [t('payback_period', lang), SAFE.payback(ind.paybackPeriod ?? ind.payback)],
+            [t('roi', lang), roiVal.toFixed(1) + '%'],
             ['هامش الربح الصافي', marginVal.toFixed(1) + '%'],
             ['نقطة التعادل (وحدات/شهر)', Math.round(breakevenMonthly)],
             ['', ''],
@@ -467,9 +510,30 @@ export class ExcelExporter {
             ['', ''],
             ['نسبة تغطية خدمة الدين (DSCR)', ''],
             ...(Array.isArray(dscr) && dscr.length
-                ? dscr.map((d) => [`السنة ${d.year}`, formatDscr(d.dscr) + (d.status ? ' - ' + d.status : '')])
+                ? dscr.map((d) => [yearColumnLabel(d.year, lang), formatDscr(d.dscr) + (d.status ? ' - ' + d.status : '')])
                 : [['—', 'لا توجد بيانات']]),
         ];
+
+        // النسب المالية — صف لكل نسبة، عمود لكل سنة (نفس نمط عمود-لكل-سنة في قائمة الدخل/التدفقات النقدية)
+        const ratios = Array.isArray(this.results?.ratios) ? this.results.ratios : [];
+        const pct = (v) => (v == null || !Number.isFinite(Number(v))) ? '—' : (Number(v) * 100).toFixed(1) + '%';
+        const mult = (v) => (v == null || !Number.isFinite(Number(v))) ? '—' : Number(v).toFixed(2) + 'x';
+        data.push(['', '']);
+        data.push([t('ratios_section_title', lang), '']);
+        if (ratios.length) {
+            data.push([t('item_column', lang), ...ratios.map((r) => yearColumnLabel(r.year, lang))]);
+            data.push([t('current_ratio', lang), ...ratios.map((r) => mult(r.currentRatio))]);
+            data.push([t('quick_ratio', lang), ...ratios.map((r) => mult(r.quickRatio))]);
+            data.push([t('cash_ratio', lang), ...ratios.map((r) => mult(r.cashRatio))]);
+            data.push([t('debt_ratio', lang), ...ratios.map((r) => pct(r.debtRatio))]);
+            data.push([t('debt_to_equity', lang), ...ratios.map((r) => pct(r.debtToEquity))]);
+            data.push([t('asset_turnover', lang), ...ratios.map((r) => mult(r.assetTurnover))]);
+            data.push([t('fixed_asset_turnover', lang), ...ratios.map((r) => mult(r.fixedAssetTurnover))]);
+            data.push([t('roa', lang), ...ratios.map((r) => pct(r.roa))]);
+            data.push([t('roe', lang), ...ratios.map((r) => pct(r.roe))]);
+        } else {
+            data.push(['—', 'لا توجد بيانات']);
+        }
 
         const ws = XLSX.utils.aoa_to_sheet(data);
         ws['!cols'] = [{ wch: 32 }, { wch: 22 }];
@@ -542,6 +606,86 @@ export class ExcelExporter {
         const ws = XLSX.utils.aoa_to_sheet(data);
         ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 40 }];
         XLSX.utils.book_append_sheet(workbook, ws, sanitizeSheetName('تحليل السوق'));
+    }
+
+    addCompetitorsSheet(workbook) {
+        const competitors = Array.isArray(this.data?.marketing?.competitors) ? this.data.marketing.competitors : [];
+
+        const data = [
+            ['مقارنة المنافسين'],
+            ['', ''],
+            ['الاسم', 'الحصة السوقية', 'نقاط القوة', 'نقاط الضعف', 'العملاء يومياً (تقديري)', 'متوسط الفاتورة (تقديري)'],
+        ];
+
+        if (competitors.length) {
+            competitors.forEach((c) => {
+                data.push([
+                    (c.name || '').toString(),
+                    SAFE.num(c.marketShare) + '%',
+                    (c.strengths || '').toString(),
+                    (c.weaknesses || '').toString(),
+                    SAFE.num(c.estimatedDailyCustomers),
+                    SAFE.num(c.estimatedAvgTicket),
+                ]);
+            });
+        } else {
+            data.push(['لا يوجد منافسون مضافون بعد', '', '', '', '', '']);
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 30 }, { wch: 30 }, { wch: 20 }, { wch: 20 }];
+        XLSX.utils.book_append_sheet(workbook, ws, sanitizeSheetName('مقارنة المنافسين'));
+    }
+
+    addGrowthPlansSheet(workbook) {
+        const payroll = Array.isArray(this.results?.payrollByPosition) ? this.results.payrollByPosition : [];
+        const marketing = Array.isArray(this.results?.marketingByChannel) ? this.results.marketingByChannel : [];
+        const pctFmt = (v) => (v == null || !Number.isFinite(Number(v))) ? '—' : (Number(v) * 100).toFixed(1) + '%';
+
+        if (!payroll.length && !marketing.length) {
+            const data = [
+                ['خطط النمو'],
+                ['', ''],
+                ['لا توجد بيانات نمو مُدخلة', ''],
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            XLSX.utils.book_append_sheet(workbook, ws, sanitizeSheetName('خطط النمو'));
+            return;
+        }
+
+        const data = [['خطط النمو'], ['', '']];
+
+        const payrollYears = Math.max(0, ...payroll.map((p) => (Array.isArray(p.byYear) ? p.byYear.length : 0)));
+        data.push(['خطة نمو الرواتب']);
+        data.push(['الوظيفة', 'الجنسية', 'معدل النمو', ...Array.from({ length: payrollYears }, (_, i) => `سنة ${i + 1}`)]);
+        payroll.forEach((p) => {
+            const byYear = Array.isArray(p.byYear) ? p.byYear : [];
+            data.push([
+                (p.position || '').toString(),
+                (p.nationality || '—').toString(),
+                pctFmt(p.growthRateUsed),
+                ...Array.from({ length: payrollYears }, (_, i) => SAFE.num(byYear[i])),
+            ]);
+        });
+
+        data.push(['', '']);
+
+        const marketingYears = Math.max(0, ...marketing.map((c) => (Array.isArray(c.byYear) ? c.byYear.length : 0)));
+        data.push(['خطة نمو التسويق حسب القناة']);
+        data.push(['القناة', 'الحملة', 'معدل النمو', ...Array.from({ length: marketingYears }, (_, i) => `سنة ${i + 1}`)]);
+        marketing.forEach((c) => {
+            const byYear = Array.isArray(c.byYear) ? c.byYear : [];
+            data.push([
+                (c.channel || '—').toString(),
+                (c.name || '').toString(),
+                pctFmt(c.growthRateUsed),
+                ...Array.from({ length: marketingYears }, (_, i) => SAFE.num(byYear[i])),
+            ]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+        XLSX.utils.book_append_sheet(workbook, ws, sanitizeSheetName('خطط النمو'));
     }
 
     addLocationGeoSheet(workbook) {
@@ -697,8 +841,8 @@ export class ExcelExporter {
  * تصدير سريع إلى Excel
  * @returns {Promise<string>} اسم الملف المُصدَّر
  */
-export async function exportToExcel(studyData, financialResults, filename) {
-    const exporter = new ExcelExporter(studyData, financialResults);
+export async function exportToExcel(studyData, financialResults, filename, options = {}) {
+    const exporter = new ExcelExporter(studyData, financialResults, options);
     const base = (studyData?.projectInfo?.name || filename || 'feasibility_study').toString();
     return exporter.export(base);
 }

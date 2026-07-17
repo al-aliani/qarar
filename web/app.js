@@ -1187,10 +1187,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showTeamManagement', async () => {
     try {
       const { TeamManagementView } = await import('./js/ui/TeamManagementView.js');
-      const view = new TeamManagementView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new TeamManagementView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('TeamManagementView load failed:', err);
       toast.error('تعذر فتح إدارة الفريق');
@@ -1201,10 +1199,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showNotifications', async () => {
     try {
       const { NotificationsView } = await import('./js/ui/NotificationsView.js');
-      const view = new NotificationsView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new NotificationsView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('NotificationsView load failed:', err);
       toast.error('تعذر فتح مركز الإشعارات');
@@ -1215,10 +1211,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showActivityLog', async () => {
     try {
       const { ActivityLogView } = await import('./js/ui/ActivityLogView.js');
-      const view = new ActivityLogView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new ActivityLogView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('ActivityLogView load failed:', err);
       toast.error('تعذر فتح سجل الأنشطة');
@@ -1229,10 +1223,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showIntegrationsHub', async () => {
     try {
       const { IntegrationsHubView } = await import('./js/ui/IntegrationsHubView.js');
-      const view = new IntegrationsHubView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new IntegrationsHubView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('IntegrationsHubView load failed:', err);
       toast.error('تعذر فتح مركز التكاملات');
@@ -1257,10 +1249,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showAcademy', async () => {
     try {
       const { AcademyView } = await import('./js/ui/AcademyView.js');
-      const view = new AcademyView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new AcademyView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('AcademyView load failed:', err);
       toast.error('تعذر فتح الأكاديمية');
@@ -1271,10 +1261,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showGlobalAnalytics', async () => {
     try {
       const { GlobalAnalyticsView } = await import('./js/ui/GlobalAnalyticsView.js');
-      const view = new GlobalAnalyticsView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new GlobalAnalyticsView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('GlobalAnalyticsView load failed:', err);
       toast.error('تعذر فتح لوحة الإحصائيات');
@@ -1299,10 +1287,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showMarketplace', async () => {
     try {
       const { MarketplaceView } = await import('./js/ui/MarketplaceView.js');
-      const view = new MarketplaceView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new MarketplaceView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('MarketplaceView load failed:', err);
       toast.error('تعذر فتح سوق الخدمات');
@@ -1313,10 +1299,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showInvestorNetwork', async () => {
     try {
       const { InvestorNetworkView } = await import('./js/ui/InvestorNetworkView.js');
-      const view = new InvestorNetworkView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new InvestorNetworkView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('InvestorNetworkView load failed:', err);
       toast.error('تعذر فتح شبكة المستثمرين');
@@ -1327,10 +1311,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showCommunityForum', async () => {
     try {
       const { CommunityForumView } = await import('./js/ui/CommunityForumView.js');
-      const view = new CommunityForumView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new CommunityForumView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('CommunityForumView load failed:', err);
       toast.error('تعذر فتح المجتمع');
@@ -1341,10 +1323,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showExecutionKanban', async () => {
     try {
       const { ExecutionKanbanView } = await import('./js/ui/ExecutionKanbanView.js');
-      const view = new ExecutionKanbanView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new ExecutionKanbanView('wizardContainer', store);
+      await view.render();
     } catch (err) {
       console.error('ExecutionKanbanView load failed:', err);
       toast.error('تعذر فتح مدير المهام');
@@ -1355,7 +1335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showCompetitorIntelligence', async () => {
     try {
       const { CompetitorIntelligenceView } = await import('./js/ui/CompetitorIntelligenceView.js');
-      const view = new CompetitorIntelligenceView(wizardContainer);
+      const view = new CompetitorIntelligenceView(wizardContainer, store);
       const el = await view.render();
       wizardContainer.innerHTML = '';
       wizardContainer.appendChild(el);
@@ -1369,10 +1349,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showHRSandbox', async () => {
     try {
       const { HRSandboxView } = await import('./js/ui/HRSandboxView.js');
-      const view = new HRSandboxView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new HRSandboxView('wizardContainer', store);
+      await view.render();
     } catch (err) {
       console.error('HRSandboxView load failed:', err);
       toast.error('تعذر فتح محاكي الموارد البشرية');
@@ -1383,10 +1361,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showFranchiseHub', async () => {
     try {
       const { FranchiseHubView } = await import('./js/ui/FranchiseHubView.js');
-      const view = new FranchiseHubView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new FranchiseHubView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('FranchiseHubView load failed:', err);
       toast.error('تعذر فتح منصة الامتياز التجاري');
@@ -1453,10 +1429,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showGovTendersRadar', async () => {
     try {
       const { GovTendersRadarView } = await import('./js/ui/GovTendersRadarView.js');
-      const view = new GovTendersRadarView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new GovTendersRadarView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('GovTendersRadarView load failed:', err);
       toast.error('تعذر فتح رادار المناقصات');
@@ -1467,10 +1441,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showIPOReadiness', async () => {
     try {
       const { IPOReadinessView } = await import('./js/ui/IPOReadinessView.js');
-      const view = new IPOReadinessView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new IPOReadinessView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('IPOReadinessView load failed:', err);
       toast.error('تعذر فتح منصة الاكتتاب');
@@ -1481,10 +1453,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showComplianceRadar', async () => {
     try {
       const { ComplianceRadarView } = await import('./js/ui/ComplianceRadarView.js');
-      const view = new ComplianceRadarView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new ComplianceRadarView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('ComplianceRadarView load failed:', err);
       toast.error('تعذر فتح رادار التشريعات');
@@ -1495,10 +1465,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showComplianceRadar', async () => {
     try {
       const { ComplianceRadarView } = await import('./js/ui/ComplianceRadarView.js');
-      const view = new ComplianceRadarView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new ComplianceRadarView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('ComplianceRadarView load failed:', err);
       toast.error('تعذر فتح رادار التشريعات');
@@ -1523,10 +1491,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showAssetsPortfolio', async () => {
     try {
       const { AssetsPortfolioView } = await import('./js/ui/AssetsPortfolioView.js');
-      const view = new AssetsPortfolioView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new AssetsPortfolioView('wizardContainer', store);
+      await view.render();
     } catch (err) {
       console.error('AssetsPortfolioView load failed:', err);
       toast.error('تعذر فتح محفظة الأصول');
@@ -1551,27 +1517,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showAIFocusGroup', async () => {
     try {
       const { AIFocusGroupView } = await import('./js/ui/AIFocusGroupView.js');
-      const view = new AIFocusGroupView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new AIFocusGroupView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('AIFocusGroupView load failed:', err);
       toast.error('تعذر فتح محطة أبحاث المستهلك الافتراضية');
     }
   });
 
-  // محرك التسعير الديناميكي (Surge Pricing Engine)
+  // حساسية السعر: ماذا لو؟ (معاينة على بيانات التسعير المثالي الفعلية)
   window.addEventListener('feasibility:showSurgePricingEngine', async () => {
     try {
       const { SurgePricingEngineView } = await import('./js/ui/SurgePricingEngineView.js');
-      const view = new SurgePricingEngineView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new SurgePricingEngineView('wizardContainer', store);
+      await view.render();
     } catch (err) {
       console.error('SurgePricingEngineView load failed:', err);
       toast.error('تعذر فتح محرك التسعير الديناميكي');
+    }
+  });
+
+  // رادار السمعة الرقمية (Digital Reputation Radar)
+  window.addEventListener('feasibility:showDigitalReputationRadar', async () => {
+    try {
+      const { DigitalReputationRadarView } = await import('./js/ui/DigitalReputationRadarView.js');
+      const view = new DigitalReputationRadarView('wizardContainer');
+      await view.render();
+    } catch (err) {
+      console.error('DigitalReputationRadarView load failed:', err);
+      toast.error('تعذر فتح رادار السمعة الرقمية');
     }
   });
 
@@ -1579,10 +1553,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showTalentPoachingRadar', async () => {
     try {
       const { TalentPoachingRadarView } = await import('./js/ui/TalentPoachingRadarView.js');
-      const view = new TalentPoachingRadarView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new TalentPoachingRadarView('wizardContainer', store);
+      await view.render();
     } catch (err) {
       console.error('TalentPoachingRadarView load failed:', err);
       toast.error('تعذر فتح رادار اصطياد المواهب');
@@ -1593,10 +1565,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showAcademy', async () => {
     try {
       const { AcademyView } = await import('./js/ui/AcademyView.js');
-      const view = new AcademyView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new AcademyView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('AcademyView load failed:', err);
       toast.error('تعذر فتح أكاديمية القادة');
@@ -1621,27 +1591,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showSupplyChainSandbox', async () => {
     try {
       const { SupplyChainSandboxView } = await import('./js/ui/SupplyChainSandboxView.js');
-      const view = new SupplyChainSandboxView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new SupplyChainSandboxView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('SupplyChainSandboxView load failed:', err);
       toast.error('تعذر فتح محاكي سلاسل الإمداد');
     }
   });
 
-  // منصة ترميز الحصص (Tokenization Hub)
+  // مخطط توزيع الحصص (ESOP) — تخطيط داخلي على بيانات الشراكة الفعلية
   window.addEventListener('feasibility:showTokenizationHub', async () => {
     try {
       const { TokenizationHubView } = await import('./js/ui/TokenizationHubView.js');
-      const view = new TokenizationHubView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new TokenizationHubView('wizardContainer', store);
+      await view.render();
     } catch (err) {
       console.error('TokenizationHubView load failed:', err);
-      toast.error('تعذر فتح منصة ترميز الحصص');
+      toast.error('تعذر فتح مخطط توزيع الحصص');
     }
   });
 
@@ -1649,10 +1615,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showMandAHub', async () => {
     try {
       const { MandAHubView } = await import('./js/ui/MandAHubView.js');
-      const view = new MandAHubView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
+      const view = new MandAHubView('wizardContainer');
+      await view.render();
     } catch (err) {
       console.error('MandAHubView load failed:', err);
       toast.error('تعذر فتح مركز الاستحواذ');

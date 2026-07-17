@@ -1,3 +1,13 @@
+/**
+ * شبكة مطابقة المستثمرين — مفهوم منتج غير مبني بعد. لا يوجد أي مستثمر حقيقي
+ * مسجَّل لدى "قرار"، ولا آلية مطابقة فعلية، وزر "تقديم مشروعي للمستثمرين" /
+ * "طلب التواصل" لا يرسل شيئاً لأي جهة. البطاقات أدناه أمثلة توضيحية لشكل
+ * الميزة إن بُنيت مستقبلاً (تحتاج قاعدة مستثمرين معتمدين حقيقية وشراكة/ترخيص
+ * تنظيمي لم يُتخذ قرار عملها بعد) — لا بيانات حقيقية.
+ */
+import { formatCurrency, formatFractionAsPercent } from '../utils/formatters.js';
+import { escapeHtml } from '../utils/escape.js';
+
 export class InvestorNetworkView {
     constructor(containerOrId) {
         if (typeof containerOrId === 'string') {
@@ -11,93 +21,73 @@ export class InvestorNetworkView {
         if (!this.container) return;
 
         const deals = [
-            { id: 1, sector: 'قطاع الأغذية والمشروبات', req: '2.5M ريال', roi: '35%', risk: 'متوسط', tags: ['توسع', 'مبيعات نشطة'] },
-            { id: 2, sector: 'التطبيقات التقنية (SaaS)', req: '500K ريال', roi: '60%', risk: 'عالي', tags: ['بذرة (Seed)', 'تقنية مالية'] },
-            { id: 3, sector: 'القطاع اللوجستي', req: '1.2M ريال', roi: '22%', risk: 'منخفض', tags: ['معدات', 'عقود حكومية'] }
+            { sector: 'قطاع الأغذية والمشروبات', req: 2500000, roi: 0.35, risk: 'متوسط', tags: ['توسع', 'مبيعات نشطة'] },
+            { sector: 'التطبيقات التقنية (SaaS)', req: 500000, roi: 0.60, risk: 'عالي', tags: ['بذرة (Seed)', 'تقنية مالية'] },
+            { sector: 'القطاع اللوجستي', req: 1200000, roi: 0.22, risk: 'منخفض', tags: ['معدات', 'عقود حكومية'] }
         ];
 
+        const riskBadgeClass = (risk) => risk === 'عالي' ? 'badge--danger' : risk === 'متوسط' ? 'badge--warning' : 'badge--success';
+
         this.container.innerHTML = `
-            <div class="investor-network-view max-w-5xl mx-auto py-8 px-4 animate-entry">
-                <!-- Header -->
-                <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-gradient-to-l from-amber-500/10 to-transparent p-6 rounded-2xl border border-amber-500/20">
+            <div class="investor-network-view" style="max-width:860px;margin:0 auto;padding:var(--s-4) 0;">
+                <button type="button" id="btnInvestorNetworkBack" class="btn btn--ghost mb-4" style="display:inline-flex;align-items:center;gap:8px;">← العودة للوحة التحكم</button>
+
+                <div class="flex-between mb-4">
                     <div>
-                        <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                            <svg class="ic w-6 h-6 text-amber-400" aria-hidden="true"><use href="#i-briefcase"/></svg>
-                            شبكة مطابقة المستثمرين (Deal-Flow)
-                        </h2>
-                        <p class="text-white/60 text-sm">استعرض ملخصات المشاريع المجهولة (Teasers) التي تبحث عن استثمار، أو اعرض مشروعك هنا.</p>
+                        <h2 class="section-title" style="margin-bottom:4px;"><svg class="ic" aria-hidden="true"><use href="#i-bank"/></svg> شبكة مطابقة المستثمرين</h2>
+                        <p class="text-muted" style="margin:0;">مطابقة بين مشاريع تبحث عن تمويل ومستثمرين محتملين.</p>
                     </div>
-                    <button class="btn btn--primary !bg-amber-500 hover:!bg-amber-600 text-black font-bold whitespace-nowrap">
-                        تقديم مشروعي للمستثمرين
-                    </button>
+                    <span class="badge badge--warning" style="white-space:nowrap;">مفهوم — قيد التطوير</span>
                 </div>
 
-                <!-- Filters -->
-                <div class="flex gap-4 mb-6">
-                    <select class="form-control text-xs bg-black/20 text-white border-white/10 w-40">
-                        <option>كل القطاعات</option>
-                        <option>التقنية</option>
-                        <option>الأغذية</option>
-                    </select>
-                    <select class="form-control text-xs bg-black/20 text-white border-white/10 w-40">
-                        <option>مستوى المخاطرة</option>
-                        <option>منخفض</option>
-                        <option>متوسط</option>
-                        <option>عالي</option>
-                    </select>
+                <div class="alert alert--warning mb-4">
+                    <p style="margin:0;">هذه الشاشة مفهوم منتج فقط. لا يوجد حالياً أي مستثمر حقيقي مسجَّل لدى "قرار"، ولا مطابقة فعلية تجري بين المشاريع والمستثمرين، وزرّا "تقديم مشروعي للمستثمرين" و"طلب التواصل" لا يرسلان شيئاً لأي جهة. البطاقات أدناه أمثلة توضيحية لشكل الميزة إن بُنيت مستقبلاً.</p>
                 </div>
 
-                <!-- Teaser Cards -->
-                <div class="space-y-4">
+                <div class="card glass-card mb-4" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <h3 class="card-title mb-1">لديك مشروع يبحث عن تمويل؟</h3>
+                        <p class="text-xs text-muted mb-0">هذه الميزة قيد التطوير ولا تصل بعد لأي مستثمر حقيقي.</p>
+                    </div>
+                    <button type="button" class="btn btn--secondary" disabled>تقديم مشروعي للمستثمرين (غير متاح)</button>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:12px;">
                     ${deals.map(deal => `
-                        <div class="flex flex-col md:flex-row items-center justify-between p-6 rounded-2xl transition-all hover:bg-white/5 cursor-pointer border border-white/5" style="background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%);">
-                            <div class="flex-1 mb-4 md:mb-0">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                                        <svg class="ic w-5 h-5" aria-hidden="true"><use href="#i-lock"/></svg>
-                                    </div>
-                                    <div>
-                                        <h3 class="text-white font-bold">مشروع في ${deal.sector}</h3>
-                                        <div class="text-[10px] text-white/40">الموقع مجهول • قيد الموافقة</div>
+                        <div class="card">
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                                <div style="flex:1;min-width:200px;">
+                                    <div class="card-title mb-1" style="font-size:0.95rem;">مشروع في ${escapeHtml(deal.sector)}</div>
+                                    <div class="text-xs text-muted mb-2">مثال توضيحي — الموقع مجهول</div>
+                                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                        ${deal.tags.map(t => `<span class="badge badge--neutral">${escapeHtml(t)}</span>`).join('')}
                                     </div>
                                 </div>
-                                <div class="flex gap-2 mt-3 ml-12">
-                                    ${deal.tags.map(t => `<span class="px-2 py-1 rounded bg-white/10 text-white/60 text-[10px]">${t}</span>`).join('')}
+                                <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                                    <div class="text-center">
+                                        <div class="text-xs text-muted mb-1">المبلغ المطلوب</div>
+                                        <div class="text-mono" style="font-weight:700;">${formatCurrency(deal.req)}</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-xs text-muted mb-1">متوسط العائد</div>
+                                        <div class="text-mono" style="font-weight:700;">${formatFractionAsPercent(deal.roi, 0)}</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-xs text-muted mb-1">المخاطرة</div>
+                                        <span class="badge ${riskBadgeClass(deal.risk)}">${escapeHtml(deal.risk)}</span>
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <div class="flex flex-wrap items-center gap-8 pl-4 border-l border-white/10">
-                                <div class="text-center">
-                                    <div class="text-[10px] text-white/40 mb-1">المبلغ المطلوب</div>
-                                    <div class="text-lg font-bold text-white">${deal.req}</div>
-                                </div>
-                                <div class="text-center">
-                                    <div class="text-[10px] text-white/40 mb-1">متوسط العائد</div>
-                                    <div class="text-lg font-bold text-green-400">${deal.roi}</div>
-                                </div>
-                                <div class="text-center">
-                                    <div class="text-[10px] text-white/40 mb-1">المخاطرة</div>
-                                    <div class="text-sm font-bold ${deal.risk === 'عالي' ? 'text-red-400' : deal.risk === 'متوسط' ? 'text-yellow-400' : 'text-green-400'}">${deal.risk}</div>
-                                </div>
-                            </div>
-                            
-                            <div class="mr-6">
-                                <button class="btn btn--secondary hover:bg-amber-500/20 hover:text-amber-400 text-xs">طلب التواصل</button>
+                            <div class="mt-3" style="text-align:left;">
+                                <button type="button" class="btn btn--secondary btn--sm" disabled>طلب التواصل (غير متاح)</button>
                             </div>
                         </div>
                     `).join('')}
                 </div>
             </div>
-            
-            <div class="max-w-5xl mx-auto px-4 mt-6">
-                <button type="button" class="btn btn-secondary btn-back-dashboard">
-                    <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>
-                    العودة للوحة التحكم
-                </button>
-            </div>
         `;
 
-        this.container.querySelector('.btn-back-dashboard')?.addEventListener('click', () => {
+        this.container.querySelector('#btnInvestorNetworkBack')?.addEventListener('click', () => {
             window.location.hash = '#/home';
         });
 

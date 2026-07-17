@@ -10,6 +10,7 @@ import { analyzePartnerNeeds } from './partnerNeeds.js';
 import { calculateZakatAndTax } from './financial/tax.js';
 import { calculateNPV, calculateIRR, calculateMIRR, calculateTerminalValue } from './financial/cashflow.js';
 import { buildDepreciationModel } from './financial/depreciation.js';
+import { buildFinancialRatios } from './financial/ratios.js';
 import { buildRevenueModel } from './financial/revenue.js';
 import { computeStressSurvival } from './financial/stressTestMath.js';
 import { getRiskScore, classifyRiskScore } from './riskScoring.js';
@@ -299,6 +300,81 @@ export function calculateStudy(study, overrides) {
         .filter(c => c.type === 'operating')
         .reduce((acc, c) => acc + (Number(c.monthly || 0) * 12), 0);
 
+    // نمو الرواتب وميزانية التسويق متعدد السنوات (اختياري لكل بند): إن لم يُدخل المستخدم
+    // pos.salaryGrowthRate/campaign.annualGrowthRate يتصرف كل بند تماماً كما اليوم (تضخم عام
+    // موحّد costInflation) — الدالتان أدناه تُستدعيان داخل حلقة السنوات بدل الضرب المجمَّع
+    // annualPayroll*costInflation/annualMarketing*costInflation، بلا أي تغيير في النتيجة عندما
+    // لا تُستخدم الحقول الجديدة (تحقّق بذلك اختبار توافق رجعي صريح).
+    const operatingPositions = positions; // نفس المصفوفة المُصدَّرة أعلاه لـ totalSalaries/gosiCost
+    const operatingCampaigns = toArray(marketing.campaigns).filter(c => c.type === 'operating');
+
+    function payrollAtYear(yearNum, costInflationForYear) {
+        let basicSum = 0, gosiSum = 0, headcountSum = 0, expatHeadcountSum = 0;
+        for (const pos of operatingPositions) {
+            const months = Number(pos.months || 12);
+            const count = Number(pos.count || 1);
+            const growthRate = Number(pos.salaryGrowthRate);
+            const growth = Number.isFinite(growthRate) ? Math.pow(1 + growthRate, yearNum - 1) : costInflationForYear;
+            const basic = Number(pos.salary || 0) * count * months * growth;
+            const rate = pos.nationality === 'expat' ? 0.02 : gosiRate;
+            basicSum += basic;
+            gosiSum += basic * rate;
+            headcountSum += count;
+            if (pos.nationality === 'expat') expatHeadcountSum += count;
+        }
+        const insurance = headcountSum * (hr.healthInsurancePerHead || 1500) * costInflationForYear;
+        const expatFees = expatHeadcountSum * (
+            Number(govtFees.workCard || 0) + Number(govtFees.ticket || 0) + Number(govtFees.iqama || 0)
+        ) * costInflationForYear;
+        return basicSum + gosiSum + insurance + expatFees;
+    }
+
+    function marketingAtYear(yearNum, costInflationForYear) {
+        let sum = 0;
+        for (const c of operatingCampaigns) {
+            const base = Number(c.monthly || 0) * 12;
+            const growthRate = Number(c.annualGrowthRate);
+            const growth = Number.isFinite(growthRate) ? Math.pow(1 + growthRate, yearNum - 1) : costInflationForYear;
+            sum += base * growth;
+        }
+        return sum;
+    }
+
+    // جدول رواتب/تسويق مُسمّى لكل وظيفة/حملة على حدة — لعرضه في التصديرات (لا يُستهلك في
+    // حساب القرار، فقط عرض تفصيلي مماثل لـ assetSchedule أعلاه).
+    const payrollByPosition = operatingPositions.map(pos => {
+        const growthRate = Number(pos.salaryGrowthRate);
+        const hasCustomGrowth = Number.isFinite(growthRate);
+        const rate = pos.nationality === 'expat' ? 0.02 : gosiRate;
+        return {
+            position: pos.position || 'وظيفة',
+            nationality: pos.nationality || null,
+            count: Number(pos.count || 1),
+            growthRateUsed: hasCustomGrowth ? growthRate : inflation,
+            byYear: Array.from({ length: years }, (_, idx) => {
+                const yearNum = idx + 1;
+                const growth = hasCustomGrowth ? Math.pow(1 + growthRate, yearNum - 1) : Math.pow(1 + inflation, yearNum - 1);
+                const basic = Number(pos.salary || 0) * Number(pos.count || 1) * Number(pos.months || 12) * growth;
+                return basic * (1 + rate);
+            })
+        };
+    });
+
+    const marketingByChannel = operatingCampaigns.map(c => {
+        const growthRate = Number(c.annualGrowthRate);
+        const hasCustomGrowth = Number.isFinite(growthRate);
+        return {
+            name: c.name || 'حملة',
+            channel: c.channel || null,
+            growthRateUsed: hasCustomGrowth ? growthRate : inflation,
+            byYear: Array.from({ length: years }, (_, idx) => {
+                const yearNum = idx + 1;
+                const growth = hasCustomGrowth ? Math.pow(1 + growthRate, yearNum - 1) : Math.pow(1 + inflation, yearNum - 1);
+                return Number(c.monthly || 0) * 12 * growth;
+            })
+        };
+    });
+
     // التكاليف الثابتة الشهرية المعرفة على مستوى كل خدمة
     const annualServiceFixed = serviceItems.reduce((acc, s) => acc + (Number(s.fixedCosts || 0) * 12), 0);
 
@@ -379,7 +455,8 @@ export function calculateStudy(study, overrides) {
         annualDepreciation,
         permanentAnnualDep,
         replaceableDepAtYear,
-        getReplacementCostAtYear
+        getReplacementCostAtYear,
+        replaceableItems
     } = buildDepreciationModel({
         technical,
         techResources,
@@ -390,6 +467,17 @@ export function calculateStudy(study, overrides) {
         establishmentAmortization,
         establishmentAmortAtYear
     });
+
+    // جدول إهلاك مسمّى لكل أصل قابل للإحلال (معدات/أثاث/موارد تقنية) — replaceableItems
+    // كانت داخلية فقط (تُستخدم لحساب replaceableDepAtYear المجمَّع)، الآن تُعرض كجدول
+    // بقيمة إهلاك سنوية لكل أصل حتى انتهاء عمره الافتراضي، بدل رقم فئة واحد مجمَّع.
+    const assetSchedule = toArray(replaceableItems).map(it => ({
+        name: it.name,
+        category: it.category,
+        annualDepreciation: it.dep,
+        usefulLifeYears: it.life || null,
+        byYear: Array.from({ length: years }, (_, idx) => (it.life > 0 && (idx + 1) <= it.life) ? it.dep : 0)
+    }));
 
     let totalCapex = Object.values(capexBreakdown).reduce((a, b) => a + b, 0);
     if (capexMult !== 1) totalCapex *= capexMult;
@@ -634,10 +722,13 @@ export function calculateStudy(study, overrides) {
         const totalVariableCosts = (opVC + nonOpVC + logisticsVC) * opexMult;
         const grossProfit = totalRevenue - totalVariableCosts;
 
-        // المصاريف الثابتة تتضخم مع الزمن
-        const payroll = annualPayroll * costInflation * (1 - getSaving('HR'));
+        // المصاريف الثابتة تتضخم مع الزمن — الرواتب والتسويق تدعمان الآن معدل نمو مخصص لكل
+        // بند (salaryGrowthRate/annualGrowthRate)؛ عند غيابه تتصرف كل بند بالضبط كما كان
+        // (costInflation الموحّد)، فتُنتج payrollAtYear/marketingAtYear نفس annualPayroll*
+        // costInflation و annualMarketing*costInflation السابقتين حرفياً (توافق رجعي مضمون).
+        const payroll = payrollAtYear(i, costInflation) * (1 - getSaving('HR'));
         const rentAndAdmin = (annualLogisticsFixed + annualAdmin) * costInflation * (1 - getSaving('AdminLogistics'));
-        const mkt = annualMarketing * costInflation * (1 - getSaving('Marketing'));
+        const mkt = marketingAtYear(i, costInflation) * (1 - getSaving('Marketing'));
         const svcFixed = annualServiceFixed * costInflation;
 
         // الطوارئ التشغيلية المخفية (كان يقرأ SECTIONS.FINANCIAL غير الموجود → صفر دائماً)
@@ -929,6 +1020,7 @@ export function calculateStudy(study, overrides) {
     let scenarios = null;
     let loanSchedule = null;
     let balanceSheets = [];
+    let ratios = [];
     let tornado = [];
     if (!overrides) {
         if (loanScheduleData) {
@@ -952,6 +1044,12 @@ export function calculateStudy(study, overrides) {
                 fundingGap
             }, years);
         } catch (_) { balanceSheets = []; }
+
+        try {
+            // مكتبة النسب المالية (سيولة/مديونية/نشاط/ربحية لكل سنة) — إضافية بالكامل،
+            // تُبنى من قائمة الدخل والميزانية المحسوبتين أعلاه، بلا أي إعادة حساب.
+            ratios = buildFinancialRatios(incomeStatement, balanceSheets);
+        } catch (_) { ratios = []; }
 
         const runCase = (ov) => {
             try {
@@ -1093,6 +1191,10 @@ export function calculateStudy(study, overrides) {
         tornado,
         loanSchedule,
         balanceSheets,
+        ratios,
+        assetSchedule,
+        payrollByPosition,
+        marketingByChannel,
         saudization,
         capacityCheck,
         cashCycle,

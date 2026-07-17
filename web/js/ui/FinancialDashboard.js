@@ -144,6 +144,20 @@ export class FinancialDashboard {
             : (Number.isFinite(indicators.breakEvenUnits) ? indicators.breakEvenUnits / 12 : null);
         const breakevenDisplay = breakevenMonthly != null ? Math.round(breakevenMonthly) : '—';
 
+        // النسب المالية (سيولة/ملاءة/ربحية) — إضافة إضافية بحتة من engine.js (result.ratios)،
+        // سنة أولى فقط لهذه اللوحة؛ null تعني «غير قابلة للحساب» فتُعرض كشرطة لا صفر/رقم منفجر.
+        const ratiosY1 = this.results.ratios?.[0] || {};
+        const currentRatioDisplay = Number.isFinite(ratiosY1.currentRatio) ? `${ratiosY1.currentRatio.toFixed(2)}x` : '—';
+        const currentRatioSentiment = !Number.isFinite(ratiosY1.currentRatio) ? 'neutral'
+            : (ratiosY1.currentRatio >= 1.5 ? 'positive' : (ratiosY1.currentRatio < 1 ? 'negative' : 'neutral'));
+        const debtRatioDisplay = Number.isFinite(ratiosY1.debtRatio) ? `${(ratiosY1.debtRatio * 100).toFixed(1)}%` : '—';
+        const debtRatioSentiment = !Number.isFinite(ratiosY1.debtRatio) ? 'neutral'
+            : (ratiosY1.debtRatio < 0.6 ? 'positive' : (ratiosY1.debtRatio > 0.85 ? 'negative' : 'neutral'));
+        const roaDisplay = Number.isFinite(ratiosY1.roa) ? `${(ratiosY1.roa * 100).toFixed(1)}%` : '—';
+        const roaSentiment = !Number.isFinite(ratiosY1.roa) ? 'neutral' : (ratiosY1.roa > 0 ? 'positive' : 'negative');
+        const roeDisplay = Number.isFinite(ratiosY1.roe) ? `${(ratiosY1.roe * 100).toFixed(1)}%` : '—';
+        const roeSentiment = !Number.isFinite(ratiosY1.roe) ? 'neutral' : (ratiosY1.roe > 0 ? 'positive' : 'negative');
+
         // تدقيق 2026-07-08 (ملاحظة عالية #28): كل بطاقات kpi-card كانت تستخدم تراكباً
         // أبيض ثابتاً بدل var(--c-surface-2) — فتبدو غامقة/متناقضة على أرضية الثيم الفاتح
         // (ورقي دافئ لا رمادي).
@@ -246,6 +260,14 @@ export class FinancialDashboard {
                 ${this.renderKPICard('IRR', 'معدل العائد الداخلي', this.formatPercent(indicators.irr), indicators.irr >= decisionThresholds.minIRR ? 'positive' : 'negative')}
                 ${this.renderKPICard('PAYBACK', 'فترة الاسترداد', (indicators.paybackPeriod != null && Number.isFinite(indicators.paybackPeriod)) ? indicators.paybackPeriod.toFixed(1) + ' سنة' : 'غير قابل للاسترداد خلال فترة الدراسة', 'neutral')}
                 ${this.renderKPICard('ROI', 'العائد على الاستثمار', this.formatPercent(indicators.roi), indicators.roi >= decisionThresholds.minROI ? 'positive' : 'negative')}
+            </div>
+
+            <!-- النسب المالية (سنة 1) — سيولة/ملاءة/ربحية من engine.js result.ratios (مخفى في العرض المبسّط) -->
+            <div id="ratiosKpiGrid" class="indicators-grid ${isSimpleView ? 'hidden' : ''}">
+                ${this.renderKPICard(null, 'نسبة التداول', currentRatioDisplay, currentRatioSentiment)}
+                ${this.renderKPICard(null, 'نسبة الدين إلى الأصول', debtRatioDisplay, debtRatioSentiment)}
+                ${this.renderKPICard(null, 'العائد على الأصول', roaDisplay, roaSentiment)}
+                ${this.renderKPICard(null, 'العائد على حقوق الملكية', roeDisplay, roeSentiment)}
             </div>
 
             <!-- لوحة مؤشرات القرار (تعادل، عائد، DSCR) - مدارج -->

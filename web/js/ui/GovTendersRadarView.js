@@ -25,11 +25,11 @@ export class GovTendersRadarView {
                             <svg class="ic w-6 h-6 text-emerald-500" aria-hidden="true"><use href="#i-briefcase"/></svg>
                             رادار المناقصات والعطاءات الحكومية
                         </h2>
-                        <p class="text-white/60 text-sm">تم ربط نشاطك التجاري آلياً. اكتشف المناقصات المتوافقة مع مشروعك وقدم عروضك بضغطة زر.</p>
+                        <p class="text-white/60 text-sm">أمثلة توضيحية لشكل مناقصات متوافقة مع مشروعك — الربط الفعلي بمنصة اعتماد الحكومية غير متاح حالياً.</p>
                     </div>
                     <div class="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
-                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
-                        <span class="text-xs text-white/80 font-bold">متصل بـ (منصة اعتماد) افتراضياً</span>
+                        <div class="w-2 h-2 rounded-full bg-amber-500"></div>
+                        <span class="text-xs text-white/80 font-bold">بيانات تجريبية (Demo)</span>
                     </div>
                 </div>
 
