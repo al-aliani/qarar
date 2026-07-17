@@ -21,6 +21,14 @@ export class PDFGenerator {
      * Open print-ready report in new window (user chooses "Save as PDF").
      * @param {{lang?: 'ar'|'en'}} [options] - lang يُمرَّر لـReportGenerator (النطاق: القوائم
      * المالية والمؤشرات فقط تُصدَّر بعناوين إنجليزية عند 'en' — لا الأقسام النصية للمستخدم).
+     *
+     * تدقيق 2026-07-17: أُعيد هذا الأسلوب بعد تجربة استبداله بـhtml2pdf.js (raster عبر
+     * html2canvas). ذاك الاستبدال كان يفقد أمرين حقيقيين لتقرير رسمي مدفوع: (1) نص
+     * قابل للتحديد/البحث/النسخ يتحول لصورة JPEG مضمّنة، (2) قواعد `page-break-inside:
+     * avoid`/`.page-break` الموجودة أصلاً في ReportGenerator.js (مصمَّمة لمحرك الطباعة
+     * الأصلي) لا معنى لها إطلاقاً لـhtml2canvas — يُقصّ الجدول الطويل من المنتصف عند
+     * حد الصفحة بلا أي احترام لهذه القواعد لأن html2pdf().set() هنا لم يُفعّل خيار
+     * pagebreak أصلاً. الطباعة الأصلية تحترم هذه القواعد فعلياً عبر محرك المتصفح.
      */
     async generate(options = {}) {
         const state = this._getState();

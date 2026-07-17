@@ -205,30 +205,37 @@ export function calculateStudyCompleteness(studyData) {
     }
 
     // 10. Marketing (8%)
+    // تدقيق 2026-07-17: مجموع نقاط هذا القسم كان 7.5 فقط بينما وزنه المعلن 9 —
+    // دراسة مكتملة 100% في كل بند هنا كانت تسقف عند 83.3% من وزن القسم، فيصير
+    // 100% الإجمالي غير قابل للتحقق رياضياً مهما اكتملت الدراسة. النقاط أدناه
+    // مُعادة الموازنة (×1.2) لتجمع 9 بالضبط دون تغيير الترتيب النسبي للأهمية.
     {
         const m = studyData.marketing || {};
         let score = 0;
         const missing = [];
 
-        if (m.competitors?.length > 0) score += 2; else missing.push('المنافسين');
-        if (m.campaigns?.length > 0) score += 1.5; else missing.push('الحملات التسويقية');
+        if (m.competitors?.length > 0) score += 2.4; else missing.push('المنافسين');
+        if (m.campaigns?.length > 0) score += 1.8; else missing.push('الحملات التسويقية');
         const mix = m.marketingMix || {};
-        if (mix.product || mix.price || mix.place || mix.promotion) score += 2; else missing.push('المزيج التسويقي (4P)');
-        if (m.swot?.strengths || m.swot?.weaknesses) score += 0.5;
-        if (m.marketAnalysis?.marketSize > 0 || m.marketAnalysis?.growthRate > 0) score += 0.5;
-        if ((m.marketAnalysis?.historicalData || []).length > 0) score += 0.5;
-        if ((m.supplyDemandBalance || []).length > 0) score += 0.5;
+        if (mix.product || mix.price || mix.place || mix.promotion) score += 2.4; else missing.push('المزيج التسويقي (4P)');
+        if (m.swot?.strengths || m.swot?.weaknesses) score += 0.6;
+        if (m.marketAnalysis?.marketSize > 0 || m.marketAnalysis?.growthRate > 0) score += 0.6;
+        if ((m.marketAnalysis?.historicalData || []).length > 0) score += 0.6;
+        if ((m.supplyDemandBalance || []).length > 0) score += 0.6;
 
         addDetail('marketing', Math.min(score, weights.marketing), weights.marketing, missing);
     }
 
     // 11. Market Sizing (7%)
+    // تدقيق 2026-07-17: مجموع نقاط هذا القسم كان 7 فقط بينما وزنه المعلن 8 — نفس خلل
+    // قسم التسويق أعلاه. رُفعت نقطة الشرائح من 2.5 إلى 3.5 (البند الأهم هنا) بدل توزيع
+    // كسري على كل البنود، فيصبح المجموع 8 بالضبط.
     {
         const ms = studyData.marketSizing || {};
         let score = 0;
         const missing = [];
 
-        if (ms.segments?.length > 0) score += 2.5; else missing.push('شرائح العملاء');
+        if (ms.segments?.length > 0) score += 3.5; else missing.push('شرائح العملاء');
         if (ms.tam?.value > 0) score += 1; else missing.push('TAM');
         if (ms.sam?.value > 0) score += 1; else missing.push('SAM');
         if (ms.som?.value > 0) score += 1; else missing.push('SOM');

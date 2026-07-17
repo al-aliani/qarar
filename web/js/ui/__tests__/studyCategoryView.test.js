@@ -22,7 +22,12 @@ describe('StudyCategoryView', () => {
         return { view, onNavigateCategory };
     }
 
-    it('classifies all 42 sections exactly once in the intended order', () => {
+    // تدقيق 2026-07-17: أُعيد ترتيب SIDEBAR_SECTIONS عمداً (أهمية + تتابعية، قرار صاحب
+    // المنتج) — التصنيفات الثلاثة الأخف وزناً في نسبة الاكتمال (خطة التنفيذ/الأدلة
+    // والمرفقات/النتائج والمتابعة) انتقلت لنهاية المصفوفة، فلم يعد ترتيب الإعلان
+    // مطابقاً لتصاعد أرقام الخطوات. الثابت الحقيقي الذي يهم هنا يبقى: كل خطوة من الـ42
+    // مصنَّفة مرة واحدة بالضبط بلا فجوة ولا تكرار — لا ترتيب مصفوفة SIDEBAR_SECTIONS نفسه.
+    it('classifies all 42 sections exactly once with no gaps or overlap', () => {
         const classifiedIndexes = SIDEBAR_SECTIONS.flatMap(category => {
             const indexes = [];
             for (let index = category.range[0]; index <= category.range[1]; index++) indexes.push(index);
@@ -30,8 +35,8 @@ describe('StudyCategoryView', () => {
         });
 
         expect(SIDEBAR_SECTIONS).toHaveLength(8);
-        expect(classifiedIndexes).toEqual(STEPS.map((_, index) => index));
         expect(new Set(classifiedIndexes).size).toBe(42);
+        expect([...classifiedIndexes].sort((a, b) => a - b)).toEqual(STEPS.map((_, index) => index));
         expect(STEPS.slice(0, 7).map(step => step.label)).toEqual([
             'الدراسة المبدئية',
             'مقارنة الأفكار',

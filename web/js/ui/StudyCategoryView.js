@@ -1,7 +1,6 @@
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { STEPS } from '../core/wizardSteps.js';
 import { enhanceFieldHelp } from './components/FieldHelpEnhancer.js';
-import { attachToolReport } from './components/ToolReport.js';
 import { Wizard } from './Wizard.js';
 import { renderStepComponent } from './stepComponentRegistry.js';
 import { trackEvent } from '../utils/analytics.js';
@@ -330,7 +329,5 @@ export class StudyCategoryView {
         trackEvent('wizard_step_view', { stepId: step.id });
         const content = document.getElementById(containerId);
         if (content) enhanceFieldHelp(content);
-        // خانة «إصدار تقرير» للأدوات التحليلية/المختلطة (تُتجاهل لخطوات الإدخال).
-        attachToolReport(step, containerId, this.store);
     }
 }

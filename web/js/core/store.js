@@ -635,6 +635,7 @@ class StudyStore {
      */
     async _syncToCloud(data) {
         try {
+            this._notifySaveStatus({ saving: true });
             const { PersistenceService } = await import('../services/PersistenceService.js');
             const projectId = this.state?.projectInfo?.id || this.state?.id || crypto.randomUUID();
 

@@ -82,6 +82,20 @@
   color: var(--c-gold-500);
 }
 
+/* شارة "إضافي" — تصنيفات وزنها ضعيف/معدوم في نسبة اكتمال الدراسة (studyCompleteness.js).
+   ألوان محايدة عبر متغيرات الثيم القائمة في هذا الملف (مثبتة التباين بالفعل في الوضعين). */
+.category-stepper__badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+  background: var(--c-surface-2);
+  color: var(--c-text-muted);
+  border: 1px solid var(--c-border);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .category-stepper { display: none !important; }
 }

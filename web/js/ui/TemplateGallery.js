@@ -79,51 +79,38 @@ export class TemplateGallery {
     }
 
     render() {
-        const expertTemplates = getExpertTemplates();
-        const emptyTemplate = this.templates[0];
         this.overlay.innerHTML = `
             <div class="modal-card template-modal template-gallery animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="template-gallery-title">
                 <div class="modal-header">
                     <h3 id="template-gallery-title">
                         <svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg>
-                        اختر نقطة البداية
+                        كيف تود إعداد دراستك؟
                     </h3>
                     <button class="btn-close" type="button" aria-label="إغلاق النافذة">×</button>
                 </div>
                 <div class="modal-body">
-                    <div class="tg-hero">
-                        <span class="tg-hero__icon" aria-hidden="true"><svg class="ic"><use href="#i-doc"/></svg></span>
-                        <h4 class="tg-hero__title">${escapeHtml(emptyTemplate.name)}</h4>
-                        <p class="tg-hero__desc">القوالب القطاعية الكاملة ستكون فقط من مختصين معتمدين لاحقاً. ${escapeHtml(emptyTemplate.description)}</p>
-                        <ul class="tg-benefits">
-                            <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> بياناتك الفعلية من أول خطوة</li>
-                            <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> عدّل أي قسم لاحقاً بحرية</li>
-                            <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> بلا أرقام افتراضية جاهزة</li>
-                        </ul>
-                        <button type="button" class="btn btn--primary tg-hero__cta" id="btnStartBlank">ابدأ الآن ←</button>
+                    
+                    <!-- الخيار الأول: طلب مستشار -->
+                    <div class="tg-hero mb-3" style="background: var(--c-surface-2); border: 1px solid var(--c-border); text-align: right; align-items: flex-start; padding: 24px;">
+                        <span class="tg-hero__icon" aria-hidden="true" style="margin-bottom: 16px; background: var(--c-primary-light); color: var(--c-primary);"><svg class="ic"><use href="#i-star"/></svg></span>
+                        <h4 class="tg-hero__title">طلب خدمة مستشار أو أخصائي</h4>
+                        <p class="tg-hero__desc" style="text-align: right;">دع خبراؤنا المعتمدون يقومون بإعداد دراسة جدوى متكاملة واحترافية لمشروعك من الألف إلى الياء، لتتفرغ أنت لإدارة أعمالك.</p>
+                        <button type="button" class="btn btn--primary tg-hero__cta" id="btnRequestConsultant" style="margin-top: 16px; align-self: flex-start;">اطلب استشارة الآن ←</button>
                     </div>
 
-                    <p class="tg-rows-label">موارد إضافية</p>
-                    <div class="tg-rows">
-                        ${expertTemplates.length ? expertTemplates.map(t => `
-                            <button type="button" class="tg-row tg-row--clickable btn-apply-expert-template" data-id="${escapeAttribute(t.id)}" aria-label="${escapeAttribute(t.title)}: ${escapeAttribute(t.expertName)} — ${escapeAttribute(t.specialty)} — ${Number(t.yearsExperience) || 0} سنة خبرة">
-                                <span class="tg-row__icon" aria-hidden="true"><svg class="ic"><use href="#i-star"/></svg></span>
-                                <span class="tg-row__body">
-                                    <span class="tg-row__title">${escapeHtml(t.title)}</span>
-                                    <span class="tg-row__desc">${escapeHtml(t.expertName)} — ${escapeHtml(t.specialty)} — ${Number(t.yearsExperience) || 0} سنة خبرة</span>
-                                </span>
-                            </button>
-                        `).join('') : `
-                            <div class="tg-row tg-row--muted">
-                                <span class="tg-row__icon" aria-hidden="true"><svg class="ic"><use href="#i-star"/></svg></span>
-                                <span class="tg-row__body">
-                                    <span class="tg-row__title">قوالب المختصين المعتمدة</span>
-                                    <span class="tg-row__desc">لا توجد قوالب معتمدة حالياً — تظهر هنا لاحقاً مع اسم الخبير وسنوات خبرته وسعرها.</span>
-                                </span>
-                                <span class="tg-row__tag">قريباً</span>
-                            </div>
-                        `}
+                    <div class="flex-center my-4 text-muted text-sm" style="position: relative;">
+                        <hr style="width: 100%; position: absolute; top: 50%; z-index: 1; border-color: var(--c-border);">
+                        <span style="background: var(--c-bg-card); padding: 0 12px; position: relative; z-index: 2;">أو</span>
                     </div>
+
+                    <!-- الخيار الثاني: استكمال يدوياً -->
+                    <div class="tg-hero" style="background: transparent; border: 1px solid var(--c-border); text-align: right; align-items: flex-start; padding: 24px;">
+                        <span class="tg-hero__icon" aria-hidden="true" style="margin-bottom: 16px; background: var(--c-surface-2); color: var(--c-text-main);"><svg class="ic"><use href="#i-code"/></svg></span>
+                        <h4 class="tg-hero__title">استكمال يدوياً (بمساعدة الذكاء الاصطناعي)</h4>
+                        <p class="tg-hero__desc" style="text-align: right;">قم ببناء دراستك بنفسك خطوة بخطوة باستخدام أدوات المنصة الذكية والمحرك المالي.</p>
+                        <button type="button" class="btn btn--secondary tg-hero__cta" id="btnStartBlank" style="margin-top: 16px; align-self: flex-start;">ابدأ إدخال البيانات ←</button>
+                    </div>
+
                 </div>
             </div>
         `;
@@ -132,6 +119,13 @@ export class TemplateGallery {
         this.overlay.onclick = (e) => { if (e.target === this.overlay) this.close(); };
 
         this.overlay.querySelector('#btnStartBlank').onclick = () => this.renderBlankAttributionForm();
+        
+        this.overlay.querySelector('#btnRequestConsultant').onclick = async () => {
+            this.close();
+            const { ConsultationModal } = await import('./ConsultationModal.js');
+            const modal = new ConsultationModal('consultationModalOverlay', this.store);
+            modal.open();
+        };
 
         this.overlay.querySelectorAll('.btn-apply-expert-template').forEach(btn => {
             btn.onclick = async () => {
@@ -215,8 +209,8 @@ export class TemplateGallery {
                 });
             };
         });
-        // نضبط الوضع والاعتماد قبل بثّ project-loaded كي يُرسم التطبيق بالوضع الصحيح مباشرة
-        const createBlank = async () => {
+        // نضبط الوضع والاعتماد قبل بدء معالج التأسيس
+        const startWizard = async () => {
             const clientName = body.querySelector('#blankClientName')?.value.trim() || '';
             const preparedBy = body.querySelector('#blankPreparedBy')?.value.trim() || '';
             if (this.store.reset) await this.store.reset();
@@ -225,14 +219,154 @@ export class TemplateGallery {
                 this.store.updatePath('projectInfo', 'clientName', clientName);
                 this.store.updatePath('projectInfo', 'preparedBy', preparedBy);
             }
+            
+            // بدلاً من إغلاق النافذة وفتح لوحة التحكم فوراً، ننتقل لمعالج التأسيس
+            this.renderFoundationWizard(1);
+        };
+        body.querySelector('#btnBlankCreate').onclick = () => startWizard();
+        body.querySelector('#btnBlankBack').onclick = () => this.render();
+        body.querySelector('.mode-card.active')?.focus();
+    }
+
+    renderFoundationWizard(stepIndex = 1) {
+        const body = this.overlay.querySelector('.modal-body');
+        if (!body) return;
+
+        // تهيئة المتغيرات المؤقتة إذا كانت غير موجودة
+        if (!this.wizardData) {
+            this.wizardData = {
+                projectName: '',
+                description: '',
+                industry: '',
+                products: '',
+                initialCapital: ''
+            };
+        }
+
+        const renderStepContent = () => {
+            if (stepIndex === 1) {
+                return `
+                    <div class="form-group mb-3">
+                        <label>اسم المشروع</label>
+                        <input type="text" id="fw_projectName" class="input" placeholder="مثال: مقهى الشروق" value="${escapeAttribute(this.wizardData.projectName)}" autofocus>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label>وصف الفكرة بإيجاز</label>
+                        <textarea id="fw_description" class="input" placeholder="مثال: مقهى مختص يقدم قهوة عضوية..." rows="3">${escapeHtml(this.wizardData.description)}</textarea>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label>القطاع (مجال العمل)</label>
+                        <input type="text" id="fw_industry" class="input" placeholder="مثال: الأغذية والمشروبات" value="${escapeAttribute(this.wizardData.industry)}">
+                    </div>
+                `;
+            } else if (stepIndex === 2) {
+                return `
+                    <div class="form-group mb-4">
+                        <label>ماذا تبيع؟ (المنتجات أو الخدمات الرئيسية)</label>
+                        <p class="text-sm text-muted mb-2">اذكر أهم 3 إلى 5 منتجات أو خدمات تعتمد عليها إيراداتك.</p>
+                        <textarea id="fw_products" class="input" placeholder="مثال: 1. قهوة حارة&#10;2. قهوة باردة&#10;3. حلى مخبوزات" rows="5">${escapeHtml(this.wizardData.products)}</textarea>
+                    </div>
+                `;
+            } else if (stepIndex === 3) {
+                return `
+                    <div class="form-group mb-4">
+                        <label>رأس المال التقديري المتوفر (اختياري)</label>
+                        <p class="text-sm text-muted mb-2">كم المبلغ التقريبي الذي تخطط لاستثماره لتأسيس هذا المشروع؟</p>
+                        <input type="number" id="fw_initialCapital" class="input" placeholder="مثال: 150000" value="${escapeAttribute(this.wizardData.initialCapital)}">
+                    </div>
+                `;
+            }
+        };
+
+        const title = stepIndex === 1 ? '1. فكرة المشروع' : stepIndex === 2 ? '2. المنتجات والخدمات' : '3. الاستثمار المبدئي';
+
+        body.innerHTML = `
+            <div class="foundation-wizard">
+                <div class="wizard-progress mb-4" style="display:flex; gap:8px;">
+                    <div style="flex:1; height:4px; border-radius:2px; background: ${stepIndex >= 1 ? 'var(--c-primary)' : 'var(--c-border)'}"></div>
+                    <div style="flex:1; height:4px; border-radius:2px; background: ${stepIndex >= 2 ? 'var(--c-primary)' : 'var(--c-border)'}"></div>
+                    <div style="flex:1; height:4px; border-radius:2px; background: ${stepIndex >= 3 ? 'var(--c-primary)' : 'var(--c-border)'}"></div>
+                </div>
+                
+                <h4 class="mb-3">${title}</h4>
+                
+                <div class="wizard-step-content">
+                    ${renderStepContent()}
+                </div>
+
+                <div class="flex-between gap-3 mt-4 pt-3" style="border-top:1px solid var(--c-border)">
+                    <button type="button" class="btn btn--ghost" id="fw_btnBack">${stepIndex === 1 ? 'تخطي التأسيس' : 'رجوع'}</button>
+                    <button type="button" class="btn btn--primary" id="fw_btnNext">${stepIndex === 3 ? 'ابدأ العمل على دراستي ←' : 'التالي ←'}</button>
+                </div>
+            </div>
+        `;
+
+        // دالة حفظ البيانات الحالية
+        const saveCurrentStepData = () => {
+            if (stepIndex === 1) {
+                this.wizardData.projectName = body.querySelector('#fw_projectName')?.value || '';
+                this.wizardData.description = body.querySelector('#fw_description')?.value || '';
+                this.wizardData.industry = body.querySelector('#fw_industry')?.value || '';
+            } else if (stepIndex === 2) {
+                this.wizardData.products = body.querySelector('#fw_products')?.value || '';
+            } else if (stepIndex === 3) {
+                this.wizardData.initialCapital = body.querySelector('#fw_initialCapital')?.value || '';
+            }
+        };
+
+        const finishWizard = async () => {
+            saveCurrentStepData();
+            
+            // حقن البيانات في الـ Store
+            if (this.wizardData.projectName) this.store.updatePath('projectInfo', 'name', this.wizardData.projectName);
+            if (this.wizardData.description) this.store.updatePath('projectInfo', 'description', this.wizardData.description);
+            if (this.wizardData.industry) this.store.updatePath('projectInfo', 'industry', this.wizardData.industry);
+            
+            if (this.wizardData.products) {
+                // محاولة ذكية لتقسيم النص إلى قائمة منتجات إذا استخدم أسطر جديدة
+                const lines = this.wizardData.products.split('\\n').map(l => l.replace(/^\\d+[.-]?\\s*/, '').trim()).filter(Boolean);
+                if (lines.length > 0) {
+                    const productsList = lines.map(name => ({ id: Date.now().toString() + Math.random(), name, type: 'product' }));
+                    this.store.updatePath('projectInfo', 'products', productsList);
+                } else {
+                    this.store.updatePath('projectInfo', 'products', [{ id: Date.now().toString(), name: this.wizardData.products, type: 'product' }]);
+                }
+            }
+
+            if (this.wizardData.initialCapital) {
+                this.store.updatePath('financing', 'equity', Number(this.wizardData.initialCapital) || 0);
+            }
+
+            if (this.store.flush) await this.store.flush();
+            trackEvent('study_created', { source: 'blank_with_wizard' });
+            window.dispatchEvent(new CustomEvent('project-loaded', { detail: { source: 'blank', name: this.wizardData.projectName || 'مشروع جديد' } }));
+            this.close();
+        };
+
+        const skipWizard = async () => {
             if (this.store.flush) await this.store.flush();
             trackEvent('study_created', { source: 'blank' });
             window.dispatchEvent(new CustomEvent('project-loaded', { detail: { source: 'blank', name: 'مشروع جديد' } }));
             this.close();
         };
-        body.querySelector('#btnBlankCreate').onclick = () => createBlank();
-        body.querySelector('#btnBlankBack').onclick = () => this.render();
-        body.querySelector('.mode-card.active')?.focus();
+
+        body.querySelector('#fw_btnNext').onclick = () => {
+            if (stepIndex < 3) {
+                saveCurrentStepData();
+                this.renderFoundationWizard(stepIndex + 1);
+            } else {
+                finishWizard();
+            }
+        };
+
+        body.querySelector('#fw_btnBack').onclick = () => {
+            if (stepIndex > 1) {
+                saveCurrentStepData();
+                this.renderFoundationWizard(stepIndex - 1);
+            } else {
+                skipWizard();
+            }
+        };
     }
 
     async selectTemplate(id) {

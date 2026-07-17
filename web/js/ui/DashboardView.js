@@ -10,7 +10,6 @@ import { PRICING_DISPLAY } from '../config.js';
 import { escapeHtml } from '../utils/escape.js';
 import { calculateStudyCompleteness } from '../utils/studyCompleteness.js';
 import { FundingSimulator } from './widgets/FundingSimulator.js';
-import { FounderCardGenerator } from './widgets/FounderCardGenerator.js';
 import { SensitivityWidget } from './widgets/SensitivityWidget.js';
 import { ReadyStudiesView } from './ReadyStudiesView.js';
 import { DatabaseFilesView } from './DatabaseFilesView.js';
@@ -1061,7 +1060,7 @@ export class DashboardView {
 
                 <div class="dv-project__actions">
                     <button class="btn btn--sm btn--secondary dv-project__open btn-open" data-id="${project.id}">فتح</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-share" data-id="${project.id}" title="عرض المستثمر (مشاركة)">${icon('i-share')}</button>
+                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-share" data-id="${project.id}" title="تصدير الدراسة (PDF/Excel/Word)">${icon('i-share')}</button>
                     <button class="btn btn--sm btn--ghost dv-iconbtn btn-duplicate" data-id="${project.id}" title="نسخ المشروع">${icon('i-clipboard')}</button>
                     <button class="btn btn--sm btn--ghost dv-iconbtn dv-iconbtn--danger btn-delete" data-id="${project.id}" title="نقل لسلة المحذوفات">${icon('i-trash')}</button>
                 </div>
@@ -1439,18 +1438,19 @@ export class DashboardView {
         bindToolSearch('#toolsSearch', '#toolsAndEngines');
         bindToolSearch('#supportToolsSearch', '#studyToolkits');
 
-        // Share Button (Founder Card)
+        // Export Button (Project Card) — تدقيق 2026-07-17: كان يفتح "بطاقة رائد الأعمال" عبر
+        // حاوية #founder-card-root غير موجودة إطلاقاً في index.html (FounderCardGenerator.render
+        // يتحقق من العنصر ويخرج بصمت إن فُقد) — الزر كان معطلاً كلياً بلا أي خطأ ظاهر للمستخدم.
+        // الآن يحمّل الدراسة المختارة فعلياً ثم يفتح قائمة التصدير الحقيقية (PDF/Excel/Word...).
         this.container.querySelectorAll('.btn-share').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const id = btn.dataset.id;
-                const allProjects = this.lastRenderedProjects || [];
-                const project = allProjects.find(p => p.id === id);
-
-                if (project) {
-                    new FounderCardGenerator('founder-card-root', this.store).render(project);
-                } else {
-                    toast.info('جاري إعداد البطاقة...');
+                if (!id) return;
+                await this.loadProject(id);
+                if (this.store.get()?.projectInfo?.id === id) {
+                    const { ExportMenu } = await import('./ExportMenu.js');
+                    new ExportMenu('exportMenuOverlay', this.store).open();
                 }
             });
         });

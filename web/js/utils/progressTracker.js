@@ -51,7 +51,8 @@ export class ProgressTracker {
      * Get progress percentage
      */
     getProgress() {
-        const percentage = (this.completedSteps.size / this.totalSteps) * 100;
+        let percentage = (this.completedSteps.size / this.totalSteps) * 100;
+        percentage = Math.min(percentage, 100);
         return {
             percentage: Math.round(percentage),
             completed: this.completedSteps.size,
@@ -126,17 +127,33 @@ export class ProgressTracker {
      * Auto-detect completion based on store data
      */
     detectCompletion(storeData, stepConfig) {
-        // أعد بناء الاكتمال المستنتج كي لا تبقى خطوة «مكتملة» بعد حذف بياناتها،
-        // مع الحفاظ فقط على الخطوات التي وُسِمت صراحةً عبر markCompleted().
         this.completedSteps = new Set(this.manualCompletedSteps);
-        // مرجع «فارغ» واحد لكل دورة كشف — createEmptyStudy() هو مصدر الحقيقة الوحيد
-        // لشكل القسم الفارغ (يُستخدم أيضاً في hasMeaningfulUnsavedChanges بـapp.js).
         const blankStudy = createEmptyStudy();
+        
+        // إحصاء الخطوات القابلة للتتبع فعلياً (trackable) لاستثنائها من المقام إن لم تكن كذلك
+        let trackableCount = 0;
+
         stepConfig.forEach((step, index) => {
+            // الخطوة تعتبر قابلة للتتبع إذا كانت تقبل إدخال بيانات (لها sectionKey يطابق الـ store)
+            // أو لها جداول صريحة. الخطوات الاستعراضية والأدوات التحليلية لا تملك بيانات خاصة بها في الـ store عادة.
+            const sectionKey = step.dataSection || step.id;
+            const isTrackable = (step.tables && step.tables.length > 0) || (sectionKey && blankStudy[sectionKey] !== undefined);
+            
+            // استثناء الخطوات التي تقع في تصنيفات "إضافية" (optional: true) إذا أردنا ذلك، 
+            // لكن يكفينا حالياً استثناء الخطوات غير القابلة للقياس (الأدوات/التحليلات) لضمان الوصول لـ 100%
+            if (isTrackable) {
+                trackableCount++;
+            }
+
             if (this.isStepComplete(step, storeData, blankStudy)) {
                 this.completedSteps.add(index);
             }
         });
+
+        // تحديث إجمالي الخطوات ليعكس فقط الخطوات ذات المعنى الإدخالي
+        if (trackableCount > 0) {
+            this.totalSteps = trackableCount;
+        }
 
         return this.getProgress();
     }

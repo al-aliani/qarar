@@ -127,18 +127,27 @@ export class StudyJourney {
             const isDone = localIndex < context.localIndex;
             const icon = CATEGORY_ICON[step.id] || 'i-folder';
             const state = isActive ? 'is-active' : isDone ? 'is-done' : 'is-upcoming';
+            // تصنيفات وزنها ضعيف/معدوم في نسبة اكتمال الدراسة (studyCompleteness.js) —
+            // شارة "إضافي" فقط للتوضيح، لا تُخفي التصنيف ولا تمنع الوصول إليه. step.note
+            // (مثال: "النتائج والمتابعة") توضّح أن الوزن الضعيف كمُدخل لا يعني أنها غير
+            // مهمة — فيها القرار النهائي والتصدير.
+            const titleAttr = step.note ? `${step.label} — ${step.note}` : step.label;
+            const badge = step.optional
+                ? `<span class="category-stepper__badge" title="${escapeHtml(step.note || 'قسم إضافي — وزنه ضعيف في نسبة اكتمال الدراسة')}">إضافي</span>`
+                : '';
             return `
                 <button type="button"
                     class="category-stepper__card ${state}"
                     data-study-step="${context.absoluteIndices[localIndex]}"
                     ${isActive ? 'aria-current="step"' : ''}
-                    title="${escapeHtml(step.label)}">
+                    title="${escapeHtml(titleAttr)}">
                     <span class="category-stepper__icon" aria-hidden="true">${
                         isDone
                             ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>'
                             : `<svg class="ic" aria-hidden="true"><use href="#${icon}"/></svg>`
                     }</span>
                     <span class="category-stepper__label">${escapeHtml(step.label)}</span>
+                    ${badge}
                 </button>`;
         }).join('');
 

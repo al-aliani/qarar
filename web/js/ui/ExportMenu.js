@@ -2,7 +2,7 @@
  * Unified Export Menu (Modal)
  * Provides centralized export options: PDF, Excel, Bank Report, JSON.
  */
-import { PDFGenerator } from '../../export/pdfGenerator.js';
+import { generateNativePDF } from './NativePDFExport.jsx';
 import { ReportGenerator } from '../services/ReportGenerator.js';
 import { BankReportGenerator } from '../../export/BankReportGenerator.js';
 import { MonshaatReportGenerator } from '../../export/MonshaatReportGenerator.js';
@@ -64,7 +64,6 @@ export class ExportMenu {
         // F5 "يحلها" لأنه يعيد تحميل الصفحة). نضبط الكلاس هنا دائماً، بصرف النظر عن مصدر العنصر.
         this.overlay.classList.add('modal-overlay');
         this.store = store;
-        this.pdfGenerator = new PDFGenerator(store);
     }
 
     async open() {
@@ -179,6 +178,7 @@ export class ExportMenu {
                     <p id="export-accelerator-checklist-hint" class="text-xs text-gold mb-2">للتقديم للمسرّعات والحاضنات: راجع قائمة تحقق متطلبات التقديم في صفحة «نصائح المسرّعات» من لوحة التحكم.</p>
                     <p id="export-bank-report-hint" class="text-xs text-gold mb-2">تقرير جاهز للإقراض: اختر «نسخة للممول» أو «تقرير جاهز للإقراض» — ملخص، استخدام القرض، مالي، ضمانات.</p>
                     <p class="text-xs text-gold/90 mb-3 px-3 py-2 rounded-lg border border-gold/20 bg-gold/5" id="export-compliance-sentence">✓ ${BANK_COMPLIANCE_SENTENCE}</p>
+                    <div class="export-category-title mt-4 mb-2 text-gold font-bold">التقارير الأساسية</div>
                     <div class="export-grid">
                         <button type="button" class="export-card" data-type="pdf" aria-label="تصدير تقرير PDF شامل جاهز للطباعة">
                             <div class="icon">📄</div>
@@ -196,14 +196,6 @@ export class ExportMenu {
                             </div>
                         </button>
 
-                        <button type="button" class="export-card" data-type="pptx" aria-label="تصدير عرض تقديمي PowerPoint PPTX">
-                            <div class="icon">📽️</div>
-                            <div class="info">
-                                <h4>PowerPoint (PPTX)</h4>
-                                <p>عرض تقديمي احترافي 7 شرائح للمستثمرين</p>
-                            </div>
-                        </button>
-
                         <button type="button" class="export-card" data-type="word" aria-label="تصدير تقرير Word DOCX">
                             <div class="icon">📝</div>
                             <div class="info">
@@ -211,55 +203,18 @@ export class ExportMenu {
                                 <p>تقرير نصي قابل للتعديل</p>
                             </div>
                         </button>
-
-                        <button type="button" class="export-card" data-type="bank" aria-label="تصدير تقرير التمويل البنكي وتنزيل HTML">
-                            <div class="icon">🏦</div>
+                        
+                        <button type="button" class="export-card" data-type="pptx" aria-label="تصدير عرض تقديمي PowerPoint PPTX">
+                            <div class="icon">📽️</div>
                             <div class="info">
-                                <h4>تقرير التمويل البنكي</h4>
-                                <p>نموذج مخصص لبنك التنمية وجهات التمويل (HTML)</p>
+                                <h4>PowerPoint (PPTX)</h4>
+                                <p>عرض تقديمي 7 شرائح للمستثمرين</p>
                             </div>
                         </button>
+                    </div>
 
-                        <button type="button" class="export-card" data-type="financier" aria-label="نسخة للممول — تقرير جاهز للتمويل PDF">
-                            <div class="icon">📑</div>
-                            <div class="info">
-                                <h4>نسخة للممول</h4>
-                                <p>تقرير جاهز للتمويل: ملخص، مالي، مخاطر، توصية — طباعة PDF</p>
-                            </div>
-                        </button>
-
-                        <button type="button" class="export-card" data-type="review_copy" aria-label="نسخة للمراجعة — للمراجعة من قبل استشاري">
-                            <div class="icon">📋</div>
-                            <div class="info">
-                                <h4>نسخة للمراجعة</h4>
-                                <p>تقرير نظيف للمراجعة من قبل استشاري — أرسلها لمكتبك</p>
-                            </div>
-                        </button>
-
-                        <button type="button" class="export-card" data-type="professional_review" aria-label="نسخة احترافية للمراجعة — هيكل مرقّم وفهرس وإخلاء مسؤولية">
-                            <div class="icon">📑</div>
-                            <div class="info">
-                                <h4>نسخة احترافية للمراجعة</h4>
-                                <p>هيكل أقسام مرقّم وفهرس؛ إخلاء: قابلة للمراجعة من جهة مستقلة — بدون إعلانات</p>
-                            </div>
-                        </button>
-
-                        <button type="button" class="export-card" data-type="lending_ready" aria-label="تقرير جاهز للإقراض — بنك التنمية والمؤسسات التمويلية">
-                            <div class="icon">🏦</div>
-                            <div class="info">
-                                <h4>تقرير جاهز للإقراض</h4>
-                                <p>بنية متوافقة مع متطلبات بنك التنمية الاجتماعية: ملخص، استخدام التمويل، القوائم المالية، الضمانات</p>
-                            </div>
-                        </button>
-
-                        <button type="button" class="export-card" data-type="monshaat" aria-label="تصدير بهيكل متوافق مع متطلبات منشآت">
-                            <div class="icon">📋</div>
-                            <div class="info">
-                                <h4>هيكل متوافق مع منشآت</h4>
-                                <p>تقرير بأقسام وعناوين مطابقة للنموذج الاسترشادي — طباعة PDF</p>
-                            </div>
-                        </button>
-
+                    <div class="export-category-title mt-6 mb-2 text-gold font-bold">للمستثمرين والمسرّعات</div>
+                    <div class="export-grid">
                         <button type="button" class="export-card" data-type="pitch" aria-label="تصدير Pitch Deck كـ PDF">
                             <div class="icon">📽️</div>
                             <div class="info">
@@ -271,48 +226,16 @@ export class ExportMenu {
                         <button type="button" class="export-card" data-type="investor_one_pager" aria-label="عرض للمستثمر/المسرّعة — صفحة واحدة">
                             <div class="icon">📄</div>
                             <div class="info">
-                                <h4>عرض للمستثمر/المسرّعة</h4>
-                                <p>صفحة واحدة: الطلب، المؤشرات، المخاطر، جهة اتصال — طباعة PDF</p>
-                            </div>
-                        </button>
-
-                        <button type="button" class="export-card" data-type="accelerator_pitch" aria-label="عرض للمسرّعة — صفحة واحدة">
-                            <div class="icon">🚀</div>
-                            <div class="info">
-                                <h4>عرض للمسرّعة</h4>
-                                <p>نفس المحتوى بعنوان «للمسرّعة» — ملخص، مالي، مخاطر، الطلب</p>
-                            </div>
-                        </button>
-
-                        <button type="button" class="export-card" data-type="incubator_pitch" aria-label="عرض للحاضنة — صفحة واحدة">
-                            <div class="icon">🏢</div>
-                            <div class="info">
-                                <h4>عرض للحاضنة</h4>
-                                <p>نفس المحتوى بعنوان «للحاضنة» — ملخص، مالي، مخاطر، الطلب</p>
-                            </div>
-                        </button>
-
-                        <button type="button" class="export-card" data-type="crowdfunding_pitch" aria-label="عرض تمويل جماعي — ملخص، طلب، استخدامات، جدول، مكافآت">
-                            <div class="icon">👥</div>
-                            <div class="info">
-                                <h4>عرض تمويل جماعي</h4>
-                                <p>صفحة واحدة جاهزة للرفع على منصة تمويل جماعي — ملخص، الطلب، الاستخدامات، الجدول الزمني، المكافآت</p>
-                            </div>
-                        </button>
-
-                        <button type="button" class="export-card" data-type="feasibility_plan_summary" aria-label="تقرير جدوى + ملخص خطة عمل">
-                            <div class="icon">📋</div>
-                            <div class="info">
-                                <h4>تقرير جدوى + ملخص خطة عمل</h4>
-                                <p>ملخص صفحة واحدة (رؤية، أهداف، منتج، سوق، مالي، الطلب) ثم التقرير الكامل</p>
+                                <h4>ملخص صفحة واحدة (One Pager)</h4>
+                                <p>للمستثمر والمسرعات: الطلب، المؤشرات، والمخاطر</p>
                             </div>
                         </button>
 
                         <button type="button" class="export-card" data-type="investor_dashboard" aria-label="عرض لوحة المستثمر التفاعلية">
                             <div class="icon">💼</div>
                             <div class="info">
-                                <h4>لوحة المستثمر (Dashboard)</h4>
-                                <p>عرض ويب احترافي للقراءة والمشاركة</p>
+                                <h4>لوحة المستثمر (تفاعلية)</h4>
+                                <p>عرض ويب احترافي للقراءة والمشاركة المباشرة</p>
                             </div>
                         </button>
 
@@ -320,65 +243,77 @@ export class ExportMenu {
                             <div class="icon">🎤</div>
                             <div class="info">
                                 <h4>Pitch Script بالـ AI</h4>
-                                <p>نص عرض تقديمي 1–2 دقيقة للمستثمرين (مولّد آلي)</p>
+                                <p>نص عرض تقديمي 1–2 دقيقة للمستثمرين</p>
                             </div>
                         </button>
+                    </div>
 
-                        <button type="button" class="export-card" data-type="grant" aria-label="تصدير بطاقة المنح لتقديم جهات التمويل">
-                            <div class="icon">📑</div>
+                    <div class="export-category-title mt-6 mb-2 text-gold font-bold">البنوك وجهات الدعم</div>
+                    <div class="export-grid">
+                        <button type="button" class="export-card" data-type="lending_ready" aria-label="تقرير جاهز للإقراض — بنك التنمية والمؤسسات التمويلية">
+                            <div class="icon">🏦</div>
                             <div class="info">
-                                <h4>بطاقة المنح</h4>
-                                <p>نموذج مبسط متوافق مع بنك التنمية وغيره (Excel)</p>
+                                <h4>جاهز للإقراض (بنك التنمية)</h4>
+                                <p>استخدام التمويل، القوائم المالية، والضمانات</p>
                             </div>
                         </button>
 
-                        <button type="button" class="export-card" data-type="csv" aria-label="تصدير ملخص CSV للإكسل أو الجداول">
+                        <button type="button" class="export-card" data-type="monshaat" aria-label="تصدير بهيكل متوافق مع متطلبات منشآت">
                             <div class="icon">📋</div>
                             <div class="info">
-                                <h4>ملف CSV (ملخص)</h4>
-                                <p>ملخص بالمؤشرات بصيغة CSV قابلة للاستيراد</p>
+                                <h4>متوافق مع «منشآت»</h4>
+                                <p>بأقسام وعناوين مطابقة للنموذج الاسترشادي</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="financier" aria-label="نسخة للممول — تقرير جاهز للتمويل PDF">
+                            <div class="icon">📑</div>
+                            <div class="info">
+                                <h4>نسخة للممول العام</h4>
+                                <p>ملخص، مالي، مخاطر، توصية (PDF)</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="export-card" data-type="review_copy" aria-label="نسخة للمراجعة — للمراجعة من قبل استشاري">
+                            <div class="icon">📋</div>
+                            <div class="info">
+                                <h4>نسخة احترافية للمراجعة</h4>
+                                <p>تقرير نظيف ومُرقم لإرساله للاستشاري</p>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="export-category-title mt-6 mb-2 text-gold font-bold">البيانات والمشاركة</div>
+                    <div class="export-grid">
+                        <button type="button" class="export-card" data-type="share_link" aria-label="مشاركة الدراسة برابط فعلي بصلاحية عرض">
+                            <div class="icon">🔗</div>
+                            <div class="info">
+                                <h4>رابط مشاركة سريع</h4>
+                                <p>رابط عرض مباشر (يُمكن إلغاؤه لاحقاً)</p>
                             </div>
                         </button>
 
                         <button type="button" class="export-card" data-type="json" aria-label="تنزيل ملف المشروع JSON للنسخ الاحتياطي">
                             <div class="icon">💾</div>
                             <div class="info">
-                                <h4>ملف المشروع (JSON)</h4>
-                                <p>للحفظ والنسخ الاحتياطي</p>
+                                <h4>نسخة احتياطية (JSON)</h4>
+                                <p>لحفظ المشروع واستعادته مستقبلاً</p>
                             </div>
                         </button>
 
-                        ${(this.store.getState?.()?.projectInfo?.folderId) ? `
-                        <button type="button" class="export-card" data-type="folder_json" aria-label="تصدير جميع الدراسات في المجلد كـ JSON">
-                            <div class="icon">📁</div>
+                        <button type="button" class="export-card" data-type="csv" aria-label="تصدير ملخص CSV للإكسل أو الجداول">
+                            <div class="icon">📋</div>
                             <div class="info">
-                                <h4>جميع الدراسات في المجلد (JSON)</h4>
-                                <p>حزمة واحدة تحتوي كل الدراسات في مجلد هذه الدراسة</p>
+                                <h4>تصدير بيانات CSV</h4>
+                                <p>للاستيراد السريع في جداول البيانات</p>
                             </div>
                         </button>
-                        ` : ''}
-
-                        <button type="button" class="export-card" data-type="gsheets" aria-label="تصدير إلى Google Sheets">
-                            <div class="icon">📗</div>
-                            <div class="info">
-                                <h4>Google Sheets</h4>
-                                <p>نشر البيانات المالية في جدول Google</p>
-                            </div>
-                        </button>
-
-                        <button type="button" class="export-card" data-type="share_link" aria-label="مشاركة الدراسة برابط فعلي بصلاحية عرض">
-                            <div class="icon">🔗</div>
-                            <div class="info">
-                                <h4>مشاركة الدراسة</h4>
-                                <p>رابط عرض حقيقي (بلا حاجة حساب للطرف الآخر) — قابل للإلغاء لاحقاً</p>
-                            </div>
-                        </button>
-
+                        
                         <button type="button" class="export-card export-card-consultation" data-type="consultation" aria-label="احجز استشارة Zoom مع خبير">
                             <div class="icon">📞</div>
                             <div class="info">
-                                <h4>احجز استشارة مع خبير</h4>
-                                <p>اجتماع Zoom مع محللين خبراء في السوق السعودي</p>
+                                <h4>استشارة مع خبير</h4>
+                                <p>اجتماع Zoom مع محلل مالي معتمد</p>
                             </div>
                         </button>
                     </div>
@@ -550,8 +485,13 @@ export class ExportMenu {
 
             switch (type) {
                 case 'pdf': {
-                    const pdfName = await this.pdfGenerator.generate({ lang: exportLang });
-                    toast.success(pdfName ? `تم تصدير PDF: ${pdfName}` : 'تم تصدير PDF بنجاح!');
+                    try {
+                        await generateNativePDF(state);
+                        toast.success('تم تصدير تقرير PDF الاحترافي بنجاح!');
+                    } catch (err) {
+                        console.error(err);
+                        toast.error('فشل تصدير PDF. تأكد من إكمال البيانات.');
+                    }
                     break;
                 }
 

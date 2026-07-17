@@ -138,10 +138,10 @@
 }
 
 [data-theme="dark"] .dashboard-view.dv {
-    --v2-glass-bg: rgba(17, 24, 39, 0.7);
-    --v2-glass-border: rgba(255, 255, 255, 0.1);
+    --v2-glass-bg: rgba(var(--c-bg-app-rgb), 0.4);
+    --v2-glass-border: rgba(255, 255, 255, 0.08);
     --v2-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-    background: linear-gradient(135deg, #111827 0%, #1f2937 100%) !important;
+    background: linear-gradient(135deg, var(--c-bg-app) 0%, var(--c-bg-panel) 100%) !important;
 }
 
 /* TOPBAR */

@@ -40,8 +40,8 @@ export const STEPS = [
   // يُفقد أي عمود تقرير كان يقرأهما من نسخة الجدول القديمة.
   { id: SECTIONS.MARKETING, label: "الدراسة السوقية", tables: ['marketAnalysis', 'historicalData', 'supplyDemandBalance', 'competitorBenchmarking', 'marketingPlan'], gridSize: 'full', stepType: 'جدول', icon: 'i-chart' },
   { id: 'pricingOptimizer', label: "التسعير المثالي", isPricingOptimizer: true, gridSize: 'half', stepType: 'أداة', icon: 'i-bolt' },
-  { id: SECTIONS.STRATEGIC, label: "التحليل الاستراتيجي", isStrategic: true, gridSize: 'full', stepType: 'تحليل', icon: 'i-scale' },
-  { id: SECTIONS.REVENUE, label: "مصادر الإيرادات", tables: ['revenueStreams'], gridSize: 'full', stepType: 'جدول', icon: 'i-bank' },
+  { id: SECTIONS.STRATEGIC, label: "التحليل الاستراتيجي", isStrategic: true, isAdvancedStep: true, gridSize: 'full', stepType: 'تحليل', icon: 'i-scale' },
+  { id: SECTIONS.REVENUE, label: "مصادر الإيرادات", tables: ['revenueStreams'], isAdvancedStep: true, gridSize: 'full', stepType: 'جدول', icon: 'i-bank' },
   { id: SECTIONS.SERVICES, label: "تحليل الخدمات", isServiceAnalysis: true, isAdvancedStep: true, gridSize: 'full', stepType: 'تحليل', icon: 'i-settings' },
 
   // الفنية والقانونية (12-19)
@@ -56,8 +56,8 @@ export const STEPS = [
   // وadministrative تبقيان خطوتين مستقلتين للوضع الكامل/المتقدم، لكن المسار المبسّط
   // (INPUT_STEPS) يخفيهما لأنهما تُدخلان داخل هذه الشاشة الواحدة.
   { id: SECTIONS.TECH_RESOURCES, label: "المصاريف التشغيلية", tables: ['techResources'], isOperatingCosts: true, gridSize: 'full', stepType: 'جدول', icon: 'i-box' },
-  { id: SECTIONS.LOGISTICS, label: "الموارد اللوجستية", tables: ['logistics'], gridSize: 'half', stepType: 'جدول', icon: 'i-link' },
-  { id: SECTIONS.ADMINISTRATIVE, label: "الموارد الإدارية", tables: ['administrative'], gridSize: 'half', stepType: 'جدول', icon: 'i-folder' },
+  { id: SECTIONS.LOGISTICS, label: "الموارد اللوجستية", tables: ['logistics'], isAdvancedStep: true, gridSize: 'half', stepType: 'جدول', icon: 'i-link' },
+  { id: SECTIONS.ADMINISTRATIVE, label: "الموارد الإدارية", tables: ['administrative'], isAdvancedStep: true, gridSize: 'half', stepType: 'جدول', icon: 'i-folder' },
   { id: SECTIONS.ORG_STRUCTURE, label: "الهيكل التنظيمي والحوكمة", tables: ['operationalKpis'], isOrgStructure: true, gridSize: 'full', stepType: 'نموذج', icon: 'i-shield' },
   { id: SECTIONS.LEGAL, label: "الدراسة القانونية", tables: ['licenses'], gridSize: 'half', stepType: 'جدول', icon: 'i-doc' },
 
@@ -97,16 +97,27 @@ export const STEPS = [
   { id: 'studyComparison', label: "مقارنة الدراسات", isComparison: true, isAdvancedStep: true, gridSize: 'full', stepType: 'أداة', icon: 'i-scale' },
 ];
 
-/** Ranges [start, end] inclusive; must match STEPS indices. Update when adding steps. */
+/**
+ * Ranges [start, end] inclusive; must match STEPS indices. Update when adding steps.
+ * تدقيق 2026-07-17: أُعيد ترتيب هذه المصفوفة فقط (لا STEPS ولا نطاقاتها) حسب طلب
+ * صاحب المنتج — الأهمية (وزن كل تصنيف في نسبة اكتمال الدراسة، studyCompleteness.js)
+ * مع التتابعية المنهجية (تعريف ← سوق ← تشغيل ← مالية ← مخاطر)، ثم مجموعة "الإضافات"
+ * (وزنها 0%/0%/2.7% تقريباً) في النهاية. التنقل بين التصنيفات (StudyJourney/app.js
+ * عبر CATEGORY_STEPS/CATEGORY_JOURNEY_SECTIONS) مبني على ترتيب هذه المصفوفة نفسها
+ * لا على قيم range، فإعادة الترتيب هنا تنعكس تلقائياً بلا أي تغيير آخر — تحقّق حي.
+ * optional: true تُستخدم في StudyJourney.js لعرض شارة "إضافي" فقط، لا تُخفي الخطوة
+ * ولا تُسقطها من الاكتمال — "النتائج والمتابعة" وزنها ضعيف كمُدخل لكنها ليست اختيارية
+ * فعلياً (فيها القرار النهائي والتصدير)، لذلك note توضّح هذا صراحة بدل الإيحاء بتخطّيها.
+ */
 export const SIDEBAR_SECTIONS = [
   { id: 'setup', label: 'التحقق والتعريف', range: [0, 6] },
   { id: 'marketing', label: 'السوق والإيرادات', range: [7, 12] },
   { id: 'technical', label: 'التشغيل والتأسيس', range: [13, 20] },
-  { id: 'advanced', label: 'خطة التنفيذ', range: [21, 21] },
   { id: 'financial', label: 'المالية والتمويل', range: [22, 29] },
   { id: 'strategic', label: 'المخاطر والاختبارات', range: [30, 34] },
-  { id: 'appendices', label: 'الأدلة والمرفقات', range: [35, 35] },
-  { id: 'results', label: 'النتائج والمتابعة', range: [36, 41] },
+  { id: 'advanced', label: 'خطة التنفيذ', range: [21, 21], optional: true },
+  { id: 'appendices', label: 'الأدلة والمرفقات', range: [35, 35], optional: true },
+  { id: 'results', label: 'النتائج والمتابعة', range: [36, 41], optional: true, note: 'القرار النهائي والتصدير هنا' },
 ];
 
 /**

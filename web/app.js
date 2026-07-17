@@ -287,6 +287,43 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Dashboard vars defined above (lines 141-142), duplicates removed.
   let projectsDashboard = null; // The main landing dashboard
 
+  // Function to update the Macro Stepper active state
+  const updateMacroStepperUI = (activeStep) => {
+    const btnInputs = document.getElementById('btnMacroInputs');
+    const btnBank = document.getElementById('btnMacroBank');
+    const btnExport = document.getElementById('btnMacroExport');
+    
+    if (btnInputs) {
+        btnInputs.classList.toggle('active', activeStep === 'inputs');
+        btnInputs.style.opacity = activeStep === 'inputs' ? '1' : '0.5';
+        const icon = btnInputs.querySelector('.macro-step-icon');
+        if (icon) {
+            icon.style.background = activeStep === 'inputs' ? 'var(--c-primary)' : 'var(--c-surface-3)';
+            icon.style.color = activeStep === 'inputs' ? 'white' : 'var(--c-text-muted)';
+        }
+    }
+    
+    if (btnBank) {
+        btnBank.classList.toggle('active', activeStep === 'bank');
+        btnBank.style.opacity = activeStep === 'bank' ? '1' : '0.5';
+        const icon = btnBank.querySelector('.macro-step-icon');
+        if (icon) {
+            icon.style.background = activeStep === 'bank' ? 'var(--c-primary)' : 'var(--c-surface-3)';
+            icon.style.color = activeStep === 'bank' ? 'white' : 'var(--c-text-muted)';
+        }
+    }
+    
+    if (btnExport) {
+        btnExport.classList.toggle('active', activeStep === 'export');
+        btnExport.style.opacity = activeStep === 'export' ? '1' : '0.5';
+        const icon = btnExport.querySelector('.macro-step-icon');
+        if (icon) {
+            icon.style.background = activeStep === 'export' ? 'var(--c-primary)' : 'var(--c-surface-3)';
+            icon.style.color = activeStep === 'export' ? 'white' : 'var(--c-text-muted)';
+        }
+    }
+  };
+
   // Function to switch to workspace mode. The full journey now lives in-page,
   // so the legacy left sidebar stays hidden and the main stage uses the full width.
   const enterWorkspaceMode = () => {
@@ -295,6 +332,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     shell?.classList.add('no-sidebar');
     const appHeader = document.getElementById('appHeader');
     if (appHeader) appHeader.style.removeProperty('display');
+    
+    const macroStepper = document.getElementById('macroJourneyStepper');
+    if (macroStepper) {
+        macroStepper.style.display = 'flex';
+        
+        // Wire up macro stepper navigation
+        document.getElementById('btnMacroInputs').onclick = () => {
+            const currentIdx = store.getState().appSettings?.currentStepIndex || 0;
+            // Only navigate if we are already in bank or export, otherwise just stay on current input step
+            const bankIdx = STEPS.findIndex(s => s.isDecisionDashboard);
+            const exportIdx = STEPS.findIndex(s => s.isReportBuilder);
+            if (currentIdx === bankIdx || currentIdx === exportIdx) {
+                navigateTo(0); // Start of inputs
+            }
+        };
+        
+        document.getElementById('btnMacroBank').onclick = () => {
+            const idx = STEPS.findIndex(s => s.isDecisionDashboard);
+            if (idx >= 0) navigateTo(idx);
+        };
+        
+        document.getElementById('btnMacroExport').onclick = () => {
+            const idx = STEPS.findIndex(s => s.isReportBuilder);
+            if (idx >= 0) navigateTo(idx);
+        };
+    }
 
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
@@ -315,6 +378,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const showLandingDashboard = async () => {
     syncHash('home');
     document.querySelector('.app-shell')?.classList.add('dashboard-mode');
+    
+    const macroStepper = document.getElementById('macroJourneyStepper');
+    if (macroStepper) macroStepper.style.display = 'none';
+    
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
     if (sidebarEl) sidebarEl.style.display = 'none';
@@ -855,9 +922,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const navigateTo = async (index) => {
+    const stepIdx = Number(index) || 0;
+    const step = STEPS[stepIdx];
+    
+    // Update Macro Stepper UI based on the current step
+    if (step?.isDecisionDashboard) {
+        updateMacroStepperUI('bank');
+    } else if (step?.isReportBuilder) {
+        updateMacroStepperUI('export');
+    } else {
+        updateMacroStepperUI('inputs');
+    }
+
     if (categoryNavigationEnabled) {
-      const categoryIndex = categoryIndexForStep(Number(index) || 0);
-      return navigateToCategory(categoryIndex >= 0 ? categoryIndex : 0, Number(index) || 0);
+      const categoryIndex = categoryIndexForStep(stepIdx);
+      return navigateToCategory(categoryIndex >= 0 ? categoryIndex : 0, stepIdx);
     }
     const requestId = ++navigationRequestId;
     try {
