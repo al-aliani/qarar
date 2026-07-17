@@ -863,17 +863,20 @@
     border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Fix generic text colors in modal body */
-.modal-body .text-gray-600,
-.modal-body .text-muted,
-.modal-body .text-gray-500 {
+/* تدقيق تباين 2026-07-17: هذه القاعدة سبقت دعم الوضع النهاري وتفترض خلفية معتمة دائماً
+   للمودال — لكن .modal-card تستخدم var(--c-bg-panel) المتكيّفة مع الوضعين، فتصبح
+   خلفية المودال فاتحة في النهار بينما يبقى النص أبيض 70% شفافية فوقها (تباين 1.18:1 —
+   شبه غير مرئي). النطاق الآن محصور بالوضع الليلي فقط حيث كانت هذه الألوان صحيحة أصلاً. */
+[data-theme="dark"] .modal-body .text-gray-600,
+[data-theme="dark"] .modal-body .text-muted,
+[data-theme="dark"] .modal-body .text-gray-500 {
     color: rgba(255, 255, 255, 0.7) !important;
 }
 
-/* Enhance form inputs in modals */
-.modal-body .form-control,
-.modal-body .input,
-.modal-body select {
+/* Enhance form inputs in modals (dark mode only — نفس سبب القصر أعلاه) */
+[data-theme="dark"] .modal-body .form-control,
+[data-theme="dark"] .modal-body .input,
+[data-theme="dark"] .modal-body select {
     background: rgba(0, 0, 0, 0.2) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     color: #fff !important;

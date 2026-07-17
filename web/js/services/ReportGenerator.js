@@ -577,13 +577,6 @@ export class ReportGenerator {
                         </p>
                     </div>
                 </div>
-
-                <script>
-                    // Auto-print after a short delay to ensure styles are loaded
-                    setTimeout(() => {
-                        window.print();
-                    }, 500);
-                </script>
             </body>
             </html>
         `;

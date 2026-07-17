@@ -246,7 +246,11 @@
 }
 
 /* BENTO HERO TILE (Welcome Card) */
-.dv-bento-tile--hero {
+/* selector مركّب (.dv-bento-tile.dv-bento-tile--hero) عمداً: العنصر يحمل الكلاسين معاً دائماً،
+   والقاعدة العامة .dv-bento-tile بالأسفل بنفس الخصوصية (0,1,0) كانت تكسب بترتيب الظهور فتُسقط
+   التدرّج الأخضر وتترك نص "مشروع جديد" الأبيض بلا خلفية داكنة — غير مرئي في الوضع النهاري تحديداً
+   لأن var(--v2-glass-bg) شبه شفاف أبيض هناك (وداكن صدفةً في الوضع الليلي فبدت السلامة). */
+.dv-bento-tile.dv-bento-tile--hero {
     background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
     color: white !important;
     border: none !important;
