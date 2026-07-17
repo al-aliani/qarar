@@ -8,21 +8,46 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e5b44'/><text x='50' y='72' font-size='62' text-anchor='middle' fill='%23fff' font-family='sans-serif' font-weight='700'>ق</text></svg>" type="image/svg+xml" />
     <link rel="stylesheet" href="/fonts/fonts.css" />
     <link rel="stylesheet" href="/css/main.css" />
+    <link rel="stylesheet" href="/css/legal-pages.css" />
   </head>
-  <body>
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand__title">سياسة الخصوصية</div>
-        <div class="brand__subtitle">منصة قرار لدراسات الجدوى — آخر تحديث: يوليو 2026</div>
-      </div>
-      <div class="topbar__actions">
-        <a class="btn btn--ghost" href="./">العودة للمنصة</a>
-      </div>
+    <body>
+
+    <header class="lp-topbar">
+      <a href="./" class="lp-brand">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#0e5b44"/><text x="50" y="72" font-size="62" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">ق</text></svg>
+        منصة قرار
+      </a>
+      <a class="lp-btn-outline" href="./">العودة للمنصة</a>
     </header>
 
-    <main class="layout" style="grid-template-columns: 1fr">
-      <section class="content">
-        <div class="card">
+    <div class="lp-hero">
+      <div class="lp-hero-content">
+        <h1 class="lp-hero-title">سياسة الخصوصية</h1>
+        <div class="lp-hero-subtitle">شفافية، وضوح، التزام كامل ببياناتك.</div>
+        <div class="lp-hero-date">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          آخر تحديث: يوليو 2026
+        </div>
+      </div>
+    </div>
+
+    <main class="lp-container">
+
+      <aside class="lp-sidebar">
+        <div class="lp-sidebar-title">السياسات والشروط</div>
+        <ul class="lp-nav-list">
+          <li><a href="terms.html" class="lp-nav-link "><svg class="lp-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg> الشروط والأحكام</a></li>
+          <li><a href="privacy.html" class="lp-nav-link active"><svg class="lp-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> سياسة الخصوصية</a></li>
+          <li><a href="disclaimer.html" class="lp-nav-link "><svg class="lp-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> إخلاء المسؤولية</a></li>
+          <li><a href="refund-policy.html" class="lp-nav-link "><svg class="lp-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg> الاسترجاع والإلغاء</a></li>
+          <li><a href="cookie-policy.html" class="lp-nav-link "><svg class="lp-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a4 4 0 0 0 4 4 4 4 0 0 0 4-4"></path><path d="M22 12a4 4 0 0 0-4 4 4 4 0 0 0-4-4"></path><path d="M2 12a4 4 0 0 0 4 4 4 4 0 0 0-4-4"></path></svg> ملفات الارتباط</a></li>
+          <li><a href="data-retention.html" class="lp-nav-link "><svg class="lp-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg> الاحتفاظ بالبيانات</a></li>
+        </ul>
+      </aside>
+
+      <div class="lp-content-wrapper">
+
+        <div class="lp-card">
           <h2>1) نطاق هذه السياسة</h2>
           <p class="text-muted">
             توضح هذه السياسة كيف تُجمع بيانات مستخدمي منصة قرار وتُستخدم وتُحفظ وتُحذف، بما يتوافق مع نظام حماية البيانات
@@ -30,7 +55,7 @@
           </p>
         </div>
 
-        <div class="card" style="margin-top:12px">
+        <div class="lp-card" >
           <h2>2) البيانات التي نجمعها</h2>
           <p class="text-muted">
             <strong>أ. بيانات الدراسة:</strong> ما تُدخله في المنصة (تكاليف، إيرادات، افتراضات…) يُحفظ افتراضياً
@@ -42,7 +67,7 @@
           </p>
         </div>
 
-        <div class="card" style="margin-top:12px">
+        <div class="lp-card" >
           <h2>3) ما لا نفعله</h2>
           <p class="text-muted">
             لا نبيع بياناتك ولا نشاركها مع أطراف ثالثة لأغراض تسويقية. لا تُرسل بيانات دراستك خارج جهازك تلقائياً إلا إذا
@@ -51,7 +76,7 @@
           </p>
         </div>
 
-        <div class="card" style="margin-top:12px">
+        <div class="lp-card" >
           <h2>4) أغراض المعالجة</h2>
           <p class="text-muted">
             نعالج البيانات لتشغيل المنصة وحفظ دراساتك وتحسين جودة المخرجات وتجربة الاستخدام، ولإصدار الفواتير عند الاشتراك
@@ -59,7 +84,7 @@
           </p>
         </div>
 
-        <div class="card" style="margin-top:12px">
+        <div class="lp-card" >
           <h2>5) حقوقك</h2>
           <p class="text-muted">
             لك حق الاطلاع على بياناتك وتصحيحها وطلب حذفها وسحب موافقتك على المعالجات الاختيارية. يمكنك حذف دراساتك من داخل
@@ -67,7 +92,7 @@
           </p>
         </div>
 
-        <div class="card" style="margin-top:12px">
+        <div class="lp-card" >
           <h2>6) الاحتفاظ والأمان</h2>
           <p class="text-muted">
             نحتفظ ببيانات الحساب طوال فترة نشاطه وبما تقتضيه المتطلبات النظامية (كالفواتير). تُنقل البيانات السحابية عبر
@@ -75,14 +100,15 @@
           </p>
         </div>
 
-        <div class="card" style="margin-top:12px">
+        <div class="lp-card" >
           <h2>7) التحديثات والتواصل</h2>
           <p class="text-muted">
             قد تُحدَّث هذه السياسة من وقت لآخر ويُشار لتاريخ آخر تحديث أعلى الصفحة. لأي استفسار أو طلب متعلق ببياناتك،
             تواصل معنا عبر قنوات الدعم الموضحة داخل المنصة.
           </p>
         </div>
-      </section>
+      
+      </div>
     </main>
     <script src="./js/theme-init.js"></script>
   </body>

@@ -195,13 +195,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize Auth Guard
   const authResult = await AuthGuard.init({
-    requireAuth: false, // Set to true to force login
+    requireAuth: true,
     onAuthChange: ({ event, user, isAuthenticated }) => {
       console.log('[App] Auth state changed:', event, isAuthenticated);
 
       // Show notification on login/logout
+      // الداخل بالجوال (signInWithOtp) بلا بريد إطلاقاً، فـuser.email = undefined
+      // وكانت الرسالة تظهر حرفياً «مرحباً undefined!». نعرض الاسم إن وُجد، وإلا
+      // ترحيباً عاماً — لا نعرض الرقم الخام لأنه ليس اسماً.
       if (event === 'SIGNED_IN' && user) {
-        toast.success(`مرحباً ${user.email}!`);
+        const displayName = user.user_metadata?.full_name || user.email || '';
+        toast.success(displayName ? `مرحباً ${displayName}!` : 'أهلاً بك — تم تسجيل الدخول');
       } else if (event === 'SIGNED_OUT') {
         toast.info('تم تسجيل الخروج');
       }
@@ -214,8 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // نفتح شاشة المصادقة فوراً. بعد نجاح الدخول تُغلق الشاشة ويكمل المستخدم إلى الدراسة.
   // إن كان مسجّلاً مسبقاً لا نعرضها. وننظّف المعامل من الرابط حتى لا تتكرر عند التحديث.
   const wantsAuth = new URLSearchParams(window.location.search).get('auth');
-  if (wantsAuth && !authResult?.authenticated) {
-    AuthGuard.showAuthPrompt();
+  if (wantsAuth) {
     const cleanUrl = new URL(window.location.href);
     cleanUrl.searchParams.delete('auth');
     window.history.replaceState({}, '', cleanUrl);
@@ -231,6 +234,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     cleanCtaUrl.searchParams.delete('cta');
     window.history.replaceState({}, '', cleanCtaUrl);
     trackEvent('landing_cta_view', { cta: landingCta });
+  }
+
+  // احتفظ بالباقة المختارة من صفحة الهبوط عبر الدخول ثم الدفع/الترقية.
+  const selectedPackage = new URLSearchParams(window.location.search).get('pkg');
+  if (['free', 'self', 'reviewed', 'full'].includes(selectedPackage)) {
+    try { sessionStorage.setItem('selected_package', selectedPackage); } catch (_) {}
+    const cleanPackageUrl = new URL(window.location.href);
+    cleanPackageUrl.searchParams.delete('pkg');
+    window.history.replaceState({}, '', cleanPackageUrl);
   }
 
   const btnToggleSidebar = document.getElementById('btnToggleSidebar');
@@ -804,18 +816,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
     syncCategoryNavToMode();
+    // تدقيق 2026-07-17: كانت studyJourney.update() تُستدعى فقط هنا بعد resolve حلقة الرسم
+    // الكاملة (categoryView.render أدناه تُصدِر setTimeout(0) بين كل خطوة لتصنيفات ثقيلة
+    // كالتسويقية، فتترك نافذة زمنية حقيقية يُعاد فيها رسم الشاشة). خلال هذه النافذة، محتوى
+    // .category-page الفعلي (innerHTML، يُستبدَل بالكامل تزامنياً في أول سطر من render())
+    // يعرض التصنيف الجديد بينما شريط "التصنيف X من ٨" لا يزال يعرض التصنيف القديم —
+    // انفصال بصري حقيقي. استدعاء update() هنا فوراً (بنفس safeCategoryIndex النهائي، لا
+    // فرق قيمة عن الاستدعاء القديم) يُبقي الشريط متزامناً مع تبديل المحتوى بدل متأخراً عنه.
+    studyJourney?.update(safeCategoryIndex);
 
     const rendered = await categoryView.render(safeCategoryIndex, {
       focusStepIndex: activeStepIndex,
       isCurrent: () => requestId === navigationRequestId
     });
-    
+
     NProgress.done();
 
     if (!rendered || requestId !== navigationRequestId) return;
 
     enhanceFieldHelp(document.getElementById('wizardContainer'));
-    studyJourney?.update(safeCategoryIndex);
     window.aiChatModal?.setCategoryContext(category.id, category.label);
 
     const mainStage = document.querySelector('.main-stage');
@@ -1152,6 +1171,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // إدارة الفريق (Team Management)
+  window.addEventListener('feasibility:showTeamManagement', async () => {
+    try {
+      const { TeamManagementView } = await import('./js/ui/TeamManagementView.js');
+      const view = new TeamManagementView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('TeamManagementView load failed:', err);
+      toast.error('تعذر فتح إدارة الفريق');
+    }
+  });
+
+  // مركز الإشعارات (Notifications)
+  window.addEventListener('feasibility:showNotifications', async () => {
+    try {
+      const { NotificationsView } = await import('./js/ui/NotificationsView.js');
+      const view = new NotificationsView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('NotificationsView load failed:', err);
+      toast.error('تعذر فتح مركز الإشعارات');
+    }
+  });
+
+  // سجل الأنشطة (Activity Log)
+  window.addEventListener('feasibility:showActivityLog', async () => {
+    try {
+      const { ActivityLogView } = await import('./js/ui/ActivityLogView.js');
+      const view = new ActivityLogView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('ActivityLogView load failed:', err);
+      toast.error('تعذر فتح سجل الأنشطة');
+    }
+  });
+
   // لوحة المستثمر (Investor Dashboard)
   window.addEventListener('feasibility:showInvestorDashboard', async () => {
     const savedStepIndex = wizard.currentStepIndex;
@@ -1299,6 +1360,38 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   // عرض صفحة المشاركة (وضع المستثمر) — عرض مغمور بلا شريط جانبي
+  // صفحة الخلاصة التنفيذية لمشروع واحد (#/project/<id>) — نقطة الهبوط عند النقر على
+  // بطاقة مشروع في لوحة التحكم. قبلها كان النقر يقذف المستخدم داخل الويزارد مباشرةً
+  // بلا أي عرض للخلاصة والقرار، وبلا رابط يشير لمشروع بعينه.
+  // زر «تعديل» فيها يعيد سلوك ما قبلها بالضبط (نفس منطق onProjectSelect).
+  const renderProjectOverviewRoute = async (projectId) => {
+    if (!projectId) { await showLandingDashboard(); return; }
+    const sidebarEl = document.querySelector('.sidebar');
+    const stepperNavEl = document.getElementById('stepperNav');
+    const breadcrumbBar = document.getElementById('breadcrumbBar');
+    if (sidebarEl) sidebarEl.style.display = 'none';
+    if (stepperNavEl) stepperNavEl.style.display = 'none';
+    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+    try {
+      const { ProjectOverviewView } = await import('./js/ui/ProjectOverviewView.js');
+      await new ProjectOverviewView('wizardContainer', store, {
+        onEdit: () => {
+          // ProjectOverviewView حمّلت الدراسة في المخزن قبل الرسم، فنقرأ منه هنا —
+          // نفس تفريع onProjectSelect: دراسة بلا فكرة تبدأ من الخطوة 0، وإلا من 3.
+          enterWorkspaceMode();
+          const state = store.getState();
+          if (!state.projectInfo?.concept) navigateTo(0);
+          else navigateTo(3);
+        },
+        onBack: () => { window.location.hash = '#/home'; }
+      }).render(projectId);
+    } catch (e) {
+      console.error('ProjectOverviewView load failed:', e);
+      toast.error('تعذر فتح صفحة الدراسة');
+      await showLandingDashboard();
+    }
+  };
+
   const renderShareRoute = async (projectId) => {
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
@@ -1391,9 +1484,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+  // الدعم الفني (2026-07-18) — نظام تذاكر داخلي، عرض مغمور بلا شريط جانبي، محمي
+  // بالدخول داخل SupportTicketsView نفسها (نفس مبدأ renderBillingRoute).
+  const renderSupportRoute = async () => {
+    const sidebarEl = document.querySelector('.sidebar');
+    const stepperNavEl = document.getElementById('stepperNav');
+    const breadcrumbBar = document.getElementById('breadcrumbBar');
+    if (sidebarEl) sidebarEl.style.display = 'none';
+    if (stepperNavEl) stepperNavEl.style.display = 'none';
+    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+    try {
+      const { SupportTicketsView } = await import('./js/ui/SupportTicketsView.js');
+      const view = new SupportTicketsView(wizardContainer, { onBack: () => showLandingDashboard() });
+      await view.render();
+    } catch (e) {
+      console.error('SupportTicketsView load failed:', e);
+      toast.error('تعذر فتح الدعم الفني');
+    }
+  };
+
+  const renderCheckoutRoute = async () => {
+    const sidebarEl = document.querySelector('.sidebar');
+    const stepperNavEl = document.getElementById('stepperNav');
+    const breadcrumbBar = document.getElementById('breadcrumbBar');
+    if (sidebarEl) sidebarEl.style.display = 'none';
+    if (stepperNavEl) stepperNavEl.style.display = 'none';
+    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+    try {
+      const { SubscriptionCheckoutView } = await import('./js/ui/SubscriptionCheckoutView.js');
+      new SubscriptionCheckoutView(wizardContainer, { onBack: () => showLandingDashboard() }).render();
+    } catch (e) {
+      console.error('SubscriptionCheckoutView load failed:', e);
+      toast.error('تعذر فتح صفحة الدفع');
+    }
+  };
+
   // رسم الواجهة المطابقة للعنوان — بدون كتابة تاريخ جديد (يُستدعى عند الرجوع/التقديم)
   const routeToView = async (route) => {
     _isRestoring = true;
+    // تدقيق 2026-07-17: _currentRoute كان يُضبط تفاؤلياً هنا قبل أي رسم فعلي، بلا أي تراجع
+    // عند الفشل. لو فشل الاستيراد الديناميكي أو render() (يُمسَك أدناه ويُسجَّل فقط بـ
+    // console.error، بلا أي إشارة للمستخدم)، يبقى _currentRoute='route' زائفاً رغم أن
+    // المحتوى الفعلي لم يُرسَم إطلاقاً — أي محاولة لاحقة للتنقل لنفس الرابط عبر hash
+    // (بما فيها الرجوع لنفس الرابط بعد تعليق hashchange في المتصفح لا يُطلَق أصلاً لهاش
+    // مطابق) تُحجَب صامتاً بحارس syncFromUrl لأن normalized === _currentRoute. نتراجع هنا
+    // للقيمة السابقة عند الفشل، ونُخبر المستخدم بدل الفشل الصامت.
+    const previousRoute = _currentRoute;
     _currentRoute = route;
     try {
       if (route === '' || route === 'home') {
@@ -1407,6 +1543,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const idx = parseInt(route.slice(5), 10);
         if (Number.isInteger(idx) && idx >= 0 && idx < STEPS.length) await navigateTo(idx);
         else await showLandingDashboard();
+      } else if (route.startsWith('project/')) {
+        await renderProjectOverviewRoute(route.slice(8));
       } else if (route.startsWith('share/')) {
         await renderShareRoute(route.slice(6));
       } else if (route.startsWith('reviewer')) {
@@ -1417,6 +1555,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         await renderBillingRoute();
       } else if (route.startsWith('downloads')) {
         await renderDownloadsRoute();
+      } else if (route.startsWith('support')) {
+        await renderSupportRoute();
+      } else if (route.startsWith('checkout')) {
+        await renderCheckoutRoute();
+      } else if (route.startsWith('centers')) {
+        // توافق انتقالي للرابط القديم: أُزيلت صفحة «مراكز التشغيل» لأن وظائفها موزعة
+        // في مواضعها الطبيعية داخل لوحة التحكم والحساب وتذييل الموقع.
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/home`);
+        _currentRoute = 'home';
+        await showLandingDashboard();
       } else if (route.startsWith('payment-return')) {
         // Moyasar/Stripe يُعيدان توجيه المتصفح هنا بعد الدفع (انظر create-checkout
         // Edge Function: returnUrl يبني هذا الرابط تحديداً بمعامل order=<orderId>).
@@ -1439,6 +1587,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch (e) {
       console.error('[Router] routeToView failed:', e);
+      _currentRoute = previousRoute;
+      toast.error('تعذّر فتح هذه الصفحة، حاول مرة أخرى');
     } finally {
       _isRestoring = false;
     }

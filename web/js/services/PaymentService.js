@@ -40,7 +40,7 @@ export async function hasActivePayment(studyId) {
  * @param {{tier: 'self'|'reviewed'|'full', studyId: string, provider: 'moyasar'|'stripe'|'tamara'}} params
  * @returns {Promise<{ok: boolean, checkoutUrl?: string, orderId?: string, error?: string}>}
  */
-export async function startCheckout({ tier, studyId, provider }) {
+export async function startCheckout({ tier, studyId, provider, addons = [], coupon = '' }) {
     const { supabase, ok, error: clientError } = await getSupabaseClient();
     if (!ok || !supabase) return { ok: false, error: clientError || 'Supabase غير مهيأ' };
 
@@ -48,8 +48,11 @@ export async function startCheckout({ tier, studyId, provider }) {
     if (!user) return { ok: false, error: 'سجّل الدخول أولاً لإتمام الدفع' };
 
     try {
+        const body = { tier, studyId, provider };
+        if (addons.length) body.addons = addons;
+        if (coupon) body.coupon = coupon;
         const { data, error } = await supabase.functions.invoke('create-checkout', {
-            body: { tier, studyId, provider },
+            body,
         });
         if (error) return { ok: false, error: error.message || 'فشل إنشاء جلسة الدفع' };
         if (!data?.checkoutUrl) return { ok: false, error: 'لم يُعِد الخادم رابط دفع صالحاً' };
@@ -95,7 +98,7 @@ export async function listOrders() {
 
     const { data, error } = await supabase
         .from('orders')
-        .select('id, tier, amount_sar, currency, status, study_id, created_at, paid_at')
+        .select('id, tier, amount_sar, subtotal_sar, discount_sar, vat_sar, total_sar, amount_paid_sar, amount_due_sar, coupon_code, items, currency, status, study_id, created_at, paid_at')
         .order('created_at', { ascending: false });
 
     if (error) {

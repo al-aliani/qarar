@@ -9,20 +9,21 @@
  * تباعد بين الملفين (نفس نمط الحرّاس المستخدم عبر هذه الحملة).
  */
 
-export type Tier = 'self' | 'reviewed' | 'full';
+export type Tier = 'free' | 'self' | 'reviewed' | 'full';
 
 export interface PricingPackage {
   id: Tier;
   name: string;
   price: number;
   unit: string;
-  channel: 'app' | 'whatsapp';
+  channel: 'app';
 }
 
 export const PRICING_PACKAGES: PricingPackage[] = [
+  { id: 'free', name: 'مجانية', price: 0, unit: '﷼', channel: 'app' },
   { id: 'self', name: 'ذاتي', price: 249, unit: '﷼ / دراسة', channel: 'app' },
-  { id: 'reviewed', name: 'مراجَع بخبير', price: 990, unit: '﷼ / دراسة', channel: 'whatsapp' },
-  { id: 'full', name: 'خدمة كاملة', price: 2900, unit: '﷼ / دراسة', channel: 'whatsapp' },
+  { id: 'reviewed', name: 'مراجَع بخبير', price: 990, unit: '﷼ / دراسة', channel: 'app' },
+  { id: 'full', name: 'خدمة كاملة', price: 2900, unit: '﷼ / دراسة', channel: 'app' },
 ];
 
 export function getPackage(tier: string): PricingPackage | null {

@@ -204,6 +204,12 @@
 .category-toc__progress strong { color: var(--c-p-500); font-weight: 800; }
 .category-toc__links {
   display: flex; gap: .5rem; overflow-x: auto; scrollbar-width: thin; flex: 1 1 auto; min-width: 0;
+  /* تدقيق 2026-07-17: هذا الصف يفيض أفقياً بلا أي مؤشر تمرير (شريط المتصفح فقط، بلا
+     auto-hide حتى) — تلاشٍ بصري خفيف عند الحافتين يلمّح بوجود محتوى إضافي، بلا الحاجة
+     لمعرفة اتجاه الفيض في RTL (يتلاشى من كلا الطرفين رمزياً). قناع شفافية فقط، لا لون
+     جديد يحتاج فحص تباين، ولا يمنع التفاعل (mask-image لا يؤثر على pointer-events). */
+  mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
 }
 .category-toc__links a {
   display: inline-flex; align-items: center; gap: .45rem; flex: 0 0 auto; min-height: 38px;
@@ -276,3 +282,677 @@
   .category-page__nav .btn { width: 100%; min-width: 0; }
   .study-map__steps--categories { grid-template-columns: 1fr; }
 }
+
+/* =========================================================================
+   CATEGORY V2 PREMIUM AESTHETIC OVERRIDES
+   ========================================================================= */
+
+.category-page {
+    --v2-glass-bg: rgba(255, 255, 255, 0.7);
+    --v2-glass-border: rgba(255, 255, 255, 0.5);
+    --v2-glass-shadow: 0 8px 32px 0 rgba(14, 91, 68, 0.05);
+    --v2-primary: var(--c-p-500, #0e5b44);
+    background: transparent;
+}
+
+[data-theme="dark"] .category-page {
+    --v2-glass-bg: rgba(17, 24, 39, 0.7);
+    --v2-glass-border: rgba(255, 255, 255, 0.1);
+    --v2-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Category Header Hero */
+.category-page__header {
+    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
+    color: white !important;
+    border-radius: 32px !important;
+    padding: 48px 40px !important;
+    margin-bottom: 32px !important;
+    box-shadow: 0 24px 48px rgba(14, 91, 68, 0.2) !important;
+    position: relative;
+    overflow: hidden;
+    text-align: right;
+}
+
+.category-page__header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%);
+    animation: rotateSlow 25s linear infinite;
+    pointer-events: none;
+}
+
+.category-page__header h2 {
+    color: white !important;
+    font-size: clamp(1.8rem, 4vw, 2.5rem) !important;
+    font-weight: 800 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    position: relative;
+    z-index: 2;
+}
+
+.category-page__header p {
+    color: rgba(255,255,255,0.85) !important;
+    font-size: 1.1rem !important;
+    line-height: 1.6 !important;
+    position: relative;
+    z-index: 2;
+}
+
+.category-page__eyebrow {
+    background: rgba(255,255,255,0.15) !important;
+    color: white !important;
+    padding: 6px 12px !important;
+    border-radius: 100px !important;
+    display: inline-block !important;
+    margin-bottom: 16px !important;
+    font-weight: 600 !important;
+    backdrop-filter: blur(8px);
+    position: relative;
+    z-index: 2;
+}
+
+/* Category Table of Contents (Sticky Glass Pill) */
+.category-toc {
+    background: var(--v2-glass-bg) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid var(--v2-glass-border) !important;
+    border-radius: 100px !important;
+    padding: 12px 24px !important;
+    margin-bottom: 32px !important;
+    box-shadow: var(--v2-glass-shadow) !important;
+    position: sticky !important;
+    top: 24px !important;
+    z-index: 100 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    transition: all 0.3s ease;
+}
+
+.category-toc__progress {
+    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
+    color: white !important;
+    padding: 8px 16px !important;
+    border-radius: 100px !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    border: none !important;
+    white-space: nowrap;
+}
+
+.category-toc__progress strong {
+    color: white !important;
+}
+
+.category-toc__links {
+    display: flex !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    padding-bottom: 0 !important;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.category-toc__links::-webkit-scrollbar {
+    display: none;
+}
+
+.category-toc__links a {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 100px !important;
+    padding: 8px 16px !important;
+    color: var(--c-text-main) !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.category-toc__links a:hover {
+    background: rgba(14, 91, 68, 0.05) !important;
+    border-color: rgba(14, 91, 68, 0.2) !important;
+    transform: translateY(-2px);
+}
+
+.category-toc__links a.is-active {
+    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(14, 91, 68, 0.15) !important;
+    border: none !important;
+}
+
+.category-toc__links a.is-active span {
+    color: rgba(255,255,255,0.8) !important;
+}
+
+/* Category Steps (Premium Cards) */
+.category-step {
+    background: var(--v2-glass-bg) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--v2-glass-border) !important;
+    border-radius: 32px !important;
+    padding: 40px !important;
+    box-shadow: var(--v2-glass-shadow) !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    margin-bottom: 24px !important;
+}
+
+.category-step:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(14, 91, 68, 0.1) !important;
+    border-color: rgba(14, 91, 68, 0.2) !important;
+}
+
+.category-step__meta {
+    border-bottom: 1px solid var(--v2-glass-border) !important;
+    padding-bottom: 16px !important;
+    margin-bottom: 24px !important;
+}
+
+.category-step__number {
+    font-size: 1.1rem !important;
+    font-weight: 800 !important;
+    color: var(--v2-primary) !important;
+}
+
+.category-step__type {
+    background: rgba(14, 91, 68, 0.1) !important;
+    color: var(--v2-primary) !important;
+    border-radius: 100px !important;
+    padding: 4px 12px !important;
+}
+
+/* Footer Navigation Buttons */
+.category-page__nav {
+    background: var(--v2-glass-bg) !important;
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--v2-glass-border) !important;
+    border-radius: 100px !important;
+    padding: 16px 32px !important;
+    box-shadow: var(--v2-glass-shadow) !important;
+    margin-top: 48px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+.category-page__nav .btn {
+    border-radius: 100px !important;
+    padding: 12px 32px !important;
+    font-weight: 700 !important;
+    transition: all 0.3s ease !important;
+}
+
+.category-page__nav .btn--primary {
+    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
+    border: none !important;
+    box-shadow: 0 8px 16px rgba(14, 91, 68, 0.2) !important;
+}
+
+.category-page__nav .btn--primary:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 12px 24px rgba(14, 91, 68, 0.3) !important;
+}
+
+/* Responsive Overrides */
+@media (max-width: 768px) {
+    .category-toc {
+        border-radius: 24px !important;
+        flex-direction: column !important;
+        padding: 16px !important;
+    }
+    
+    .category-toc__progress {
+        width: 100% !important;
+        text-align: center !important;
+    }
+    
+    .category-page__header {
+        border-radius: 24px !important;
+        padding: 32px 24px !important;
+    }
+    
+    .category-step {
+        border-radius: 24px !important;
+        padding: 24px !important;
+    }
+    
+    .category-page__nav {
+        border-radius: 24px !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+        padding: 24px !important;
+    }
+    
+    .category-page__nav .btn {
+        width: 100% !important;
+    }
+}
+
+/* =========================================================================
+   ADVISORY, BILLING & SUPPORT V2 PREMIUM AESTHETIC OVERRIDES
+   ========================================================================= */
+
+/* Common Glassmorphic Variables for Subpages */
+.advisory-view, 
+.billing-history-page, 
+.support-tickets-page {
+    --v2-glass-bg: rgba(255, 255, 255, 0.7);
+    --v2-glass-border: rgba(255, 255, 255, 0.5);
+    --v2-glass-shadow: 0 8px 32px 0 rgba(14, 91, 68, 0.05);
+    --v2-primary: var(--c-p-500, #0e5b44);
+    background: transparent;
+}
+
+[data-theme="dark"] .advisory-view, 
+[data-theme="dark"] .billing-history-page, 
+[data-theme="dark"] .support-tickets-page {
+    --v2-glass-bg: rgba(17, 24, 39, 0.7);
+    --v2-glass-border: rgba(255, 255, 255, 0.1);
+    --v2-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Page Titles */
+.advisory-view h1,
+.advisory-view h2,
+.billing-history-page h2,
+.support-tickets-page h2 {
+    color: var(--v2-primary) !important;
+    font-weight: 800 !important;
+}
+
+/* Glassmorphic Cards (Shared across these views) */
+.advisory-view .card,
+.billing-history-page .card,
+.support-tickets-page .card {
+    background: var(--v2-glass-bg) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--v2-glass-border) !important;
+    border-radius: 24px !important;
+    padding: 32px !important;
+    box-shadow: var(--v2-glass-shadow) !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    margin-bottom: 24px !important;
+}
+
+/* Interactive Cards (Hover Lift) */
+.advisory-view label.card,
+.billing-history-page .card.mb-3,
+.support-tickets-page [data-ticket-row],
+.billing-history-page .space-y-3 > .card {
+    cursor: pointer !important;
+}
+
+.advisory-view label.card:hover,
+.billing-history-page .card.mb-3:hover,
+.support-tickets-page [data-ticket-row]:hover,
+.billing-history-page .space-y-3 > .card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 24px 48px rgba(14, 91, 68, 0.12) !important;
+    border-color: rgba(14, 91, 68, 0.2) !important;
+}
+
+/* Selected Card Highlight (Advisory Levels) */
+.advisory-view label.card:has(input:checked) {
+    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 12px 24px rgba(14, 91, 68, 0.2) !important;
+    transform: translateY(-4px);
+}
+
+.advisory-view label.card:has(input:checked) span,
+.advisory-view label.card:has(input:checked) strong {
+    color: white !important;
+}
+
+/* Form Inputs inside these views */
+.advisory-view .form-input,
+.support-tickets-page .form-input {
+    background: rgba(255, 255, 255, 0.5) !important;
+    border: 1px solid rgba(14, 91, 68, 0.15) !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    transition: all 0.3s ease !important;
+}
+
+[data-theme="dark"] .advisory-view .form-input,
+[data-theme="dark"] .support-tickets-page .form-input {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+}
+
+.advisory-view .form-input:focus,
+.support-tickets-page .form-input:focus {
+    background: white !important;
+    border-color: var(--v2-primary) !important;
+    box-shadow: 0 0 0 4px rgba(14, 91, 68, 0.1) !important;
+    outline: none !important;
+}
+
+/* Primary Buttons inside these views */
+.advisory-view .btn--primary,
+.billing-history-page .btn--primary,
+.support-tickets-page .btn--primary,
+.billing-history-page .btn--secondary {
+    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 100px !important;
+    padding: 12px 24px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 8px 16px rgba(14, 91, 68, 0.2) !important;
+    transition: all 0.3s ease !important;
+}
+
+.advisory-view .btn--primary:hover,
+.billing-history-page .btn--primary:hover,
+.support-tickets-page .btn--primary:hover,
+.billing-history-page .btn--secondary:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 12px 24px rgba(14, 91, 68, 0.3) !important;
+}
+
+/* Ghost / Back Buttons */
+.advisory-view .btn--ghost,
+.billing-history-page .btn--ghost,
+.support-tickets-page .btn--ghost {
+    background: rgba(14, 91, 68, 0.05) !important;
+    color: var(--v2-primary) !important;
+    border-radius: 100px !important;
+    padding: 8px 20px !important;
+    font-weight: 700 !important;
+    transition: all 0.3s ease !important;
+}
+
+.advisory-view .btn--ghost:hover,
+.billing-history-page .btn--ghost:hover,
+.support-tickets-page .btn--ghost:hover {
+    background: rgba(14, 91, 68, 0.1) !important;
+    transform: translateX(4px);
+}
+
+/* Badges / Status Highlights */
+.billing-history-page .badge,
+.support-tickets-page .badge,
+.advisory-view .badge {
+    padding: 6px 16px !important;
+    border-radius: 100px !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    border: none !important;
+}
+
+/* =========================================================================
+   KNOWLEDGE CENTER V2 PREMIUM AESTHETIC OVERRIDES
+   ========================================================================= */
+
+.knowledge-center-view {
+    --v2-glass-bg: rgba(255, 255, 255, 0.7);
+    --v2-glass-border: rgba(255, 255, 255, 0.5);
+    --v2-glass-shadow: 0 8px 32px 0 rgba(14, 91, 68, 0.05);
+    --v2-primary: var(--c-p-500, #0e5b44);
+    background: transparent;
+}
+
+[data-theme="dark"] .knowledge-center-view {
+    --v2-glass-bg: rgba(17, 24, 39, 0.7);
+    --v2-glass-border: rgba(255, 255, 255, 0.1);
+    --v2-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.knowledge-center-view h1 {
+    color: var(--v2-primary) !important;
+    font-weight: 800 !important;
+}
+
+/* Glassmorphic Cards (Accordion) */
+.knowledge-center-view .card {
+    background: var(--v2-glass-bg) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--v2-glass-border) !important;
+    border-radius: 20px !important;
+    box-shadow: var(--v2-glass-shadow) !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    margin-bottom: 16px !important;
+}
+
+.knowledge-center-view .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 32px rgba(14, 91, 68, 0.1) !important;
+    border-color: rgba(14, 91, 68, 0.2) !important;
+}
+
+/* Accordion Buttons */
+.knowledge-center-view .card button {
+    font-weight: 700 !important;
+    transition: background 0.3s ease !important;
+}
+
+.knowledge-center-view .card button:hover {
+    background: rgba(14, 91, 68, 0.05) !important;
+}
+
+/* Highlighted Titles */
+.knowledge-center-view .text-gold {
+    color: var(--v2-primary) !important;
+}
+
+/* Ghost / Back Button */
+.knowledge-center-view .btn--ghost {
+    background: rgba(14, 91, 68, 0.05) !important;
+    color: var(--v2-primary) !important;
+    border-radius: 100px !important;
+    padding: 8px 20px !important;
+    font-weight: 700 !important;
+    transition: all 0.3s ease !important;
+}
+
+.knowledge-center-view .btn--ghost:hover {
+    background: rgba(14, 91, 68, 0.1) !important;
+    transform: translateX(4px);
+}
+
+/* =========================================
+   [12] MISSING VIEWS V2 UPGRADE 
+   (Profile, Trash, Gallery, Export, Share)
+   ========================================= */
+
+/* User Profile */
+.user-profile-page .card {
+    background: var(--v2-glass-bg, rgba(255, 255, 255, 0.05)) !important;
+    border: 1px solid var(--v2-glass-border, rgba(255, 255, 255, 0.1)) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+    color: var(--text-color, #fff) !important;
+}
+
+.user-profile-page .card:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Modal Enhancements (Template Gallery, Share, Export) */
+.template-modal,
+.export-modal {
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4) !important;
+    color: #fff !important;
+}
+
+.template-modal .modal-header,
+.export-modal .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.template-modal .modal-header h3,
+.export-modal .modal-header h3 {
+    color: #fff !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.5px !important;
+}
+
+.tg-row {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.tg-row:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+}
+
+.tg-hero {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 78, 59, 0.2) 100%) !important;
+    border: 1px solid rgba(16, 185, 129, 0.2) !important;
+    border-radius: 16px !important;
+}
+
+/* Trash View Cards (which use basic .card inside #stepperNav) */
+#stepperNav .card.bg-white,
+#stepperNav .card.group {
+    background: var(--v2-glass-bg, rgba(255, 255, 255, 0.05)) !important;
+    border: 1px solid var(--v2-glass-border, rgba(255, 255, 255, 0.1)) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    color: #fff !important;
+    border-radius: 16px !important;
+    transition: all 0.3s ease !important;
+}
+
+#stepperNav .card.bg-white:hover,
+#stepperNav .card.group:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 12px 32px rgba(239, 68, 68, 0.2) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+#stepperNav .card.group .text-gray-400 {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+#stepperNav .card.group .border-gray-100 {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+#stepperNav .bg-gray-50 {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Fix generic text colors in modal body */
+.modal-body .text-gray-600,
+.modal-body .text-muted,
+.modal-body .text-gray-500 {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Enhance form inputs in modals */
+.modal-body .form-control,
+.modal-body .input,
+.modal-body select {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    border-radius: 8px !important;
+}
+
+.modal-body .form-control:focus,
+.modal-body .input:focus,
+.modal-body select:focus {
+    border-color: var(--color-primary, #10b981) !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
+}
+
+
+/* =========================================
+   [13] ADVANCED SAAS VIEWS
+   (Team, Notifications, Activity Log)
+   ========================================= */
+
+.team-management-view,
+.notifications-view,
+.activity-log-view {
+    color: #fff !important;
+}
+
+/* Common Header & Icons */
+.team-management-view h2 .ic,
+.notifications-view h2 .ic,
+.activity-log-view h2 .ic {
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4)) !important;
+}
+
+/* Stats Cards */
+.team-stat-card {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    transition: all 0.3s ease !important;
+}
+
+.team-stat-card:hover {
+    transform: translateY(-2px) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Lists and Tables Container */
+.team-list-container {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+}
+
+.team-member-row:hover {
+    background: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Badges */
+.role-badge {
+    padding: 4px 12px !important;
+    border-radius: 20px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+}
+.role-owner { background: rgba(16, 185, 129, 0.2) !important; color: #10b981 !important; }
+.role-editor { background: rgba(59, 130, 246, 0.2) !important; color: #3b82f6 !important; }
+.role-reviewer { background: rgba(245, 158, 11, 0.2) !important; color: #f59e0b !important; }
+.role-viewer { background: rgba(255, 255, 255, 0.1) !important; color: #cbd5e1 !important; }
+
+/* Notifications & Activity Hover states */
+.notification-card:hover,
+.activity-timeline .group:hover > div:last-child {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)) !important;
+    transform: translateY(-2px) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+}
+

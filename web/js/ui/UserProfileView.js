@@ -103,6 +103,9 @@ export class UserProfileView {
                         <button type="button" id="btnUserProfile2FA" class="btn btn--secondary w-full" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                             🔐 المصادقة الثنائية (2FA)
                         </button>
+                        <button type="button" id="btnUserProfileActivityLog" class="btn btn--secondary w-full" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            ⏱️ سجل الأنشطة والتدقيق
+                        </button>
                         <button type="button" id="btnUserProfileLogout" class="btn btn--ghost w-full text-danger" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                             🚪 تسجيل الخروج
                         </button>
@@ -141,6 +144,10 @@ export class UserProfileView {
 
         document.getElementById('btnUserProfileIntegrations')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showIntegrations', { detail: { onBackToProfile: true } }));
+        });
+
+        document.getElementById('btnUserProfileActivityLog')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showActivityLog'));
         });
 
         const inpDisplayName = document.getElementById('inpDisplayName');

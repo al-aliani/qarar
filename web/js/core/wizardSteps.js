@@ -90,7 +90,11 @@ export const STEPS = [
   { id: SECTIONS.DECISION_DASHBOARD, label: "لوحة القرار الاستثماري", isDecisionDashboard: true, isAdvancedStep: true, gridSize: 'full', stepType: 'لوحة', icon: 'i-target' },
   { id: SECTIONS.EXECUTIVE_SUMMARY, label: "الملخص التنفيذي", isExecutiveSummary: true, gridSize: 'full', stepType: 'تقرير', icon: 'i-doc' },
   { id: 'reportBuilder', label: "بناء التقرير", isReportBuilder: true, isAdvancedStep: true, gridSize: 'full', stepType: 'أداة', icon: 'i-slides' },
-  { id: SECTIONS.ACTUALS, label: "مراقبة الأداء الفعلي", isPostLaunch: true, isAdvancedStep: true, gridSize: 'full', stepType: 'متابعة', icon: 'i-history' }, // ما بعد الافتتاح — تبقى الأخيرة
+  // تدقيق 2026-07-17 (إعادة وصل ميزة ميتة): StudyComparison.js/DataService.compareStudies
+  // كانا موجودين وكاملين لكن بلا أي خطوة isComparison:true تُفعّل الفرع الميت في
+  // stepComponentRegistry.js — أُضيفت هنا كآخر خطوة (لا إدراج وسط المصفوفة) تحديداً
+  // لتفادي إزاحة فهارس كل الخطوات اللاحقة (كانت ستؤثر على أي كود يعتمد رقم خطوة ثابتاً).
+  { id: 'studyComparison', label: "مقارنة الدراسات", isComparison: true, isAdvancedStep: true, gridSize: 'full', stepType: 'أداة', icon: 'i-scale' },
 ];
 
 /** Ranges [start, end] inclusive; must match STEPS indices. Update when adding steps. */
@@ -186,7 +190,7 @@ const STEP_HELP_SOURCE = [
   { why: 'الملخص التنفيذي يجمع خلاصة الدراسة في صفحة واحدة للمستثمر أو البنك.', how: 'راجع النص المُولَّد وعدّله إن احتجت.' },
   { why: 'ترتيب الأقسام يحدد كيف يظهر التقرير النهائي عند التصدير.', how: 'اسحب الأقسام لترتيبها؛ أضف أو احذف أقساماً إن أردت.' },
   { why: 'لوحة التحكم المالية تعرض الأداء والسيناريوهات واقتراحات التحسين.', how: 'راجع الرسوم والمؤشرات واقتراحات التحسين.' },
-  { why: 'مراقبة الأداء الفعلي تقارن التقديرات بما حدث فعلياً بعد الإطلاق.', how: 'أدخل البيانات الفعلية دورياً وقارنها بالتوقعات.' },
+  { why: 'لا تستثمر في مشروع واحد بدون مقارنة مؤشراته ببدائل أو دراسات سابقة محفوظة.', how: 'اختر دراسة محفوظة من القائمة واضغط "مقارنة الآن" لعرض الفارق في المؤشرات.' },
 ];
 
 // تثبيت الشرح بمعرّف الخطوة، لا بموقعها: يسمح بتحسين ترتيب الرحلة دون أن ينتقل
@@ -202,7 +206,7 @@ const STEP_HELP_SOURCE_IDS = [
   SECTIONS.ZAKAT_TAX, SECTIONS.VALUATION, SECTIONS.RISK_ANALYSIS, 'stress_test',
   'sensitivity', SECTIONS.SCENARIOS, SECTIONS.MONTE_CARLO, SECTIONS.TIMELINE,
   SECTIONS.APPENDICES, SECTIONS.BUSINESS_MODEL, SECTIONS.DECISION_DASHBOARD,
-  SECTIONS.EXECUTIVE_SUMMARY, 'reportBuilder', 'dashboard', SECTIONS.ACTUALS
+  SECTIONS.EXECUTIVE_SUMMARY, 'reportBuilder', 'dashboard', 'studyComparison'
 ];
 const STEP_HELP_BY_ID = new Map(STEP_HELP_SOURCE_IDS.map((id, index) => [id, STEP_HELP_SOURCE[index]]));
 export const STEP_HELP = STEPS.map(step => STEP_HELP_BY_ID.get(step.id) || null);
@@ -238,7 +242,7 @@ export const STEPS_ABSORBED_IN_CATEGORY_VIEW = [SECTIONS.LOGISTICS, SECTIONS.ADM
 export const MAJOR_PHASES = [
   { id: 'phase1', label: 'التقييم والسوق', range: [0, 12] }, // setup & marketing
   { id: 'phase2', label: 'البناء الفني والمالي', range: [13, 29] }, // technical, execution, financial
-  { id: 'phase3', label: 'المخاطر والقرار', range: [30, 41] }, // risk, evidence, results
+  { id: 'phase3', label: 'المخاطر والقرار', range: [30, 40] }, // risk, evidence, results
 ];
 
 export function getMajorPhaseForStep(stepIndex) {
@@ -316,7 +320,7 @@ const STEP_FLOW_ENTRIES = [
   [SECTIONS.DECISION_DASHBOARD, 'result'],
   [SECTIONS.EXECUTIVE_SUMMARY, 'result'],
   ['reportBuilder', 'advanced'],              // أداة ما‑قبل‑تصدير، لا خطوة
-  [SECTIONS.ACTUALS, 'postlaunch'],           // بعد الإطلاق — خارج نطاق الجدوى
+  ['studyComparison', 'advanced'],            // أداة مقارنة اختيارية، لا خطوة إدخال
 ];
 const STEP_FLOW = new Map(STEP_FLOW_ENTRIES);
 
@@ -396,7 +400,7 @@ export const SIMPLE_MODE_HIDDEN_STEP_IDS = [
   'operational_sim', SECTIONS.ORG_STRUCTURE, 'balance_sheet', SECTIONS.ZAKAT_TAX,
   'investor_analysis', SECTIONS.VALUATION, SECTIONS.SCENARIOS, 'sensitivity',
   'stress_test', SECTIONS.MONTE_CARLO, SECTIONS.APPENDICES, 'reportBuilder',
-  SECTIONS.ACTUALS,
+  'studyComparison',
 ];
 
 /** هل يظهر القسم (بمعرّفه) في وضع التفصيل المعطى؟ (الافتراض: مفصّل → الكل) */

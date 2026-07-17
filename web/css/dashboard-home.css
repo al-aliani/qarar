@@ -118,3 +118,200 @@
         transform: none;
     }
 }
+
+/* =========================================================================
+   DASHBOARD V2 PREMIUM AESTHETIC OVERRIDES
+   ========================================================================= */
+
+.dashboard-view.dv {
+    --v2-bg: #f8f9fa;
+    --v2-glass-bg: rgba(255, 255, 255, 0.7);
+    --v2-glass-border: rgba(255, 255, 255, 0.5);
+    --v2-glass-shadow: 0 8px 32px 0 rgba(14, 91, 68, 0.05);
+    --v2-primary: var(--c-p-500, #0e5b44);
+    background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%) !important;
+    min-height: 100vh;
+    padding: 24px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+[data-theme="dark"] .dashboard-view.dv {
+    --v2-glass-bg: rgba(17, 24, 39, 0.7);
+    --v2-glass-border: rgba(255, 255, 255, 0.1);
+    --v2-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%) !important;
+}
+
+/* TOPBAR */
+.dv-topbar {
+    background: var(--v2-glass-bg) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--v2-glass-border) !important;
+    border-radius: 100px !important;
+    box-shadow: var(--v2-glass-shadow) !important;
+    padding: 16px 32px !important;
+    margin: 0 !important;
+}
+
+/* WORKSPACE GRID */
+.dv-workspace {
+    display: grid !important;
+    grid-template-columns: 280px 1fr !important;
+    gap: 24px !important;
+    background: transparent !important;
+    padding: 0 !important;
+    align-items: start;
+}
+
+/* SIDEBAR */
+.dv-side-nav {
+    background: var(--v2-glass-bg) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--v2-glass-border) !important;
+    border-radius: 24px !important;
+    box-shadow: var(--v2-glass-shadow) !important;
+    padding: 24px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    position: sticky !important;
+    top: 24px !important;
+}
+
+.dv-side-nav__main {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dv-side-nav__main button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px !important;
+    border-radius: 16px !important;
+    background: transparent !important;
+    border: none !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    text-align: right;
+    width: 100%;
+}
+
+.dv-side-nav__main button:hover {
+    background: rgba(14, 91, 68, 0.1) !important;
+    transform: translateX(-4px);
+}
+
+.dv-side-nav__main button.is-active {
+    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(14, 91, 68, 0.15) !important;
+}
+
+.dv-side-nav__main button.is-active .ic {
+    color: white !important;
+}
+
+/* MAIN CONTENT PANELS */
+.dv-home-panels {
+    background: var(--v2-glass-bg) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--v2-glass-border) !important;
+    border-radius: 24px !important;
+    box-shadow: var(--v2-glass-shadow) !important;
+    padding: 32px !important;
+}
+
+/* CARDS */
+.dv-project {
+    background: var(--v2-glass-bg) !important;
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--v2-glass-border) !important;
+    border-radius: 20px !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    padding: 24px !important;
+}
+
+.dv-project:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(14, 91, 68, 0.1) !important;
+    border-color: var(--v2-primary) !important;
+}
+
+/* BENTO HERO TILE (Welcome Card) */
+.dv-bento-tile--hero {
+    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 24px !important;
+    padding: 32px !important;
+    box-shadow: 0 16px 32px rgba(14, 91, 68, 0.2) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.dv-bento-tile--hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+    animation: rotateSlow 20s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes rotateSlow {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.dv-bento-tile--hero .dv-bento-tile__heroTitle {
+    font-size: 2rem !important;
+    font-weight: 800 !important;
+    margin-bottom: 12px !important;
+}
+
+/* WIDE BUTTONS & PANELS */
+.dv-bento-tile--wide, .dv-bento-tile {
+    background: var(--v2-glass-bg) !important;
+    border: 1px solid var(--v2-glass-border) !important;
+    border-radius: 24px !important;
+    box-shadow: var(--v2-glass-shadow) !important;
+    transition: all 0.3s ease !important;
+}
+
+.dv-bento-tile:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(14, 91, 68, 0.1) !important;
+}
+
+/* SCROLLBAR REFINEMENTS FOR V2 */
+.dv-home-panels::-webkit-scrollbar {
+    width: 8px;
+}
+.dv-home-panels::-webkit-scrollbar-track {
+    background: transparent;
+}
+.dv-home-panels::-webkit-scrollbar-thumb {
+    background: rgba(14, 91, 68, 0.2);
+    border-radius: 4px;
+}
+
+/* RESPONSIVE LAYOUT */
+@media (max-width: 900px) {
+    .dv-workspace {
+        grid-template-columns: 1fr !important;
+    }
+    .dv-side-nav {
+        position: static !important;
+    }
+}

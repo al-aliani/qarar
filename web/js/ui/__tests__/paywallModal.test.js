@@ -3,8 +3,8 @@
  *
  * تدقيق 2026-07-08 (ملاحظة عالية #39، قرار المالك): كان الموقع يسوّق ثلاث باقات
  * (249/990/2900 ريال) بلا أي حاجز فعلي يمنع تصدير التقرير النهائي مجاناً — فجوة
- * ثقة مباشرة. هذا يثبّت أن PaywallModal يعرض الباقات الثلاث بأسعارها الحقيقية
- * (من pricing.js، مصدر الحقيقة الوحيد) وروابط واتساب صحيحة لكل باقة.
+ * ثقة مباشرة. هذا يثبّت أن PaywallModal يعرض الباقات المدفوعة بأسعارها الحقيقية
+ * (من pricing.js، مصدر الحقيقة الوحيد) والدفع داخل المنصة بلا طلب عبر واتساب.
  *
  * تدقيق 2026-07-09 (أتمتة الدفع): القرار السابق ("لا بوابة دفع، تواصل يدوي فقط")
  * حُدِّث صراحة — أُضيف دفع فعلي (Moyasar/Stripe) لكل الباقات الثلاث. الباقة
@@ -21,23 +21,11 @@ vi.mock('../../services/PaymentService.js', () => ({
     startCheckout: (...a) => startCheckoutMock(...a),
 }));
 
-// تدقيق 2026-07-10: buildWhatsAppLink صار يُعيد null بلا رقم مضبوط (تراجع رشيق) بدل
-// رابط مكسور. WHATSAPP_NUMBER يُحسَب مرة واحدة عند تحميل config.js (قبل أي beforeEach)،
-// فضبط window.WHATSAPP_NUMBER هنا لا يصل بالوقت المناسب — نُموِّه الدالة مباشرة بدلاً
-// من ذلك لاختبار المسار الفعلي (رابط واتساب حقيقي) بمعزل عن توقيت تحميل الوحدات.
-vi.mock('../../config.js', async (importOriginal) => {
-    const actual = await importOriginal();
-    return {
-        ...actual,
-        buildWhatsAppLink: (text) => `https://wa.me/966501234567?text=${encodeURIComponent(text || '')}`,
-    };
-});
-
 function fakeStore(state = {}) {
     return { getState: () => state };
 }
 
-describe('PaywallModal — عرض الباقات الثلاث بأسعار pricing.js الحقيقية', () => {
+describe('PaywallModal — عرض الباقات المدفوعة بأسعار pricing.js الحقيقية', () => {
     beforeEach(() => {
         document.body.innerHTML = '';
         startCheckoutMock.mockClear();
@@ -50,26 +38,18 @@ describe('PaywallModal — عرض الباقات الثلاث بأسعار prici
         modal.open('تقرير PDF شامل');
 
         const cards = document.querySelectorAll('.paywall-package-card');
-        expect(cards).toHaveLength(PRICING_PACKAGES.length);
-        PRICING_PACKAGES.forEach(pkg => {
+        const paidPackages = PRICING_PACKAGES.filter(pkg => pkg.price > 0);
+        expect(cards).toHaveLength(paidPackages.length);
+        paidPackages.forEach(pkg => {
             const found = [...cards].some(c => c.textContent.includes(pkg.name) && c.textContent.includes(String(formatPrice(pkg.price))));
             expect(found, `باقة ${pkg.name} (${pkg.price}) غير معروضة بسعرها الصحيح`).toBe(true);
         });
     });
 
-    it('كل باقة تعرض رابط واتساب صحيحاً (يحوي اسم الباقة وسعرها واسم المشروع) بجانب زرَّي الدفع', () => {
-        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { name: 'مطعم الاختبار', id: 'study-1' } }));
+    it('لا يعرض أي زر طلب أو ترقية عبر واتساب', () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
         modal.open('ملف Excel التفصيلي');
-
-        const links = [...document.querySelectorAll('.btn-whatsapp-upgrade')];
-        expect(links).toHaveLength(PRICING_PACKAGES.length);
-        links.forEach(link => {
-            expect(link.getAttribute('href')).toMatch(/^https:\/\/wa\.me\//);
-            expect(link.getAttribute('target')).toBe('_blank');
-            const decoded = decodeURIComponent(link.getAttribute('href').split('text=')[1]);
-            expect(decoded).toContain('مطعم الاختبار');
-            expect(decoded).toContain('ملف Excel التفصيلي');
-        });
+        expect(document.querySelector('.btn-whatsapp-upgrade')).toBeNull();
     });
 
     it('كل باقة تعرض زرَّي دفع فعليين (Moyasar وStripe)', () => {
@@ -78,24 +58,23 @@ describe('PaywallModal — عرض الباقات الثلاث بأسعار prici
 
         const moyasarButtons = document.querySelectorAll('.btn-pay-now[data-provider="moyasar"]');
         const stripeButtons = document.querySelectorAll('.btn-pay-now[data-provider="stripe"]');
-        expect(moyasarButtons).toHaveLength(PRICING_PACKAGES.length);
-        expect(stripeButtons).toHaveLength(PRICING_PACKAGES.length);
+        const paidCount = PRICING_PACKAGES.filter(pkg => pkg.price > 0).length;
+        expect(moyasarButtons).toHaveLength(paidCount);
+        expect(stripeButtons).toHaveLength(paidCount);
     });
 
-    it('باقة "ذاتي" (channel:app) تُقدِّم زرَّي الدفع قبل رابط واتساب في البطاقة نفسها', () => {
+    it('باقة "ذاتي" تعرض الدفع داخل المنصة فقط', () => {
         const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
         modal.open('تقرير PDF شامل');
 
         const selfPkg = PRICING_PACKAGES.find(p => p.id === 'self');
         const card = [...document.querySelectorAll('.paywall-package-card')].find(c => c.textContent.includes(selfPkg.name));
         const payBtnIndex = card.innerHTML.indexOf('btn-pay-now');
-        const waLinkIndex = card.innerHTML.indexOf('btn-whatsapp-upgrade');
         expect(payBtnIndex).toBeGreaterThan(-1);
-        expect(waLinkIndex).toBeGreaterThan(-1);
-        expect(payBtnIndex).toBeLessThan(waLinkIndex);
+        expect(card.querySelector('.btn-whatsapp-upgrade')).toBeNull();
     });
 
-    it('باقتا "مراجَع بخبير"/"خدمة كاملة" (channel:whatsapp) تُقدِّمان واتساب قبل زرَّي الدفع', () => {
+    it('باقتا "مراجَع بخبير" و"خدمة كاملة" تعرضان الدفع داخل المنصة', () => {
         const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
         modal.open('تقرير PDF شامل');
 
@@ -103,8 +82,8 @@ describe('PaywallModal — عرض الباقات الثلاث بأسعار prici
             const pkg = PRICING_PACKAGES.find(p => p.id === id);
             const card = [...document.querySelectorAll('.paywall-package-card')].find(c => c.textContent.includes(pkg.name));
             const payBtnIndex = card.innerHTML.indexOf('btn-pay-now');
-            const waLinkIndex = card.innerHTML.indexOf('btn-whatsapp-upgrade');
-            expect(waLinkIndex).toBeLessThan(payBtnIndex);
+            expect(payBtnIndex).toBeGreaterThan(-1);
+            expect(card.querySelector('.btn-whatsapp-upgrade')).toBeNull();
         });
     });
 
@@ -183,7 +162,7 @@ describe('PaywallModal — ملاحظة شفافية عند توصية NO-GO/REV
 
         const note = document.querySelector('.alert--danger');
         expect(note?.textContent).toContain('NO-GO');
-        expect(document.querySelectorAll('.paywall-package-card')).toHaveLength(PRICING_PACKAGES.length);
+        expect(document.querySelectorAll('.paywall-package-card')).toHaveLength(PRICING_PACKAGES.filter(pkg => pkg.price > 0).length);
     });
 
     it('results.decision = REVISE: تظهر ملاحظة تنبيه', () => {
@@ -208,6 +187,6 @@ describe('PaywallModal — ملاحظة شفافية عند توصية NO-GO/REV
 
         expect(document.querySelector('.alert--danger')).toBeNull();
         expect(document.querySelector('.alert--warning')).toBeNull();
-        expect(document.querySelectorAll('.paywall-package-card')).toHaveLength(PRICING_PACKAGES.length);
+        expect(document.querySelectorAll('.paywall-package-card')).toHaveLength(PRICING_PACKAGES.filter(pkg => pkg.price > 0).length);
     });
 });

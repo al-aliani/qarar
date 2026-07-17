@@ -22,14 +22,14 @@ describe('PackagePreferenceModal', () => {
         expect(modal.overlay.querySelector('.btn-close')).toBeNull();
     });
 
-    it('يعرض 4 خيارات: الباقات الثلاث + استخدم مجاناً الآن، بنفس ترتيب PRICING_PACKAGES', async () => {
+    it('يعرض الباقات الأربع وتبدأ بالمجانية، بنفس ترتيب PRICING_PACKAGES', async () => {
         const { PackagePreferenceModal } = await import('../PackagePreferenceModal.js');
         const modal = new PackagePreferenceModal();
         modal.open();
         const buttons = modal.overlay.querySelectorAll('[data-tier]');
         expect(buttons.length).toBe(4);
         const tiers = Array.from(buttons).map((b) => b.dataset.tier);
-        expect(tiers).toEqual(['self', 'reviewed', 'full', 'free']);
+        expect(tiers).toEqual(['free', 'self', 'reviewed', 'full']);
     });
 
     it('اختيار باقة: يحفظ preferred_tier، يستدعي onSelected، ويغلق النافذة', async () => {
@@ -44,7 +44,7 @@ describe('PackagePreferenceModal', () => {
         expect(modal.overlay).toBeNull();
     });
 
-    it('اختيار "استخدم مجاناً الآن": يحفظ preferred_tier="free" (لا سعر معروض له)', async () => {
+    it('اختيار الباقة المجانية يحفظ preferred_tier="free"', async () => {
         const { PackagePreferenceModal } = await import('../PackagePreferenceModal.js');
         const modal = new PackagePreferenceModal();
         modal.open();

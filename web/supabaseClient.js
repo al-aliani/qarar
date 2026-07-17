@@ -243,7 +243,7 @@ export async function signInWithOAuth(provider) {
   const { data, error: e } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: window.location.origin
+      redirectTo: `${window.location.origin}${window.location.pathname}${window.location.search}`
     }
   });
   
@@ -313,15 +313,30 @@ export async function updateUserDisplayName(displayName) {
 /**
  * إرسال رمز OTP إلى رقم الجوال (دخول بالجوال)
  * الرقم بصيغة E.164 مثل +966501234567
+ *
+ * تدقيق 2026-07-17: كان يمرّر options.channel:'whatsapp'. قناة واتساب في Supabase
+ * مدعومة **حصراً** عبر مزوّد Twilio/Twilio Verify بمرسِل واتساب معتمد — وبلا مزوّد
+ * مهيأ كان الطلب يُرفض (422 invalid channel) لكل مستخدم، أي أن الدخول كان معطّلاً
+ * بالكامل. التسليم الآن عبر Send SMS Hook (supabase/functions/send-sms-hook)، وفيه
+ * لا وجود لمفهوم "القناة" أصلاً: حمولة الـhook هي {user, sms:{otp}} فقط، والوجهة
+ * يقرّرها الـhook نفسه (واتساب عبر Meta Cloud API). فتمرير channel هنا لا يفيد
+ * شيئاً ويُعيد إدخال خطر الـ422 — لذا حُذف.
+ *
+ * @param {string} phone
+ * @param {string} [_channelIgnored] مُهمَل عمداً — أُبقي ليبقى نداء PhoneAuthModal
+ *   ذو الوسيطين صالحاً بلا تعديل. لا تبنِ عليه منطقاً جديداً.
  */
-export async function signInWithOtpPhone(phone) {
+export async function signInWithOtpPhone(phone, _channelIgnored) {
   const { supabase, ok, error } = await getSupabaseClient();
   if (!ok) return { ok: false, error };
 
   const e164 = toE164SaudiPhone(phone);
 
   const { data, error: e } = await supabase.auth.signInWithOtp({
-    phone: e164
+    phone: e164,
+    options: {
+      shouldCreateUser: true
+    }
   });
 
   if (e) return { ok: false, error: e.message };

@@ -96,15 +96,8 @@ describe('StudyCategoryView', () => {
 
         await view.render(0);
 
-        expect([...document.querySelectorAll('.category-step__number')].map(element => element.textContent)).toEqual([
-            'الخطوة ١ من ٤٢',
-            'الخطوة ٢ من ٤٢',
-            'الخطوة ٣ من ٤٢',
-            'الخطوة ٤ من ٤٢',
-            'الخطوة ٥ من ٤٢',
-            'الخطوة ٦ من ٤٢',
-            'الخطوة ٧ من ٤٢'
-        ]);
+        expect([...document.querySelectorAll('.category-step__number')].map(element => element.textContent))
+            .toEqual(Array.from({ length: 7 }, (_, index) => `الخطوة ${(index + 1).toLocaleString('ar-SA')} من ${STEPS.length.toLocaleString('ar-SA')}`));
     });
 
     it('without a visible-category filter, the category eyebrow keeps absolute numbering out of all 8 categories', async () => {

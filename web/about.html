@@ -12,21 +12,39 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e5b44'/><text x='50' y='72' font-size='62' text-anchor='middle' fill='%23fff' font-family='sans-serif' font-weight='700'>ق</text></svg>" type="image/svg+xml" />
     <link rel="stylesheet" href="/fonts/fonts.css" />
     <link rel="stylesheet" href="/css/main.css" />
+    <link rel="stylesheet" href="/css/legal-pages.css" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand__title">من نحن</div>
-        <div class="brand__subtitle">منصة قرار لدراسات الجدوى</div>
-      </div>
-      <div class="topbar__actions">
-        <a class="btn btn--ghost" href="./">العودة للمنصة</a>
-      </div>
+    
+    <header class="lp-topbar">
+      <a href="./" class="lp-brand">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#0e5b44"/><text x="50" y="72" font-size="62" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">ق</text></svg>
+        منصة قرار
+      </a>
+      <a class="lp-btn-outline" href="./">العودة للمنصة</a>
     </header>
 
-    <main class="layout" style="grid-template-columns: 1fr">
-      <section class="content">
-        <div class="card">
+    <div class="lp-hero">
+      <div class="lp-hero-content">
+        <h1 class="lp-hero-title">من نحن</h1>
+        <div class="lp-hero-subtitle">منصة سعودية لإعداد دراسات الجدوى للأنشطة التجارية.</div>
+      </div>
+    </div>
+
+    <main class="lp-container">
+
+      <aside class="lp-sidebar">
+        <div class="lp-sidebar-title">الشركة والدعم</div>
+        <ul class="lp-nav-list">
+          <li><a href="about.html" class="lp-nav-link active"><svg class="lp-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg> من نحن</a></li>
+          <li><a href="help.html" class="lp-nav-link "><svg class="lp-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> مركز المساعدة</a></li>
+          <li><a href="contact.html" class="lp-nav-link "><svg class="lp-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg> اتصل بنا</a></li>
+        </ul>
+      </aside>
+
+      <div class="lp-content-wrapper">
+
+        <div class="lp-card">
           <h2>ماذا تقدّم قرار</h2>
           <p class="text-muted">
             قرار منصة سعودية لإعداد دراسات الجدوى للأنشطة التجارية. بدل الاعتماد على قوالب جاهزة أو تقديرات يدوية،
@@ -35,7 +53,7 @@
           </p>
         </div>
 
-        <div class="card" style="margin-top:12px">
+        <div class="lp-card" >
           <h2>ثلاث باقات حسب حاجتك</h2>
           <p class="text-muted">
             <strong>الباقة الذاتية:</strong> المحرك والأدوات لتبني دراستك بنفسك.
@@ -44,7 +62,7 @@
           </p>
         </div>
 
-        <div class="card" style="margin-top:12px">
+        <div class="lp-card" >
           <h2>لماذا نختلف</h2>
           <p class="text-muted">
             لأن المحرك المالي يقوم بالحسابات الثقيلة تلقائياً، نوفّر وقت العمل اليدوي وتكاليفه دون التنازل عن دقة
@@ -53,7 +71,7 @@
           </p>
         </div>
 
-        <div class="card" style="margin-top:12px">
+        <div class="lp-card" >
           <h2>التزامنا</h2>
           <p class="text-muted">
             لا نَعِد باعتماد تمويل مضمون، ولا نُخفي حدود النموذج عنك — الهدف رقم تقدر تدافع عنه فعلاً أمام ممول أو
@@ -62,15 +80,17 @@
           </p>
         </div>
 
-        <div class="card" style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+        <div class="lp-card" style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between">
           <p class="text-muted" style="margin:0">جاهز تختبر فكرتك بالأرقام؟</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <a class="btn btn--primary" href="./index.html">ابدأ دراستك</a>
             <a class="btn btn--ghost" href="./contact.html">تواصل معنا</a>
           </div>
         </div>
-      </section>
+      
+      </div>
     </main>
+
     <script src="./js/theme-init.js"></script>
   </body>
 </html>

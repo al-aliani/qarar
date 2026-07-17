@@ -98,4 +98,66 @@ export function verifyTamaraNotificationToken(
   return { ok: true };
 }
 
+/**
+ * Supabase Send SMS Hook: يوقّع طلباته بمعيار Standard Webhooks — المحتوى الموقَّع
+ * هو "{webhook-id}.{webhook-timestamp}.{raw body}"، والتوقيع HMAC-SHA256 بترميز
+ * base64 (لا hex، بخلاف Stripe أعلاه)، ورأس webhook-signature قد يحمل عدة توقيعات
+ * مفصولة بمسافات بصيغة "v1,<sig>" لدعم تدوير المفاتيح.
+ *
+ * فخّ المفتاح: Supabase يعرض السرّ بصيغة "v1,whsec_<base64>"، والمفتاح الفعلي هو
+ * ناتج فكّ base64 لما بعد "whsec_" — لا النص كما هو. استخدامه كما هو يجعل كل
+ * توقيع يفشل صامتاً.
+ *
+ * لماذا التحقق إلزامي: بدونه يستطيع أي طرف استدعاء عنوان الدالة برقم ورمز من
+ * اختياره، فيُرسل رسائل واتساب على حساب المالك (استنزاف رصيد Meta + انتحال).
+ */
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+async function hmacSha256Base64(keyBytes: Uint8Array, message: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyBytes,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+  return btoa(String.fromCharCode(...new Uint8Array(sigBuf)));
+}
+
+export async function verifyStandardWebhookSignature(
+  configuredSecret: string,
+  headers: { id: string | null; timestamp: string | null; signature: string | null },
+  rawBody: string
+): Promise<{ ok: boolean; reason?: string }> {
+  if (!configuredSecret) return { ok: false, reason: 'missing_configured_secret' };
+  const { id, timestamp, signature } = headers;
+  if (!id) return { ok: false, reason: 'missing_webhook_id' };
+  if (!timestamp) return { ok: false, reason: 'missing_webhook_timestamp' };
+  if (!signature) return { ok: false, reason: 'missing_webhook_signature' };
+
+  // يرفض الطلبات القديمة/المستقبلية — يقلّل نافذة إعادة الإرسال (replay).
+  const tsSeconds = Number(timestamp);
+  if (!Number.isFinite(tsSeconds)) return { ok: false, reason: 'invalid_webhook_timestamp' };
+  if (Math.abs(Date.now() / 1000 - tsSeconds) > 300) return { ok: false, reason: 'timestamp_out_of_tolerance' };
+
+  const rawKey = configuredSecret.replace(/^v1,/, '').replace(/^whsec_/, '');
+  let keyBytes: Uint8Array;
+  try {
+    keyBytes = base64ToBytes(rawKey);
+  } catch {
+    return { ok: false, reason: 'secret_not_base64' };
+  }
+
+  const expected = await hmacSha256Base64(keyBytes, `${id}.${timestamp}.${rawBody}`);
+  const provided = signature.split(' ').map((part) => part.split(',')[1] ?? '');
+  const match = provided.some((sig) => sig && timingSafeEqual(sig, expected));
+  return match ? { ok: true } : { ok: false, reason: 'signature_mismatch' };
+}
+
 export { hmacSha256Hex, timingSafeEqual };

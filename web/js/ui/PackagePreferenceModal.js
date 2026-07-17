@@ -9,8 +9,6 @@
 import { PRICING_PACKAGES, formatPrice, CURRENCY_SYMBOL } from '../core/pricing.js';
 import { updateUserProfile } from '../../supabaseClient.js';
 
-const FREE_OPTION = { id: 'free', name: 'استخدم مجاناً الآن', price: null, unit: '' };
-
 function escapeHtml(str) {
     if (str == null) return '';
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -30,7 +28,7 @@ export class PackagePreferenceModal {
         this.overlay.id = 'packagePreferenceModalOverlay';
         this.overlay.className = 'modal-overlay is-open';
 
-        const cards = [...PRICING_PACKAGES, FREE_OPTION].map((pkg) => `
+        const cards = PRICING_PACKAGES.map((pkg) => `
             <button type="button" class="card" data-tier="${pkg.id}" style="text-align:start;cursor:pointer;padding:16px;border-radius:12px;width:100%;">
                 <h4 style="margin:0 0 4px;">${escapeHtml(pkg.name)}</h4>
                 <div class="text-gold" style="font-size:1.1rem;font-weight:700;">

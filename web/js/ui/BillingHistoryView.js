@@ -49,7 +49,7 @@ export class BillingHistoryView {
         if (!user) {
             this.container.innerHTML = `
                 <div class="billing-history-view" style="max-width:560px;margin:60px auto;text-align:center;padding:24px;">
-                    <p class="text-muted mb-4">يجب تسجيل الدخول لعرض سجل الفواتير.</p>
+                    <p class="text-muted mb-4">يجب تسجيل الدخول لعرض الطلبات والفواتير.</p>
                     <button type="button" id="btnBillingLogin" class="btn btn--primary">تسجيل الدخول</button>
                 </div>
             `;
@@ -70,7 +70,7 @@ export class BillingHistoryView {
                 </button>
 
                 <div class="card p-6">
-                    <h2 class="text-xl font-bold mb-4" style="border-bottom: 1px solid var(--c-border); padding-bottom: var(--s-2);">سجل الفواتير</h2>
+                    <h2 class="text-xl font-bold mb-4" style="border-bottom: 1px solid var(--c-border); padding-bottom: var(--s-2);">الطلبات والفواتير</h2>
 
                     ${orders.length === 0 ? `
                         <p class="text-muted">لا توجد عمليات دفع حتى الآن.</p>
@@ -99,5 +99,12 @@ export class BillingHistoryView {
         `;
 
         this.container.querySelector('#btnBillingBack')?.addEventListener('click', () => this.onBack());
+        // تدقيق 2026-07-17: href="#/home" وحده لا يكفي إن كان المستخدم أصلاً على #/home —
+        // المتصفح لا يُطلق حدث hashchange حين لا تتغيّر قيمة الهاش، فلا يحدث شيء عند النقر.
+        // نستدعي onBack() مباشرة (نفس تعريف #btnBillingBack) بدل الاعتماد فقط على href.
+        this.container.querySelector('#billingEmptyPricingLink')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.onBack();
+        });
     }
 }

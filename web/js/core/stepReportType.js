@@ -22,7 +22,7 @@ export function stepReportType(step) {
         || step.isExecutiveSummary || step.isReportBuilder;
     if (analysis) return 'analysis';
     const mixed = step.isIntroduction || step.isOrgStructure || step.id === 'legal'
-        || step.isTimeline || step.isFinancing || step.isPostLaunch;
+        || step.isTimeline || step.isFinancing;
     if (mixed) return 'mixed';
     return 'input';
 }

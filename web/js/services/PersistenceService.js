@@ -223,7 +223,7 @@ export class PersistenceService {
         // Update info in index (Runway: folderId for تنظيم)
         const info = {
             id,
-            name: data.projectInfo?.name || 'Untitled',
+            name: data.projectInfo?.name || 'مشروع جديد',
             lastModified: new Date().toISOString(),
             folderId: data.projectInfo?.folderId || null,
             deleted: data.projectInfo?.deleted || false,
@@ -362,7 +362,7 @@ export class PersistenceService {
 
         return data.map(d => ({
             id: d.id,
-            name: (d.title && d.title.trim()) ? d.title.trim() : 'Untitled Project',
+            name: (d.title && d.title.trim()) ? d.title.trim() : 'مشروع جديد',
             lastModified: d.updated_at
         }));
     }

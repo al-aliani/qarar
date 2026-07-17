@@ -99,11 +99,6 @@ export class Wizard {
         // المتقدم (this.steps === STEPS الكاملة، فالمحلي=المطلق أصلاً).
         this.stepIndexMap = options.stepIndexMap || null;
         this.onNavigate = options.onNavigate || (() => { });
-        // تدقيق 2026-07-10: آخر خطوة (مراقبة الأداء الفعلي) كانت تنتهي بزر «التالي»
-        // معطّل بلا أي إجراء إغلاق حقيقي — لا رجوع للرئيسية، لا تصدير، لا عرض لقرار
-        // نهائي. onGoHome يتيح لوحة الإغلاق (renderCompletionPanel) إعادة استخدام نفس
-        // مسار showLandingDashboard() الذي يستخدمه شعار الهيدر أصلاً، بدل اختراع منطق
-        // جديد أو الاعتماد على محاكاة نقرة DOM هشة.
         this.onGoHome = options.onGoHome || (() => { });
         this.lastValidationError = null; // Track last validation error to prevent spam
         this.validationDebounce = null; // Debounce timer

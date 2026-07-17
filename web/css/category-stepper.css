@@ -8,6 +8,10 @@
   overflow-x: auto;
   padding: 10px max(16px, calc((100% - 800px) / 2)) 4px;
   scrollbar-width: thin;
+  /* تدقيق 2026-07-17: نفس تلاشي التمرير المطبَّق على .category-toc__links (main.css) —
+     مؤشر بصري بلا لون جديد يحتاج فحص تباين. */
+  mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
 }
 .category-stepper:not(:empty) {
   display: flex;

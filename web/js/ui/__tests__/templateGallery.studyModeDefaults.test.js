@@ -44,7 +44,7 @@ describe('TemplateGallery — نافذة مستوى تفصيل الدراسة (�
 
         expect(miniDesc).toContain('7 خطوات');
         expect(simpleDesc).toContain('23 خطوة');
-        expect(advancedDesc).toContain('40 خطوة');
+        expect(advancedDesc).toContain('41 خطوة');
     });
 
     it('بلا دراسة محمَّلة (appSettings.mode غير معرَّف): البطاقة المُفعّلة افتراضياً هي «مفصل»', () => {

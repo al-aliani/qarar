@@ -5,7 +5,7 @@
 
 import { getSupabaseClient, getAuthUser } from '../../supabaseClient.js';
 import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
-// واجهة مصادقة موحّدة: نستخدم النافذة (AuthModalStub) في كل المسارات بدل شاشة منفصلة.
+// واجهة الدخول الحية موحّدة برقم الجوال ورمز واتساب.
 
 class AuthGuardClass {
     constructor() {
@@ -221,8 +221,8 @@ class AuthGuardClass {
      * عرض شاشة المصادقة
      */
     async showAuthPrompt(onSuccess = () => {}) {
-        const { AuthModal } = await import('../ui/AuthModalStub.js');
-        const modal = new AuthModal('authModalContainer', {
+        const { PhoneAuthModal } = await import('../ui/PhoneAuthModal.js');
+        const modal = new PhoneAuthModal('authModalContainer', {
             onSuccess: async () => {
                 try {
                     const { user } = await getAuthUser();

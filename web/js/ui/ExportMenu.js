@@ -56,9 +56,13 @@ export class ExportMenu {
         if (!this.overlay) {
             this.overlay = document.createElement('div');
             this.overlay.id = overlayId || 'exportMenuOverlay';
-            this.overlay.className = 'modal-overlay';
             document.body.appendChild(this.overlay);
         }
+        // index.html يُعرِّف مسبقاً <div id="exportMenuOverlay"></div> فارغاً بلا كلاس (خارج
+        // app-shell) — الفرع أعلاه لا يُنفَّذ أبداً فعلياً، فتبقى النافذة بلا class="modal-overlay"
+        // ولا تستجيب لـ.is-open إطلاقاً (X/الخلفية/Escape تزيل is-open لكن النافذة لا تُخفى، فقط
+        // F5 "يحلها" لأنه يعيد تحميل الصفحة). نضبط الكلاس هنا دائماً، بصرف النظر عن مصدر العنصر.
+        this.overlay.classList.add('modal-overlay');
         this.store = store;
         this.pdfGenerator = new PDFGenerator(store);
     }

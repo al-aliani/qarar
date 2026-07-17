@@ -61,7 +61,7 @@ describe('أوضاع تفصيل الدراسة — إظهار الأقسام', (
         });
         // يُخفى
         [SECTIONS.MONTE_CARLO, 'sensitivity', 'stress_test', SECTIONS.VALUATION,
-         SECTIONS.SCENARIOS, 'marketSizing', SECTIONS.ACTUALS, 'reportBuilder'].forEach(id => {
+         SECTIONS.SCENARIOS, 'marketSizing', 'reportBuilder'].forEach(id => {
             expect(isStepVisibleInStudyMode(id, 'simple'), `${id} يجب أن يُخفى في بسيط`).toBe(false);
         });
     });

@@ -1,0 +1,159 @@
+/* ProjectOverviewView (#/project/<id>) — صفحة الخلاصة التنفيذية لمشروع واحد.
+ *
+ * مبدأ مقصود: هذا الملف **تخطيط فقط**. ألوان القرار (GO/REVISE/NO-GO) تأتي كاملةً من
+ * `.decision-banner.is-go/.is-revise/.is-nogo` في components.css — المعرَّفة مرة واحدة
+ * والمستخدمة أصلاً في ExecutiveSummary.js وFinancialDashboard.js. لا تُضِف هنا لوناً
+ * للقرار: تعليق components.css:382 ينصّ على أن REVISE تحذير لا رفض.
+ *
+ * كل لون أدناه من توكنات --c-* التي تتبدّل تلقائياً مع [data-theme="dark"]
+ * (variables.css:118) — لا قيم hex صلبة، فالوضع الليلي يعمل بلا قاعدة منفصلة.
+ */
+
+.po {
+    max-width: 880px;
+    margin-inline: auto;
+    padding: var(--s-5) var(--s-4) var(--s-8);
+}
+
+.po__head {
+    margin-bottom: var(--s-5);
+}
+
+.po__back {
+    margin-bottom: var(--s-3);
+}
+
+.po__title {
+    margin: 0;
+    font-size: clamp(1.5rem, 3.4vw, 2rem);
+    font-weight: 700;
+    color: var(--c-text-main);
+    line-height: 1.3;
+}
+
+.po__sub,
+.po__completeness {
+    margin: var(--s-1) 0 0;
+    font-size: 0.9rem;
+    color: var(--c-text-muted);
+}
+
+.po__block {
+    margin-bottom: var(--s-5);
+}
+
+/* .decision-banner تأتي بـmargin-bottom خاصاً بها؛ نضبط المسافة هنا لا هناك
+   حتى لا نغيّر شكلها في الشاشتين الأخريين اللتين تستخدمانها. */
+.po__block .decision-banner {
+    margin-bottom: var(--s-3);
+}
+
+.po__block-desc {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: var(--c-text-main);
+}
+
+.po__block-note {
+    margin: var(--s-2) 0 0;
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: var(--c-text-muted);
+}
+
+.po__reasons {
+    margin-top: var(--s-4);
+    padding: var(--s-4);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-md);
+    background: var(--c-surface-2);
+}
+
+.po__reasons-title {
+    margin: 0 0 var(--s-2);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--c-text-main);
+}
+
+.po__reasons-list {
+    margin: 0;
+    padding-inline-start: 1.1rem;
+    font-size: 0.88rem;
+    line-height: 1.9;
+    color: var(--c-text-main);
+}
+
+.po__section {
+    margin-bottom: var(--s-5);
+}
+
+.po__section-title {
+    margin: 0 0 var(--s-3);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--c-text-main);
+}
+
+.po__kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--s-3);
+}
+
+.po__kpi {
+    padding: var(--s-3);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-md);
+    background: var(--c-bg-card);
+    /* الحد الجانبي وحده يحمل الدلالة اللونية — النص يبقى --c-text-main دائماً،
+       فلا يعتمد التمييز على اللون فقط (نفس مبدأ شارات بطاقة المشروع). */
+    border-inline-start: 3px solid var(--c-border);
+}
+
+.po__kpi.is-good { border-inline-start-color: var(--c-success); }
+.po__kpi.is-bad { border-inline-start-color: var(--c-danger); }
+
+.po__kpi-label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--c-text-muted);
+    margin-bottom: var(--s-1);
+}
+
+.po__kpi-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--c-text-main);
+}
+
+.po__summary {
+    padding: var(--s-4);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-md);
+    background: var(--c-bg-card);
+}
+
+.po__summary p {
+    margin: 0 0 var(--s-3);
+    font-size: 0.92rem;
+    line-height: 1.9;
+    color: var(--c-text-main);
+}
+
+.po__summary p:last-child {
+    margin-bottom: 0;
+}
+
+.po__actions {
+    display: flex;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    padding-top: var(--s-2);
+}
+
+@media (max-width: 560px) {
+    .po { padding-inline: var(--s-3); }
+    .po__actions .btn { width: 100%; }
+}

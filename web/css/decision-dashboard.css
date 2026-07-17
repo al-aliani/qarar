@@ -1711,12 +1711,38 @@
 /* ═══ مساحة العمل: شبكة Bento أعلى تبويب «دراساتك» بدل التنقل الجانبي الدائم
    (اعتماد 2026-07-16 — راجع .dv-bento أدناه) ═══ */
 .dv-workspace {
-    display: block;
+    display: grid;
+    grid-template-columns: 238px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
 }
 
 .dv-home-panels {
     min-width: 0;
 }
+
+.dv-side-nav {
+    position: sticky;
+    top: 12px;
+    min-height: calc(100vh - 112px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 12px;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-lg);
+    background: var(--c-surface);
+    box-shadow: var(--shadow-sm);
+}
+.dv-side-nav__main,.dv-side-nav__bottom{display:grid;gap:5px}
+.dv-side-nav button{display:flex;align-items:center;gap:10px;width:100%;min-height:43px;padding:9px 11px;border:0;border-radius:10px;background:transparent;color:var(--c-text-muted);font:inherit;font-size:.86rem;font-weight:600;text-align:start;cursor:pointer}
+.dv-side-nav button:hover,.dv-side-nav button.is-active{background:var(--c-p-subtle);color:var(--c-p-500)}
+.dv-side-nav button .ic{width:18px;height:18px}
+.dv-side-nav__bottom{padding-top:12px;margin-top:20px;border-top:1px solid var(--c-border)}
+.dv-account{position:relative}
+.dv-account__menu{position:absolute;inset-inline-end:0;top:calc(100% + 8px);z-index:70;width:220px;padding:7px;border:1px solid var(--c-border);border-radius:12px;background:var(--c-surface);box-shadow:var(--shadow-lg)}
+.dv-account__menu button,.dv-account__menu a{display:block;width:100%;padding:10px 11px;border:0;border-radius:8px;background:transparent;color:var(--c-text-main);font:inherit;font-size:.84rem;text-align:start;cursor:pointer}
+.dv-account__menu button:hover,.dv-account__menu a:hover{background:var(--c-surface-2)}
 
 /* ═══ شبكة Bento (تبويب «دراساتك») ═══ */
 .dv-bento {
@@ -2380,6 +2406,10 @@
 }
 
 @media (max-width: 768px) {
+    .dv-workspace{grid-template-columns:1fr}
+    .dv-side-nav{position:static;min-height:0;display:flex;flex-direction:row;overflow-x:auto;padding:7px}
+    .dv-side-nav__main,.dv-side-nav__bottom{display:flex;gap:5px;padding:0;margin:0;border:0}
+    .dv-side-nav button{width:max-content;white-space:nowrap}
     .modal-overlay--nonblocking {
         align-items: flex-end;
         padding: 16px;

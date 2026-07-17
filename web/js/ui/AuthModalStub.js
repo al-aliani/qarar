@@ -4,6 +4,24 @@
  */
 import { trackEvent } from '../utils/analytics.js';
 
+// تدقيق 2026-07-17: supabaseClient.js:signIn() يُعيد e.message الخام من Supabase GoTrue
+// بلا أي ترجمة — قبل هذا كان أي خطأ غير "email not confirmed" يظهر كنص إنجليزي حرفي
+// (مثال: "Invalid login credentials") للمستخدم رغم أن الواجهة عربية بالكامل. نترجم
+// الرسائل الشائعة، ونستبدل أي رسالة أخرى غير معروفة برسالة عربية عامة بدل تسريب النص
+// الإنجليزي الخام — لا نعرض أبداً error كما هو.
+const AUTH_ERROR_TRANSLATIONS = [
+    { match: 'email not confirmed', text: 'البريد غير مفعّل. استخدم الزر أدناه لإعادة إرسال رابط التأكيد.' },
+    { match: 'invalid login credentials', text: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' },
+    { match: 'user already registered', text: 'هذا البريد مسجَّل بالفعل — جرّب تسجيل الدخول بدل إنشاء حساب جديد.' },
+    { match: 'password should be at least', text: 'كلمة المرور قصيرة جداً — استخدم 6 أحرف على الأقل.' },
+];
+
+function translateAuthError(error) {
+    const errLower = (error || '').toLowerCase();
+    const found = AUTH_ERROR_TRANSLATIONS.find((t) => errLower.includes(t.match));
+    return found ? found.text : 'فشل تسجيل الدخول أو إنشاء الحساب.';
+}
+
 export class AuthModal {
     constructor(containerId, options = {}) {
         this.containerId = containerId;
@@ -33,6 +51,10 @@ export class AuthModal {
                         <button type="button" id="authBtnResendConfirm" class="btn btn--ghost text-sm">إعادة إرسال رابط التأكيد</button>
                     </div>
                     <div id="authModalNotConfigured" class="p-3 bg-warning/10 border border-warning/30 rounded text-sm" style="display:none;"></div>
+                    <div id="authTabRow" class="flex gap-2 mb-3" role="tablist" aria-label="دخول أو إنشاء حساب">
+                        <button type="button" id="authTabSignIn" class="btn btn--primary flex-1" role="tab" aria-selected="true" aria-controls="authModalForm">دخول</button>
+                        <button type="button" id="authTabSignUp" class="btn btn--ghost flex-1" role="tab" aria-selected="false" aria-controls="authModalForm">إنشاء حساب</button>
+                    </div>
                     <form id="authModalForm" style="display:block;">
                         <div class="mb-3">
                             <label class="block text-sm mb-1" for="authEmail">البريد الإلكتروني</label>
@@ -43,18 +65,18 @@ export class AuthModal {
                             <input type="password" id="authPassword" class="input w-full" placeholder="••••••••" required minlength="8" title="8+ أحرف، رقم واحد على الأقل، رمز واحد على الأقل" autocomplete="current-password">
                             <div id="authPasswordStrength" class="text-xs mt-1" style="display:none;"></div>
                         </div>
-                        <div class="mb-3" id="authNameGroup">
-                            <label class="block text-sm mb-1" for="authName">الاسم <span class="text-muted text-xs">— لإنشاء حساب جديد</span></label>
+                        <div class="mb-3" id="authNameGroup" style="display:none;">
+                            <label class="block text-sm mb-1" for="authName">الاسم</label>
                             <input type="text" id="authName" class="input w-full" placeholder="اسمك الكامل" autocomplete="name">
                         </div>
-                        <div class="mb-3" id="authPhoneGroup">
-                            <label class="block text-sm mb-1" for="authPhone">رقم الجوال (واتساب) <span class="text-muted text-xs">— لإنشاء حساب جديد</span></label>
+                        <div class="mb-3" id="authPhoneGroup" style="display:none;">
+                            <label class="block text-sm mb-1" for="authPhone">رقم الجوال (واتساب)</label>
                             <input type="tel" id="authPhone" class="input w-full" placeholder="05xxxxxxxx" autocomplete="tel" dir="ltr" inputmode="numeric">
                             <p class="text-xs text-muted mt-1">نستخدمه للتواصل معك بخصوص طلباتك عبر واتساب.</p>
                         </div>
                         <div class="flex gap-2 mb-2">
                             <button type="submit" id="authBtnSignIn" class="btn btn--primary flex-1">دخول</button>
-                            <button type="button" id="authBtnSignUp" class="btn btn--secondary flex-1">إنشاء حساب</button>
+                            <button type="button" id="authBtnSignUp" class="btn btn--secondary flex-1" style="display:none;">إنشاء حساب</button>
                         </div>
                         <p class="text-xs text-muted text-center mb-2">
                             بإنشاء حساب أو تسجيل الدخول، أنت توافق على
@@ -67,7 +89,8 @@ export class AuthModal {
                         <div class="border-t border-solid mt-3 pt-3" style="border-color:var(--c-border);">
                             <p class="text-xs text-muted text-center mb-2">أو</p>
                             <button type="button" id="authBtnGoogle" class="btn btn--ghost w-full flex items-center justify-center gap-2" title="تسجيل الدخول بحساب Google">
-                                <span>🔐</span> تسجيل الدخول بـ Google
+                                <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.348 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+                                تسجيل الدخول بـ Google
                             </button>
                         </div>
                     </form>
@@ -123,6 +146,35 @@ export class AuthModal {
 
         const showErr = (msg) => { errEl.textContent = msg || ''; errEl.style.display = msg ? 'block' : 'none'; };
 
+        // تدقيق 2026-07-17: كانت حقول الاسم/الجوال (غير مطلوبة إلا عند إنشاء حساب) ظاهرة
+        // دائماً بجانب حقلَي البريد/كلمة المرور — نموذج واحد مزدحم بلا فصل واضح بين دخول
+        // وتسجيل. تبويبان يتحكمان الآن بإظهارها وبأيّ من زرَّي الإجراء الأساسيَّين ظاهر،
+        // مع isSignUpTab يوجّه إرسال النموذج (Enter/submit) للدالة الصحيحة أدناه.
+        let isSignUpTab = false;
+        const tabRow = this.overlay.querySelector('#authTabRow');
+        const tabSignIn = this.overlay.querySelector('#authTabSignIn');
+        const tabSignUp = this.overlay.querySelector('#authTabSignUp');
+        const nameGroup = this.overlay.querySelector('#authNameGroup');
+        const phoneGroup = this.overlay.querySelector('#authPhoneGroup');
+        const btnSignInEl = this.overlay.querySelector('#authBtnSignIn');
+        const btnSignUpEl = this.overlay.querySelector('#authBtnSignUp');
+        const setAuthTab = (signUp) => {
+            isSignUpTab = signUp;
+            tabSignIn.classList.toggle('btn--primary', !signUp);
+            tabSignIn.classList.toggle('btn--ghost', signUp);
+            tabSignIn.setAttribute('aria-selected', String(!signUp));
+            tabSignUp.classList.toggle('btn--primary', signUp);
+            tabSignUp.classList.toggle('btn--ghost', !signUp);
+            tabSignUp.setAttribute('aria-selected', String(signUp));
+            nameGroup.style.display = signUp ? 'block' : 'none';
+            phoneGroup.style.display = signUp ? 'block' : 'none';
+            btnSignInEl.style.display = signUp ? 'none' : 'block';
+            btnSignUpEl.style.display = signUp ? 'block' : 'none';
+            showErr('');
+        };
+        tabSignIn?.addEventListener('click', () => setAuthTab(false));
+        tabSignUp?.addEventListener('click', () => setAuthTab(true));
+
         const validatePassword = (p) => {
             if (p.length < 8) return 'كلمة المرور 8 أحرف على الأقل';
             if (!/[0-9]/.test(p)) return 'أضف رقماً واحداً على الأقل';
@@ -166,6 +218,7 @@ export class AuthModal {
 
             return new Promise((resolve) => {
                 form.style.display = 'none';
+                if (tabRow) tabRow.style.display = 'none';
                 const mfaPanel = this.overlay.querySelector('#authModalMfaPanel');
                 mfaPanel.style.display = 'block';
                 const codeInput = mfaPanel.querySelector('#authMfaCode');
@@ -234,7 +287,7 @@ export class AuthModal {
                     this.close();
                 } else {
                     const isEmailNotConfirmed = (error || '').toLowerCase().includes('email not confirmed');
-                    showErr(isEmailNotConfirmed ? 'البريد غير مفعّل. استخدم الزر أدناه لإعادة إرسال رابط التأكيد.' : (error || 'فشل تسجيل الدخول أو إنشاء الحساب.'));
+                    showErr(translateAuthError(error));
                     const resendBlock = this.overlay.querySelector('#authModalResendBlock');
                     if (resendBlock) resendBlock.style.display = isEmailNotConfirmed ? 'block' : 'none';
                 }
@@ -247,7 +300,7 @@ export class AuthModal {
             }
         };
 
-        form.addEventListener('submit', (e) => { e.preventDefault(); runAuth(false); });
+        form.addEventListener('submit', (e) => { e.preventDefault(); runAuth(isSignUpTab); });
         this.overlay.querySelector('#authBtnSignUp').addEventListener('click', (e) => { e.preventDefault(); runAuth(true); });
 
         // إعادة إرسال رابط تأكيد البريد
@@ -294,12 +347,14 @@ export class AuthModal {
         const forgotMessage = this.overlay.querySelector('#authForgotMessage');
         this.overlay.querySelector('#authBtnForgotPassword')?.addEventListener('click', () => {
             form.style.display = 'none';
+            if (tabRow) tabRow.style.display = 'none';
             if (forgotPanel) forgotPanel.style.display = 'block';
         });
         this.overlay.querySelector('#authBtnBackToLogin')?.addEventListener('click', () => {
             if (forgotPanel) forgotPanel.style.display = 'none';
             if (forgotMessage) { forgotMessage.style.display = 'none'; forgotMessage.textContent = ''; }
             form.style.display = 'block';
+            if (tabRow) tabRow.style.display = 'flex';
         });
         this.overlay.querySelector('#authBtnSendReset')?.addEventListener('click', async () => {
             const emailInput = this.overlay.querySelector('#authForgotEmail');
@@ -329,6 +384,7 @@ export class AuthModal {
                 const { ok, error } = await getSupabaseClient();
                 if (!ok) {
                     form.style.display = 'none';
+                    if (tabRow) tabRow.style.display = 'none';
                     notCfg.style.display = 'block';
                     notCfg.innerHTML = 'لم يُعد الحفظ السحابي. أضف SUPABASE_URL و SUPABASE_ANON_KEY (في localStorage أو window) لتفعيل الدخول.<br><span class="text-muted mt-2 block">يمكنك العمل محلياً بدون تسجيل؛ المسودة تُحفظ على جهازك.</span>';
                 }

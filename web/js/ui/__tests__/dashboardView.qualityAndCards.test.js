@@ -1,11 +1,13 @@
 /**
  * @vitest-environment jsdom
  *
- * تدقيق مجلس الحرب 2026-07-10: renderQualityStrip كان يفحص `projectInfo` على عنصر
- * قائمة خفيف لا يحمله أبداً — الشرط يفشل دائماً فيختفي الشريط لكل مستخدم حقيقي (كود
- * ميت 100%). أُصلح بتحميل الدراسة الكاملة عند غياب البيانات. لم يكن لهذا السلوك — ولا
- * لتقسيم renderProjectCard إلى رسم فوري + تحميل مؤجَّل لشارة الجودة، ولا لتبديل
- * تبويبات مساحة العمل — أي اختبار آلي قبل هذا الملف.
+ * تغطية renderProjectCard (رسم فوري + تحميل مؤجَّل لشارة الجودة)، وتبديل تبويبات
+ * مساحة العمل، وشارات حالة المشروع — لم يكن لأيٍّ منها اختبار آلي قبل هذا الملف
+ * (تدقيق مجلس الحرب 2026-07-10).
+ *
+ * حُذفت 2026-07-17 مجموعة اختبارات renderQualityStrip مع الدالة نفسها: أزال المالك
+ * شريط «اكتمال بيانات الدراسة» من مساحة العمل، فلم يبقَ للدالة مستدعٍ. لاحظ أن
+ * `dv-quality-mini` أدناه شيء آخر تماماً — شارة داخل بطاقة المشروع، ما زالت حيّة.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -35,40 +37,6 @@ function makeView(projects) {
         return view;
     });
 }
-
-describe('DashboardView — شريط الجودة (renderQualityStrip)', () => {
-    beforeEach(() => {
-        document.body.innerHTML = '<div id="dv"></div>';
-        vi.clearAllMocks();
-    });
-
-    it('لا يظهر الشريط بلا أي دراسة محفوظة', async () => {
-        const view = await makeView([]);
-        expect(await view.renderQualityStrip([])).toBe('');
-    });
-
-    it('يظهر الشريط ويحسب نسبة حقيقية حين تكون البيانات عنواناً خفيفاً بلا projectInfo (الحالة الفعلية من ProjectManager)', async () => {
-        const { ProjectManager } = await import('../../services/ProjectManager.js');
-        const view = await makeView(null);
-        const header = { id: 'p1', name: 'مطعمي', lastModified: new Date().toISOString() };
-
-        const html = await view.renderQualityStrip([header]);
-
-        expect(ProjectManager.loadProject).toHaveBeenCalledWith('p1');
-        expect(html).toContain('quality-strip');
-        expect(html).toMatch(/\d+%/);
-        expect(html).toContain('مطعم تجريبي');
-    });
-
-    it('لا يتحطم ويُعيد نصاً فارغاً إن فشل تحميل الدراسة الكاملة', async () => {
-        const { ProjectManager } = await import('../../services/ProjectManager.js');
-        ProjectManager.loadProject.mockRejectedValueOnce(new Error('network down'));
-        const view = await makeView(null);
-
-        const html = await view.renderQualityStrip([{ id: 'p2', name: 'مشروع' }]);
-        expect(html).toBe('');
-    });
-});
 
 describe('DashboardView — بطاقة المشروع (renderProjectCard) وتهريب الأسماء', () => {
     beforeEach(() => {

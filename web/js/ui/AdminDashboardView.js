@@ -14,6 +14,7 @@
 import { AuthGuard } from '../middleware/AuthGuard.js';
 import * as AdminService from '../services/AdminService.js';
 import * as ReviewsService from '../services/ReviewsService.js';
+import * as TicketService from '../services/TicketService.js';
 import { renderStarsHtml } from '../utils/starRating.js';
 import { toast } from '../utils/toast.js';
 import { formatCurrency } from '../utils/formatters.js';
@@ -29,6 +30,7 @@ const TABS = [
     { key: 'sharing', label: 'المشاركة' },
     { key: 'behavior', label: 'السلوك' },
     { key: 'reviews', label: 'آراء العملاء' },
+    { key: 'tickets', label: 'الدعم الفني' },
 ];
 
 export class AdminDashboardView {
@@ -38,6 +40,7 @@ export class AdminDashboardView {
         this.cache = {};
         this.charts = {};
         this.behaviorDays = 30;
+        this.openTicketId = null;
     }
 
     async render() {
@@ -56,6 +59,23 @@ export class AdminDashboardView {
 
         this._renderShell();
         await this._loadTab(this.activeTab);
+        this._hydrateTicketsBadge();
+    }
+
+    /** شارة عدد التذاكر المفتوحة بجانب زر تبويب "الدعم الفني" — تحميل مؤجَّل بلا
+     * انتظار قبل ظهور اللوحة نفسها (نفس مبدأ hydrateAccountTiles في DashboardView.js). */
+    async _hydrateTicketsBadge() {
+        const count = await TicketService.getOpenTicketsCount();
+        const btn = this.container.querySelector('#adminTabs [data-tab="tickets"]');
+        if (!btn || !count) return;
+        // إعادة استخدام صنف .badge/.badge--warning العام (components.css) بدل صنف جديد —
+        // نفس النمط المستخدم لشارة "بانتظار تأكيد الفريق" في UserProfileView.js، متوافق
+        // مع الوضع الليلي أصلاً بلا حاجة لفحص تباين جديد.
+        const badge = document.createElement('span');
+        badge.className = 'badge badge--warning';
+        badge.style.marginInlineStart = '6px';
+        badge.textContent = String(count);
+        btn.appendChild(badge);
     }
 
     _esc(value) {
@@ -105,6 +125,11 @@ export class AdminDashboardView {
 
         if (tabKey === 'reviews') {
             await this._renderReviewsTab(contentEl);
+            return;
+        }
+
+        if (tabKey === 'tickets') {
+            await this._renderTicketsTab(contentEl);
             return;
         }
 
@@ -508,6 +533,130 @@ export class AdminDashboardView {
                 toast.success('تم حذف التقييم');
                 await this._renderReviewsTab(contentEl);
             });
+        });
+    }
+
+    /** نفس نمط _renderReviewsTab: بلا كاش (تحتاج جلباً حياً)، بناء HTML كامل ثم ربط
+     * الأحداث، تحديث بإعادة-جلب-وإعادة-رسم كامل لا تحديث متفائل. */
+    async _renderTicketsTab(contentEl) {
+        contentEl.innerHTML = '<p class="admin-loading">جارٍ التحميل…</p>';
+        const tickets = await TicketService.listAllTickets();
+
+        const statusLabel = { open: 'مفتوحة', answered: 'تم الرد', closed: 'مُغلقة' };
+
+        contentEl.innerHTML = `
+            <div class="admin-card">
+                <h3 class="admin-card__title">تذاكر الدعم الفني (${tickets.length})</h3>
+                ${tickets.length ? tickets.map((t) => `
+                    <div class="admin-card" data-ticket-admin-row="${this._esc(t.id)}" style="cursor:pointer;margin-top:12px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                            <div>
+                                <div class="font-bold">${this._esc(t.subject)}</div>
+                                <div class="text-xs text-muted mt-1">${this._esc(t.user_id)} — ${new Date(t.updated_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric', numberingSystem: 'latn' })}</div>
+                            </div>
+                            <span class="badge ${t.status === 'open' ? 'badge--warning' : t.status === 'answered' ? 'badge--success' : 'badge--neutral'}">${statusLabel[t.status] || t.status}</span>
+                        </div>
+                        <div class="ticket-admin-thread mt-3" id="adminTicketThread-${this._esc(t.id)}" style="display:none;"></div>
+                    </div>
+                `).join('') : '<p class="admin-table__empty">لا توجد تذاكر دعم بعد.</p>'}
+            </div>
+        `;
+
+        contentEl.querySelectorAll('[data-ticket-admin-row]').forEach((row) => {
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('.ticket-admin-thread')) return;
+                this._toggleAdminThread(contentEl, row.dataset.ticketAdminRow);
+            });
+        });
+    }
+
+    async _toggleAdminThread(contentEl, ticketId) {
+        const threadEl = contentEl.querySelector(`#adminTicketThread-${ticketId}`);
+        if (!threadEl) return;
+
+        if (this.openTicketId === ticketId) {
+            threadEl.style.display = 'none';
+            this.openTicketId = null;
+            return;
+        }
+        if (this.openTicketId) {
+            const prev = contentEl.querySelector(`#adminTicketThread-${this.openTicketId}`);
+            if (prev) prev.style.display = 'none';
+        }
+        this.openTicketId = ticketId;
+
+        threadEl.style.display = 'block';
+        threadEl.innerHTML = '<p class="admin-loading">جارٍ التحميل…</p>';
+        const { ok, ticket, messages, error } = await TicketService.getTicketWithMessages(ticketId);
+        if (!ok) { threadEl.innerHTML = `<p class="admin-error">${this._esc(error || 'تعذّر تحميل المحادثة')}</p>`; return; }
+
+        this._renderAdminThread(contentEl, threadEl, ticket, messages);
+    }
+
+    _renderAdminThread(contentEl, threadEl, ticket, messages) {
+        threadEl.innerHTML = `
+            <div class="space-y-2 mb-3" style="max-height:260px;overflow-y:auto;">
+                ${messages.map((m) => `
+                    <div class="p-2 rounded text-sm" style="background:var(--c-surface-2);">
+                        <div class="text-xs text-muted mb-1">${m.sender_type === 'admin' ? 'أنت (الدعم)' : 'العميل'} — ${new Date(m.created_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric', numberingSystem: 'latn' })}</div>
+                        <div>${this._esc(m.body)}</div>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="flex gap-2 mb-2">
+                <textarea id="adminTicketReplyBody-${ticket.id}" class="form-input flex-1" rows="2" placeholder="اكتب رداً..."></textarea>
+                <button type="button" class="btn btn--sm btn--primary" id="adminTicketReplyBtn-${ticket.id}">إرسال الرد</button>
+            </div>
+            <div id="adminTicketReplyError-${ticket.id}" class="text-danger text-sm mb-2" style="display:none;"></div>
+            ${ticket.status !== 'closed'
+                ? `<button type="button" class="btn btn--sm btn--ghost btn-close-ticket" data-id="${this._esc(ticket.id)}" style="color:#c53030;">إغلاق التذكرة</button>`
+                : `<button type="button" class="btn btn--sm btn--ghost btn-reopen-ticket" data-id="${this._esc(ticket.id)}">إعادة فتح التذكرة</button>`}
+        `;
+
+        const replyBody = threadEl.querySelector(`#adminTicketReplyBody-${ticket.id}`);
+        const replyErr = threadEl.querySelector(`#adminTicketReplyError-${ticket.id}`);
+        threadEl.querySelector(`#adminTicketReplyBtn-${ticket.id}`)?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const result = await TicketService.addMessage(ticket.id, replyBody.value);
+            if (!result.ok) {
+                replyErr.textContent = result.error || 'فشل إرسال الرد';
+                replyErr.style.display = 'block';
+                return;
+            }
+            toast.success('تم إرسال الرد');
+            this.openTicketId = null;
+            await this._renderTicketsTab(contentEl);
+            await this._toggleAdminThread(contentEl, ticket.id);
+        });
+
+        threadEl.querySelector('.btn-close-ticket')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const confirmResult = await Swal.fire({
+                title: 'إغلاق هذه التذكرة؟',
+                text: 'يمكن للعميل إعادة فتحها لاحقاً بإرسال رسالة جديدة.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'نعم، أغلقها',
+                cancelButtonText: 'إلغاء',
+                customClass: { confirmButton: 'btn btn--sm btn--primary', cancelButton: 'btn btn--sm btn--ghost' },
+                buttonsStyling: false,
+            });
+            if (!confirmResult.isConfirmed) return;
+
+            const result = await TicketService.updateTicketStatus(ticket.id, 'closed');
+            if (!result.ok) { toast.error(result.error || 'فشل إغلاق التذكرة'); return; }
+            toast.success('تم إغلاق التذكرة');
+            this.openTicketId = null;
+            await this._renderTicketsTab(contentEl);
+        });
+
+        threadEl.querySelector('.btn-reopen-ticket')?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const result = await TicketService.updateTicketStatus(ticket.id, 'open');
+            if (!result.ok) { toast.error(result.error || 'فشل إعادة فتح التذكرة'); return; }
+            toast.success('أُعيد فتح التذكرة');
+            this.openTicketId = null;
+            await this._renderTicketsTab(contentEl);
         });
     }
 

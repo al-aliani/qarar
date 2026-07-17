@@ -26,9 +26,12 @@ export class ShareStudyView {
         if (!this.overlay) {
             this.overlay = document.createElement('div');
             this.overlay.id = overlayId || 'shareStudyOverlay';
-            this.overlay.className = 'modal-overlay';
             document.body.appendChild(this.overlay);
         }
+        // index.html يُعرِّف مسبقاً هذا العنصر فارغاً بلا كلاس (خارج app-shell) — الفرع أعلاه لا
+        // يُنفَّذ فعلياً، فتبقى النافذة بلا class="modal-overlay" ولا تستجيب لـ.is-open (انظر
+        // نفس الإصلاح في ExportMenu.js).
+        this.overlay.classList.add('modal-overlay');
         this.store = store;
         this.onClose = options.onClose || (() => { });
         this.onInvite = options.onInvite || null;

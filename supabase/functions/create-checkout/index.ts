@@ -19,6 +19,7 @@ import { getPackage } from '../_shared/pricing.ts';
 import { createMoyasarCheckout } from '../_shared/providers/moyasar.ts';
 import { createStripeCheckout } from '../_shared/providers/stripe.ts';
 import { createTamaraCheckout } from '../_shared/providers/tamara.ts';
+import { selectedAddons } from '../_shared/catalog.ts';
 
 const APP_ORIGIN = Deno.env.get('APP_ORIGIN') || 'http://localhost:5173';
 
@@ -48,7 +49,7 @@ Deno.serve(async (req: Request) => {
   if (userError || !userData?.user) return jsonResponse({ error: 'invalid_session' }, 401);
   const userId = userData.user.id;
 
-  let body: { tier?: string; studyId?: string; provider?: string };
+  let body: { tier?: string; studyId?: string; provider?: string; addons?: string[]; coupon?: string };
   try {
     body = await req.json();
   } catch {
@@ -64,6 +65,19 @@ Deno.serve(async (req: Request) => {
   // عميل بصلاحية service_role — الوحيد المسموح له بالكتابة في orders (RLS لا يسمح
   // لأي دور آخر بذلك إطلاقاً، انظر migration الخاص بهذا الجدول).
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
+  const addons = selectedAddons(body.addons);
+  const subtotal = pkg.price + addons.reduce((sum, item) => sum + item.price, 0);
+  const couponCode = String(body.coupon || '').trim().toUpperCase();
+  let discountPercent = 0;
+  if (couponCode) {
+    const { data: coupon } = await adminClient.from('coupons').select('discount_percent,active,expires_at,max_uses,used_count').eq('code', couponCode).maybeSingle();
+    const valid = coupon?.active && (!coupon.expires_at || new Date(coupon.expires_at) > new Date()) && (!coupon.max_uses || coupon.used_count < coupon.max_uses);
+    if (valid) discountPercent = Number(coupon.discount_percent || 0);
+  }
+  const discount = Math.round(subtotal * discountPercent) / 100;
+  const taxable = Math.max(0, subtotal - discount);
+  const vat = Math.round(taxable * 15) / 100;
+  const total = Math.round((taxable + vat) * 100) / 100;
 
   const { data: orderRow, error: insertError } = await adminClient
     .from('orders')
@@ -71,7 +85,14 @@ Deno.serve(async (req: Request) => {
       user_id: userId,
       study_id: body.studyId || null,
       tier: pkg.id,
-      amount_sar: pkg.price,
+      amount_sar: total,
+      subtotal_sar: subtotal,
+      discount_sar: discount,
+      vat_sar: vat,
+      total_sar: total,
+      amount_due_sar: total,
+      coupon_code: discountPercent ? couponCode : null,
+      items: [{ id: pkg.id, name: pkg.name, price: pkg.price }, ...addons],
       provider,
       status: 'pending',
     })
@@ -93,7 +114,7 @@ Deno.serve(async (req: Request) => {
     if (provider === 'moyasar') {
       const secretKey = Deno.env.get('MOYASAR_SECRET_KEY')!;
       const result = await createMoyasarCheckout(secretKey, {
-        amountSar: pkg.price,
+        amountSar: total,
         description: `قرار — باقة ${pkg.name}`,
         callbackUrl: returnUrl,
         metadata: { orderId, tier: pkg.id, userId },
@@ -103,7 +124,7 @@ Deno.serve(async (req: Request) => {
     } else if (provider === 'tamara') {
       const apiToken = Deno.env.get('TAMARA_API_TOKEN')!;
       const result = await createTamaraCheckout(apiToken, {
-        amountSar: pkg.price,
+        amountSar: total,
         description: `قرار — باقة ${pkg.name}`,
         callbackUrl: returnUrl,
         metadata: { orderId, tier: pkg.id, userId },
@@ -113,7 +134,7 @@ Deno.serve(async (req: Request) => {
     } else {
       const secretKey = Deno.env.get('STRIPE_SECRET_KEY')!;
       const result = await createStripeCheckout(secretKey, {
-        amountSar: pkg.price,
+        amountSar: total,
         description: `قرار — باقة ${pkg.name}`,
         successUrl: returnUrl,
         cancelUrl: `${APP_ORIGIN}/#/payment-return?order=${orderId}&cancelled=1`,

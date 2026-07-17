@@ -6,9 +6,7 @@ import { listOrders } from '../services/PaymentService.js';
 import { unreadCount } from '../services/NotificationService.js';
 import { getAuditLog, ACTIONS } from '../utils/auditLogger.js';
 import { toast } from '../utils/toast.js';
-import { PRICING_DISPLAY, buildWhatsAppLink } from '../config.js';
-import { PRICING_PACKAGES, formatPrice, CURRENCY_SYMBOL } from '../core/pricing.js';
-import { QualityCalculator } from '../utils/QualityCalculator.js';
+import { PRICING_DISPLAY } from '../config.js';
 import { escapeHtml } from '../utils/escape.js';
 import { calculateStudyCompleteness } from '../utils/studyCompleteness.js';
 import { FundingSimulator } from './widgets/FundingSimulator.js';
@@ -21,8 +19,6 @@ import { stepReportType, stepCanReport, STEP_TYPE_BADGE } from '../core/stepRepo
 import { DATA_SOURCE_CATALOG } from '../services/DataConnectors.js';
 
 const FOLDERS_STORAGE_KEY = 'feas_folders';
-
-import { ResourcesMenu } from './widgets/ResourcesMenu.js';
 
 /* ─── نظام الأيقونات الموحّد (بديل الإيموجي) ───
    أولاً: رموز الـsprite المعرفة في index.html (i-*)،
@@ -83,9 +79,6 @@ const INLINE_PATHS = {
 
 const inlineIcon = (name, cls = '') =>
     `<svg class="ic${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true">${INLINE_PATHS[name] || ''}</svg>`;
-
-/** إزالة الإيموجي من نصوص قادمة من الخارج (مثل شارة QualityCalculator) */
-const stripEmoji = (s) => (s || '').replace(/[\p{Extended_Pictographic}️‍]/gu, '').trim();
 
 export class DashboardView {
     constructor(containerId, store, onProjectSelect, options = {}) {
@@ -154,9 +147,6 @@ export class DashboardView {
 
         const hasProjects = filtered.length > 0;
         const userEmail = this.currentUser ? this.currentUser.email : null;
-        const displayName = this.currentUser
-            ? ((this.currentUser.user_metadata?.full_name || '').trim() || userEmail || 'صديقنا')
-            : null;
 
         // بطاقات حساب سريعة (حالة اشتراك، اكتمال ملف شخصي، شارة الإشعارات) — بيانات
         // شبكية إضافية لا تُنتظَر هنا أبداً (نفس مبدأ hydrateProjectCompleteness أدناه:
@@ -209,7 +199,7 @@ export class DashboardView {
             if (step.isPreliminaryCheck) return 'target';
             if (step.isProjectAlternatives || step.isComparison) return 'scale';
             if (step.isTemplateSelector || step.isReportBuilder || step.isAppendices) return 'clipboard';
-            if (step.isOperationalSim || step.isPostLaunch) return 'activity';
+            if (step.isOperationalSim) return 'activity';
             if (step.isFinancing || step.isLoanSchedule) return 'bank';
             if (step.isStressTest || step.isSensitivity || step.isMonteCarlo || step.isScenarios || step.isDashboard) return 'chart';
             if (step.isDecisionDashboard || step.isExecutiveSummary || step.isInvestorAnalysis || step.isValuation) return 'trend';
@@ -318,7 +308,6 @@ export class DashboardView {
                     { name: 'خطة التوظيف', desc: 'المناصب والرواتب ونسبة التوطين (نطاقات) المطلوبة لنشاطك', icon: 'users', step: stepIndexBy(s => s.id === 'hr', 9) },
                     { name: 'خطة المشتريات والأصول', desc: 'معدات، أثاث، تقنية، وتجهيزات', icon: 'list', step: stepIndexBy(s => s.id === 'technical', 8) },
                     { name: 'خطة التنفيذ', desc: 'مراحل، تواريخ، ومسؤوليات', icon: 'map', step: stepIndexBy(s => s.isTimeline, 20) },
-                    { name: 'أول تسعين يوم بعد الإطلاق', desc: 'متابعة الأداء الفعلي مقابل الخطة', icon: 'activity', step: stepIndexBy(s => s.isPostLaunch, 37), engine: true }
                 ]
             },
             {
@@ -377,26 +366,6 @@ export class DashboardView {
         const journeyToolsCount = allSupportTools.filter(tool => Number.isFinite(tool.step)).length;
         const independentToolsCount = allSupportTools.length - journeyToolsCount;
         const supportToolsCount = allSupportTools.length;
-        const homePanelId = (panel) => ({
-            studies: 'homePanel-studies',
-            engines: 'toolsAndEngines',
-            support: 'studyToolkits',
-            additional: 'additionalReadyStudies',
-            databases: 'databaseFilesRootPanel'
-        }[panel] || 'homePanel-studies');
-        const homeNavButton = (panel, iconName, title, desc, badge) => `
-            <button type="button"
-                class="dv-bento-tile dv-bento-tile--small ${activeHomePanel === panel ? 'is-active' : ''}"
-                data-dv-panel-button="${panel}"
-                role="tab"
-                aria-controls="${homePanelId(panel)}"
-                aria-selected="${activeHomePanel === panel ? 'true' : 'false'}">
-                <span class="dv-bento-tile__label"><span class="dv-bento-tile__ic">${inlineIcon(iconName)}</span> ${title}</span>
-                <span class="dv-bento-tile__count dv-num">${badge}</span>
-                <span class="dv-bento-tile__hint">${desc}</span>
-            </button>
-        `;
-
         this.container.innerHTML = `
             <div class="dashboard-view dv animate-entry">
 
@@ -406,10 +375,9 @@ export class DashboardView {
                         <span class="dv-brand__mark">ق</span>
                         <span class="dv-brand__name">قرار</span>
                     </button>
-                    <span class="dv-brand__ctx">${displayName ? `أهلاً ${escapeHtml(displayName)}` : 'مساحة العمل — دراسة الجدوى'}</span>
-                    <!-- Resource Menu Anchor (ResourcesMenu يملؤها) -->
-                    <div id="resources-menu-root" class="dv-resources"></div>
                     <span class="dv-topbar__sp"></span>
+                    <button type="button" id="dvConsultation" class="btn btn--sm btn--primary">طلب استشارة</button>
+                    <button type="button" id="dvLanguageToggle" class="btn btn--sm btn--ghost" aria-label="تغيير اللغة" title="تغيير اللغة">العربية</button>
                     <!-- تدقيق محتوى: زر تبديل المظهر (headerThemeToggle/btnThemeToggle) كان بلا أي
                          وسيلة وصول في وضع اللوحة — حاويتاهما (.app-header وsidebar) مخفيتان بالكامل
                          في dashboard-mode. زر مكافئ هنا داخل شريط عمل ظاهر دائماً. -->
@@ -436,17 +404,36 @@ export class DashboardView {
                         ${!this.currentUser ? `
                             <button type="button" id="dashboardLogin" class="btn btn--sm btn--secondary">${icon('i-user')} تسجيل الدخول</button>
                         ` : `
-                            <span class="dv-userchip"><span class="dv-userchip__dot"></span> ${userEmail}</span>
-                            <button type="button" id="btnUserProfile" class="btn btn--sm btn--ghost" title="حسابي">${icon('i-user')} حسابي</button>
-                            <button type="button" id="btnDashboardBilling" class="btn btn--sm btn--ghost" title="سجل الفواتير">سجل الفواتير</button>
-                            <a href="./help.html" target="_blank" rel="noopener" class="btn btn--sm btn--ghost" title="مركز المساعدة">مساعدة</a>
-                            <button type="button" id="btnLogout" class="btn btn--sm btn--ghost dv-logout">خروج</button>
+                            <div class="dv-account">
+                                <button type="button" id="dvAccountToggle" class="btn btn--sm btn--ghost" aria-expanded="false">${icon('i-user')} ${userEmail}</button>
+                                <div id="dvAccountMenu" class="dv-account__menu" hidden>
+                                    <button type="button" id="btnUserProfile">حسابي وبياناتي</button>
+                                    <button type="button" id="btnDashboardBilling">الطلبات والفواتير</button>
+                                    <a href="./help.html" target="_blank" rel="noopener">مركز المساعدة</a>
+                                    <button type="button" id="btnLogout" class="text-danger">تسجيل الخروج</button>
+                                </div>
+                            </div>
                         `}
                     </div>
                 </header>
 
                 <!-- ٢. مساحة العمل: شبكة Bento بدل التنقل الجانبي (اعتماد 2026-07-16) -->
                 <div class="dv-workspace" id="homeWorkspace">
+                    <aside class="dv-side-nav" aria-label="قائمة لوحة المستخدم">
+                        <div class="dv-side-nav__main">
+                            <button type="button" data-dv-panel-button="studies" class="${activeHomePanel === 'studies' ? 'is-active' : ''}">${inlineIcon('folder')} الرئيسية والمشاريع</button>
+                            <button type="button" data-dv-panel-button="engines" class="${activeHomePanel === 'engines' ? 'is-active' : ''}">${inlineIcon('chart')} الأدوات والمحرّكات</button>
+                            <button type="button" data-dv-panel-button="support" class="${activeHomePanel === 'support' ? 'is-active' : ''}">${inlineIcon('clipboard')} أدوات مساندة للدراسة</button>
+                            <button type="button" data-dv-panel-button="additional" class="${activeHomePanel === 'additional' ? 'is-active' : ''}">${inlineIcon('book')} دراسات جدوى جاهزة</button>
+                            <button type="button" data-dv-panel-button="databases" class="${activeHomePanel === 'databases' ? 'is-active' : ''}">${inlineIcon('list')} قواعد البيانات</button>
+                            <button type="button" data-dv-route="advisory">${inlineIcon('users')} الاستشارات</button>
+                            <button type="button" data-dv-route="billing">${inlineIcon('folder')} الطلبات</button>
+                            <button type="button" data-dv-route="support">${inlineIcon('bell')} الشكاوى والتذاكر</button>
+                        </div>
+                        <div class="dv-side-nav__bottom">
+                            <button type="button" data-dv-route="knowledge">${inlineIcon('book')} مركز المعرفة والموارد</button>
+                        </div>
+                    </aside>
                     <div class="dv-home-panels">
                         <section class="dv-section dv-home-panel" id="homePanel-studies" data-home-panel="studies" ${activeHomePanel !== 'studies' ? 'hidden' : ''}>
 
@@ -468,13 +455,6 @@ export class DashboardView {
                                         <button type="button" id="cardFullStudy" class="btn btn--primary">${icon('i-plus')} دراسة جديدة</button>
                                     </div>
                                 </div>
-
-                                ${hasProjects ? `<div class="dv-bento-tile dv-bento-tile--wide dv-bento-tile--quality">${await this.renderQualityStrip(filtered)}</div>` : ''}
-
-                                ${homeNavButton('engines', 'chart', 'الأدوات والمحرّكات', 'اختصارات خطوات الدراسة والنتائج', STEPS.length)}
-                                ${homeNavButton('support', 'clipboard', 'أدوات مساندة للدراسة', 'جمع بيانات، تحقق، تصدير، وربط', supportToolsCount)}
-                                ${homeNavButton('additional', 'book', 'دراسات جدوى جاهزة', 'ملفات جاهزة للتحميل', 'ملفات')}
-                                ${homeNavButton('databases', 'list', 'قواعد بيانات', 'أدلة وبيانات القطاعات', 'ملفات')}
 
                                 ${this.currentUser ? `
                                 <button type="button" id="dvTileSubscription" class="dv-bento-tile dv-bento-tile--small">
@@ -577,11 +557,6 @@ export class DashboardView {
                                 ${matchingTools.map(t => toolButton(t)).join('')}
                             </div>
                             ` : ''}
-
-                            <!-- تدقيق محتوى: باقتا «مراجَع بخبير»/«خدمة كاملة» لم تكونا مذكورتين
-                                 إطلاقاً في مساحة العمل — الفرصة البيعية الوحيدة كانت مؤجَّلة لحظة
-                                 التصدير النهائية عبر PaywallModal.js فقط. بطاقة تعريفية مبكرة هنا. -->
-                            ${hasProjects ? this.renderExpertCta() : ''}
 
                             <!-- Projects Grid -->
                             ${!hasProjects ? this.renderEmptyState() : `
@@ -1048,77 +1023,38 @@ export class DashboardView {
         `;
     }
 
-    // البيانات القادمة من قائمة المشاريع عناوين خفيفة بلا `projectInfo` (نفس علة renderProjectCard) —
-    // فالشرط القديم `!latest.projectInfo` كان يتحقق دائماً فيُسقط الشريط صامتاً لكل مستخدم حقيقي.
-    async renderQualityStrip(projects) {
-        if (!projects || projects.length === 0) return '';
-        const header = projects[0];
-        let latest = header;
-        if (!latest.projectInfo) {
-            try {
-                const loaded = await ProjectManager.loadProject(header.id);
-                latest = loaded?.data || null;
-            } catch (_) { latest = null; }
-        }
-        if (!latest || !latest.projectInfo) return '';
-
-        try {
-            const q = QualityCalculator.calculate(latest);
-            const badgeLabel = stripEmoji(q.badge) || 'بيانات أساسية';
-            return `
-                <section id="quality-strip" class="dv-section">
-                    <div class="dv-quality">
-                        <div class="dv-quality__info">
-                            <div class="dv-quality__head">
-                                <span class="dv-pill dv-pill--onband">${badgeLabel}</span>
-                                <h3 class="dv-quality__title">اكتمال بيانات الدراسة — <span class="dv-quality__name">${escapeHtml(latest.projectInfo.name || '')}</span></h3>
-                            </div>
-                            <p class="dv-quality__hint">أكملت <b class="dv-num">${q.score}%</b> من الدراسة. ${q.missing.length > 0 ? 'خطوتك التالية: ' + q.missing[0].label : 'ممتاز! الدراسة مكتملة.'}</p>
-                            <p class="dv-quality__caveat">هذه النسبة تقيس اكتمال البيانات المدخلة فقط، لا سلامة القرار المالي — راجع مؤشرات NPV وIRR ونقطة التعادل لمعرفة ذلك.</p>
-                        </div>
-                        <div class="dv-quality__cta-wrap">
-                            <div class="dv-track dv-track--onband"><div class="dv-track__fill" style="width: ${q.score}%"></div></div>
-                            <button class="btn btn--sm dv-quality__cta btn-open" data-id="${header.id}">${icon('i-pen')} حسّن النتيجة</button>
-                        </div>
-                    </div>
-                </section>
-            `;
-        } catch (e) { console.error(e); return ''; }
-    }
-
-    // بطاقة تعريفية بباقة «مراجَع بخبير» ضمن مساحة العمل نفسها — قبل ذلك لم تكن الباقات
-    // المدفوعة الأعلى هامشاً (تتطلب تدخلاً بشرياً فعلياً) تظهر إلا داخل نافذة القفل
-    // (PaywallModal.js) عند محاولة التصدير، أي في آخر لحظة ممكنة من رحلة المستخدم.
-    renderExpertCta() {
-        try {
-            const pkg = PRICING_PACKAGES.find(p => p.id === 'reviewed');
-            if (!pkg) return '';
-            const waLink = buildWhatsAppLink(`مرحباً، أرغب بمراجعة خبير لدراستي عبر منصة «قرار» (باقة «${pkg.name}» — ${formatPrice(pkg.price)} ${CURRENCY_SYMBOL}).`);
-            // waLink يكون null إن كان رقم واتساب غير مضبوط بعد — لا نعرض رابطاً مكسوراً
-            // (نفس منطق التراجع الرشيق في PaywallModal.js وlanding.html).
-            const ctaAction = waLink
-                ? `<a href="${waLink}" target="_blank" rel="noopener noreferrer" class="btn btn--sm btn--secondary">تواصل عبر واتساب</a>`
-                : `<span class="text-xs text-muted">قناة واتساب غير متاحة حالياً</span>`;
-            return `
-                <div class="dv-expert-cta">
-                    <span class="dv-expert-cta__ic">${icon('i-user')}</span>
-                    <div class="dv-expert-cta__body">
-                        <strong>محتار في افتراضاتك؟ دع خبيراً يراجع دراستك</strong>
-                        <span>${formatPrice(pkg.price)} ${CURRENCY_SYMBOL} — مراجعة مختص وتحليل حساسية موسّع قبل التسليم</span>
-                    </div>
-                    ${ctaAction}
-                </div>
-            `;
-        } catch (e) { console.warn('renderExpertCta failed:', e); return ''; }
-    }
-
     bindEvents() {
+        const accountToggle = this.container.querySelector('#dvAccountToggle');
+        const accountMenu = this.container.querySelector('#dvAccountMenu');
+        accountToggle?.addEventListener('click', () => {
+            const willOpen = accountMenu.hidden;
+            accountMenu.hidden = !willOpen;
+            accountToggle.setAttribute('aria-expanded', String(willOpen));
+        });
+        this.container.querySelector('#dvConsultation')?.addEventListener('click', () => this.options.onShowAdvisory?.());
+        this.container.querySelector('#dvLanguageToggle')?.addEventListener('click', () => {
+            const current = localStorage.getItem('qarar_language') || 'ar';
+            const next = current === 'ar' ? 'en' : 'ar';
+            localStorage.setItem('qarar_language', next);
+            const button = this.container.querySelector('#dvLanguageToggle');
+            if (button) button.textContent = next === 'ar' ? 'العربية' : 'English';
+            import('../utils/toast.js').then(({ toast }) => toast.info(next === 'ar' ? 'تم اختيار العربية' : 'English interface is being prepared for the study engine.'));
+        });
+        this.container.querySelectorAll('[data-dv-route]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const route = button.dataset.dvRoute;
+                if (route === 'advisory') this.options.onShowAdvisory?.();
+                else if (route === 'knowledge') this.options.onShowKnowledgeCenter?.();
+                else window.location.hash = '#/' + route;
+            });
+        });
+
         // Login
         const btnLogin = this.container.querySelector('#dashboardLogin');
         if (btnLogin) {
             btnLogin.addEventListener('click', async () => {
-                const { AuthModal } = await import('./AuthModalStub.js');
-                new AuthModal('authModalContainer', {
+                const { PhoneAuthModal } = await import('./PhoneAuthModal.js');
+                new PhoneAuthModal('authModalContainer', {
                     onSuccess: () => this.render() // Refresh dashboard on success
                 }).open();
             });
@@ -1337,9 +1273,6 @@ export class DashboardView {
             this.render();
         });
 
-        // Initialize Resources Menu
-        new ResourcesMenu('resources-menu-root', this.options).render();
-
         // Journey Links (دليل سريع، منشآت، تمويل، إلخ) — event delegation
         const journeyLinkHandlers = {
             linkQuickStartFromJourneys: () => this.options.onShowQuickStartGuide?.(),
@@ -1448,7 +1381,7 @@ export class DashboardView {
                 e.stopPropagation();
                 // btn.dataset بدل e.target.dataset: النقر قد يقع على أيقونة SVG داخل الزر
                 const id = btn.dataset.id;
-                this.loadProject(id);
+                this.openProjectOverview(id);
             });
         });
 
@@ -1457,7 +1390,7 @@ export class DashboardView {
             card.addEventListener('click', (e) => {
                 if (e.target.closest('button') || e.target.closest('select')) return;
                 const id = card.dataset.id;
-                this.loadProject(id);
+                this.openProjectOverview(id);
             });
             // إتاحة لوحة المفاتيح: Enter/Space يفتح البطاقة (role="button"/tabindex="0")
             // — نتجاهل حين يكون التركيز على زر/قائمة داخلية حتى لا نتعارض مع أفعالها
@@ -1465,7 +1398,7 @@ export class DashboardView {
                 if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
                 if (e.target !== card) return;
                 e.preventDefault();
-                this.loadProject(card.dataset.id);
+                this.openProjectOverview(card.dataset.id);
             });
         });
 
@@ -1486,6 +1419,18 @@ export class DashboardView {
                 if (result.isConfirmed) {
                     const id = (e.target.closest('[data-id]') || e.target).dataset?.id;
                     await ProjectManager.deleteProject(id);
+                    // تدقيق 2026-07-17: طبقتا تخزين مستقلتان لا تتزامنان — ProjectManager يضبط
+                    // deleted:true في feas_project_<id> فقط، بينما حلقة autosave الخاصة بـstore
+                    // (مستقلة تماماً، تعمل على مؤقّت بلا علاقة بهذا الحذف) قد يكون لديها مزامنة
+                    // سحابية معلَّقة (_syncToCloud، حتى 800ms) بنسخة قديمة من بيانات نفس الدراسة
+                    // بلا deleted:true — تصل لاحقاً فتكتب فوق العلم وتُعيد إحياء الدراسة المحذوفة
+                    // بعد التحديث. لو كانت الدراسة المحذوفة هي نفسها الدراسة النشطة حالياً في
+                    // الذاكرة، store.reset() يُلغي المزامنة المعلَّقة (saveLocal تُصفّر
+                    // _cloudSyncTimeout قبل جدولة مزامنة جديدة) ويستبدل الحالة النشطة بدراسة
+                    // فارغة جديدة، فلا يُعاد لمس مفتاح الدراسة المحذوفة إطلاقاً.
+                    if (this.store?.getState?.()?.projectInfo?.id === id) {
+                        await this.store.reset();
+                    }
                     this.render();
                 }
             });
@@ -1560,6 +1505,17 @@ export class DashboardView {
                 console.error('Failed to update project folder:', err);
             }
         });
+    }
+
+    /**
+     * فتح مشروع = الانتقال لصفحة خلاصته التنفيذية برابطها الخاص (#/project/<id>)،
+     * لا القذف داخل الويزارد مباشرةً كما كان. التحميل الفعلي وضبط المخزن يتمّان داخل
+     * ProjectOverviewView، وزر «تعديل» فيها يكمل لنفس وجهة السلوك السابق.
+     * loadProject() تبقى للمسارات التي تفتح الدراسة للتحرير فوراً (مثل «آخر ما فتحته»).
+     */
+    openProjectOverview(id) {
+        if (!id) return;
+        window.location.hash = `#/project/${id}`;
     }
 
     async loadProject(id) {

@@ -4,14 +4,14 @@
  * فعلي يمنع الوصول المجاني للتقرير النهائي — فجوة ثقة مباشرة بين التسويق والمنتج.
  *
  * تدقيق 2026-07-09 (أتمتة الدفع): أُضيف دفع فعلي (Moyasar/Stripe عبر
- * PaymentService.js → Edge Functions) لكل الباقات الثلاث. الباقة "ذاتي" (self)
+ * PaymentService.js → Edge Functions) لكل الباقات المدفوعة. الباقة "ذاتي" (self)
  * تعتمد الدفع المباشر كخيار أول (channel:'app' أصلاً في pricing.js)؛ باقتا
  * "مراجَع بخبير"/"خدمة كاملة" (channel:'whatsapp') تُبقي واتساب كخيار أول عمداً
  * (تتطلبان تدخلاً بشرياً فعلياً — مراجعة/إعداد يدوي — لا مجرد فتح قفل تلقائي)
  * مع إضافة الدفع المباشر كخيار ثانٍ لمن يفضّل الدفع فوراً دون انتظار محادثة.
  */
-import { PRICING_PACKAGES, formatPrice, CURRENCY_SYMBOL } from '../core/pricing.js';
-import { buildWhatsAppLink, REFUND_POLICY } from '../config.js';
+import { PRICING_PACKAGES, formatPrice } from '../core/pricing.js';
+import { REFUND_POLICY } from '../config.js';
 import { startCheckout } from '../services/PaymentService.js';
 import { trackEvent } from '../utils/analytics.js';
 
@@ -59,7 +59,6 @@ export class PaywallModal {
 
     render() {
         const state = this.store?.getState?.() || {};
-        const projectName = state.projectInfo?.name || 'مشروعي';
         this.studyId = state.projectInfo?.id || state.id || null;
 
         // ملاحظة شفافية: لو زار العميل لوحة القرار قبل التصدير (النسق المعتاد) تكون
@@ -72,17 +71,8 @@ export class PaywallModal {
                 ? '<div class="alert alert--warning mb-3">دراستك تحتاج مراجعة (REVISE) حالياً — هذا التقرير يوضّح النقاط التي تحتاج تعديلاً.</div>'
                 : '';
 
-        const cards = PRICING_PACKAGES.map(pkg => {
+        const cards = PRICING_PACKAGES.filter(pkg => pkg.price > 0).map(pkg => {
             const features = PACKAGE_FEATURES[pkg.id] || [];
-            const message = `مرحباً، أرغب بترقية دراسة «${projectName}» لباقة «${pkg.name}» (${formatPrice(pkg.price)} ${CURRENCY_SYMBOL}) للحصول على ${this.formatLabel}.`;
-            const waLink = buildWhatsAppLink(message);
-            // waLink يكون null إن كان رقم واتساب غير مضبوط بعد (web/public/whatsapp-config.js) —
-            // نُخفي الزر بدل عرض رابط مكسور بلا مستلم يبدو كأن لا أحد يرد على طلبات الشراء.
-            const waButton = waLink
-                ? `<a href="${escapeHtml(waLink)}" target="_blank" rel="noopener noreferrer" class="btn btn--secondary btn-block btn-whatsapp-upgrade" data-package="${pkg.id}">
-                    📱 تواصل عبر واتساب للترقية
-                </a>`
-                : `<p class="text-xs text-muted" style="margin:4px 0;">قناة واتساب غير متاحة حالياً — استخدم الدفع المباشر أدناه.</p>`;
             const payButtons = `
                 <div class="paywall-pay-buttons" style="display:flex;flex-direction:column;gap:6px;">
                     <button type="button" class="btn btn--primary btn-block btn-pay-now" data-package="${pkg.id}" data-provider="moyasar">
@@ -95,12 +85,6 @@ export class PaywallModal {
                         ادفع ببطاقة دولية
                     </button>
                 </div>`;
-            // channel='app' (الباقة الذاتية): الدفع المباشر أولاً. channel='whatsapp'
-            // (الباقتان الأخريان): واتساب أولاً عمداً — تتطلبان تدخلاً بشرياً فعلياً،
-            // مع إبقاء الدفع المباشر خياراً ثانياً لمن لا يريد الانتظار.
-            const buttonsHtml = pkg.channel === 'app'
-                ? `${payButtons}<div class="mt-2">${waButton}</div>`
-                : `${waButton}<div class="mt-2">${payButtons}</div>`;
             return `
                 <div class="card paywall-package-card" data-package-card="${pkg.id}" style="padding:16px;border-radius:12px;">
                     <h4 style="margin:0 0 4px;">${escapeHtml(pkg.name)}</h4>
@@ -108,7 +92,7 @@ export class PaywallModal {
                     <ul style="margin:0 0 12px;padding-inline-start:18px;font-size:0.85rem;color:var(--c-text-muted,#94a3b8);">
                         ${features.map(f => `<li>${escapeHtml(f)}</li>`).join('')}
                     </ul>
-                    ${buttonsHtml}
+                    ${payButtons}
                 </div>
             `;
         }).join('');
@@ -120,7 +104,7 @@ export class PaywallModal {
                     <button type="button" class="btn-close paywall-close" aria-label="إغلاق">×</button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted mb-4">${escapeHtml(this.formatLabel)} متاح ضمن الباقات المدفوعة. ادفع مباشرة الآن، أو تواصل معنا عبر واتساب.</p>
+                    <p class="text-muted mb-4">${escapeHtml(this.formatLabel)} متاح ضمن الباقات المدفوعة. اختر الباقة وطريقة الدفع لإكمال الطلب داخل المنصة.</p>
                     <div id="paywallPayError" class="text-danger text-sm mb-2" style="display:none;"></div>
                     ${decisionNote}
                     <div class="paywall-packages-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
@@ -189,7 +173,7 @@ export class PaywallModal {
             return;
         }
 
-        showErr(result.error || 'تعذّر بدء عملية الدفع. جرّب واتساب بدلاً من ذلك أو حاول لاحقاً.');
+        showErr(result.error || 'تعذّر بدء عملية الدفع. حاول مرة أخرى لاحقاً.');
         btn.disabled = false;
         btn.textContent = orig;
     }

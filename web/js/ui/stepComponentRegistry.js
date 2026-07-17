@@ -93,12 +93,6 @@ export async function renderStepComponent(step, containerId, index, ctx) {
         instance.render(index);
         return { instance };
     }
-    if (step.isPostLaunch) {
-        const { PostLaunchTracker } = await import('./PostLaunchTracker.js');
-        const instance = get('postLaunch', PostLaunchTracker, containerId, store);
-        instance.render();
-        return { instance };
-    }
     if (step.isBusinessModel) {
         const { BusinessModelView } = await import('./BusinessModelView.js');
         const instance = get('businessModel', BusinessModelView, containerId, store, onNavigate);
