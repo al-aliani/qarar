@@ -1533,6 +1533,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // محاكي البجعة السوداء (Black Swan Stress Test)
+  window.addEventListener('feasibility:showBlackSwanStressTest', async () => {
+    try {
+      const { BlackSwanStressTestView } = await import('./js/ui/BlackSwanStressTestView.js');
+      const view = new BlackSwanStressTestView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('BlackSwanStressTestView load failed:', err);
+      toast.error('تعذر فتح محاكي البجعة السوداء');
+    }
+  });
+
+  // محطة أبحاث المستهلك الافتراضية (AI Focus Group)
+  window.addEventListener('feasibility:showAIFocusGroup', async () => {
+    try {
+      const { AIFocusGroupView } = await import('./js/ui/AIFocusGroupView.js');
+      const view = new AIFocusGroupView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('AIFocusGroupView load failed:', err);
+      toast.error('تعذر فتح محطة أبحاث المستهلك الافتراضية');
+    }
+  });
+
+  // محرك التسعير الديناميكي (Surge Pricing Engine)
+  window.addEventListener('feasibility:showSurgePricingEngine', async () => {
+    try {
+      const { SurgePricingEngineView } = await import('./js/ui/SurgePricingEngineView.js');
+      const view = new SurgePricingEngineView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('SurgePricingEngineView load failed:', err);
+      toast.error('تعذر فتح محرك التسعير الديناميكي');
+    }
+  });
+
+  // رادار اصطياد المواهب (Talent Poaching Radar)
+  window.addEventListener('feasibility:showTalentPoachingRadar', async () => {
+    try {
+      const { TalentPoachingRadarView } = await import('./js/ui/TalentPoachingRadarView.js');
+      const view = new TalentPoachingRadarView(wizardContainer);
+      const el = await view.render();
+      wizardContainer.innerHTML = '';
+      wizardContainer.appendChild(el);
+    } catch (err) {
+      console.error('TalentPoachingRadarView load failed:', err);
+      toast.error('تعذر فتح رادار اصطياد المواهب');
+    }
+  });
+
   // أكاديمية القادة (Academy)
   window.addEventListener('feasibility:showAcademy', async () => {
     try {

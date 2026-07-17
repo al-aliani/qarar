@@ -223,9 +223,17 @@ export class DashboardViewV2 {
                             <svg class="ic" aria-hidden="true"><use href="#i-alert-triangle"/></svg>
                             غرفة إدارة الأزمات والطوارئ
                         </button>
+                        <button class="dv2-nav-btn text-red-600/90 hover:text-red-600 hover:bg-red-600/10" id="btnSidebarBlackSwan">
+                            <svg class="ic" aria-hidden="true"><use href="#i-activity"/></svg>
+                            محاكي البجعة السوداء (Black Swan)
+                        </button>
                         <button class="dv2-nav-btn text-rose-400/90 hover:text-rose-400 hover:bg-rose-400/10" id="btnSidebarPricingLab">
                             <svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg>
                             مختبر التسعير السيكولوجي
+                        </button>
+                        <button class="dv2-nav-btn text-cyan-400/90 hover:text-cyan-400 hover:bg-cyan-400/10" id="btnSidebarSurgePricing">
+                            <svg class="ic" aria-hidden="true"><use href="#i-zap"/></svg>
+                            محرك التسعير الديناميكي (Surge)
                         </button>
                         <button class="dv2-nav-btn text-teal-400/90 hover:text-teal-400 hover:bg-teal-400/10" id="btnSidebarSupplyChain">
                             <svg class="ic" aria-hidden="true"><use href="#i-truck"/></svg>
@@ -242,6 +250,10 @@ export class DashboardViewV2 {
                         <button class="dv2-nav-btn text-emerald-400/90 hover:text-emerald-400 hover:bg-emerald-400/10" id="btnSidebarCopilot">
                             <svg class="ic" aria-hidden="true"><use href="#i-cpu"/></svg>
                             مساعد الذكاء الاصطناعي (Copilot)
+                        </button>
+                        <button class="dv2-nav-btn text-blue-400/90 hover:text-blue-400 hover:bg-blue-400/10" id="btnSidebarAIFocusGroup">
+                            <svg class="ic" aria-hidden="true"><use href="#i-message-square"/></svg>
+                            أبحاث المستهلك الافتراضية
                         </button>
                         <button class="dv2-nav-btn" id="btnSidebarTeam">
                             <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
@@ -271,6 +283,10 @@ export class DashboardViewV2 {
                         <button class="dv2-nav-btn text-amber-400/90 hover:text-amber-400 hover:bg-amber-400/10" id="btnSidebarInvestorNetwork">
                             <svg class="ic" aria-hidden="true"><use href="#i-briefcase"/></svg>
                             شبكة المستثمرين (Deal-Flow)
+                        </button>
+                        <button class="dv2-nav-btn text-emerald-500/90 hover:text-emerald-500 hover:bg-emerald-500/10" id="btnSidebarTalentPoaching">
+                            <svg class="ic" aria-hidden="true"><use href="#i-crosshair"/></svg>
+                            رادار اصطياد المواهب (Talent Poaching)
                         </button>
                         <button class="dv2-nav-btn text-pink-400/90 hover:text-pink-400 hover:bg-pink-400/10" id="btnSidebarCommunity">
                             <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>
@@ -712,8 +728,14 @@ export class DashboardViewV2 {
         this.container.querySelector('#btnSidebarCrisis')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showCrisisManagement'));
         });
+        this.container.querySelector('#btnSidebarBlackSwan')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showBlackSwanStressTest'));
+        });
         this.container.querySelector('#btnSidebarPricingLab')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showPricingStrategyLab'));
+        });
+        this.container.querySelector('#btnSidebarSurgePricing')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showSurgePricingEngine'));
         });
         this.container.querySelector('#btnSidebarSupplyChain')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showSupplyChainSandbox'));
@@ -727,10 +749,16 @@ export class DashboardViewV2 {
         this.container.querySelector('#btnSidebarCopilot')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showAIAssistantCopilot'));
         });
+        this.container.querySelector('#btnSidebarAIFocusGroup')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showAIFocusGroup'));
+        });
 
         // Business Network Links
         this.container.querySelector('#btnSidebarMarketplace')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showMarketplace'));
+        });
+        this.container.querySelector('#btnSidebarTalentPoaching')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showTalentPoachingRadar'));
         });
         this.container.querySelector('#btnSidebarInvestorNetwork')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('feasibility:showInvestorNetwork'));

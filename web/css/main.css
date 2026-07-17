@@ -1182,3 +1182,55 @@
     box-shadow: 0 0 15px rgba(120, 113, 108, 0.4) !important;
 }
 
+
+/* =========================================
+   [22] EXTREME DOMINANCE VIEWS
+   (BlackSwan, TalentPoaching)
+   ========================================= */
+
+.black-swan-view,
+.poaching-radar-view {
+    color: #fff !important;
+}
+
+/* Animations */
+.poaching-radar-view .animate-ping {
+    animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.black-swan-view .animate-pulse {
+    animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+
+/* =========================================
+   [23] AI MARKETING VIEWS
+   (AIFocusGroup, SurgePricingEngine)
+   ========================================= */
+
+.ai-focus-group-view,
+.surge-pricing-view {
+    color: #fff !important;
+}
+
+/* Animations */
+.ai-focus-group-view .animate-pulse {
+    animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Custom Scrollbar for Chat */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.5); /* indigo-500 */
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.8);
+}
+
