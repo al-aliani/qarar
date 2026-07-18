@@ -24,7 +24,7 @@ export class TwoFactorModal {
         overlay.innerHTML = `
             <div style="background:var(--c-bg-card);border-radius:12px;padding:24px;max-width:500px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                    <h3 style="margin:0;font-size:18px;color:var(--c-text-main);">🔐 المصادقة الثنائية</h3>
+                    <h3 style="margin:0;font-size:18px;color:var(--c-text-main);"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg> المصادقة الثنائية</h3>
                     <button id="btn2FAClose" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--c-text-muted);">×</button>
                 </div>
                 <div id="2fa-content">
@@ -106,7 +106,7 @@ export class TwoFactorModal {
             let enrollData = null;
             overlay.querySelector('#btnStart2FA')?.addEventListener('click', async (e) => {
                 e.target.disabled = true;
-                e.target.textContent = '⏳ جاري...';
+                e.target.textContent = 'جاري...';
                 const result = await mfaEnrollTOTP('تطبيق المصادقة');
                 if (result.ok && result.data) {
                     enrollData = result.data;
@@ -144,7 +144,7 @@ export class TwoFactorModal {
                     return;
                 }
                 e.target.disabled = true;
-                e.target.textContent = '⏳ جاري التحقق...';
+                e.target.textContent = 'جاري التحقق...';
                 if (!enrollData?.id) {
                     toast.error('خطأ: بيانات التفعيل مفقودة');
                     e.target.disabled = false;

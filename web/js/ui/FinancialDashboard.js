@@ -727,7 +727,6 @@ export class FinancialDashboard {
         if (presBtn) {
             const handler = () => {
                 try {
-                    console.log('Activating Presentation Mode...');
                     const presentation = new PresentationView(this.store);
                     presentation.render();
                 } catch (err) {

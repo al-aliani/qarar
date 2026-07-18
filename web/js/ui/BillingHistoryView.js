@@ -46,22 +46,11 @@ export class BillingHistoryView {
         if (!this.container) return;
 
         const { user } = await getAuthUser();
-        if (!user) {
-            this.container.innerHTML = `
-                <div class="billing-history-view" style="max-width:560px;margin:60px auto;text-align:center;padding:24px;">
-                    <p class="text-muted mb-4">يجب تسجيل الدخول لعرض الطلبات والفواتير.</p>
-                    <button type="button" id="btnBillingLogin" class="btn btn--primary">تسجيل الدخول</button>
-                </div>
-            `;
-            this.container.querySelector('#btnBillingLogin')?.addEventListener('click', () => {
-                AuthGuard.showAuthPrompt(({ isAuthenticated }) => {
-                    if (isAuthenticated) this.render();
-                });
-            });
-            return;
+        // تم إيقاف فرض تسجيل الدخول مؤقتاً للتجربة
+        let orders = [];
+        if (user) {
+            orders = await listOrders();
         }
-
-        const orders = await listOrders();
 
         this.container.innerHTML = `
             <div class="billing-history-page" style="max-width: 720px; margin: 0 auto; padding: var(--s-4) 0;">

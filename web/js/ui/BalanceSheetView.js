@@ -215,8 +215,8 @@ export class BalanceSheetView {
                     padding: 4px 0;
                     font-size: 0.9rem;
                 }
-                .bs-line.negative { color: #f87171; }
-                .bs-line.positive { color: #34d399; }
+                .bs-line.negative { color: var(--c-danger); }
+                .bs-line.positive { color: var(--c-success); }
                 .bs-subtotal {
                     display: flex;
                     justify-content: space-between;
@@ -242,7 +242,7 @@ export class BalanceSheetView {
                     border-radius: 8px;
                     font-weight: 500;
                 }
-                .balance-check.balanced { background: rgba(16,185,129,0.15); color: #34d399; }
+                .balance-check.balanced { background: rgba(16,185,129,0.06); color: var(--c-success); }
                 .balance-check.unbalanced { background: rgba(239,68,68,0.15); color: #f87171; }
                 .balance-check-reason {
                     margin-top: 8px;

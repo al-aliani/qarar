@@ -9,6 +9,11 @@
   --c-bg-app: #ffffff;
   --c-bg-panel: #eeece4;
   --c-bg-card: #fdfcf9;
+  /* تدقيق: --c-surface-1 كان يُستخدم في main.css (خلفية .category-page__header/.category-toc
+     الأصلية) بلا أي تعريف فعلي في أي ملف — color-mix()/linear-gradient() بمرجع متغيّر
+     غير معرَّف يسقط كلياً لشفاف (initial)، لا يُهمَل جزئياً. لم يظهر كخلل مرئياً فقط لأن
+     تراكب "CATEGORY V2" في main.css يغلبه بـ!important في كل مكان يُستخدم فيه حالياً. */
+  --c-surface-1: var(--c-bg-card);
 
   /* --- الأساسي: أخضر صنوبري (هوية قرار) بدل أزرق Tailwind العام --- */
   --c-p-500: #0e5b44;
@@ -56,6 +61,10 @@
   /* لون التحذير — كان مستخدماً في components (.bg-warning/.text-warning) بلا تعريف */
   --c-warning: #b45309;
   --c-warning-subtle: rgba(180, 83, 9, 0.14);
+  /* نص فوق --c-warning-subtle تحديداً (لا الحدود/الأيقونات الزخرفية) — --c-warning نفسه
+     4.14:1 فقط على الخلفية المركّبة الفعلية لبطاقة .dd-status--warning (لوحة القرار
+     الاستثماري)، أقل من حد 4.5:1 للنص العادي؛ نفس الدرجة (hue) لكن أغمق قليلاً. */
+  --c-warning-text: #a54c08;
 
   /* سطوح شفافة تعمل على الفاتح والداكن — بديل rgba(255,255,255,.0x) الموروثة */
   --c-surface-2: rgba(28, 36, 32, 0.04);
@@ -111,6 +120,10 @@
   --color-primary: var(--c-p-500);
   --color-primary-light: var(--c-p-subtle);
   --color-primary-dark: var(--c-p-600);
+  /* تدقيق 2026-07-18: --c-primary مستخدَم مباشرة (بلا بادئة color-) في index.html
+     (رقم الخطوة النشطة macro-step-icon)، app.js، scenario-switcher.css، tooltip.css،
+     TemplateGallery.js، SensitivityWidget.js — لم يكن معرَّفاً أصلاً فيسقط لشفافية كاملة. */
+  --c-primary: var(--c-p-500);
   --color-success: var(--c-success);
 }
 
@@ -119,6 +132,7 @@
   --c-bg-app: #12221d;
   --c-bg-panel: #182d26;
   --c-bg-card: #1d362e;
+  --c-surface-1: var(--c-bg-card);
   /* نسخة RGB من --c-bg-app لاستخدامها داخل rgba() (زجاجية dashboard-v2/dashboard-home) —
      كانت اللوحتان تستخدمان rgba(17,24,39,x) ثابتة (رمادي مزرقّ) فوق خلفية خضراء داكنة فعلياً. */
   --c-bg-app-rgb: 18, 34, 29;
@@ -143,6 +157,8 @@
   --c-danger-subtle: rgba(248, 113, 113, 0.12);
   --c-warning: #fbbf24;
   --c-warning-subtle: rgba(251, 191, 36, 0.14);
+  /* الداكن يجتاز التباين بالفعل بلون --c-warning نفسه، فلا حاجة لدرجة نصية منفصلة */
+  --c-warning-text: var(--c-warning);
 
   --c-surface-2: rgba(238, 245, 240, 0.05);
   --c-surface-3: rgba(238, 245, 240, 0.09);

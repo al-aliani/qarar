@@ -21,13 +21,6 @@ vi.mock('../../services/PaymentService.js', () => ({
     startCheckout: vi.fn(async () => ({ ok: false, error: 'not used in this test' })),
 }));
 
-// تدقيق 2026-07-18: ExportMenu لم يعد يبني this.pdfGenerator (استُبدل توليد PDF بدالة
-// generateNativePDF مستوردة مباشرة) — نموّه هنا بدل التجسّس على خاصية لم تعد موجودة.
-const generateNativePDFMock = vi.fn(async () => true);
-vi.mock('../NativePDFExport.jsx', () => ({
-    generateNativePDF: (...a) => generateNativePDFMock(...a),
-}));
-
 function fakeStore(state) {
     return { getState: () => state, update: vi.fn(), notify: vi.fn() };
 }
@@ -36,15 +29,15 @@ describe('ExportMenu — بوابة الترقية تعترض صيغ التقر�
     beforeEach(async () => {
         document.body.innerHTML = `<div id="exportMenuOverlay"></div>`;
         hasActivePaymentMock.mockReset().mockResolvedValue(false);
-        generateNativePDFMock.mockClear();
     });
 
-    it('النقر على صيغة PDF (premium) يفتح PaywallModal ولا يستدعي generateNativePDF إطلاقاً', async () => {
+    it('النقر على صيغة PDF (premium) يفتح PaywallModal ولا يستدعي PDFGenerator.generate إطلاقاً', async () => {
         const menu = new ExportMenu('exportMenuOverlay', fakeStore(createEmptyStudy()));
+        const generateSpy = vi.spyOn(menu.pdfGenerator, 'generate').mockResolvedValue('test.pdf');
 
         await menu.handleExport('pdf', document.createElement('button'));
 
-        expect(generateNativePDFMock).not.toHaveBeenCalled();
+        expect(generateSpy).not.toHaveBeenCalled();
         const paywallOverlay = document.getElementById('paywallModalOverlay');
         expect(paywallOverlay).toBeTruthy();
         expect(paywallOverlay.classList.contains('is-open')).toBe(true);

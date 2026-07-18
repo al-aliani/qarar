@@ -121,12 +121,12 @@ export class StrategicAnalysis {
         ];
 
         const icons = {
-            political: '🏛️',
-            economic: '💰',
-            social: '👥',
-            technological: '💻',
-            environmental: '🌍',
-            legal: '⚖️'
+            political: icon('i-bank'),
+            economic: icon('i-chart'),
+            social: icon('i-users'),
+            technological: icon('i-code'),
+            environmental: icon('i-pin'),
+            legal: icon('i-scale')
         };
 
         const impactLabels = {
@@ -140,7 +140,7 @@ export class StrategicAnalysis {
                 ${factors.map((f, idx) => `
                     <div class="pestel-item" data-factor="${f.factor}">
                         <div class="pestel-header">
-                            <span class="pestel-icon">${icons[f.factor] || '📌'}</span>
+                            <span class="pestel-icon">${icons[f.factor] || icon('i-info')}</span>
                             <span class="pestel-label">${f.label}</span>
                         </div>
                         <textarea 
@@ -166,10 +166,10 @@ export class StrategicAnalysis {
 
     renderSWOT(swot) {
         const categories = [
-            { key: 'strengths', label: 'نقاط القوة', icon: '💪', class: 'swot-strengths' },
-            { key: 'weaknesses', label: 'نقاط الضعف', icon: '⚠️', class: 'swot-weaknesses' },
-            { key: 'opportunities', label: 'الفرص', icon: '🎯', class: 'swot-opportunities' },
-            { key: 'threats', label: 'التهديدات', icon: '🔥', class: 'swot-threats' }
+            { key: 'strengths', label: 'نقاط القوة', icon: icon('i-shield'), class: 'swot-strengths' },
+            { key: 'weaknesses', label: 'نقاط الضعف', icon: icon('i-warning'), class: 'swot-weaknesses' },
+            { key: 'opportunities', label: 'الفرص', icon: icon('i-target'), class: 'swot-opportunities' },
+            { key: 'threats', label: 'التهديدات', icon: icon('i-hand-stop'), class: 'swot-threats' }
         ];
 
         return `
@@ -222,11 +222,11 @@ export class StrategicAnalysis {
 
     renderPorter(porter) {
         const forces = [
-            { key: 'newEntrants', label: 'تهديد الداخلين الجدد', icon: '🚪', position: 'top' },
-            { key: 'supplierPower', label: 'قوة الموردين', icon: '📦', position: 'left' },
-            { key: 'rivalry', label: 'التنافس في الصناعة', icon: '⚔️', position: 'center' },
-            { key: 'buyerPower', label: 'قوة المشترين', icon: '🛒', position: 'right' },
-            { key: 'substitutes', label: 'تهديد البدائل', icon: '🔄', position: 'bottom' }
+            { key: 'newEntrants', label: 'تهديد الداخلين الجدد', icon: icon('i-user'), position: 'top' },
+            { key: 'supplierPower', label: 'قوة الموردين', icon: icon('i-box'), position: 'left' },
+            { key: 'rivalry', label: 'التنافس في الصناعة', icon: icon('i-trophy'), position: 'center' },
+            { key: 'buyerPower', label: 'قوة المشترين', icon: icon('i-users'), position: 'right' },
+            { key: 'substitutes', label: 'تهديد البدائل', icon: icon('i-reset'), position: 'bottom' }
         ];
 
         const levelLabels = { low: 'منخفض', medium: 'متوسط', high: 'عالي' };

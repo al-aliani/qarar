@@ -79,7 +79,7 @@ export class PresentationView {
                 type: 'title',
                 template: `
                     <div class="h-full flex flex-col items-center justify-center text-center p-12 bg-gradient-to-br from-indigo-900 to-black">
-                        <div class="text-6xl mb-6">🚀</div>
+                        <svg class="ic text-6xl mb-6" aria-hidden="true"><use href="#i-rocket"/></svg>
                         <h1 class="text-6xl font-black mb-4 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
                             ${project.name || 'مشروع جديد'}
                         </h1>
@@ -99,7 +99,7 @@ export class PresentationView {
                 title: 'المشكلة والحل',
                 left: `
                     <div class="p-8 bg-red-900/20 rounded-2xl border border-red-500/20 h-full">
-                        <h2 class="text-3xl font-bold text-red-400 mb-6">🛑 المشكلة</h2>
+                        <h2 class="text-3xl font-bold text-red-400 mb-6"><svg class="ic" aria-hidden="true"><use href="#i-hand-stop"/></svg> المشكلة</h2>
                         <p class="text-xl leading-relaxed text-gray-200">
                             ${exec.problemStatement || 'لم يتم تحديد المشكلة بعد...'}
                         </p>
@@ -107,12 +107,12 @@ export class PresentationView {
                 `,
                 right: `
                     <div class="p-8 bg-green-900/20 rounded-2xl border border-green-500/20 h-full">
-                        <h2 class="text-3xl font-bold text-green-400 mb-6">💡 الحل المقترح</h2>
+                        <h2 class="text-3xl font-bold text-green-400 mb-6"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> الحل المقترح</h2>
                         <p class="text-xl leading-relaxed text-gray-200">
                             ${project.concept || exec.solutionStatement || 'لم يتم تحديد الحل...'}
                         </p>
                         <div class="mt-6 pt-6 border-t border-white/10">
-                            <h4 class="text-green-300 font-bold mb-2">✨ القيمة المميزة:</h4>
+                            <h4 class="text-green-300 font-bold mb-2"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg> القيمة المميزة:</h4>
                             <p>${exec.uniqueValueProposition || ''}</p>
                         </div>
                     </div>
@@ -175,7 +175,7 @@ export class PresentationView {
                 content: `
                     <div class="grid grid-cols-2 gap-8 w-full max-w-4xl">
                         <div class="bg-white/5 p-8 rounded-2xl border border-white/10">
-                            <h3 class="text-2xl font-bold mb-6 text-blue-400">👥 الهيكل التنظيمي</h3>
+                            <h3 class="text-2xl font-bold mb-6 text-blue-400"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg> الهيكل التنظيمي</h3>
                             <div class="space-y-4">
                                 ${(state.hr?.positions || []).slice(0, 4).map(pos => `
                                     <div class="flex justify-between items-center p-3 bg-white/5 rounded-lg">
@@ -186,7 +186,7 @@ export class PresentationView {
                             </div>
                         </div>
                         <div class="bg-white/5 p-8 rounded-2xl border border-white/10">
-                            <h3 class="text-2xl font-bold mb-6 text-purple-400">📅 الجدول الزمني</h3>
+                            <h3 class="text-2xl font-bold mb-6 text-purple-400"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg> الجدول الزمني</h3>
                             <div class="space-y-3">
                                 <div class="flex items-center gap-3">
                                     <div class="w-3 h-3 rounded-full bg-green-500"></div>
@@ -212,7 +212,7 @@ export class PresentationView {
                 title: 'المخاطر الرئيسية',
                 left: `
                     <div class="p-8 bg-orange-900/20 rounded-2xl border border-orange-500/20 h-full">
-                        <h2 class="text-3xl font-bold text-orange-400 mb-6">⚠️ المخاطر</h2>
+                        <h2 class="text-3xl font-bold text-orange-400 mb-6"><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> المخاطر</h2>
                         <div class="space-y-4">
                             ${(state.riskAnalysis?.risks || []).slice(0, 3).map(risk => `
                                 <div class="p-4 bg-white/5 rounded-lg">
@@ -225,7 +225,7 @@ export class PresentationView {
                 `,
                 right: `
                     <div class="p-8 bg-blue-900/20 rounded-2xl border border-blue-500/20 h-full">
-                        <h2 class="text-3xl font-bold text-blue-400 mb-6">🛡️ خطة المواجهة</h2>
+                        <h2 class="text-3xl font-bold text-blue-400 mb-6"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg> خطة المواجهة</h2>
                         <div class="space-y-4">
                             ${(state.riskAnalysis?.risks || []).slice(0, 3).map(risk => `
                                 <div class="p-4 bg-white/5 rounded-lg">
@@ -272,7 +272,7 @@ export class PresentationView {
                 type: 'title',
                 template: `
                     <div class="h-full flex flex-col items-center justify-center text-center p-12 bg-gradient-to-br from-purple-900 via-indigo-900 to-black">
-                        <div class="text-8xl mb-8 animate-bounce">🤝</div>
+                        <svg class="ic text-8xl mb-8 animate-bounce" aria-hidden="true"><use href="#i-users"/></svg>
                         <h1 class="text-6xl font-black mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
                             لنبدأ معاً
                         </h1>
@@ -281,11 +281,11 @@ export class PresentationView {
                         </p>
                         <div class="flex gap-6">
                             <div class="bg-white/10 p-6 rounded-2xl backdrop-blur">
-                                <div class="text-3xl mb-2">📧</div>
+                                <svg class="ic text-3xl mb-2" aria-hidden="true"><use href="#i-link"/></svg>
                                 <div class="text-sm text-gray-400">للتواصل</div>
                             </div>
                             <div class="bg-white/10 p-6 rounded-2xl backdrop-blur">
-                                <div class="text-3xl mb-2">📅</div>
+                                <svg class="ic text-3xl mb-2" aria-hidden="true"><use href="#i-calendar"/></svg>
                                 <div class="text-sm text-gray-400">للمقابلة</div>
                             </div>
                         </div>
@@ -303,7 +303,7 @@ export class PresentationView {
             <!-- Controls -->
             <div class="absolute top-0 left-0 w-full p-6 flex justify-between z-20 pointer-events-none">
                 <button class="pointer-events-auto btn btn--sm btn--secondary bg-black/50 hover:bg-white/20 backdrop-blur" id="btnExitPitch">
-                    ✕ خروج
+                    <svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> خروج
                 </button>
                 <div class="text-white/50 text-sm font-mono">
                     <span id="slideCurrent">1</span> / <span id="slideTotal">${this.slides.length}</span>

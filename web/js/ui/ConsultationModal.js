@@ -59,7 +59,7 @@ export class ConsultationModal {
         this.overlay.innerHTML = `
             <div class="modal-card consultation-modal animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="consultation-modal-title">
                 <div class="modal-header">
-                    <h3 id="consultation-modal-title">📞 احجز استشارة مع خبير</h3>
+                    <h3 id="consultation-modal-title"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg> احجز استشارة مع خبير</h3>
                     <button type="button" class="btn-close consultation-close" aria-label="إغلاق">×</button>
                 </div>
                 <div class="modal-body">
@@ -78,8 +78,8 @@ export class ConsultationModal {
                     </div>
                     ${hasBookingUrl
                         ? `<div class="flex gap-2 items-center">
-                            <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn-block btn-book-consultation">📅 الذهاب لجدولة الموعد</a>
-                            <button type="button" class="btn btn--ghost btn--sm btn-edit-consultation-url" title="تعديل الرابط">✏️</button>
+                            <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn-block btn-book-consultation"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg> الذهاب لجدولة الموعد</a>
+                            <button type="button" class="btn btn--ghost btn--sm btn-edit-consultation-url" title="تعديل الرابط"><svg class="ic" aria-hidden="true"><use href="#i-pen"/></svg></button>
                            </div>`
                         : `<div class="consultation-url-setup">
                             <label class="text-sm font-medium mb-2 block">أدخل رابط جدولة المواعيد (Calendly / Cal.com)</label>

@@ -48,10 +48,7 @@
     body.is-printing-tool .app-header,
     body.is-printing-tool .sidebar,
     body.is-printing-tool .sidebar-overlay,
-    body.is-printing-tool .breadcrumb-bar,
-    body.is-printing-tool #breadcrumbBar,
     body.is-printing-tool .category-page__header,
-    body.is-printing-tool .category-toc,
     body.is-printing-tool .category-page__nav,
     body.is-printing-tool .category-step:not(.tool-print-target),
     body.is-printing-tool .tool-report-bar {

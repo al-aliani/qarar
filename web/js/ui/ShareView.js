@@ -46,12 +46,12 @@ export class ShareView {
                 <!-- Header / Navigation -->
                 <div class="fixed top-0 w-full bg-white/90 backdrop-blur-md shadow-sm z-50 px-6 py-3 flex justify-between items-center print:hidden">
                     <div class="flex items-center gap-2">
-                        <span class="text-2xl">🚀</span>
+                        <svg class="ic text-2xl" aria-hidden="true"><use href="#i-rocket"/></svg>
                         <h1 class="font-bold text-lg text-gray-800">${pi.name || 'مشروع جديد'} <span class="text-xs text-muted font-normal px-2 py-1 bg-gray-100 rounded-full">Investor Mode</span></h1>
                     </div>
                     <div class="flex gap-3">
                         <button id="btnExitShare" class="btn btn--sm btn--ghost text-gray-600">خروج</button>
-                        <button id="btnPrintShare" class="btn btn--sm btn--primary">🖨️ طباعة / PDF</button>
+                        <button id="btnPrintShare" class="btn btn--sm btn--primary"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> طباعة / PDF</button>
                     </div>
                 </div>
 
@@ -72,14 +72,14 @@ export class ShareView {
                 <section class="py-20 px-6 max-w-5xl mx-auto">
                     <div class="grid md:grid-cols-2 gap-12 items-center">
                         <div class="p-8 bg-white rounded-3xl shadow-xl border border-gray-100 transform hover:-translate-y-2 transition-transform duration-500">
-                            <div class="text-4xl mb-4">🔥</div>
+                            <svg class="ic text-4xl mb-4" aria-hidden="true"><use href="#i-warning"/></svg>
                             <h2 class="text-2xl font-bold mb-4 text-red-500">المشكلة</h2>
                             <p class="text-lg text-gray-600 leading-relaxed">
                                 ${pi.startupHypothesis?.problem || 'لم يتم تحديد المشكلة بالتفصيل.'}
                             </p>
                         </div>
                         <div class="p-8 bg-white rounded-3xl shadow-xl border border-gray-100 transform hover:-translate-y-2 transition-transform duration-500 delay-100">
-                            <div class="text-4xl mb-4">💡</div>
+                            <svg class="ic text-4xl mb-4" aria-hidden="true"><use href="#i-lightbulb"/></svg>
                             <h2 class="text-2xl font-bold mb-4 text-green-500">الحل المقترح</h2>
                             <p class="text-lg text-gray-600 leading-relaxed">
                                 ${pi.startupHypothesis?.solution || 'لم يتم تحديد الحل بالتفصيل.'}

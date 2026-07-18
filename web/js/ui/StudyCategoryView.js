@@ -30,7 +30,6 @@ export class StudyCategoryView {
         this.visibleCategoryIndexes = null;
         this.instances = [];
         this.currentCategoryIndex = 0;
-        this.tocObserver = null;
         this._navPrev = null;
         this._navNext = null;
     }
@@ -98,11 +97,6 @@ export class StudyCategoryView {
             const pos = visibleStepOrder ? visibleStepOrder.indexOf(idx) : -1;
             return (pos >= 0 ? pos + 1 : idx + 1).toLocaleString('ar-SA');
         };
-        // عدّاد «أنجزت X من Y» من progressTracker الحي الموجود أصلاً في app.js (بند 2.3) —
-        // محسوب فقط على أقسام هذا التصنيف، لا إجمالي الدراسة كاملة.
-        const completedCount = this.progressTracker
-            ? stepIndexes.filter(index => this.progressTracker.isCompleted(index)).length
-            : 0;
         this.container.innerHTML = `
             <div class="category-page" data-category-index="${categoryIndex}">
                 <header class="category-page__header">
@@ -112,15 +106,6 @@ export class StudyCategoryView {
                         <p>${this.categoryDescription(category.id)}</p>
                     </div>
                 </header>
-
-                <nav class="category-toc" aria-label="أقسام ${category.label}">
-                    ${this.progressTracker && stepIndexes.length ? `
-                        <span class="category-toc__progress">أنجزت <strong>${completedCount.toLocaleString('ar-SA')}</strong> من ${stepIndexes.length.toLocaleString('ar-SA')}</span>
-                    ` : ''}
-                    <div class="category-toc__links">
-                        ${stepIndexes.map(index => `<a href="#category-section-${index}" data-category-anchor="${index}"><span>${stepPosition(index)}</span>${this.steps[index].label}</a>`).join('')}
-                    </div>
-                </nav>
 
                 <div class="category-page__sections${stepIndexes.some(index => this.steps[index].gridSize) ? ' category-page__sections--adaptive' : ''}">
                     ${stepIndexes.length ? stepIndexes.map(index => {
@@ -177,7 +162,6 @@ export class StudyCategoryView {
         });
         
         this.removeChildNavigation();
-        this.setupTocScrollSpy(stepIndexes);
 
         const focusIndex = Number.isInteger(options.focusStepIndex) ? options.focusStepIndex : null;
         if (focusIndex != null && stepIndexes.includes(focusIndex) && focusIndex !== stepIndexes[0]) {
@@ -206,7 +190,6 @@ export class StudyCategoryView {
                     },
                     steps: [
                         { element: '.category-page__header', popover: { title: 'مرحباً بك في دراستك!', description: 'هذه المرحلة مخصصة لتعريف مشروعك بشكل صحيح قبل الدخول في الأرقام.', side: "bottom" }},
-                        { element: '.category-toc', popover: { title: 'أقسام المرحلة', description: 'يمكنك القفز المباشر لأي قسم من هنا. كل قسم يحفظ بياناتك تلقائياً.', side: "left" }},
                         { element: '[data-category-next]', popover: { title: 'المرحلة التالية', description: 'بعد الانتهاء من أقسام هذه الصفحة، اضغط هنا للانتقال للمرحلة التالية.', side: "top" }}
                     ]
                 });
@@ -238,52 +221,6 @@ export class StudyCategoryView {
         this.container.querySelector('[data-category-next]')?.addEventListener('click', () => {
             if (this._navNext !== null) this.onNavigateCategory(this._navNext);
         });
-        this.container.querySelectorAll('[data-category-anchor]').forEach(anchor => {
-            anchor.addEventListener('click', event => {
-                event.preventDefault();
-                const index = Number(anchor.dataset.categoryAnchor);
-                document.getElementById(`category-section-${index}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
-        });
-    }
-
-    /**
-     * تظليل رابط القسم النشط في .category-toc أثناء التمرير (scroll-spy). يُفصَل
-     * المراقب القديم في بداية كل رسم (وقبل أي إرجاع مبكر عبر render()) كي لا يتراكم
-     * أكثر من IntersectionObserver واحد حياً في آن واحد على نفس الصفحة.
-     */
-    setupTocScrollSpy(stepIndexes) {
-        this.tocObserver?.disconnect();
-        this.tocObserver = null;
-        if (typeof IntersectionObserver === 'undefined' || !stepIndexes.length) return;
-
-        const setActive = (index) => {
-            this.container.querySelectorAll('.category-toc__links a[data-category-anchor]').forEach(anchor => {
-                const isActive = Number(anchor.dataset.categoryAnchor) === index;
-                anchor.classList.toggle('is-active', isActive);
-                if (isActive) anchor.setAttribute('aria-current', 'true');
-                else anchor.removeAttribute('aria-current');
-            });
-        };
-
-        // النطاق الأعلى للـroot مُنكمَش بارتفاع الشريط اللاصق تقريباً كي لا يُحتسب قسم
-        // كـ«مرئي» وهو لا يزال خلفه، والسفلي مُنكمَش بنسبة كبيرة كي يبقى دوماً قسم واحد
-        // أو اثنان مرشّحين لا كل الأقسام معاً في صفحة طويلة.
-        const visible = new Set();
-        this.tocObserver = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                const index = Number(entry.target.dataset.stepIndex);
-                if (entry.isIntersecting) visible.add(index);
-                else visible.delete(index);
-            });
-            if (visible.size) setActive(Math.min(...visible));
-        }, { root: null, rootMargin: '-120px 0px -65% 0px', threshold: 0 });
-
-        stepIndexes.forEach(index => {
-            const section = document.getElementById(`category-section-${index}`);
-            if (section) this.tocObserver.observe(section);
-        });
-        setActive(stepIndexes[0]);
     }
 
     removeChildNavigation() {

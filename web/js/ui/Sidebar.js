@@ -230,8 +230,6 @@ export class Sidebar {
     }
 
     async render() {
-        console.log('[Sidebar] render() called');
-
         if (this.modeController) {
             this.modeController.store = this.store || (await import('../core/store.js')).store;
             this.modeController.applyModeToBody();
@@ -306,11 +304,9 @@ export class Sidebar {
         // Calculate and render completeness percentage
         let completenessHTML = '';
         try {
-            console.log('[Sidebar] calculating completeness...');
             // Use passed store or import default
             const storeInstance = this.store || (await import('../core/store.js')).store;
             // const { calculateStudyCompleteness } = await import('../utils/studyCompleteness.js'); // Moved to static import
-            console.log('[Sidebar] store loaded');
             const state = storeInstance?.getState();
             if (state) {
                 const completeness = calculateStudyCompleteness(state);
@@ -330,8 +326,6 @@ export class Sidebar {
         } catch (e) {
             console.warn('Could not calculate completeness:', e);
         }
-
-        console.log('[Sidebar] building HTML...');
 
         // تجميع المحتوى: نتيجة الفكرة أولاً ثم الوضع ثم الاكتمال ثم التقدم ثم الدراسات ثم الأقسام
         const state = (this.store?.getState && this.store.getState()) || (this.store?.get && this.store.get()) || {};
@@ -434,7 +428,6 @@ export class Sidebar {
             ? `<div class="sidebar-status">${ideaScoreHTML}${completenessHTML}${progressHTML}</div>`
             : '';
         this.container.innerHTML = statusHTML + modeToggleHTML + studiesSectionHTML + renderedSections;
-        console.log('[Sidebar] HTML injected');
 
         // Ensure container is visible
         if (this.container) {

@@ -103,7 +103,7 @@ export class DigitalReputationRadarView {
                                         <div class="text-xs font-bold text-white">@user_2910</div>
                                         <div class="text-[10px] text-white/40">مثال</div>
                                     </div>
-                                    <p class="text-xs text-white/70">تطبيقكم الجديد يفوز! واجهة سريعة وخدمة عملاء راقية. شكراً لكم 👏</p>
+                                    <p class="text-xs text-white/70">تطبيقكم الجديد يفوز! واجهة سريعة وخدمة عملاء راقية. شكراً لكم</p>
                                 </div>
                             </div>
 
@@ -117,7 +117,7 @@ export class DigitalReputationRadarView {
                                         <div class="text-xs font-bold text-white">Google Maps Review (فرع الملقا)</div>
                                         <div class="text-[10px] text-white/40">مثال</div>
                                     </div>
-                                    <div class="flex text-yellow-400 mb-1">★★★★★</div>
+                                    <div class="flex text-yellow-400 mb-1"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg></div>
                                     <p class="text-xs text-white/70">المكان هادئ ومناسب للعمل، والقهوة ممتازة كالعادة.</p>
                                 </div>
                             </div>
@@ -130,7 +130,7 @@ export class DigitalReputationRadarView {
                                         <div class="text-xs font-bold text-white">@angry_client</div>
                                         <div class="text-[10px] text-white/40">مثال</div>
                                     </div>
-                                    <p class="text-xs text-white/70">أسوأ تجربة! طلبت من ساعة ونص وللحين ما وصل الطلب ومحد يرد على خدمة العملاء 😡</p>
+                                    <p class="text-xs text-white/70">أسوأ تجربة! طلبت من ساعة ونص وللحين ما وصل الطلب ومحد يرد على خدمة العملاء</p>
                                     <div class="mt-2 text-right">
                                         <span class="text-[10px] text-white/40">مثال — إنشاء تذكرة دعم فني تلقائياً غير متاح حالياً</span>
                                     </div>

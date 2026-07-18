@@ -54,9 +54,7 @@ describe('StudyCategoryView', () => {
         await view.render(0);
 
         const sections = document.querySelectorAll('.category-step');
-        const links = document.querySelectorAll('[data-category-anchor]');
         expect(sections).toHaveLength(7);
-        expect(links).toHaveLength(7);
         expect([...sections].map(section => Number(section.dataset.stepIndex))).toEqual([0, 1, 2, 3, 4, 5, 6]);
         expect(document.querySelector('.category-page__header').textContent).toContain('التحقق والتعريف');
     });
@@ -90,10 +88,6 @@ describe('StudyCategoryView', () => {
             'الخطوة ٢ من ٣',
             'الخطوة ٣ من ٣'
         ]);
-        // شارة الرقم في فهرس الأقسام (.category-toc__links) تعرض نفس «معادل بصياغة
-        // مختلفة» للرقم — يجب ألا تنحرف عن رأس القسم أعلاه لنفس الخطوة (لا أرقام
-        // متضاربة على نفس الصفحة لنفس العنصر).
-        expect([...document.querySelectorAll('.category-toc__links a span')].map(el => el.textContent)).toEqual(['١', '٢', '٣']);
     });
 
     it('without a visible-step filter, the step number keeps absolute numbering out of all 42 steps', async () => {

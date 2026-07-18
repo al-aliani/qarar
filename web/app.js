@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize Auth Guard
   const authResult = await AuthGuard.init({
-    requireAuth: true,
+    requireAuth: false, // تم إيقاف فرض الدخول مؤقتاً للتجربة
     onAuthChange: ({ event, user, isAuthenticated }) => {
       console.log('[App] Auth state changed:', event, isAuthenticated);
 

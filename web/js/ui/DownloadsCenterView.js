@@ -29,23 +29,12 @@ export class DownloadsCenterView {
         if (!this.container) return;
 
         const { user } = await getAuthUser();
-        if (!user) {
-            this.container.innerHTML = `
-                <div class="downloads-center-view" style="max-width:560px;margin:60px auto;text-align:center;padding:24px;">
-                    <p class="text-muted mb-4">يجب تسجيل الدخول لعرض مركز التنزيلات.</p>
-                    <button type="button" id="btnDownloadsLogin" class="btn btn--primary">تسجيل الدخول</button>
-                </div>
-            `;
-            this.container.querySelector('#btnDownloadsLogin')?.addEventListener('click', () => {
-                AuthGuard.showAuthPrompt(({ isAuthenticated }) => { if (isAuthenticated) this.render(); });
-            });
-            return;
-        }
-
         const { supabase, ok } = await getSupabaseClient();
-        const items = (ok && supabase)
-            ? (await supabase.from('export_history').select('id, study_name, file_type, storage_path, created_at').order('created_at', { ascending: false })).data || []
-            : [];
+        
+        let items = [];
+        if (user && ok && supabase) {
+            items = (await supabase.from('export_history').select('id, study_name, file_type, storage_path, created_at').order('created_at', { ascending: false })).data || [];
+        }
 
         this.container.innerHTML = `
             <div class="downloads-center-page" style="max-width: 720px; margin: 0 auto; padding: var(--s-4) 0;">

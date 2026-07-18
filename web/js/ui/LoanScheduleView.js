@@ -15,7 +15,7 @@ export class LoanScheduleView {
         if (!loanSchedule || !loanSchedule.annualSummary?.length) {
             this.container.innerHTML = `
                 <div class="card glass-card">
-                    <h3 class="card-title">📊 جدول سداد القرض</h3>
+                    <h3 class="card-title"><svg class="ic" aria-hidden="true"><use href="#i-table"/></svg> جدول سداد القرض</h3>
                     <div class="empty-state">
                         <p class="text-muted">لا يوجد قرض بنكي في هيكل التمويل</p>
                         <p class="text-xs text-muted">أضف قرض بنكي في قسم "مصادر التمويل" لعرض جدول السداد</p>
@@ -31,7 +31,7 @@ export class LoanScheduleView {
 
         this.container.innerHTML = `
             <div class="card glass-card">
-                <h3 class="card-title">📊 جدول سداد القرض البنكي</h3>
+                <h3 class="card-title"><svg class="ic" aria-hidden="true"><use href="#i-table"/></svg> جدول سداد القرض البنكي</h3>
 
                 <!-- قابل للتعديل: معدل الفائدة، مدة السداد -->
                 <div class="loan-params-edit">

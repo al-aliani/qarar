@@ -160,7 +160,7 @@ export function renderBenchmarkingSection(results, studyData) {
 
     return `
         <div class="card glass-card mt-4" id="benchmarkingSection" aria-label="هل أرقامي منطقية؟">
-            <h3 class="card-title mb-2 text-gold">📊 هل أرقامي منطقية؟</h3>
+            <h3 class="card-title mb-2 text-gold"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> هل أرقامي منطقية؟</h3>
             <p class="text-xs text-muted mb-3">مقارنة مع معايير قطاع «${bench.name}» في السوق السعودي. الأرقام خارج النطاق قد تحتاج مراجعة.</p>
             <div class="benchmarks-container overflow-x-auto">
                 <table class="data-table" style="font-size: 0.9rem;">
@@ -178,13 +178,13 @@ export function renderBenchmarkingSection(results, studyData) {
                                 <td>${r.label}</td>
                                 <td class="text-mono">${r.mine}</td>
                                 <td class="text-muted text-sm">${r.range}</td>
-                                <td>${r.ok === true ? '<span class="text-success">✅ ضمن النطاق</span>' : r.ok === false ? '<span class="text-warning">⚠️ خارج النطاق</span>' : '<span class="text-muted">—</span>'}</td>
+                                <td>${r.ok === true ? '<span class="text-success"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> ضمن النطاق</span>' : r.ok === false ? '<span class="text-warning"><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> خارج النطاق</span>' : '<span class="text-muted">—</span>'}</td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
             </div>
-            <p class="text-xs text-muted mt-3 mb-0">${okCount}/${totalRows} مؤشر ضمن النطاق المعياري. ${allOk ? 'أرقامك قريبة من معايير القطاع ✅' : 'راجع المؤشرات الخارجة عن النطاق إن كانت غير مقصودة.'}</p>
+            <p class="text-xs text-muted mt-3 mb-0">${okCount}/${totalRows} مؤشر ضمن النطاق المعياري. ${allOk ? 'أرقامك قريبة من معايير القطاع <svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>' : 'راجع المؤشرات الخارجة عن النطاق إن كانت غير مقصودة.'}</p>
         </div>
     `;
 }

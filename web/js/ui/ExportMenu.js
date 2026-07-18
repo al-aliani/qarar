@@ -2,7 +2,7 @@
  * Unified Export Menu (Modal)
  * Provides centralized export options: PDF, Excel, Bank Report, JSON.
  */
-import { generateNativePDF } from './NativePDFExport.jsx';
+import { PDFGenerator } from '../../export/pdfGenerator.js';
 import { ReportGenerator } from '../services/ReportGenerator.js';
 import { BankReportGenerator } from '../../export/BankReportGenerator.js';
 import { MonshaatReportGenerator } from '../../export/MonshaatReportGenerator.js';
@@ -21,6 +21,8 @@ import { generatePitchScript } from '../services/AIConnector.js';
 import { hasActivePayment } from '../services/PaymentService.js';
 import { getCertificationForStudy } from '../services/ReviewerService.js';
 import { renderReviewStatusBadge } from './components/ReviewStatusBadge.js';
+
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
 
 // تدقيق 2026-07-08 (ملاحظة عالية #39): صيغ التقرير النهائي الاحترافي (قرار المالك:
 // قفلها فعلياً، لا مجرد رسائل تسويقية) — الأدوات الخام/المشاركة (JSON/CSV/Sheets/
@@ -64,6 +66,7 @@ export class ExportMenu {
         // F5 "يحلها" لأنه يعيد تحميل الصفحة). نضبط الكلاس هنا دائماً، بصرف النظر عن مصدر العنصر.
         this.overlay.classList.add('modal-overlay');
         this.store = store;
+        this.pdfGenerator = new PDFGenerator(store);
     }
 
     async open() {
@@ -112,9 +115,9 @@ export class ExportMenu {
         const softCount = items.length - hardCount;
 
         let summaryHtml;
-        if (hardCount > 0) summaryHtml = `<span class="text-danger">❌ أخطاء حرجة: ${hardCount}${softCount ? ` — وتنبيهات: ${softCount}` : ''}</span>`;
-        else if (softCount > 0) summaryHtml = `<span class="text-warning">⚠️ تحذيرات: ${softCount}</span>`;
-        else summaryHtml = '<span class="text-success">✅ اجتازت فحص الجودة (QA)</span>';
+        if (hardCount > 0) summaryHtml = `<span class="text-danger">${icon('i-x')} أخطاء حرجة: ${hardCount}${softCount ? ` — وتنبيهات: ${softCount}` : ''}</span>`;
+        else if (softCount > 0) summaryHtml = `<span class="text-warning">${icon('i-warning')} تحذيرات: ${softCount}</span>`;
+        else summaryHtml = `<span class="text-success">${icon('i-check')} اجتازت فحص الجودة (QA)</span>`;
 
         if (items.length === 0) {
             el.innerHTML = summaryHtml;
@@ -162,7 +165,7 @@ export class ExportMenu {
         this.overlay.innerHTML = `
             <div class="modal-card export-modal animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
                 <div class="modal-header">
-                    <h3 id="export-modal-title">📥 تصدير الدراسة</h3>
+                    <h3 id="export-modal-title">${icon('i-download')} تصدير الدراسة</h3>
                     <button type="button" class="btn-close" aria-label="إغلاق قائمة التصدير">×</button>
                 </div>
                 <div class="modal-body">
@@ -170,7 +173,7 @@ export class ExportMenu {
                     <div id="export-review-status-badge" class="mb-4 text-sm"></div>
                     <div id="export-auto-text-bar" class="mb-4 p-3 rounded-lg border border-white/10 bg-white/5">
                         <p class="text-xs text-muted mb-2">عند حفظ أو قبل التصدير: المنصة يمكنها توليد نصوص الأقسام (الملخص، السوق، المخاطر) من المدخلات تلقائياً. يمكنك مراجعتها وتعديلها بعد التوليد.</p>
-                        <button type="button" id="btnExportAutoGenerateText" class="btn btn--sm btn--secondary">✨ توليد النصوص تلقائياً</button>
+                        <button type="button" id="btnExportAutoGenerateText" class="btn btn--sm btn--secondary">${icon('i-sparkle')} توليد النصوص تلقائياً</button>
                     </div>
                     <p class="text-sm text-muted mb-3">صدّر الدراسة — اختر PDF، Word، Excel، أو PPT (ملخص شرائح) حسب حاجتك.</p>
                     <p class="text-xs text-muted mb-2">نطاق التصدير: الدراسة الحالية فقط، أو جميع الدراسات في المجلد (إن وُجد).</p>
@@ -181,7 +184,7 @@ export class ExportMenu {
                     <div class="export-category-title mt-4 mb-2 text-gold font-bold">التقارير الأساسية</div>
                     <div class="export-grid">
                         <button type="button" class="export-card" data-type="pdf" aria-label="تصدير تقرير PDF شامل جاهز للطباعة">
-                            <div class="icon">📄</div>
+                            <div class="icon">${icon('i-doc')}</div>
                             <div class="info">
                                 <h4>تقرير PDF شامل</h4>
                                 <p>تقرير احترافي جاهز للطباعة مع الرسوم البيانية</p>
@@ -189,7 +192,7 @@ export class ExportMenu {
                         </button>
                         
                         <button type="button" class="export-card" data-type="excel" aria-label="تصدير ملف Excel بجداول مالية تفصيلية">
-                            <div class="icon">📊</div>
+                            <div class="icon">${icon('i-chart')}</div>
                             <div class="info">
                                 <h4>ملف Excel</h4>
                                 <p>جداول مالية تفصيلية بصيغة XLSX</p>
@@ -197,7 +200,7 @@ export class ExportMenu {
                         </button>
 
                         <button type="button" class="export-card" data-type="word" aria-label="تصدير تقرير Word DOCX">
-                            <div class="icon">📝</div>
+                            <div class="icon">${icon('i-pen')}</div>
                             <div class="info">
                                 <h4>Word (DOCX)</h4>
                                 <p>تقرير نصي قابل للتعديل</p>
@@ -205,7 +208,7 @@ export class ExportMenu {
                         </button>
                         
                         <button type="button" class="export-card" data-type="pptx" aria-label="تصدير عرض تقديمي PowerPoint PPTX">
-                            <div class="icon">📽️</div>
+                            <div class="icon">${icon('i-slides')}</div>
                             <div class="info">
                                 <h4>PowerPoint (PPTX)</h4>
                                 <p>عرض تقديمي 7 شرائح للمستثمرين</p>
@@ -216,7 +219,7 @@ export class ExportMenu {
                     <div class="export-category-title mt-6 mb-2 text-gold font-bold">للمستثمرين والمسرّعات</div>
                     <div class="export-grid">
                         <button type="button" class="export-card" data-type="pitch" aria-label="تصدير Pitch Deck كـ PDF">
-                            <div class="icon">📽️</div>
+                            <div class="icon">${icon('i-slides')}</div>
                             <div class="info">
                                 <h4>Pitch Deck (عرض المستثمر)</h4>
                                 <p>شرائح جاهزة للطباعة PDF للمستثمرين</p>
@@ -224,7 +227,7 @@ export class ExportMenu {
                         </button>
 
                         <button type="button" class="export-card" data-type="investor_one_pager" aria-label="عرض للمستثمر/المسرّعة — صفحة واحدة">
-                            <div class="icon">📄</div>
+                            <div class="icon">${icon('i-doc')}</div>
                             <div class="info">
                                 <h4>ملخص صفحة واحدة (One Pager)</h4>
                                 <p>للمستثمر والمسرعات: الطلب، المؤشرات، والمخاطر</p>
@@ -232,7 +235,7 @@ export class ExportMenu {
                         </button>
 
                         <button type="button" class="export-card" data-type="investor_dashboard" aria-label="عرض لوحة المستثمر التفاعلية">
-                            <div class="icon">💼</div>
+                            <div class="icon">${icon('i-folder')}</div>
                             <div class="info">
                                 <h4>لوحة المستثمر (تفاعلية)</h4>
                                 <p>عرض ويب احترافي للقراءة والمشاركة المباشرة</p>
@@ -240,7 +243,7 @@ export class ExportMenu {
                         </button>
 
                         <button type="button" class="export-card" data-type="pitch_script" aria-label="توليد سكربت العرض التقديمي بالذكاء الاصطناعي">
-                            <div class="icon">🎤</div>
+                            <div class="icon">${icon('i-play')}</div>
                             <div class="info">
                                 <h4>Pitch Script بالـ AI</h4>
                                 <p>نص عرض تقديمي 1–2 دقيقة للمستثمرين</p>
@@ -251,7 +254,7 @@ export class ExportMenu {
                     <div class="export-category-title mt-6 mb-2 text-gold font-bold">البنوك وجهات الدعم</div>
                     <div class="export-grid">
                         <button type="button" class="export-card" data-type="lending_ready" aria-label="تقرير جاهز للإقراض — بنك التنمية والمؤسسات التمويلية">
-                            <div class="icon">🏦</div>
+                            <div class="icon">${icon('i-bank')}</div>
                             <div class="info">
                                 <h4>جاهز للإقراض (بنك التنمية)</h4>
                                 <p>استخدام التمويل، القوائم المالية، والضمانات</p>
@@ -259,7 +262,7 @@ export class ExportMenu {
                         </button>
 
                         <button type="button" class="export-card" data-type="monshaat" aria-label="تصدير بهيكل متوافق مع متطلبات منشآت">
-                            <div class="icon">📋</div>
+                            <div class="icon">${icon('i-clipboard')}</div>
                             <div class="info">
                                 <h4>متوافق مع «منشآت»</h4>
                                 <p>بأقسام وعناوين مطابقة للنموذج الاسترشادي</p>
@@ -267,7 +270,7 @@ export class ExportMenu {
                         </button>
 
                         <button type="button" class="export-card" data-type="financier" aria-label="نسخة للممول — تقرير جاهز للتمويل PDF">
-                            <div class="icon">📑</div>
+                            <div class="icon">${icon('i-doc')}</div>
                             <div class="info">
                                 <h4>نسخة للممول العام</h4>
                                 <p>ملخص، مالي، مخاطر، توصية (PDF)</p>
@@ -275,7 +278,7 @@ export class ExportMenu {
                         </button>
 
                         <button type="button" class="export-card" data-type="review_copy" aria-label="نسخة للمراجعة — للمراجعة من قبل استشاري">
-                            <div class="icon">📋</div>
+                            <div class="icon">${icon('i-clipboard')}</div>
                             <div class="info">
                                 <h4>نسخة احترافية للمراجعة</h4>
                                 <p>تقرير نظيف ومُرقم لإرساله للاستشاري</p>
@@ -286,7 +289,7 @@ export class ExportMenu {
                     <div class="export-category-title mt-6 mb-2 text-gold font-bold">البيانات والمشاركة</div>
                     <div class="export-grid">
                         <button type="button" class="export-card" data-type="share_link" aria-label="مشاركة الدراسة برابط فعلي بصلاحية عرض">
-                            <div class="icon">🔗</div>
+                            <div class="icon">${icon('i-link')}</div>
                             <div class="info">
                                 <h4>رابط مشاركة سريع</h4>
                                 <p>رابط عرض مباشر (يُمكن إلغاؤه لاحقاً)</p>
@@ -294,7 +297,7 @@ export class ExportMenu {
                         </button>
 
                         <button type="button" class="export-card" data-type="json" aria-label="تنزيل ملف المشروع JSON للنسخ الاحتياطي">
-                            <div class="icon">💾</div>
+                            <div class="icon">${icon('i-save')}</div>
                             <div class="info">
                                 <h4>نسخة احتياطية (JSON)</h4>
                                 <p>لحفظ المشروع واستعادته مستقبلاً</p>
@@ -302,7 +305,7 @@ export class ExportMenu {
                         </button>
 
                         <button type="button" class="export-card" data-type="csv" aria-label="تصدير ملخص CSV للإكسل أو الجداول">
-                            <div class="icon">📋</div>
+                            <div class="icon">${icon('i-clipboard')}</div>
                             <div class="info">
                                 <h4>تصدير بيانات CSV</h4>
                                 <p>للاستيراد السريع في جداول البيانات</p>
@@ -310,7 +313,7 @@ export class ExportMenu {
                         </button>
                         
                         <button type="button" class="export-card export-card-consultation" data-type="consultation" aria-label="احجز استشارة Zoom مع خبير">
-                            <div class="icon">📞</div>
+                            <div class="icon">${icon('i-users')}</div>
                             <div class="info">
                                 <h4>استشارة مع خبير</h4>
                                 <p>اجتماع Zoom مع محلل مالي معتمد</p>
@@ -362,7 +365,7 @@ export class ExportMenu {
                 if (!connector) {
                     toast.warning('خدمة التوليد غير متاحة.');
                     btnAutoText.disabled = false;
-                    btnAutoText.textContent = '✨ توليد النصوص تلقائياً';
+                    btnAutoText.innerHTML = `${icon('i-sparkle')} توليد النصوص تلقائياً`;
                     return;
                 }
                 try {
@@ -396,7 +399,7 @@ export class ExportMenu {
                     toast.error('فشل التوليد: ' + (err?.message || 'خطأ'));
                 } finally {
                     btnAutoText.disabled = false;
-                    btnAutoText.textContent = '✨ توليد النصوص تلقائياً';
+                    btnAutoText.innerHTML = `${icon('i-sparkle')} توليد النصوص تلقائياً`;
                 }
             });
         }
@@ -485,13 +488,8 @@ export class ExportMenu {
 
             switch (type) {
                 case 'pdf': {
-                    try {
-                        await generateNativePDF(state);
-                        toast.success('تم تصدير تقرير PDF الاحترافي بنجاح!');
-                    } catch (err) {
-                        console.error(err);
-                        toast.error('فشل تصدير PDF. تأكد من إكمال البيانات.');
-                    }
+                    const pdfName = await this.pdfGenerator.generate({ lang: exportLang });
+                    toast.success(pdfName ? `تم تصدير PDF: ${pdfName}` : 'تم تصدير PDF بنجاح!');
                     break;
                 }
 
@@ -923,7 +921,7 @@ export class ExportMenu {
             if (soft.length) sections.push(
                 `<div style="font-weight:800;font-size:13px;color:#C0982E;margin:10px 0 4px;">تنبيهات تحتاج مراجعتك:</div><ul style="list-style:none;margin:0;padding:0;">${li(soft, '#C0982E')}</ul>`);
 
-            const title = hasHard ? '🚫 لا يمكن تصدير الدراسة بعد' : '⚠️ مراجعة الجودة قبل التصدير';
+            const title = hasHard ? `${icon('i-hand-stop')} لا يمكن تصدير الدراسة بعد` : `${icon('i-warning')} مراجعة الجودة قبل التصدير`;
             const subtitle = hasHard
                 ? 'حمايةً لسمعتك: الدراسة غير مكتملة أو تحتوي تناقضاً. أصلِح النقاط التالية ثم أعِد التصدير.'
                 : 'الدراسة قابلة للتصدير، لكن راجِع هذه التنبيهات أولاً. تقدر تُكمل إذا كنت متأكداً.';

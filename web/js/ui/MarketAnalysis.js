@@ -615,7 +615,7 @@ export class MarketAnalysis {
         if (!forecast?.points?.length) return '<p class="text-muted text-sm">تعذّر حساب التنبؤ لهذه المدينة.</p>';
         const fmt = (n) => Math.round(n).toLocaleString('ar-SA');
         const rows = forecast.points.map(p => `<li>سنة +${p.yearOffset}: ${fmt(p.value)} نسمة${p.provenance === 'assumption' ? ' (توقّع)' : ' (فعلي)'}</li>`).join('');
-        return `<ul class="text-sm mb-0">${rows}</ul><p class="text-xs text-muted mt-1">معدل نمو مفترض: ${(forecast.growthRatePct * 100).toFixed(1)}% سنوياً (${escapeHtml(forecast.growthRateSource || '')})</p>`;
+        return `<ul class="text-sm mb-0">${rows}</ul><p class="text-xs text-muted mt-1">معدل نمو مفترض: ${(forecast.growthRatePct * 100).toFixed(1)}% سنوياً (${escapeHtml(forecast.growthRateSource?.source || '')})</p>`;
     }
 
     /** جدول "نحن مقابل أقرب 3 منافسين" — من أول 3 صفوف في مصفوفة المنافسين الحالية

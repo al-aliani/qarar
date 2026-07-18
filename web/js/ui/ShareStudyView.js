@@ -146,7 +146,7 @@ export class ShareStudyView {
         this.overlay.innerHTML = `
             <div class="modal-card export-modal animate-scale-in max-w-md" role="dialog" aria-modal="true" aria-labelledby="share-study-title">
                 <div class="modal-header">
-                    <h3 id="share-study-title">🔗 مشاركة هذه الدراسة</h3>
+                    <h3 id="share-study-title"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg> مشاركة هذه الدراسة</h3>
                     <button type="button" class="btn-close" aria-label="إغلاق">×</button>
                 </div>
                 <div class="modal-body">
@@ -185,7 +185,7 @@ export class ShareStudyView {
                         <input type="text" id="readOnlyLinkInput" class="input text-xs w-full mb-1" readonly dir="ltr" />
                         <div class="flex gap-2 flex-wrap">
                             <button type="button" id="btnCopyReadOnlyLink" class="btn btn--sm btn--primary">نسخ الرابط</button>
-                            <button type="button" id="btnShowQRCode" class="btn btn--sm btn--ghost">📱 عرض رمز QR</button>
+                            <button type="button" id="btnShowQRCode" class="btn btn--sm btn--ghost"><svg class="ic" aria-hidden="true"><use href="#i-code"/></svg> عرض رمز QR</button>
                         </div>
                         <div id="qrCodeBox" class="hidden mt-3 p-3 rounded bg-white/5 border border-white/10 text-center">
                             <p class="text-xs text-muted mb-2">امسح الرمز بماسح QR لفتح لوحة المستثمر</p>
@@ -347,12 +347,12 @@ export class ShareStudyView {
                     const dataUrl = await generateQRDataURL(url);
                     qrCodeImage.src = dataUrl;
                     qrCodeBox.classList.remove('hidden');
-                    btnShowQR.textContent = '📱 عرض رمز QR';
+                    btnShowQR.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-code"/></svg> عرض رمز QR';
                     toast.success('تم توليد رمز QR');
                 } catch (e) {
                     console.error('QR generation failed:', e);
                     toast.error('فشل توليد رمز QR');
-                    btnShowQR.textContent = '📱 عرض رمز QR';
+                    btnShowQR.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-code"/></svg> عرض رمز QR';
                 } finally {
                     btnShowQR.disabled = false;
                 }

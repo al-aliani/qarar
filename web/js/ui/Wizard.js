@@ -134,7 +134,7 @@ export class Wizard {
         // القرار، وonGoHome الجديد الذي يوازي مسار شعار الهيدر إلى الرئيسية.
         return navHtml + `
             <div class="wizard-completion">
-                <div class="wizard-completion__icon" aria-hidden="true">🏁</div>
+                <div class="wizard-completion__icon" aria-hidden="true">${icon('i-trophy')}</div>
                 <div class="wizard-completion__body">
                     <h3 class="wizard-completion__title">اكتملت خطوات الدراسة</h3>
                     <p class="wizard-completion__desc">اختر ما تريد فعله الآن.</p>
@@ -241,7 +241,6 @@ export class Wizard {
                 const emptyStudy = this.store.getState();
                 if (emptyStudy && typeof emptyStudy === 'object') {
                     // Section will be created by schema, but ensure it exists
-                    console.log('Store state exists, section may need initialization');
                 }
             }
         }

@@ -192,7 +192,7 @@ export class InvestorAnalysis {
     }
 
     buildInvestorCriteriaTable(ctx) {
-        const dr = (ctx.discountRate ?? 0.10) * 100;
+        const dr = ((ctx.discountRate ?? 0.10) * 100).toFixed(1);
         return [
             { name: 'NPV', threshold: '> 0', yours: (ctx.npv ?? 0).toLocaleString('ar-SA', { maximumFractionDigits: 0 }), ok: (ctx.npv ?? 0) > 0, note: (ctx.npv ?? 0) > 0 ? 'مقبول' : 'يُفضّل تحسين التدفقات أو تخفيف التكاليف' },
             { name: 'IRR', threshold: `> ${dr}% (معدل الخصم)`, yours: ctx.irr != null ? (ctx.irr * 100).toFixed(1) + '%' : '--', ok: (ctx.irr ?? 0) > (ctx.discountRate ?? 0.1), note: 'المستثمر يفضّل عائداً أعلى من تكلفة رأس المال' },

@@ -103,7 +103,11 @@
       --mint-100: #e3f4ec;
       --mint-50: #f5faf7;
       --gold: #d7aa4a;
-      --gold-deep: #b8892f;
+      /* كان b8892f (~2.9-3.0:1) على خلفيات eyebrow/verdict/sample-flag الفاتحة — دون 4.5:1.
+         غُمّق بنفس الصبغة (H≈39°, S≈59%) ليجتاز 4.5:1 على أضعف خلفية منها (verdict، 4.82:1).
+         يُعاد للقيمة الأصلية داخل @media (prefers-color-scheme: dark) أدناه لأنها هناك تقف
+         فوق خلفيات داكنة (--surface) حيث التغميق كان سيُسيء للتباين بدل إصلاحه. */
+      --gold-deep: #8a6623;
       --gold-soft: #fff5dc;
       /* سلّم محايدات غني — النصوص الثانوية مضبوطة فوق 4.5:1 على الأبيض */
       --ink: #10201a;
@@ -458,7 +462,7 @@
     .cmp-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-md); background: var(--white); -webkit-overflow-scrolling: touch; }
     table.cmp { width: 100%; min-width: 640px; border-collapse: collapse; background: var(--white); }
     table.cmp th, table.cmp td { text-align: start; padding: 16px 20px; font-size: var(--text-sm); border-bottom: 1px solid var(--line); vertical-align: top; }
-    table.cmp thead th { font-weight: 700; font-size: var(--text-base); background: var(--mint-50); border-bottom: 2px solid var(--line-strong); }
+    table.cmp thead th { font-weight: 700; font-size: var(--text-base); color: var(--ink); background: var(--mint-50); border-bottom: 2px solid var(--line-strong); }
     table.cmp thead th.us { color: var(--green-700-text); background: rgba(16,130,100,.08); }
     table.cmp thead th.them { color: var(--muted); }
     table.cmp tbody th { font-weight: 700; color: var(--ink); width: 26%; background: rgba(6,46,35,.015); }
@@ -663,6 +667,9 @@
         --green-50: #14251d;
         --green-100: #1a3328;
         --surface: #16221c;
+        /* القيمة الأصلية قبل تغميقها أعلاه لإصلاح الوضع الفاتح — هنا فوق خلفيات داكنة
+           (--surface في .report-card) فالتغميق كان يخفّض تباينها بدل رفعه. */
+        --gold-deep: #b8892f;
       }
       body { background: #0d1511; color: var(--ink); }
       .site-header, .band, .price, .report-card, .step, .faq-item { background: var(--surface); color: var(--ink); }

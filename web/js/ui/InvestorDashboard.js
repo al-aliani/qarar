@@ -80,7 +80,7 @@ export class InvestorDashboard {
         return `
             <div class="investor-dashboard text-right p-8" dir="rtl" style="min-height:100vh;display:flex;align-items:center;justify-content:center;">
                 <div class="text-center max-w-md">
-                    <div class="text-5xl mb-4">📭</div>
+                    <div class="text-5xl mb-4"><svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg></div>
                     <h1 class="text-2xl font-bold text-white mb-3">لا توجد بيانات عرض</h1>
                     <p class="text-muted">هذا الرابط لا يحتوي على ملخص دراسة صالح، أو انتهت صلاحيته على هذا الجهاز. أنشئ رابط «عرض المستثمر» من داخل الدراسة ثم افتحه.</p>
                 </div>
@@ -107,10 +107,10 @@ export class InvestorDashboard {
                 <!-- Header / Navigation -->
                 <div class="flex justify-between items-center mb-12 pb-4 border-b border-white/10 no-print max-w-6xl mx-auto">
                     <h1 class="text-xl font-bold text-gold flex items-center gap-2">
-                        <span>💼</span> عرض المستثمرين
+                        <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg> عرض المستثمرين
                     </h1>
                     <div class="flex gap-2">
-                        <button id="btnInvPrint" class="btn btn--secondary btn--sm">🖨️ طباعة / PDF</button>
+                        <button id="btnInvPrint" class="btn btn--secondary btn--sm"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> طباعة / PDF</button>
                         ${this.standalone ? '' : '<button id="btnInvExit" class="btn btn--ghost btn--sm text-danger">إغلاق</button>'}
                     </div>
                 </div>
@@ -121,7 +121,7 @@ export class InvestorDashboard {
                     <!-- 1. Hero Section -->
                     <div class="text-center space-y-6">
                         <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary to-secondary shadow-lg mb-4">
-                            <span class="text-4xl text-white">🚀</span>
+                            <svg class="ic text-4xl text-white" aria-hidden="true"><use href="#i-rocket"/></svg>
                         </div>
                         <h1 class="text-5xl font-black text-white leading-tight tracking-tight">${escapeHtml(data.name)}</h1>
                         <p class="text-2xl text-muted font-light max-w-3xl mx-auto">
@@ -180,10 +180,10 @@ export class InvestorDashboard {
                         </div>
                         
                         <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                            ${this.renderMetricCard('إجمالي الاستثمار', formatCurrency(data.financing.totalInvestment || 0), '💰')}
-                            ${this.renderMetricCard('صافي القيمة الحالية (NPV)', formatCurrency(data.indicators.npv || 0), '📈', (data.indicators.npv || 0) > 0)}
-                            ${this.renderMetricCard('معدل العائد (IRR)', ((data.indicators.irr || 0) * 100).toFixed(1) + '%', '📊')}
-                            ${this.renderMetricCard('فترة الاسترداد', (data.indicators.paybackPeriod || '—') + ' سنة', '⏱️')}
+                            ${this.renderMetricCard('إجمالي الاستثمار', formatCurrency(data.financing.totalInvestment || 0), '<svg class="ic" aria-hidden="true"><use href="#i-bank"/></svg>')}
+                            ${this.renderMetricCard('صافي القيمة الحالية (NPV)', formatCurrency(data.indicators.npv || 0), '<svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg>', (data.indicators.npv || 0) > 0)}
+                            ${this.renderMetricCard('معدل العائد (IRR)', ((data.indicators.irr || 0) * 100).toFixed(1) + '%', '<svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg>')}
+                            ${this.renderMetricCard('فترة الاسترداد', (data.indicators.paybackPeriod || '—') + ' سنة', '<svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>')}
                         </div>
                     </div>
 
@@ -195,7 +195,7 @@ export class InvestorDashboard {
                                 ${(data.team).slice(0, 4).map(p => `
                                     <div class="bg-white/5 p-4 rounded-xl border border-white/5 flex items-center gap-4 hover:bg-white/10 transition-colors">
                                         <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-xl text-primary border border-primary/30">
-                                            ${p.name ? escapeHtml(String(p.name).charAt(0)) : '👤'}
+                                            ${p.name ? escapeHtml(String(p.name).charAt(0)) : '<svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>'}
                                         </div>
                                         <div>
                                             <div class="font-bold text-white">${escapeHtml(p.name) || 'عضو فريق'}</div>
@@ -250,7 +250,7 @@ export class InvestorDashboard {
     renderMetricCard(label, value, icon, isPositive = true) {
         return `
             <div class="bg-white/5 p-6 rounded-2xl border border-white/5 hover:bg-white/10 transition-all hover:-translate-y-1 shadow-sm text-center group">
-                <div class="text-4xl mb-4 opacity-80 group-hover:scale-110 transition-transform duration-300">${escapeHtml(icon)}</div>
+                <div class="text-4xl mb-4 opacity-80 group-hover:scale-110 transition-transform duration-300">${icon}</div>
                 <div class="text-2xl font-bold mb-2 ${isPositive ? 'text-white' : 'text-danger'} metric-value">${escapeHtml(value)}</div>
                 <div class="text-xs text-muted font-medium">${escapeHtml(label)}</div>
             </div>

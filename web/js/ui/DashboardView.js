@@ -483,21 +483,22 @@ export class DashboardView {
                         <section class="dv-section dv-home-panel" id="homePanel-studies" data-home-panel="studies" ${activeHomePanel !== 'studies' ? 'hidden' : ''}>
 
                             <div class="dv-bento" role="tablist" aria-label="مساحتك">
-                                ${hasProjects ? `
                                 <div class="dv-bento-tile dv-bento-tile--hero">
+                                    ${hasProjects && lastStep ? `
                                     <div>
                                         <span class="dv-bento-tile__eyebrow">${inlineIcon('folder')} متابعة</span>
                                         <h3 class="dv-bento-tile__heroTitle">${escapeHtml(filtered[0]?.name || 'مشروعك')}</h3>
-                                        ${lastStep ? `<p class="dv-bento-tile__hint">آخر خطوة: ${lastStep.label}</p>` : ''}
+                                        <p class="dv-bento-tile__hint">آخر خطوة: ${lastStep.label}</p>
                                     </div>
-                                    ${lastStep ? `<button type="button" id="btnContinueLastStep" class="btn btn--primary">${inlineIcon('play')} تابع من حيث توقفت</button>` : ''}
-                                </div>
-                                ` : ''}
-
-                                <div class="dv-bento-tile dv-bento-tile--wide">
-                                    <span class="dv-bento-tile__eyebrow">${inlineIcon('bulb')} ابدأ</span>
+                                    ` : `
+                                    <div>
+                                        <span class="dv-bento-tile__eyebrow">${inlineIcon('bulb')} ابدأ</span>
+                                        <h3 class="dv-bento-tile__heroTitle">دراسة جديدة</h3>
+                                    </div>
+                                    `}
                                     <div class="dv-bento-tile__stack">
-                                        <button type="button" id="cardFullStudy" class="btn btn--primary">${icon('i-plus')} دراسة جديدة</button>
+                                        ${hasProjects && lastStep ? `<button type="button" id="btnContinueLastStep" class="btn btn--primary">${inlineIcon('play')} تابع من حيث توقفت</button>` : ''}
+                                        <button type="button" id="cardFullStudy" class="btn ${hasProjects && lastStep ? 'btn--secondary' : 'btn--primary'}">${icon('i-plus')} دراسة جديدة</button>
                                     </div>
                                 </div>
 

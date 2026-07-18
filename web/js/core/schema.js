@@ -1030,7 +1030,7 @@ export const TABLE_SCHEMAS = {
         smartFill: { label: '🪄 اقتراح الهيكل والرواتب', dataKey: 'staffing' },
         columns: [
             { key: 'position', label: 'المسمى الوظيفي', type: 'text' },
-            { key: 'nationality', label: 'الجنسية', type: 'select', options: [{ value: 'saudi', label: 'سعودي 🇸🇦' }, { value: 'expat', label: 'غير سعودي 🌍' }], default: 'expat' },
+            { key: 'nationality', label: 'الجنسية', type: 'select', options: [{ value: 'saudi', label: 'سعودي' }, { value: 'expat', label: 'غير سعودي' }], default: 'expat' },
             { key: 'count', label: 'العدد', type: 'number', default: 1 },
             { key: 'salary', label: 'الراتب الأساسي + السكن', type: 'number' },
             { key: 'months', label: 'أشهر العمل/سنة', type: 'number', default: 12 },

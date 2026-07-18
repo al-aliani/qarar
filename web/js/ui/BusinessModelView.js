@@ -12,8 +12,7 @@ import { escapeHtml } from '../utils/escape.js';
 import Sortable from 'sortablejs';
 import LeaderLine from 'leader-line-new';
 
-// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11. (أيقونات بلوكات
-// Business Model Canvas التسع تُترك كمجموعة دلالية متمايزة بلا مقابل sprite مفرد.)
+// أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-18.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
 
 // مستمع واحد على مستوى الوحدة (لا واحد لكل نسخة/تنقّل) — يمنع تراكم مستمعي
@@ -24,15 +23,15 @@ if (typeof window !== 'undefined') {
 }
 
 const BLOCKS = [
-    { key: 'valueProposition', label: 'عرض القيمة', icon: '💎', placeholder: 'ما الذي يقدّمه المشروع للعميل؟ ما المشكلة التي يحلها؟' },
-    { key: 'customerSegments', label: 'شرائح العملاء', icon: '👥', placeholder: 'من هم العملاء المستهدفون؟ ما خصائصهم وحاجاتهم؟' },
-    { key: 'channels', label: 'قنوات الوصول', icon: '📡', placeholder: 'كيف تصل للعميل؟ (متجر، إلكتروني، وكلاء، إلخ)' },
-    { key: 'customerRelationships', label: 'علاقات العملاء', icon: '🤝', placeholder: 'طبيعة العلاقة: ذاتية الخدمة، مساعدة شخصية، مجتمع، اشتراك...' },
-    { key: 'revenueStreams', label: 'مصادر الإيرادات', icon: '💰', placeholder: 'كيف يحقق المشروع الإيراد؟ (مبيعات، اشتراكات، إعلانات...)' },
-    { key: 'keyResources', label: 'الموارد الأساسية', icon: '🏛️', placeholder: 'الأصول الحرجة: أصول مادية، بشرية، فكرية، مالية' },
-    { key: 'keyActivities', label: 'الأنشطة الأساسية', icon: '⚙️', placeholder: 'أهم ما يجب أن يفعله المشروع لينجح' },
-    { key: 'keyPartners', label: 'الشراكات الأساسية', icon: '🔗', placeholder: 'المورّدون، التحالفات، الشراكات الاستراتيجية' },
-    { key: 'costStructure', label: 'هيكل التكاليف', icon: '📉', placeholder: 'أهم بنود التكلفة: ثابتة، متغيرة، اقتصاديات الحجم' }
+    { key: 'valueProposition', label: 'عرض القيمة', icon: icon('i-star'), placeholder: 'ما الذي يقدّمه المشروع للعميل؟ ما المشكلة التي يحلها؟' },
+    { key: 'customerSegments', label: 'شرائح العملاء', icon: icon('i-users'), placeholder: 'من هم العملاء المستهدفون؟ ما خصائصهم وحاجاتهم؟' },
+    { key: 'channels', label: 'قنوات الوصول', icon: icon('i-share'), placeholder: 'كيف تصل للعميل؟ (متجر، إلكتروني، وكلاء، إلخ)' },
+    { key: 'customerRelationships', label: 'علاقات العملاء', icon: icon('i-user'), placeholder: 'طبيعة العلاقة: ذاتية الخدمة، مساعدة شخصية، مجتمع، اشتراك...' },
+    { key: 'revenueStreams', label: 'مصادر الإيرادات', icon: icon('i-bank'), placeholder: 'كيف يحقق المشروع الإيراد؟ (مبيعات، اشتراكات، إعلانات...)' },
+    { key: 'keyResources', label: 'الموارد الأساسية', icon: icon('i-factory'), placeholder: 'الأصول الحرجة: أصول مادية، بشرية، فكرية، مالية' },
+    { key: 'keyActivities', label: 'الأنشطة الأساسية', icon: icon('i-settings'), placeholder: 'أهم ما يجب أن يفعله المشروع لينجح' },
+    { key: 'keyPartners', label: 'الشراكات الأساسية', icon: icon('i-link'), placeholder: 'المورّدون، التحالفات، الشراكات الاستراتيجية' },
+    { key: 'costStructure', label: 'هيكل التكاليف', icon: icon('i-chart'), placeholder: 'أهم بنود التكلفة: ثابتة، متغيرة، اقتصاديات الحجم' }
 ];
 
 export class BusinessModelView {

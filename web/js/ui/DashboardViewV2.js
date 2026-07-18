@@ -82,90 +82,6 @@ const inlineIcon = (name, cls = '') =>
 const stripEmoji = (s) => (s || '').replace(/[\p{Extended_Pictographic}️‍]/gu, '').trim();
 
 export class DashboardViewV2 {
-import Swal from 'sweetalert2';
-import { ProjectManager } from '../services/ProjectManager.js';
-import { getAuthUser, signOut } from '../../supabaseClient.js';
-import { toast } from '../utils/toast.js';
-import { PRICING_DISPLAY, buildWhatsAppLink } from '../config.js';
-import { PRICING_PACKAGES, formatPrice, CURRENCY_SYMBOL } from '../core/pricing.js';
-import { QualityCalculator } from '../utils/QualityCalculator.js';
-import { escapeHtml } from '../utils/escape.js';
-import { calculateStudyCompleteness } from '../utils/studyCompleteness.js';
-import { FundingSimulator } from './widgets/FundingSimulator.js';
-import { FounderCardGenerator } from './widgets/FounderCardGenerator.js';
-import { SensitivityWidget } from './widgets/SensitivityWidget.js';
-import { ReadyStudiesView } from './ReadyStudiesView.js';
-import { DatabaseFilesView } from './DatabaseFilesView.js';
-import { STEPS, SIDEBAR_SECTIONS } from '../core/wizardSteps.js';
-import { stepReportType, stepCanReport, STEP_TYPE_BADGE } from '../core/stepReportType.js';
-import { DATA_SOURCE_CATALOG } from '../services/DataConnectors.js';
-
-const FOLDERS_STORAGE_KEY = 'feas_folders';
-
-import { ResourcesMenu } from './widgets/ResourcesMenu.js';
-
-/* ─── نظام الأيقونات الموحّد (بديل الإيموجي) ───
-   أولاً: رموز الـsprite المعرفة في index.html (i-*)،
-   ثانياً: رموز inline بنفس اللغة (stroke 1.75 / 24×24 / currentColor) لما لا يوجد في الـsprite. */
-const icon = (id, cls = '') =>
-    `<svg class="ic${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
-
-const INLINE_PATHS = {
-    // حقيبة عمل — «دراسة احترافية»
-    briefcase: '<rect x="2.5" y="7.5" width="19" height="13" rx="2"/><path d="M9 7.5V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.5"/><path d="M2.5 12.5h19"/>',
-    // تشغيل — «جولة تجريبية»
-    play: '<path d="M8 5.5v13l10-6.5Z"/>',
-    // دورق مختبر — «مختبر الأفكار»
-    flask: '<path d="M10 3h4"/><path d="M11 3v5.2L5.7 17.4a2 2 0 0 0 1.8 3.1h9a2 2 0 0 0 1.8-3.1L13 8.2V3"/><path d="M8 15h8"/>',
-    // مصباح فكرة — «فرضية الستارت آب»
-    bulb: '<path d="M9.5 18v-1.2c0-1-.6-1.9-1.3-2.6a6 6 0 1 1 7.6 0c-.7.7-1.3 1.6-1.3 2.6V18"/><path d="M9.5 21h5"/>',
-    // سهم تقدم (RTL: يشير يساراً)
-    chev: '<path d="m14.5 6-6 6 6 6"/>',
-    // فقاعة حوار — «رحلة الاستشارة»
-    chat: '<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.6 0-3.1-.4-4.4-1.2L3 20.5l1.7-4.9A8.5 8.5 0 1 1 21 11.5Z"/>',
-    // شخصان — «رحلة الشريك»
-    users: '<circle cx="9.5" cy="8" r="3.5"/><path d="M3 20c0-3.2 2.9-5.3 6.5-5.3S16 16.8 16 20"/><path d="M16 4.8a3.5 3.5 0 0 1 0 6.4"/><path d="M18.5 15.2c1.7.8 2.5 2.4 2.5 4.8"/>',
-    // سحابة — شارة الحفظ السحابي
-    cloud: '<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a4 4 0 0 0 0-8Z"/>',
-    // حاسوب — شارة الحفظ المحلي
-    laptop: '<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2.5 19.5h19"/>',
-    // مجلد — «دراساتك»
-    folder: '<path d="M3.5 6.5h6l1.6 2h9.4v8.5a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2Z"/><path d="M3.5 8.5h17"/>',
-    // اتجاه صاعد — نصيحة رفع الجودة
-    trend: '<path d="m3.5 17 5.5-5.5 4 4 7.5-7.5"/><path d="M14.5 8h6v6"/>',
-    // خريطة — «دليل سريع»
-    map: '<path d="m9 4-6 2v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/>',
-    // ميزان — «هل أرقامي منطقية؟»
-    scale: '<path d="M12 3v18M6 7h12"/><path d="M6 7 3 13a3 3 0 0 0 6 0Zm12 0-3 6a3 3 0 0 0 6 0Z"/>',
-    // قائمة — «قائمة تحقق التمويل»
-    list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
-    // هدف — «الدراسة المبدئية»
-    target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
-    // بنك — «التمويل»
-    bank: '<path d="m3 9 9-5 9 5"/><path d="M5 10v7M9.7 10v7M14.3 10v7M19 10v7"/><path d="M3 20h18"/>',
-    // درع — «التوافق»
-    shield: '<path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6Z"/><path d="m9 12 2 2 4-4"/>',
-    // مخطط — «اختبارات مالية»
-    chart: '<path d="M4 20V4M4 20h16"/><path d="M8 16l3-4 3 2 4-6"/>',
-    // نبض — «مراقبة/تشغيل»
-    activity: '<path d="M3 12h4l2-7 4 14 2-7h6"/>',
-    // تحميل — «تصدير»
-    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
-    // لوحة — «بناء التقرير»
-    clipboard: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5A2 2 0 0 1 11 3h2a2 2 0 0 1 2 1.5V6H9Z"/><path d="M9 11h6M9 15h6"/>',
-    // صاروخ — «نصائح المسرّعات»
-    rocket: '<path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2M9 12a12 12 0 0 1 8-9c2 0 3 1 3 3a12 12 0 0 1-9 8Z"/><circle cx="14.5" cy="9.5" r="1.5"/><path d="M9 12l-3 .5 5.5 5.5.5-3"/>',
-    // كتاب — «نصائح للمبتدئين / مركز المعرفة»
-    book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2Z"/><path d="M19 3v18"/>'
-};
-
-const inlineIcon = (name, cls = '') =>
-    `<svg class="ic${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true">${INLINE_PATHS[name] || ''}</svg>`;
-
-/** إزالة الإيموجي من نصوص قادمة من الخارج (مثل شارة QualityCalculator) */
-const stripEmoji = (s) => (s || '').replace(/[\p{Extended_Pictographic}️‍]/gu, '').trim();
-
-export class DashboardViewV2 {
     constructor(containerId, store, onProjectSelect, options = {}) {
         this.container = document.getElementById(containerId);
         this.store = store;
@@ -363,7 +279,7 @@ export class DashboardViewV2 {
                 <main class="dv2-main">
                     <!-- Topbar -->
                     <header class="dv2-topbar dv2-glass-panel">
-                        <div style="font-weight: 600;">مرحباً بك في قرار! 👋</div>
+                        <div style="font-weight: 600;">مرحباً بك في قرار!</div>
                         <div class="dv2-topbar-actions">
                             ${!this.currentUser ? `
                                 <button type="button" id="dashboardLogin" class="dv2-btn-secondary">تسجيل الدخول</button>

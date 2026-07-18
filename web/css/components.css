@@ -2393,7 +2393,7 @@ textarea.input {
 }
 
 .summary-pending .summary-value {
-    color: #9ca3af;
+    color: var(--c-text-muted);
 }
 
 .completion-rate {

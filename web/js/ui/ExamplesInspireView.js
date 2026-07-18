@@ -25,7 +25,7 @@ export class ExamplesInspireView {
                         ${items.map(ex => `
                             <div class="card p-4 flex flex-col">
                                 <div class="flex items-center gap-3 mb-2">
-                                    <span class="text-2xl">${ex.icon || '📄'}</span>
+                                    <span class="text-2xl">${ex.icon || '<svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg>'}</span>
                                     <div>
                                         <h3 class="font-bold text-gold">${(ex.displayName || '').toString().replace(/</g, '&lt;')}</h3>
                                         <p class="text-sm text-muted">${(ex.sector || '').toString().replace(/</g, '&lt;')}</p>

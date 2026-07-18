@@ -24,7 +24,7 @@ export class StudyComparison {
             <div class="comparison-panel animate-entry">
                 <div class="panel-header mb-6">
                     <h2 class="text-xl font-bold flex items-center gap-2">
-                        ⚖️ مقارنة الدراسات
+                        <svg class="ic" aria-hidden="true"><use href="#i-scale"/></svg> مقارنة الدراسات
                     </h2>
                     <p class="text-muted">قارن أداء مشروعك الحالي مع مشاريعك السابقة أو سيناريوهات بديلة.</p>
                     <div class="alert alert--info mt-3" style="font-size: 0.85rem;">
@@ -85,7 +85,7 @@ export class StudyComparison {
                     ${this.renderRow('إيرادات السنة الأولى', null, comparison.revenue)}
                 </div>
                 <div class="mt-6 p-4 bg-glass rounded">
-                    <h3 class="font-bold text-gold mb-2">💡 الخلاصة</h3>
+                    <h3 class="font-bold text-gold mb-2"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> الخلاصة</h3>
                     <p>${this.generateInsight(comparison)}</p>
                 </div>
             `;
@@ -98,7 +98,7 @@ export class StudyComparison {
     renderEmptyState() {
         return `
             <div class="text-center p-8 text-muted border-dashed">
-                <div class="text-4xl mb-4">📊</div>
+                <svg class="ic text-4xl mb-4" aria-hidden="true"><use href="#i-chart"/></svg>
                 <p>اختر دراسة من القائمة أعلاه لبدء المقارنة التفصيلية</p>
             </div>
         `;
@@ -114,7 +114,7 @@ export class StudyComparison {
             return new Intl.NumberFormat('ar-SA').format(Math.round(val));
         };
 
-        const diffIcon = data.status === 'positive' ? '🟢' : data.status === 'negative' ? '🔴' : '⚪';
+        const diffIcon = data.status === 'positive' ? '<span class="inline-block w-2 h-2 rounded-full bg-green-500"></span>' : data.status === 'negative' ? '<span class="inline-block w-2 h-2 rounded-full bg-red-500"></span>' : '<span class="inline-block w-2 h-2 rounded-full bg-gray-400"></span>';
         const diffSign = data.diff > 0 ? '+' : '';
         const diffText = `${diffSign}${format(data.diff)}`;
         const pctText = `(${diffSign}${data.pct.toFixed(1)}%)`;

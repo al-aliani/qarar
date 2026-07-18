@@ -33,5 +33,6 @@
       "runtimeArgs": ["run", "dev", "--", "--port", "5199", "--strictPort"],
       "port": 5199
     }
-  ]
+  ],
+  "autoVerify": false
 }

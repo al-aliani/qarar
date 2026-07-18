@@ -98,16 +98,16 @@ export class UserProfileView {
                             مركز التنزيلات
                         </button>
                         <button type="button" id="btnUserProfileIntegrations" class="btn btn--secondary w-full" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            🔗 التكاملات (Google Sheets، reCAPTCHA، إلخ)
+                            <svg class="ic" aria-hidden="true"><use href="#i-link"/></svg> التكاملات (Google Sheets، reCAPTCHA، إلخ)
                         </button>
                         <button type="button" id="btnUserProfile2FA" class="btn btn--secondary w-full" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            🔐 المصادقة الثنائية (2FA)
+                            <svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg> المصادقة الثنائية (2FA)
                         </button>
                         <button type="button" id="btnUserProfileActivityLog" class="btn btn--secondary w-full" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            ⏱️ سجل الأنشطة والتدقيق
+                            <svg class="ic" aria-hidden="true"><use href="#i-history"/></svg> سجل الأنشطة والتدقيق
                         </button>
                         <button type="button" id="btnUserProfileLogout" class="btn btn--ghost w-full text-danger" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            🚪 تسجيل الخروج
+                            تسجيل الخروج
                         </button>
                     </div>
 

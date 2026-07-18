@@ -1,3 +1,5 @@
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class ModeSelector {
     constructor(onSelect) {
         this.onSelect = onSelect;
@@ -38,7 +40,7 @@ export class ModeSelector {
         });
 
         container.innerHTML = `
-            <h1 style="font-size: 2rem; color: var(--c-p-500); margin-bottom: 0.5rem;">👋 مرحباً بك في دراسة الجدوى الذكية</h1>
+            <h1 style="font-size: 2rem; color: var(--c-p-500); margin-bottom: 0.5rem;">${icon('i-star')} مرحباً بك في دراسة الجدوى الذكية</h1>
             <p style="color: var(--c-text-muted); margin-bottom: 2.5rem; font-size: 1.1rem;">اختر الطريقة التي تناسبك للبدء في مشروعك</p>
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
@@ -56,7 +58,7 @@ export class ModeSelector {
                     gap: 1rem;
                     group
                 ">
-                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🚀</div>
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">${icon('i-rocket')}</div>
                     <h3 style="color: var(--c-text-main); font-size: 1.4rem; margin: 0;">الدراسة السريعة</h3>
                     <p style="color: var(--c-text-muted); font-size: 0.95rem; line-height: 1.6;">
                         مثالية للأفكار الجديدة. سنطلب منك <strong>5 معلومات فقط</strong>، وسيقوم الذكاء الاصطناعي بتقدير الباقي بناءً على السوق السعودي.
@@ -79,7 +81,7 @@ export class ModeSelector {
                     flex-direction: column;
                     gap: 1rem;
                 ">
-                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">💼</div>
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">${icon('i-folder')}</div>
                     <h3 style="color: var(--c-text-main); font-size: 1.4rem; margin: 0;">الدراسة التفصيلية</h3>
                     <p style="color: var(--c-text-muted); font-size: 0.95rem; line-height: 1.6;">
                         للمحترفين والجهات التمويلية. تحكم كامل في كل رقم وتفصيل في الدراسة الفنية، المالية، والتسويقية.

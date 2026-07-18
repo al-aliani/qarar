@@ -33,50 +33,50 @@ export function computeEligibilityScore({
     if (nationality !== 'saudi') {
         score = 0;
         status = 'rejected';
-        reasons.push('❌ التمويل متاح للسعوديين فقط حالياً.');
+        reasons.push('<svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> التمويل متاح للسعوديين فقط حالياً.');
     }
 
     // Rule: Age (18-65) - some products 21-60
     if (age < 18) {
         score = 0;
         status = 'rejected';
-        reasons.push('❌ العمر أقل من 18 سنة.');
+        reasons.push('<svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> العمر أقل من 18 سنة.');
     } else if (age > 65) {
         score = 0;
         status = 'rejected';
-        reasons.push('❌ العمر تجاوز 65 سنة.');
+        reasons.push('<svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> العمر تجاوز 65 سنة.');
     } else if (age < 21) {
         score -= 20; // Risk
-        reasons.push('⚠️ العمر أقل من 21 (قد يتطلب كفيلاً أو منتجات محدودة).');
+        reasons.push('<svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> العمر أقل من 21 (قد يتطلب كفيلاً أو منتجات محدودة).');
     } else if (age > 60) {
         score -= 20; // Risk
-        reasons.push('⚠️ العمر فوق 60 (قد يتطلب شروطاً إضافية).');
+        reasons.push('<svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> العمر فوق 60 (قد يتطلب شروطاً إضافية).');
     } else {
-        reasons.push('✅ العمر مناسب (18-65).');
+        reasons.push('<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> العمر مناسب (18-65).');
     }
 
     // Rule: Credit Defaults
     if (hasDefaults) {
         score -= 50; // Major impact
         status = score > 0 ? 'low' : 'rejected';
-        reasons.push('🛑 وجود تعثرات مالية يقلل فرص القبول بشكل كبير (يجب المعالجة).');
+        reasons.push('<svg class="ic" aria-hidden="true"><use href="#i-hand-stop"/></svg> وجود تعثرات مالية يقلل فرص القبول بشكل كبير (يجب المعالجة).');
     } else {
-        reasons.push('✅ السجل الائتماني سليم.');
+        reasons.push('<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> السجل الائتماني سليم.');
     }
 
     // Rule: Employment
     if (isEmployed) {
         // New rules allow employed but with specific products (Mumars Plus)
         score -= 10;
-        reasons.push('ℹ️ الموظفون مؤهلون لمنتجات محددة (ممارسة) وليس التفرغ الكامل.');
+        reasons.push('<svg class="ic" aria-hidden="true"><use href="#i-info"/></svg> الموظفون مؤهلون لمنتجات محددة (ممارسة) وليس التفرغ الكامل.');
     } else {
-        reasons.push('✅ التفرغ يعزز فرص تمويل المشاريع الناشئة (ريادة).');
+        reasons.push('<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> التفرغ يعزز فرص تمويل المشاريع الناشئة (ريادة).');
     }
 
     // Sector Check (Basic)
     if (/مقاولات|عقار|تأمين/i.test(sector)) {
         score -= 10;
-        reasons.push('⚠️ بعض النشاطات (مقاولات/عقار) قد تكون مقيدة أو تتطلب خبرة محددة.');
+        reasons.push('<svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> بعض النشاطات (مقاولات/عقار) قد تكون مقيدة أو تتطلب خبرة محددة.');
     }
 
     // امتداد إضافي: مؤشرات حقيقية من نموذج الدراسة المالي (DSCR محسوب/ضمانات موثّقة) —
@@ -86,15 +86,15 @@ export function computeEligibilityScore({
         if (computedDscr != null && targetDSCR != null) {
             if (computedDscr >= targetDSCR) {
                 score += 10;
-                reasons.push(`✅ نسبة تغطية خدمة الدين المحسوبة من نموذجك المالي ${computedDscr.toFixed(2)}x تفوق المستهدف ${targetDSCR.toFixed(2)}x.`);
+                reasons.push(`<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> نسبة تغطية خدمة الدين المحسوبة من نموذجك المالي ${computedDscr.toFixed(2)}x تفوق المستهدف ${targetDSCR.toFixed(2)}x.`);
             } else {
                 score -= 10;
-                reasons.push(`⚠️ نسبة تغطية خدمة الدين المحسوبة ${computedDscr.toFixed(2)}x أقل من المستهدف ${targetDSCR.toFixed(2)}x.`);
+                reasons.push(`<svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> نسبة تغطية خدمة الدين المحسوبة ${computedDscr.toFixed(2)}x أقل من المستهدف ${targetDSCR.toFixed(2)}x.`);
             }
         }
         if (guaranteesValue > 0) {
             score += 5;
-            reasons.push('✅ وجود ضمانات موثّقة (رهن/كفالة) في خطوة التمويل يعزز فرص القبول.');
+            reasons.push('<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> وجود ضمانات موثّقة (رهن/كفالة) في خطوة التمويل يعزز فرص القبول.');
         }
     }
 
@@ -128,7 +128,7 @@ export class FundingSimulator {
         this.container.innerHTML = `
             <div class="funding-simulator card border-gold">
                 <div class="card-header flex-between">
-                    <h3 class="text-lg font-bold text-gold">🏦 محاكي قبول التمويل</h3>
+                    <h3 class="text-lg font-bold text-gold"><svg class="ic" aria-hidden="true"><use href="#i-bank"/></svg> محاكي قبول التمويل</h3>
                     <span class="badge badge--outline">Beta</span>
                 </div>
                 <div class="card-body">
@@ -173,7 +173,7 @@ export class FundingSimulator {
                         </div>
 
                         <button type="submit" class="btn btn--primary w-full mt-2">
-                            🔍 احسب نسبة القبول
+                            احسب نسبة القبول
                         </button>
                     </form>
 
@@ -252,7 +252,7 @@ export class FundingSimulator {
                 ${reasons.map(r => `<li>${r}</li>`).join('')}
             </ul>
             <div class="mt-3 text-center">
-                <a href="https://www.sdb.gov.sa/ar-sa/products/individual/riada" target="_blank" class="text-gold text-xs underline">🔗 تفاصيل منتجات بنك التنمية</a>
+                <a href="https://www.sdb.gov.sa/ar-sa/products/individual/riada" target="_blank" class="text-gold text-xs underline"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg> تفاصيل منتجات بنك التنمية</a>
             </div>
         `;
     }

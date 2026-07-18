@@ -78,13 +78,13 @@ export class SupplyChainSandboxView {
                                 
                                 <!-- Origin (Supplier) -->
                                 <div class="absolute w-8 h-8 rounded-full bg-white/10 border border-white/30 flex items-center justify-center left-[20px] top-[80px] -translate-x-1/2 -translate-y-1/2 text-[10px]">
-                                    🏭
+                                    <svg class="ic" aria-hidden="true"><use href="#i-factory"/></svg>
                                 </div>
                                 <div class="absolute left-[20px] top-[100px] -translate-x-1/2 text-[10px] text-white/50 bg-black/80 px-1 rounded">المورد (البرازيل)</div>
                                 
                                 <!-- Destination (Warehouse) -->
                                 <div class="absolute w-8 h-8 rounded-full bg-teal-500/20 border border-teal-500 flex items-center justify-center left-[400px] top-[20px] -translate-x-1/2 -translate-y-1/2 text-[10px]">
-                                    🏢
+                                    <svg class="ic" aria-hidden="true"><use href="#i-box"/></svg>
                                 </div>
                                 <div class="absolute left-[400px] top-[40px] -translate-x-1/2 text-[10px] text-teal-400 font-bold bg-black/80 px-1 rounded">المستودع الرئيسي</div>
                             </div>

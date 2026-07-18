@@ -15,7 +15,7 @@ export class ResourcesMenu {
         const button = document.createElement('button');
         button.className = 'btn btn--ghost btn--sm';
         button.innerHTML = `
-            <span>📚</span>
+            <span></span>
             <span>مركز المعرفة والموارد</span>
             <span class="dv-resources__caret" aria-hidden="true">▼</span>
         `;
@@ -36,18 +36,18 @@ export class ResourcesMenu {
         menu.innerHTML = `
             <div class="dv-resources__body">
                 <div class="dv-resources__group-label">تعلم وإرشاد</div>
-                ${this.renderLink('📖', 'دليل المبتدئين', 'beginnerGuide')}
-                ${this.renderLink('💡', 'تقييم الفكرة (Startup)', 'ideaAssessment')}
-                ${this.renderLink('🎓', 'مركز المعرفة', 'knowledgeCenter')}
+                ${this.renderLink('', 'دليل المبتدئين', 'beginnerGuide')}
+                ${this.renderLink('', 'تقييم الفكرة (Startup)', 'ideaAssessment')}
+                ${this.renderLink('', 'مركز المعرفة', 'knowledgeCenter')}
 
                 <div class="dv-resources__group-label dv-resources__group-label--sp">أدوات مساعدة</div>
-                ${this.renderLink('🏦', 'دليل التمويل', 'financingGuide')}
-                ${this.renderLink('📋', 'معايير منشآت', 'monshaatCompliance')}
-                ${this.renderLink('🚀', 'نصائح المسرّعات', 'acceleratorTips')}
+                ${this.renderLink('', 'دليل التمويل', 'financingGuide')}
+                ${this.renderLink('', 'معايير منشآت', 'monshaatCompliance')}
+                ${this.renderLink('', 'نصائح المسرّعات', 'acceleratorTips')}
 
                 <div class="dv-resources__group-label dv-resources__group-label--sp">دعم</div>
-                ${this.renderLink('💬', 'طلب استشارة', 'advisory')}
-                ${this.renderLink('📂', 'موارد وإرشاد', 'resourcesGuide')}
+                ${this.renderLink('', 'طلب استشارة', 'advisory')}
+                ${this.renderLink('', 'موارد وإرشاد', 'resourcesGuide')}
             </div>
         `;
 

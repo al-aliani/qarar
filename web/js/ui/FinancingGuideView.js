@@ -96,7 +96,7 @@ export class FinancingGuideView {
                     <p class="text-sm text-muted mb-4">التقرير المُصدّر (PDF أو نسخة للممول) يجمع هذه العناصر ويمكنك تقديمه للبنك أو المؤسسة التمويلية أو المستثمر. المتطلبات الفعلية تختلف حسب كل جهة.</p>
                     ${this.onOpenExport ? `
                     <button type="button" class="btn btn--primary mt-2" id="financingGuideExport">
-                        📄 تصدير تقرير للمؤسسة التمويلية
+                        <svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> تصدير تقرير للمؤسسة التمويلية
                     </button>
                     ` : ''}
                 </div>
@@ -116,7 +116,7 @@ export class FinancingGuideView {
                     <p id="financingReadinessMessage" class="text-sm mt-4 text-muted" role="status">حدّد البنود المكتملة. عند إكمالها كلها ستظهر رسالة جاهزية التصدير.</p>
                     <p class="text-xs text-muted mt-2">المتطلبات الفعلية تختلف حسب كل جهة. يُوصى بمراجعة بوابة الجهة قبل التقديم.</p>
                     <div class="flex gap-2 mt-4">
-                        <button type="button" class="btn btn--secondary btn--sm" id="financingChecklistPrint" aria-label="طباعة أو تصدير قائمة التحقق كـ PDF">🖨️ طباعة / تصدير القائمة</button>
+                        <button type="button" class="btn btn--secondary btn--sm" id="financingChecklistPrint" aria-label="طباعة أو تصدير قائمة التحقق كـ PDF"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> طباعة / تصدير القائمة</button>
                     </div>
                 </div>
 

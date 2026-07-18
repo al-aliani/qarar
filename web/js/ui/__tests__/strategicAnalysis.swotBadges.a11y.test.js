@@ -5,7 +5,9 @@
  * بصنف CSS لوني مختلف لكل ربع (swot-strengths/weaknesses/opportunities/threats).
  * نتحقق أن كل ربع يحمل — إلى جانب الصنف اللوني — أيقونة ونصاً ظاهرين يميّزانه
  * فعلياً، فلا يعتمد التمييز بين "إيجابي" (قوة/فرصة) و"سلبي" (ضعف/تهديد) على
- * اللون وحده. نفس نمط التحقق في batch6.readinessDimensions.test.js.
+ * اللون وحده. الأيقونات مهاجَرة إلى SVG-sprite (aria-hidden، لا تُحتسب ضمن
+ * textContent) فنتحقق من وجودها عبر innerHTML/href، بنفس نمط التحقق المستخدم
+ * في pageTitleAndEmojiSprite.batch7.test.js.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { StrategicAnalysis } from '../StrategicAnalysis.js';
@@ -20,10 +22,10 @@ describe('StrategicAnalysis — أرباع SWOT لا تعتمد على اللو�
     });
 
     const quadrants = [
-        { cls: 'swot-strengths', icon: '💪', label: 'نقاط القوة' },
-        { cls: 'swot-weaknesses', icon: '⚠️', label: 'نقاط الضعف' },
-        { cls: 'swot-opportunities', icon: '🎯', label: 'الفرص' },
-        { cls: 'swot-threats', icon: '🔥', label: 'التهديدات' }
+        { cls: 'swot-strengths', iconId: 'i-shield', emoji: '💪', label: 'نقاط القوة' },
+        { cls: 'swot-weaknesses', iconId: 'i-warning', emoji: '⚠️', label: 'نقاط الضعف' },
+        { cls: 'swot-opportunities', iconId: 'i-target', emoji: '🎯', label: 'الفرص' },
+        { cls: 'swot-threats', iconId: 'i-hand-stop', emoji: '🔥', label: 'التهديدات' }
     ];
 
     it('كل ربع من SWOT يحمل صنف اللون المائز + أيقونة ونص مائزين معاً', () => {
@@ -34,15 +36,16 @@ describe('StrategicAnalysis — أرباع SWOT لا تعتمد على اللو�
         const view = new StrategicAnalysis('c', store, () => {});
         view.render(0);
 
-        quadrants.forEach(({ cls, icon, label }) => {
+        quadrants.forEach(({ cls, iconId, emoji, label }) => {
             const quadrant = document.querySelector(`.swot-quadrant.${cls}`);
             expect(quadrant).toBeTruthy();
             // (1) الصنف اللوني
             expect(quadrant.className).toContain(cls);
             // (2) أيقونة ونص ظاهران — لا يكفي اللون وحده للتمييز بين الأرباع
             const header = quadrant.querySelector('.swot-quadrant-header');
-            expect(header.textContent).toContain(icon);
+            expect(header.innerHTML).toContain(`href="#${iconId}"`);
             expect(header.textContent).toContain(label);
+            expect(header.textContent).not.toMatch(new RegExp(emoji, 'u'));
         });
     });
 
@@ -61,12 +64,13 @@ describe('StrategicAnalysis — أرباع SWOT لا تعتمد على اللو�
         const view = new StrategicAnalysis('c', store, () => {});
         view.render(0);
 
-        quadrants.forEach(({ cls, icon, label }) => {
+        quadrants.forEach(({ cls, iconId, emoji, label }) => {
             const quadrant = document.querySelector(`.swot-quadrant.${cls}`);
             expect(quadrant.className).toContain(cls);
             const header = quadrant.querySelector('.swot-quadrant-header');
-            expect(header.textContent).toContain(icon);
+            expect(header.innerHTML).toContain(`href="#${iconId}"`);
             expect(header.textContent).toContain(label);
+            expect(header.textContent).not.toMatch(new RegExp(emoji, 'u'));
         });
     });
 });

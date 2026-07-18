@@ -7,6 +7,8 @@
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { DEFAULT_SCENARIOS } from '../core/schema.js';
 
+const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 export class ScenarioSwitcher {
     constructor(containerId, store) {
         this.container = document.getElementById(containerId);
@@ -34,9 +36,9 @@ export class ScenarioSwitcher {
         const pessimisticResults = runFullModel(state, params.pessimistic || DEF.pessimistic);
 
         const scenarios = {
-            base: { results: baseResults, label: 'السيناريو الأساسي', icon: '😐', color: 'gray' },
-            optimistic: { results: optimisticResults, label: 'السيناريو المتفائل', icon: '🚀', color: 'green' },
-            pessimistic: { results: pessimisticResults, label: 'السيناريو المتشائم', icon: '😰', color: 'red' }
+            base: { results: baseResults, label: 'السيناريو الأساسي', icon: icon('i-scale'), color: 'gray' },
+            optimistic: { results: optimisticResults, label: 'السيناريو المتفائل', icon: icon('i-rocket'), color: 'green' },
+            pessimistic: { results: pessimisticResults, label: 'السيناريو المتشائم', icon: icon('i-warning'), color: 'red' }
         };
 
         const active = scenarios[this.currentScenario];
@@ -53,7 +55,7 @@ export class ScenarioSwitcher {
         this.container.innerHTML = `
             <div class="scenario-switcher-panel">
                 <div class="scenario-header">
-                    <h3>🔮 محاكي السيناريوهات</h3>
+                    <h3>${icon('i-sparkle')} محاكي السيناريوهات</h3>
                     <p>اختر سيناريو لرؤية تأثيره على نتائج المشروع المالية</p>
                 </div>
 

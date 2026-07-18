@@ -247,7 +247,7 @@
 }
 .dd-status--warning .dd-status__ic,
 .dd-status--warning .dd-status__title,
-.dd-status--warning .dd-status__list { color: var(--c-warning); }
+.dd-status--warning .dd-status__list { color: var(--c-warning-text); }
 
 .dd-status--success {
     border-inline-start-color: var(--c-success);

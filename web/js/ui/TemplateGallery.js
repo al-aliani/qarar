@@ -24,9 +24,9 @@ const modeStepCount = (modeId) => STEPS.filter(s => !ABSORBED_STEP_IDS.has(s.id)
 
 // أوضاع الدراسة — كانت مدفونة في خطوة القوالب؛ صارت اختياراً واضحاً عند البداية
 const STUDY_MODES = [
-    { id: 'mini', icon: '🌱', name: 'مصغّر (للمبتدئين)', desc: `المشروع، التكاليف، الفريق، الإيرادات، التمويل، القرار — أقل الأسئلة للوصول لقرار سريع (${modeStepCount('mini')} خطوات تقريباً).`, badge: 'نقطة بداية جيدة' },
-    { id: 'simple', icon: '📋', name: 'بسيط', desc: `الأقسام الأساسية للدراسة دون التحليلات المتقدمة (حساسية، سيناريوهات، مونت كارلو، تقييم…) — ${modeStepCount('simple')} خطوة تقريباً.` },
-    { id: 'advanced', icon: '📊', name: 'مفصل', desc: `الدراسة الكاملة بكل الأقسام والتحليلات — جاهزة للبنك والمستثمر (${modeStepCount('advanced')} خطوة).`, badge: 'موصى به لبنك/مستثمر' }
+    { id: 'mini', icon: 'bolt', name: 'مصغّر (للمبتدئين)', desc: `المشروع، التكاليف، الفريق، الإيرادات، التمويل، القرار — أقل الأسئلة للوصول لقرار سريع (${modeStepCount('mini')} خطوات تقريباً).`, badge: 'نقطة بداية جيدة' },
+    { id: 'simple', icon: 'clipboard', name: 'بسيط', desc: `الأقسام الأساسية للدراسة دون التحليلات المتقدمة (حساسية، سيناريوهات، مونت كارلو، تقييم…) — ${modeStepCount('simple')} خطوة تقريباً.` },
+    { id: 'advanced', icon: 'chart', name: 'مفصل', desc: `الدراسة الكاملة بكل الأقسام والتحليلات — جاهزة للبنك والمستثمر (${modeStepCount('advanced')} خطوة).`, badge: 'موصى به لبنك/مستثمر' }
 ];
 
 const escapeAttribute = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -120,11 +120,14 @@ export class TemplateGallery {
 
         this.overlay.querySelector('#btnStartBlank').onclick = () => this.renderBlankAttributionForm();
         
-        this.overlay.querySelector('#btnRequestConsultant').onclick = async () => {
+        this.overlay.querySelector('#btnRequestConsultant').onclick = () => {
+            // تدقيق 2026-07-18: كان يفتح ConsultationModal — رابط حجز خارجي يعدّه المستخدم يدوياً
+            // بلا أي إرسال فعلي لأي جهة. نظام الاستشارات الحقيقي (نموذج + باقات أسعار + تخزين
+            // Supabase حي في consultation_requests) موجود أصلاً في AdvisoryView على #/advisory
+            // (نفس المسار الذي يفتحه زر «طلب استشارة» في لوحة التحكم) — نوجّه لنفس المكان بدل
+            // تكرار واجهة معطّلة.
             this.close();
-            const { ConsultationModal } = await import('./ConsultationModal.js');
-            const modal = new ConsultationModal('consultationModalOverlay', this.store);
-            modal.open();
+            window.location.hash = '#/advisory';
         };
 
         this.overlay.querySelectorAll('.btn-apply-expert-template').forEach(btn => {
@@ -156,12 +159,15 @@ export class TemplateGallery {
     renderBlankAttributionForm() {
         const body = this.overlay.querySelector('.modal-body');
         if (!body) { this.selectTemplate('empty'); return; }
-        // الافتراضي دائماً «مفصل» عند فتح هذه النافذة — لا تذكّر آخر اختيار يدوي (تحقّق
-        // 2026-07-15: appSettings.mode هنا كان يقرأ حالة الدراسة السابقة/الحالية المتبقية
-        // في المخزن قبل استدعاء store.reset() أدناه، وليس تفضيلاً متعمَّداً محفوظاً لهذه
-        // النافذة تحديداً. آلية التفضيل الفعلية عبر الجلسات — localStorage['study_mode_preference']
-        // المستهلكة في app.js/SimpleModeController.js — لغرض مختلف تماماً (الوضع الفعّال
-        // لدراسة قائمة بالفعل) ولم تُمس هنا.
+        // الافتراضي هنا حرفي ثابت دائماً — لا تذكّر آخر اختيار يدوي (تحقّق 2026-07-15:
+        // appSettings.mode هنا كان يقرأ حالة الدراسة السابقة/الحالية المتبقية في المخزن قبل
+        // استدعاء store.reset() أدناه، وليس تفضيلاً متعمَّداً محفوظاً لهذه النافذة تحديداً.
+        // آلية التفضيل الفعلية عبر الجلسات — localStorage['study_mode_preference'] المستهلكة
+        // في app.js/SimpleModeController.js — لغرض مختلف تماماً (الوضع الفعّال لدراسة قائمة
+        // بالفعل) ولم تُمس هنا.
+        // تدقيق 2026-07-18: جُرِّب 'mini' كافتراضي لفترة وجيزة اليوم (أقل انطباع أول)، ثم
+        // قرار صريح من المالك بإعادته لـ'advanced' — الدراسة الافتراضية يجب أن تكون كاملة
+        // (40 خطوة) ما لم يختر المستخدم 'مصغّر'/'بسيط' يدوياً بنفسه.
         const currentMode = 'advanced';
         body.innerHTML = `
             <div class="blank-attribution-form">
@@ -171,7 +177,7 @@ export class TemplateGallery {
                     ${STUDY_MODES.map(m => `
                         <button type="button" class="mode-card ${m.id === currentMode ? 'active' : ''}" data-mode="${m.id}" role="radio" aria-checked="${m.id === currentMode}" aria-label="${escapeAttribute(m.name)}: ${escapeAttribute(m.desc)}${m.badge ? ' — ' + escapeAttribute(m.badge) : ''}">
                             ${m.badge ? `<span class="mode-card__badge" style="display:block;font-size:.7rem;font-weight:700;color:var(--c-primary,#0f5132);margin-bottom:4px;">${m.badge}</span>` : ''}
-                            <span class="mode-card__icon" aria-hidden="true" style="font-size:1.5rem;">${m.icon}</span>
+                            <span class="mode-card__icon" aria-hidden="true" style="font-size:1.5rem;"><svg class="ic" aria-hidden="true"><use href="#i-${m.icon}"/></svg></span>
                             <span class="mode-card__name" style="display:block;font-weight:700;font-size:1.05rem;margin-top:4px;">${m.name}</span>
                             <span class="mode-card__desc">${m.desc}</span>
                         </button>

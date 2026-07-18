@@ -15,7 +15,7 @@ export class TrashView {
         this.container.innerHTML = `
             <div class="flex justify-between items-center mb-8">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-800">🗑️ سلة المحذوفات</h1>
+                    <h1 class="text-2xl font-bold text-gray-800"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg> سلة المحذوفات</h1>
                     <p class="text-gray-500">المشاريع المحذوفة تبقى هنا حتى تستعيدها أو تحذفها نهائياً بنفسك.</p>
                 </div>
                 <button class="btn btn-secondary text-sm" onclick="window.history.back()">عودة</button>
@@ -44,7 +44,7 @@ export class TrashView {
             if (deletedProjects.length === 0) {
                 listContainer.innerHTML = `
                     <div class="col-span-full text-center py-20 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                        <div class="text-4xl mb-4">♻️</div>
+                        <svg class="ic text-4xl mb-4" aria-hidden="true"><use href="#i-reset"/></svg>
                         <h3 class="text-xl font-bold text-gray-600">السلة فارغة</h3>
                         <p class="text-gray-500">لا توجد مشاريع محذوفة حالياً.</p>
                     </div>
@@ -56,7 +56,7 @@ export class TrashView {
                 <div class="card p-5 border border-gray-200 hover:border-red-300 transition-all group bg-white rounded-lg shadow-sm">
                     <div class="flex justify-between items-start mb-4">
                         <div class="p-3 bg-red-50 rounded-full text-red-500 text-xl group-hover:bg-red-100 transition-colors">
-                            🗑️
+                            <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
                         </div>
                         <div class="text-xs text-gray-400">
                             حذف ${new Date(project.deletedAt || project.lastModified).toLocaleDateString('ar-SA-u-nu-latn')}
@@ -68,10 +68,10 @@ export class TrashView {
                     
                     <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
                         <button class="btn-restore btn btn-sm btn-outline-primary flex-1 py-1" data-id="${project.id}">
-                            ♻️ استعادة
+                            <svg class="ic" aria-hidden="true"><use href="#i-reset"/></svg> استعادة
                         </button>
                         <button class="btn-permanent-delete btn btn-sm btn-outline-danger flex-1 py-1 text-red-600 hover:bg-red-50" data-id="${project.id}">
-                            ✖️ حذف نهائي
+                            <svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> حذف نهائي
                         </button>
                     </div>
                 </div>

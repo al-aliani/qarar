@@ -1064,6 +1064,8 @@ export class DecisionDashboard {
         const map = [
             ['assumptions.thresholds', 'الافتراضات المالية (حدود القرار)'],
             ['assumptions', 'الافتراضات المالية'],
+            ['indicators.breakEvenPointValue', 'تحليل نقطة التعادل'],
+            ['cashFlow', 'القوائم المالية التقديرية'],
             ['revenue', 'مصادر الإيرادات'],
             ['financing', 'مصادر وهيكلة التمويل'],
             ['technical', 'الدراسة الفنية'],
@@ -1255,9 +1257,11 @@ export class DecisionDashboard {
             }
         });
 
-        // نقاط القوة (لماذا القرار جيد) من تفاصيل التقييم الإيجابية
+        // نقاط القوة (لماذا القرار جيد) من تفاصيل التقييم الإيجابية — استبعاد أي بند
+        // معلَّم issue:true (نقاط جزئية لمعيار لم يتحقق فعلياً، كـ"معدل العائد الداخلي
+        // دون المستوى المطلوب" score:10) كي لا تُعرض كنقطة قوة رغم أنها في جوهرها نقص.
         const positives = (evaluation?.details || [])
-            .filter(d => d && (d.issue === false || (typeof d.score === 'number' && d.score > 0)))
+            .filter(d => d && d.issue !== true && typeof d.score === 'number' && d.score > 0)
             .slice(0, 3)
             .map(d => d.label)
             .filter(Boolean);

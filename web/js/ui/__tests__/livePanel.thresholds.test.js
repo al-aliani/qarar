@@ -75,10 +75,10 @@ describe('LivePanel — عتبات موحّدة (لا 5%/5-سنوات ثابتة
             assumptionsApplied: { thresholds: { minIRR: 0.15, maxPayback: 3.5 } }
         };
         panel.updateQAStatus();
-        const text = document.getElementById('qaStatusList').textContent;
-        // قبل الإصلاح: IRR=10% وpayback=4 كانا يظهران ✅ (فوق 5%، تحت 5 سنوات) —
-        // بعد الإصلاح: كلاهما يفشل عتبة القرار الفعلية (15%، 3.5 سنة) فيظهران ⚠️.
-        expect(text).toContain('⚠️');
-        expect(text).not.toMatch(/معدل العائد الداخلي[^⚠]*✅/);
+        const html = document.getElementById('qaStatusList').innerHTML;
+        // قبل الإصلاح: IRR=10% وpayback=4 كانا يظهران أيقونة نجاح (فوق 5%، تحت 5 سنوات) —
+        // بعد الإصلاح: كلاهما يفشل عتبة القرار الفعلية (15%، 3.5 سنة) فيظهران أيقونة تحذير.
+        expect(html).toContain('#i-warning');
+        expect(html).not.toMatch(/معدل العائد الداخلي[\s\S]*?#i-check/);
     });
 });

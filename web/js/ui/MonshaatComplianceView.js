@@ -68,7 +68,7 @@ export class MonshaatComplianceView {
                     <h2 class="text-lg font-bold mb-3 text-gold">النموذج الرسمي وتحديثاته</h2>
                     <p class="text-sm text-muted mb-4">للاطلاع على النموذج الاسترشادي الرسمي لدراسة الجدوى وتحديثاته، يُوصى بزيارة بوابة منشآت.</p>
                     <a href="${MONSHAAT_MODEL_URL}" target="_blank" rel="noopener noreferrer" class="btn btn--secondary inline-flex items-center gap-2">
-                        📄 النموذج الاسترشادي لدراسة الجدوى — منشآت
+                        <svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> النموذج الاسترشادي لدراسة الجدوى — منشآت
                     </a>
                 </div>
 

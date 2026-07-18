@@ -38,23 +38,11 @@ export class SupportTicketsView {
         if (!this.container) return;
 
         const { user } = await getAuthUser();
-        if (!user) {
-            this.container.innerHTML = `
-                <div class="support-tickets-view" style="max-width:560px;margin:60px auto;text-align:center;padding:24px;">
-                    <p class="text-muted mb-4">يجب تسجيل الدخول لعرض الدعم الفني.</p>
-                    <button type="button" id="btnSupportLogin" class="btn btn--primary">تسجيل الدخول</button>
-                </div>
-            `;
-            this.container.querySelector('#btnSupportLogin')?.addEventListener('click', async () => {
-                const { AuthGuard } = await import('../middleware/AuthGuard.js');
-                AuthGuard.showAuthPrompt(({ isAuthenticated }) => {
-                    if (isAuthenticated) this.render();
-                });
-            });
-            return;
+        // تم إيقاف فرض تسجيل الدخول مؤقتاً للتجربة
+        let tickets = [];
+        if (user) {
+            tickets = await listMyTickets();
         }
-
-        const tickets = await listMyTickets();
 
         this.container.innerHTML = `
             <div class="support-tickets-page" style="max-width: 720px; margin: 0 auto; padding: var(--s-4) 0;">

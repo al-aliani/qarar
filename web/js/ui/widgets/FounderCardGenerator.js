@@ -29,7 +29,7 @@ export class FounderCardGenerator {
                 <div class="relative bg-gray-900 rounded-2xl border border-gold/30 p-6 max-w-lg w-full text-center shadow-2xl">
                     <button class="btn-close absolute top-4 left-4 text-white hover:text-red-500 text-xl">&times;</button>
                     
-                    <h3 class="text-xl font-bold text-gold mb-4">🚀 بطاقة رائد الأعمال</h3>
+                    <h3 class="text-xl font-bold text-gold mb-4"><svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg> بطاقة رائد الأعمال</h3>
                     <p class="text-sm text-muted mb-6">شارك حلمك مع العالم! هذه البطاقة مصممة للنشر واجتذاب الدعم.</p>
                     
                     <div class="canvas-wrapper flex justify-center mb-6 overflow-hidden rounded-xl border border-white/10">
@@ -38,10 +38,10 @@ export class FounderCardGenerator {
 
                     <div class="actions flex gap-3 justify-center">
                         <button id="btnDownloadCard" class="btn btn--primary flex items-center gap-2">
-                            📥 تحميل الصورة
+                            <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> تحميل الصورة
                         </button>
                         <button id="btnShareTwitter" class="btn btn--secondary flex items-center gap-2">
-                            🐦 مشاركة
+                            <svg class="ic" aria-hidden="true"><use href="#i-share"/></svg> مشاركة
                         </button>
                     </div>
                 </div>
@@ -64,7 +64,7 @@ export class FounderCardGenerator {
         });
 
         root.querySelector('#btnShareTwitter').addEventListener('click', () => {
-            const text = `أنا أطلق مشروعي "${name}" في ${city}! 🚀\nادعوا لي بالتوفيق 🙏\n#ريادة_أعمال #السعودية \nتم التخطيط عبر منصة الجدوى`;
+            const text = `أنا أطلق مشروعي "${name}" في ${city}!\nادعوا لي بالتوفيق\n#ريادة_أعمال #السعودية \nتم التخطيط عبر منصة الجدوى`;
             const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
             window.open(url, '_blank');
         });
@@ -116,7 +116,7 @@ export class FounderCardGenerator {
 
         ctx.font = '40px "IBM Plex Sans Arabic", sans-serif';
         ctx.fillStyle = '#9ca3af'; // Gray-400
-        ctx.fillText(`📍 ${city}`, w / 2, 480);
+        ctx.fillText(`${city}`, w / 2, 480);
 
         // Divider
         ctx.strokeStyle = '#333';
@@ -129,7 +129,7 @@ export class FounderCardGenerator {
         // Quote/Stats
         ctx.font = 'italic 36px "IBM Plex Sans Arabic", serif';
         ctx.fillStyle = '#ffffff';
-        const msg = "ادعوا لي بالتوفيق! 🙏";
+        const msg = "ادعوا لي بالتوفيق!";
         ctx.fillText(msg, w / 2, 650);
 
         // 3. Footer / Branding

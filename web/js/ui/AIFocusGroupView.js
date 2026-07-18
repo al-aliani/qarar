@@ -106,7 +106,7 @@ export class AIFocusGroupView {
                             <div class="flex flex-col items-end gap-1">
                                 <div class="text-[10px] text-blue-400 px-2 flex items-center gap-1"><svg class="ic w-3 h-3" aria-hidden="true"><use href="#i-cpu"/></svg> سارة (شخصية افتراضية — نص مثال)</div>
                                 <div class="bg-white/10 text-white text-sm p-3 rounded-2xl rounded-tl-sm max-w-[80%] border border-white/20 leading-relaxed text-right">
-                                    الفكرة ممتازة جداً وتحل مشكلة كبيرة لي، أنا أكره الوقوف في طوابير المقاهي صباحاً! 😍<br/><br/>
+                                    الفكرة ممتازة جداً وتحل مشكلة كبيرة لي، أنا أكره الوقوف في طوابير المقاهي صباحاً!<br/><br/>
                                     ولكن.. السعر (350 ريال) يبدو مرتفعاً قليلاً لدفع مبلغ مقطوع مسبقاً. لو جعلتم الاشتراك بـ 250 ريال لـ 15 كوباً في الشهر فقط (أيام العمل) سأشترك فوراً!
                                 </div>
                             </div>

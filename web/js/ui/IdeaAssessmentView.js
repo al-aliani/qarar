@@ -45,7 +45,7 @@ export class IdeaAssessmentView {
             <div class="idea-assessment-view animate-entry">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h2 class="text-xl font-bold">🚀 تقييم الفكرة (معايير الستارت آب)</h2>
+                        <h2 class="text-xl font-bold"><svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg> تقييم الفكرة (معايير الستارت آب)</h2>
                         <p class="text-muted text-sm mt-1">أسئلة قصيرة لربط جدواك بمعايير المستثمرين والمسرّعات. اختياري — للمشاريع الناشئة.</p>
                     </div>
                     <button type="button" class="btn btn--ghost btn-back-idea" aria-label="رجوع">← رجوع</button>

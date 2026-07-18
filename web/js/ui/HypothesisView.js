@@ -23,7 +23,7 @@ export class HypothesisView {
             <div class="view-header mb-6">
                 <div class="flex justify-between items-center">
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-800">فرضية الرواد (Startup Hypothesis) 🚀</h1>
+                        <h1 class="text-2xl font-bold text-gray-800">فرضية الرواد (Startup Hypothesis) <svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg></h1>
                         <p class="text-gray-500 mt-1">هل فكرتك قابلة للنمو السريع؟ تحقق من الأساسيات قبل الغوص في الأرقام (منهجية YC).</p>
                     </div>
                     <button class="btn btn-secondary btn-sm" onclick="window.history.back()">عودة للرئيسية</button>
@@ -44,7 +44,7 @@ export class HypothesisView {
                 </div>
 
                 <div class="bg-blue-50 p-4 rounded-lg border-r-4 border-blue-500 mb-6">
-                    <h4 class="font-bold text-blue-900 text-sm">💡 نصائح (YC):</h4>
+                    <h4 class="font-bold text-blue-900 text-sm"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> نصائح (YC):</h4>
                     <ul class="list-disc list-inside text-xs text-blue-800 mt-1">
                         <li>لا تبدأ من الحل وتدور على مشكلة (SISP).</li>
                         <li>المشاكل "المملة" غالباً فرص ذهبية بالملايين.</li>
@@ -66,7 +66,7 @@ export class HypothesisView {
             </div>
 
             <div class="card p-6 mb-6 border border-yellow-400 bg-yellow-50/30 rounded-lg shadow-sm">
-                <h3 class="text-xl font-bold mb-4 text-purple-900">3. الاستبصار (The Insight) ✨</h3>
+                <h3 class="text-xl font-bold mb-4 text-purple-900">3. الاستبصار (The Insight) <svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg></h3>
                 <p class="text-sm text-gray-600 mb-4">لماذا ستفوز شركتك؟ ما هي "الميزة غير العادلة"؟</p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -91,7 +91,7 @@ export class HypothesisView {
             <div class="flex justify-between mt-8 pb-10">
                 <button class="btn btn-secondary" onclick="window.history.back()">إلغاء</button>
                 <div class="flex gap-3">
-                    <button class="btn btn-primary px-8" id="save-hypothesis-btn">حفظ الفرضية ✅</button>
+                    <button class="btn btn-primary px-8" id="save-hypothesis-btn">حفظ الفرضية <svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></button>
                     <!-- <button class="btn btn-outline" id="next-step-btn">التالي: الدراسة المالية ➡️</button> -->
                 </div>
             </div>
@@ -131,7 +131,7 @@ export class HypothesisView {
         // Save functionality
         this.container.querySelector('#save-hypothesis-btn').addEventListener('click', () => {
             this._saveData();
-            toast.success('تم حفظ الفرضية بنجاح ✅');
+            toast.success('تم حفظ الفرضية بنجاح');
         });
 
         // Auto-save on textarea changes
@@ -168,7 +168,5 @@ export class HypothesisView {
             problemQualityChecklist: checklist,
             unfairAdvantage: unfairAdvantage
         });
-
-        console.log('Hypothesis saved:', { hypothesis, checklist, unfairAdvantage });
     }
 }

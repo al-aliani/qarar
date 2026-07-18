@@ -40,7 +40,7 @@ export class RefundPolicyModal {
         this.overlay.innerHTML = `
             <div class="modal-card refund-policy-modal animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="refund-policy-title" style="max-width: 500px;">
                 <div class="modal-header">
-                    <h3 id="refund-policy-title" class="text-gold">🛡️ ${policy.shortTitle || 'سياسة الاسترداد'}</h3>
+                    <h3 id="refund-policy-title" class="text-gold"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg> ${policy.shortTitle || 'سياسة الاسترداد'}</h3>
                     <button type="button" class="btn-close refund-policy-close" aria-label="إغلاق">×</button>
                 </div>
                 <div class="modal-body text-sm" dir="rtl" style="white-space: pre-line;">

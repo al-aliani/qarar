@@ -100,7 +100,7 @@ export class PaywallModal {
         this.overlay.innerHTML = `
             <div class="modal-card paywall-modal animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="paywall-modal-title">
                 <div class="modal-header">
-                    <h3 id="paywall-modal-title">🔒 ترقية مطلوبة</h3>
+                    <h3 id="paywall-modal-title"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg> ترقية مطلوبة</h3>
                     <button type="button" class="btn-close paywall-close" aria-label="إغلاق">×</button>
                 </div>
                 <div class="modal-body">

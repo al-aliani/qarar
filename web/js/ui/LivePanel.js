@@ -218,7 +218,7 @@ export class LivePanel {
         const thresholds = assumptionsApplied?.thresholds || { minIRR: 0.15, maxPayback: 3.5 };
 
         if (_meta?.revenueFromBridge) {
-            checks.push({ label: 'مصدر الإيرادات', pass: true, value: 'مشتق من قسم الخدمات ℹ️' });
+            checks.push({ label: 'مصدر الإيرادات', pass: true, value: 'مشتق من قسم الخدمات <svg class="ic" aria-hidden="true"><use href="#i-info"/></svg>' });
         }
 
         // NPV Check
@@ -226,7 +226,7 @@ export class LivePanel {
             checks.push({
                 label: 'صافي القيمة الحالية',
                 pass: indicators.npv > 0,
-                value: indicators.npv > 0 ? 'موجب ✅' : 'سالب ⚠️'
+                value: indicators.npv > 0 ? 'موجب <svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>' : 'سالب <svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg>'
             });
         }
 
@@ -236,7 +236,7 @@ export class LivePanel {
             checks.push({
                 label: 'معدل العائد الداخلي',
                 pass: irrPass,
-                value: irrPass ? `> ${(thresholds.minIRR * 100).toFixed(0)}% ✅` : `< ${(thresholds.minIRR * 100).toFixed(0)}% ⚠️`
+                value: irrPass ? `> ${(thresholds.minIRR * 100).toFixed(0)}% <svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>` : `< ${(thresholds.minIRR * 100).toFixed(0)}% <svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg>`
             });
         }
 
@@ -246,7 +246,7 @@ export class LivePanel {
             checks.push({
                 label: 'فترة الاسترداد',
                 pass: paybackPass,
-                value: paybackPass ? `${indicators.paybackPeriod.toFixed(1)} سنة ✅` : `${indicators.paybackPeriod.toFixed(1)} سنة ⚠️`
+                value: paybackPass ? `${indicators.paybackPeriod.toFixed(1)} سنة <svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>` : `${indicators.paybackPeriod.toFixed(1)} سنة <svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg>`
             });
         }
 
@@ -254,7 +254,7 @@ export class LivePanel {
         checks.push({
             label: 'القرار النهائي',
             pass: decision === 'GO',
-            value: decision === 'GO' ? '🟢 مجدي' : '🔴 غير مجدي'
+            value: decision === 'GO' ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> مجدي' : '<svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> غير مجدي'
         });
 
         // Render checks
