@@ -8,8 +8,10 @@ export function calculateNPV(rate, cashflows) {
 }
 
 export function calculateIRR(cashflows, guess = 0.1) {
-    if (!Array.isArray(cashflows) || cashflows.length < 2) return 0;
-    if (!cashflows.some(v => v > 0) || !cashflows.some(v => v < 0)) return 0;
+    // null = غير قابل للحساب (نفس اصطلاح calculatePaybackPeriod أدناه)، وليس 0% —
+    // فرق جوهري: صفر تدفقات سالبة يعني "لا يوجد استثمار مسجَّل بعد"، لا "عائد صفري".
+    if (!Array.isArray(cashflows) || cashflows.length < 2) return null;
+    if (!cashflows.some(v => v > 0) || !cashflows.some(v => v < 0)) return null;
 
     const maxIter = 1000;
     const precision = 1e-7;

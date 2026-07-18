@@ -569,6 +569,7 @@ export class DashboardView {
                                         </div>
                                     `).join('')}
                                 </div>
+                                <button type="button" id="linkGlobalAnalyticsFromComparison" class="btn btn--ghost btn--sm" style="margin-top:6px;">${inlineIcon('trend')} عرض كل المؤشرات (لوحة الإحصائيات الشاملة) ←</button>
                             </details>
                             ` : ''}
 
@@ -1363,6 +1364,7 @@ export class DashboardView {
             linkAssetsPortfolioToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showAssetsPortfolio')),
             linkExecutionKanbanToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showExecutionKanban')),
             linkGlobalAnalyticsToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showGlobalAnalytics')),
+            linkGlobalAnalyticsFromComparison: () => window.dispatchEvent(new CustomEvent('feasibility:showGlobalAnalytics')),
             linkNotificationsToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showNotifications')),
             linkActivityLogToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showActivityLog')),
             linkOwnershipPlannerToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showTokenizationHub')),

@@ -1493,7 +1493,9 @@ function computeDecision(th, k) {
 
     const reasons = [];
     if (!passNPV) reasons.push(`صافي القيمة الحالية يجب أن يكون > ${minNPV}`);
-    if (!passIRR) reasons.push(`معدل العائد الداخلي يجب أن يكون ≥ ${(minIRR * 100).toFixed(0)}%`);
+    if (!passIRR) reasons.push(k.irr == null
+        ? 'معدل العائد الداخلي غير قابل للحساب — أكمل بيانات الاستثمار (الأصول والتجهيزات) أولاً'
+        : `معدل العائد الداخلي يجب أن يكون ≥ ${(minIRR * 100).toFixed(0)}%`);
     if (!passPayback) reasons.push(k.paybackPeriod == null
         ? 'رأس المال لا يُسترد خلال سنوات الدراسة'
         : `فترة الاسترداد يجب أن تكون ≤ ${maxPayback} سنوات`);

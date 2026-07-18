@@ -340,7 +340,11 @@ export class TemplateGallery {
             }
 
             if (this.wizardData.initialCapital) {
-                this.store.updatePath('financing', 'equity', Number(this.wizardData.initialCapital) || 0);
+                // كان يُكتب في financing.equity (حقل غير موجود بالمخطط، لا يقرأه أي شيء في
+                // المحرك — إجابة المستخدم تُهمَل بصمت). المسار الصحيح الذي يقرأه المحرك فعلياً
+                // (paidCapital/fundingGap) هو financing.sources.equity.amount، نفسه الذي تكتب
+                // إليه لوحة «معايرة سريعة» لاحقاً.
+                this.store.updatePath('financing', 'sources.equity.amount', Number(this.wizardData.initialCapital) || 0);
             }
 
             if (this.store.flush) await this.store.flush();
