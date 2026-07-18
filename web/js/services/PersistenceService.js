@@ -220,17 +220,28 @@ export class PersistenceService {
             index = JSON.parse(localStorage.getItem(idxKey) || '[]');
         } catch { }
 
+        const existingIdx = index.findIndex(x => x.id === id);
+        const existingFolderId = existingIdx >= 0 ? (index[existingIdx].folderId || null) : null;
+
+        // Runway: folderId عادة لا يكون جزءاً من مخطط projectInfo للويزارد (لا سؤال/حقل
+        // له هناك) — فحين تُشغَّل هذه الدالة من حفظ الويزارد التلقائي (autoSave) بدل
+        // إجراء تعيين المجلد نفسه من لوحة التحكم، لا يحمل data.projectInfo مفتاح
+        // folderId إطلاقاً (undefined)، لا null. التمييز بين "المفتاح غائب" (المستدعي
+        // لا يعرف عن المجلدات، فحافظ على القيمة الحالية) و"المفتاح موجود بقيمة null"
+        // (المستخدم اختار «بدون مجلد» صراحة من القائمة المنسدلة) هو ما يمنع أن يمحو
+        // الحفظ التلقائي تعيين المجلد الذي ضبطه المستخدم للتو من لوحة المشاريع.
+        const hasFolderIdKey = !!data.projectInfo && Object.prototype.hasOwnProperty.call(data.projectInfo, 'folderId');
+
         // Update info in index (Runway: folderId for تنظيم)
         const info = {
             id,
             name: data.projectInfo?.name || 'مشروع جديد',
             lastModified: new Date().toISOString(),
-            folderId: data.projectInfo?.folderId || null,
+            folderId: hasFolderIdKey ? (data.projectInfo.folderId || null) : existingFolderId,
             deleted: data.projectInfo?.deleted || false,
             deletedAt: data.projectInfo?.deletedAt || null
         };
 
-        const existingIdx = index.findIndex(x => x.id === id);
         if (existingIdx >= 0) {
             index[existingIdx] = info;
         } else {
