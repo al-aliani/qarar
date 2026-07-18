@@ -1418,6 +1418,17 @@
     height: 13px;
 }
 
+.dv-project__local-warning {
+    margin: 6px 0 0;
+    padding: 6px 10px;
+    border-inline-start: 3px solid var(--c-warning);
+    background: var(--c-warning-subtle);
+    color: var(--c-warning-text);
+    font-size: 0.72rem;
+    line-height: 1.5;
+    border-radius: var(--r-sm);
+}
+
 .dv-project__folder {
     display: flex;
     align-items: center;

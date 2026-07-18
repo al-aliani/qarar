@@ -337,6 +337,10 @@
     .hero .hero-headline .hl::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: -.08em; height: 3px; background: linear-gradient(90deg, var(--gold), transparent); border-radius: 3px; }
     .hero .lede { color: rgba(255,255,255,.86); font-size: clamp(16px, 1.7vw, 19px); max-width: 56ch; line-height: 1.72; }
     .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+    .hero-price-note { margin: 14px 0 0; font-size: 14px; color: rgba(255,255,255,.86); }
+    .hero-price-emph { color: var(--gold); font-weight: 700; font-family: var(--mono); }
+    .hero-guarantee-note { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: rgba(255,255,255,.72); font-size: 13px; }
+    .hero-guarantee-note .ic { flex: none; color: var(--gold); }
     .hero-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 40px; max-width: 760px; }
     .hero-facts[hidden] { display: none; }
     .hero-fact { border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.07); border-radius: var(--r); padding: 15px 15px; backdrop-filter: blur(8px); transition: border-color .22s ease, background .22s ease, transform .22s cubic-bezier(.2,.7,.2,1); }
@@ -748,6 +752,8 @@
             <a href="./index.html?auth=1&amp;cta=hero" class="btn btn-light">ابدأ دراستك الآن</a>
             <a href="#sample" class="btn btn-ghost">شاهد نموذج تقرير أولاً</a>
           </div>
+          <p class="hero-price-note">تبدأ الأسعار من <span class="hero-price-emph" data-price-min>249</span> ريالاً — سعر ثابت ومعلن.</p>
+          <p class="hero-price-note hero-guarantee-note"><svg class="ic" style="width:14px;height:14px"><use href="#i-shield"/></svg> ضمان استرداد كامل خلال 15 يوماً على الباقات المدفوعة.</p>
           <div class="hero-facts" id="heroUsageStats" hidden>
             <div class="hero-fact is-num"><b id="statTotalStudies">-</b><span>دراسة أُعِدَّت على المنصة</span></div>
             <div class="hero-fact is-num"><b id="statPaidStudies">-</b><span>دراسة مدفوعة فعلياً</span></div>
@@ -1030,7 +1036,6 @@
           </article>
         </div>
         <p class="price-note">سعر ثابت معلن، لا عروض تفاوضية غامضة. وقد تختلف المتطلبات النهائية حسب نوع النشاط واكتمال البيانات.</p>
-        <p class="price-note price-guarantee"><svg class="ic" style="width:15px;height:15px"><use href="#i-shield"/></svg> ضمان استرداد كامل خلال 15 يوماً على الباقات المدفوعة — بلا تعقيد.</p>
       </div>
     </section>
 
