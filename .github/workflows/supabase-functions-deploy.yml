@@ -75,13 +75,14 @@ jobs:
       # العمل إطلاقاً لو تُرك الافتراضي، لأن مزوّدي الدفع خدمتان خارجيتان لا ترسلان
       # أي JWT مستخدم. التحقق الحقيقي لهذين المسارين هو توقيع/سرّ الـwebhook نفسه
       # (webhookVerify.ts) — طبقة حماية مستقلة تماماً عن Supabase JWT.
-      - name: "Deploy webhook-moyasar / webhook-stripe (بلا تحقق JWT منصّة — التحقق عبر توقيع المزوّد نفسه)"
+      - name: "Deploy webhook-moyasar / webhook-stripe / webhook-tamara (بلا تحقق JWT منصّة — التحقق عبر توقيع المزوّد نفسه)"
         if: steps.check_link_secrets.outputs.configured == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           npx supabase functions deploy webhook-moyasar --no-verify-jwt
           npx supabase functions deploy webhook-stripe --no-verify-jwt
+          npx supabase functions deploy webhook-tamara --no-verify-jwt
 
       - name: "Deploy whatsapp-otp-send / whatsapp-otp-verify (تتطلبان JWT مستخدم حقيقي، نفس نمط create-checkout)"
         if: steps.check_link_secrets.outputs.configured == 'true'
@@ -118,6 +119,8 @@ jobs:
             [MOYASAR_WEBHOOK_SECRET]="${{ secrets.MOYASAR_WEBHOOK_SECRET }}"
             [STRIPE_SECRET_KEY]="${{ secrets.STRIPE_SECRET_KEY }}"
             [STRIPE_WEBHOOK_SECRET]="${{ secrets.STRIPE_WEBHOOK_SECRET }}"
+            [TAMARA_API_TOKEN]="${{ secrets.TAMARA_API_TOKEN }}"
+            [TAMARA_NOTIFICATION_TOKEN]="${{ secrets.TAMARA_NOTIFICATION_TOKEN }}"
             [WHATSAPP_ACCESS_TOKEN]="${{ secrets.WHATSAPP_ACCESS_TOKEN }}"
             [WHATSAPP_PHONE_NUMBER_ID]="${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}"
             [WHATSAPP_TEMPLATE_NAME]="${{ secrets.WHATSAPP_TEMPLATE_NAME }}"

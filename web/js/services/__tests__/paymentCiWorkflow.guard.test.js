@@ -26,12 +26,14 @@ describe('CI: نشر Edge Functions الخاصة بالدفع', () => {
         expect(line).not.toContain('--no-verify-jwt');
     });
 
-    it('webhook-moyasar وwebhook-stripe يُنشَران بـ --no-verify-jwt (مزوّدو دفع خارجيون لا يرسلون JWT)', () => {
+    it('webhook-moyasar وwebhook-stripe وwebhook-tamara تُنشَر بـ --no-verify-jwt (مزوّدو دفع خارجيون لا يرسلون JWT)', () => {
         const src = readFileSync(workflowPath, 'utf8');
         const moyasarLine = src.split('\n').find((l) => l.includes('functions deploy webhook-moyasar'));
         const stripeLine = src.split('\n').find((l) => l.includes('functions deploy webhook-stripe'));
+        const tamaraLine = src.split('\n').find((l) => l.includes('functions deploy webhook-tamara'));
         expect(moyasarLine).toContain('--no-verify-jwt');
         expect(stripeLine).toContain('--no-verify-jwt');
+        expect(tamaraLine).toContain('--no-verify-jwt');
     });
 
     it('كل أسرار مزوّدي الدفع الأربعة مذكورة صراحة (تُدفع من GitHub Secrets لا تُكتب كقيم حرفية)', () => {
