@@ -8,8 +8,6 @@ import { stepIndexById } from '../core/wizardSteps.js';
 import { fieldHelp } from './components/FieldHelp.js';
 import { calculateIdeaScore } from '../core/calculateIdeaScore.js';
 
-import * as THREE from 'three';
-window.THREE = THREE;
 import Typed from 'typed.js';
 import VanillaTilt from 'vanilla-tilt';
 import confetti from 'canvas-confetti';
