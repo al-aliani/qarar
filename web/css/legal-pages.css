@@ -19,6 +19,27 @@
   --lp-hero-gradient: linear-gradient(135deg, var(--lp-primary-dark) 0%, var(--lp-primary) 100%);
 }
 
+/* الوضع الليلي — تدقيق جولة الموقع 2026-07-20 (بند #22): كانت theme-init تضبط
+   data-theme=dark على هذه الصفحات بينما legal-pages.css بلا قواعد داكنة، فمن اختار
+   الليلي في التطبيق يرى الصفحات القانونية فاتحة. المكوّنات تستهلك المتغيّرات، فيكفي
+   تجاوزها هنا. نُبقي مطابقة آلية theme-init (data-theme صريح) دون prefers-color-scheme
+   كي لا يتعارض مع تفضيل المستخدم المحفوظ. ملاحظة: --lp-primary-dark مزدوج الاستخدام
+   (عناوين + بداية تدرّج الهيرو)، لذا نجعله فاتحاً للعناوين ونثبّت تدرّج الهيرو بأخضر
+   داكن صريح مستقل عنه. */
+:root[data-theme="dark"] {
+  --lp-bg: #0f1512;
+  --lp-surface: #161d19;
+  --lp-text-main: #e7ece8;
+  --lp-text-muted: #9db0a6;
+  --lp-border: #28312b;
+  --lp-primary: #4fb891;
+  --lp-primary-light: #6cc9a6;
+  --lp-primary-dark: #a8dcc8;
+  --lp-shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.45), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
+  --lp-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  --lp-hero-gradient: linear-gradient(135deg, #0b3f30 0%, #12735a 100%);
+}
+
 body {
   background-color: var(--lp-bg);
   color: var(--lp-text-main);
