@@ -74,9 +74,11 @@ export async function createTamaraCheckout(
 }
 
 /** استخراج الحالة من حمولة webhook تمارا (order_status: approved/captured/declined/...). */
-export function parseTamaraWebhookStatus(payload: any): 'paid' | 'failed' | 'unknown' {
+export function parseTamaraWebhookStatus(payload: any): 'paid' | 'failed' | 'refunded' | 'unknown' {
   const status = String(payload?.order_status || payload?.status || '').toLowerCase();
   if (status === 'approved' || status === 'captured' || status === 'fully_captured') return 'paid';
+  // الاسترداد (كلي أو جزئي) يصل بنفس order_id (provider_ref) — يُسحب الوصول.
+  if (status === 'refunded' || status === 'partially_refunded') return 'refunded';
   if (status === 'declined' || status === 'canceled' || status === 'cancelled' || status === 'expired') return 'failed';
   return 'unknown';
 }

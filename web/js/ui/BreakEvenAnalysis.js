@@ -107,12 +107,20 @@ export class BreakEvenAnalysis {
             </div>
         `;
 
-        this.renderChart(fixedCosts, totalRevenue);
+        this.renderChart(fixedCosts, totalRevenue, bepValue);
     }
 
-    renderChart(fixed, total) {
+    renderChart(fixed, total, bepValue) {
         const ctx = document.getElementById('bepCanvas')?.getContext('2d');
         if (!ctx || typeof Chart === 'undefined') return;
+
+        // ميل خط التكلفة مشتقّ من نقطة التعادل الفعلية (bepValue) لا من نسبة ثابتة 40%:
+        // عند التعادل الإيراد = التكلفة، فنسبة التكلفة المتغيرة = 1 − fixed/bepValue.
+        // بهذا يتقاطع الخطان بصرياً عند bepValue تماماً بدل تقاطع اعتباطي يناقض الرقم المعروض.
+        const vcRatio = (Number.isFinite(bepValue) && bepValue > fixed)
+            ? Math.max(0, Math.min(0.95, 1 - fixed / bepValue))
+            : 0.4;
+        const fractions = [0, 0.25, 0.5, 0.75, 1.0, 1.25];
 
         new Chart(ctx, {
             type: 'line',
@@ -121,14 +129,14 @@ export class BreakEvenAnalysis {
                 datasets: [
                     {
                         label: 'الإيرادات',
-                        data: [0, total * 0.25, total * 0.5, total * 0.75, total, total * 1.25],
+                        data: fractions.map((f) => total * f),
                         borderColor: '#8a5f1c',
                         borderWidth: 3,
                         fill: false
                     },
                     {
                         label: 'التكاليف المدمجة',
-                        data: [fixed, fixed + (total * 0.1), fixed + (total * 0.2), fixed + (total * 0.3), fixed + (total * 0.4), fixed + (total * 0.5)],
+                        data: fractions.map((f) => fixed + vcRatio * total * f),
                         borderColor: '#ef4444',
                         borderDash: [5, 5],
                         fill: false

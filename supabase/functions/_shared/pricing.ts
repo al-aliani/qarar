@@ -21,9 +21,9 @@ export interface PricingPackage {
 
 export const PRICING_PACKAGES: PricingPackage[] = [
   { id: 'free', name: 'مجانية', price: 0, unit: '﷼', channel: 'app' },
-  { id: 'self', name: 'ذاتي', price: 249, unit: '﷼ / دراسة', channel: 'app' },
-  { id: 'reviewed', name: 'مراجَع بخبير', price: 990, unit: '﷼ / دراسة', channel: 'app' },
-  { id: 'full', name: 'خدمة كاملة', price: 2900, unit: '﷼ / دراسة', channel: 'app' },
+  { id: 'self', name: 'ذاتي', price: 299, unit: '﷼ / دراسة', channel: 'app' },
+  { id: 'reviewed', name: 'مراجَع بخبير', price: 1999, unit: '﷼ / دراسة', channel: 'app' },
+  { id: 'full', name: 'خدمة كاملة', price: 4999, unit: '﷼ / دراسة', channel: 'app' },
 ];
 
 export function getPackage(tier: string): PricingPackage | null {

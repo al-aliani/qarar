@@ -90,11 +90,16 @@ export async function createStripeCheckout(
 }
 
 /** استخراج الحالة من حدث webhook (checkout.session.completed يعني دفعاً ناجحاً). */
-export function parseStripeWebhookStatus(event: any): 'paid' | 'failed' | 'unknown' {
+export function parseStripeWebhookStatus(event: any): 'paid' | 'failed' | 'refunded' | 'unknown' {
   const type = event?.type;
   if (type === 'checkout.session.completed') {
     const paymentStatus = event?.data?.object?.payment_status;
     return paymentStatus === 'paid' ? 'paid' : 'unknown';
+  }
+  // حدث الاسترداد يحمل كائن charge (بـ payment_intent) لا كائن session — لذا يُربط
+  // بالطلب عبر provider_payment_intent المحفوظ وقت الدفع، لا عبر provider_ref (session id).
+  if (type === 'charge.refunded') {
+    return 'refunded';
   }
   if (type === 'checkout.session.async_payment_failed' || type === 'payment_intent.payment_failed') {
     return 'failed';
@@ -104,4 +109,10 @@ export function parseStripeWebhookStatus(event: any): 'paid' | 'failed' | 'unkno
 
 export function getStripeSessionId(event: any): string | null {
   return event?.data?.object?.id || null;
+}
+
+/** payment_intent الخاص بالحدث — موجود في session (عند الدفع) وفي charge (عند الاسترداد)،
+ *  فهو الجسر الوحيد الذي يربط حدث الاسترداد بالطلب الأصلي. */
+export function getStripePaymentIntent(event: any): string | null {
+  return event?.data?.object?.payment_intent || null;
 }

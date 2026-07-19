@@ -27,7 +27,7 @@ export class InvestorAnalysis {
 
         const ind = results?.indicators || {};
         const npv = ind.npv ?? 0;
-        const irr = ind.irr ?? 0;
+        const irr = ind.irr ?? null; // نُبقي null (لا نسحقه لصفر): الدوال المستهلِكة تحرس بـ irr != null
         const payback = ind.paybackPeriod ?? ind.payback ?? 999;
         const roi = ind.roi ?? 0;
         const profitMargin = ind.profitMargin ?? 0;

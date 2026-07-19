@@ -35,18 +35,21 @@ Deno.serve(async (req: Request) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-  // شرط "status='pending'" في التحديث يمنع إعادة معالجة حدث مكرر (Moyasar تُعيد
-  // الإرسال عند عدم استلام 200 سريع) من الكتابة فوق سجل مدفوع/فاشل مسبقاً.
+  // شرط الحالة السابقة يمنع إعادة معالجة حدث مكرر (Moyasar تُعيد الإرسال عند عدم
+  // استلام 200 سريع). يختلف بنوع الحدث: paid/failed يحدّثان طلباً pending فقط،
+  // والاسترداد يحدّث طلباً paid فقط (استرداد طلب غير مدفوع لا معنى له) ويحافظ على
+  // paid_at الأصلي للسجل المحاسبي. تحويل الحالة إلى 'refunded' يسحب الوصول تلقائياً
+  // (PaymentService.hasActivePayment يشترط status='paid').
+  const prevStatus = status === 'refunded' ? 'paid' : 'pending';
+  const updateFields: Record<string, unknown> = { status, metadata: payload };
+  if (status === 'paid') updateFields.paid_at = new Date().toISOString();
+
   const { data, error } = await adminClient
     .from('orders')
-    .update({
-      status,
-      paid_at: status === 'paid' ? new Date().toISOString() : null,
-      metadata: payload,
-    })
+    .update(updateFields)
     .eq('provider', 'moyasar')
     .eq('provider_ref', providerRef)
-    .eq('status', 'pending')
+    .eq('status', prevStatus)
     .select('id');
 
   if (error) {

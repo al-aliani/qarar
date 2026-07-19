@@ -632,7 +632,7 @@ export class ReportGenerator {
                             </tr></thead><tbody><tr>
                                 <td><strong>${fmt(results.capex?.total || 0)}</strong></td>
                                 <td class="${(exIn.npv || 0) > 0 ? 'status-positive' : 'status-negative'}">${fmt(exIn.npv || 0)}</td>
-                                <td>${((exIn.irr || 0) * 100).toFixed(1)}%</td>
+                                <td>${exIn.irr == null ? 'غير محقق' : (exIn.irr * 100).toFixed(1) + '%'}</td>
                                 <td>${exIn.paybackPeriod ? exIn.paybackPeriod.toFixed(1) + ' سنة' : '—'}</td>
                                 <td>${exDecision}</td>
                             </tr></tbody></table>`;
@@ -812,7 +812,7 @@ export class ReportGenerator {
                         <div class="section-content">
                             <div class="kpi-grid">
                                 <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'npv', 'صافي القيمة الحالية')}</div><div class="kpi-value ${(results.indicators?.npv || 0) > 0 ? 'positive' : 'negative'}">${formatCurrency(results.indicators?.npv || 0)}</div></div>
-                                <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'irr', 'معدل العائد الداخلي (IRR)')}</div><div class="kpi-value ${(results.indicators?.irr || 0) > 0.15 ? 'positive' : ''}">${((results.indicators?.irr || 0) * 100).toFixed(1)}%</div></div>
+                                <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'irr', 'معدل العائد الداخلي (IRR)')}</div><div class="kpi-value ${(results.indicators?.irr || 0) > 0.15 ? 'positive' : ''}">${results.indicators?.irr == null ? 'غير محقق' : (results.indicators.irr * 100).toFixed(1) + '%'}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'payback_period', 'فترة الاسترداد')}</div><div class="kpi-value">${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">نقطة التعادل</div><div class="kpi-value">${results.indicators?.breakEvenPointValue != null ? formatCurrency(results.indicators.breakEvenPointValue) : (results.indicators?.breakevenUnitsPerMonth != null ? Math.round(results.indicators.breakevenUnitsPerMonth) + ' وحدة/شهر' : '—')}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">نسبة تغطية خدمة الدين (DSCR)</div><div class="kpi-value">${results.indicators?.dscr != null ? (results.indicators.dscr.toFixed(2) + 'x') : '—'}</div></div>
@@ -821,7 +821,7 @@ export class ReportGenerator {
                             ${this.renderFinancingDiagnostics(financingDiagnostics, fmt)}
                             <table><thead><tr><th>المؤشر المالي</th><th>القيمة</th><th>التقييم</th></tr></thead><tbody>
                                 <tr><td>${this._lbl(lang, 'npv', 'صافي القيمة الحالية')}</td><td>${formatCurrency(results.indicators?.npv || 0)}</td><td class="${(results.indicators?.npv || 0) > 0 ? 'status-positive' : 'status-negative'}">${(results.indicators?.npv || 0) > 0 ? '✓ موجب' : '✗ سالب'}</td></tr>
-                                <tr><td>${this._lbl(lang, 'irr', 'معدل العائد الداخلي')}</td><td>${((results.indicators?.irr || 0) * 100).toFixed(2)}%</td><td>${(results.indicators?.irr || 0) > 0.15 ? '✓ مرتفع' : 'متوسط'}</td></tr>
+                                <tr><td>${this._lbl(lang, 'irr', 'معدل العائد الداخلي')}</td><td>${results.indicators?.irr == null ? 'غير محقق' : (results.indicators.irr * 100).toFixed(2) + '%'}</td><td>${results.indicators?.irr == null ? '—' : (results.indicators.irr > 0.15 ? '✓ مرتفع' : 'متوسط')}</td></tr>
                                 <tr><td>${this._lbl(lang, 'payback_period', 'فترة الاسترداد')}</td><td>${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</td><td>${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; if (!Number.isFinite(p) || p <= 0) return 'غير محقق'; return p < 3 ? 'سريع' : 'طويل نسبياً'; })()}</td></tr>
                                 <tr><td>فجوة التمويل</td><td>${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? fmt(financingDiagnostics.fundingGap) : financingDiagnostics.fundingGap < -(financingDiagnostics.fundingGapThreshold ?? 1) ? 'فائض ' + fmt(Math.abs(financingDiagnostics.fundingGap)) : 'متوازن'}</td><td class="${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? 'status-negative' : 'status-positive'}">${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? 'يجب سدها قبل الاعتماد' : 'مقبولة'}</td></tr>
                                 <tr><td>DSCR السنة الأولى</td><td>${financingDiagnostics.dscr == null ? 'غير قابل للحساب' : financingDiagnostics.dscr.toFixed(2) + 'x'}</td><td class="${financingDiagnostics.dscrBlocked ? 'status-negative' : 'status-positive'}">${financingDiagnostics.dscrBlocked ? 'دون الحد البنكي المستهدف' : 'مقبول مبدئياً'}</td></tr>
@@ -1262,7 +1262,7 @@ export class ReportGenerator {
                         <tr>
                             <td><strong>${labels[key] || key}</strong></td>
                             <td class="${val.kpis.npv > 0 ? 'status-positive' : ''}">${formatCurrency(val.kpis.npv)}</td>
-                            <td>${(val.kpis.irr * 100).toFixed(1)}%</td>
+                            <td>${val.kpis.irr == null ? 'غير محقق' : (val.kpis.irr * 100).toFixed(1) + '%'}</td>
                             <td>${Number.isFinite(val.kpis.payback) && val.kpis.payback > 0 ? val.kpis.payback.toFixed(1) + ' سنة' : 'غير محقق'}</td>
                             <td>${Math.round(val.breakeven?.ordersPerDay || 0)}/يوم</td>
                         </tr>

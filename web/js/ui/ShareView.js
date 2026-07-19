@@ -13,6 +13,7 @@ import { generateExecutiveSummary } from '../services/InternalAIGenerator.js'; /
 import { getSharedStudy, recordShareView } from '../services/ShareService.js';
 import { toast } from '../utils/toast.js';
 import { getOfficialIndicators } from '../core/resultContract.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class ShareView {
     constructor(containerId, store, onNavigate) {
@@ -47,7 +48,7 @@ export class ShareView {
                 <div class="fixed top-0 w-full bg-white/90 backdrop-blur-md shadow-sm z-50 px-6 py-3 flex justify-between items-center print:hidden">
                     <div class="flex items-center gap-2">
                         <svg class="ic text-2xl" aria-hidden="true"><use href="#i-rocket"/></svg>
-                        <h1 class="font-bold text-lg text-gray-800">${pi.name || 'مشروع جديد'} <span class="text-xs text-muted font-normal px-2 py-1 bg-gray-100 rounded-full">Investor Mode</span></h1>
+                        <h1 class="font-bold text-lg text-gray-800">${escapeHtml(pi.name || 'مشروع جديد')} <span class="text-xs text-muted font-normal px-2 py-1 bg-gray-100 rounded-full">Investor Mode</span></h1>
                     </div>
                     <div class="flex gap-3">
                         <button id="btnExitShare" class="btn btn--sm btn--ghost text-gray-600">خروج</button>
@@ -60,10 +61,10 @@ export class ShareView {
                     <!-- نقش زخرفي مضمّن (data-URI) بدل طلب خارجي — أسرع وأأمن (يسمح بتضييق CSP img-src) -->
                     <div class="absolute inset-0 opacity-10" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 0h40v40H0z' fill='none'/%3E%3Cpath d='M0 20h40M20 0v40' stroke='%23ffffff' stroke-width='1' opacity='0.5'/%3E%3C/svg%3E&quot;);"></div>
                     <div class="z-10 max-w-4xl animate-fade-in-up">
-                        <h1 class="text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-gold to-yellow-200">${pi.name || 'اسم المشروع'}</h1>
-                        <p class="text-2xl text-gray-300 font-light mb-8">${pi.concept || 'فكرة المشروع'}</p>
+                        <h1 class="text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-gold to-yellow-200">${escapeHtml(pi.name || 'اسم المشروع')}</h1>
+                        <p class="text-2xl text-gray-300 font-light mb-8">${escapeHtml(pi.concept || 'فكرة المشروع')}</p>
                         <div class="inline-block border-t border-gold/50 pt-8 mt-4">
-                            <p class="text-lg text-gold/90">${pi.city || 'المدينة المستهدفة'}</p>
+                            <p class="text-lg text-gold/90">${escapeHtml(pi.city || 'المدينة المستهدفة')}</p>
                         </div>
                     </div>
                 </header>
@@ -75,18 +76,18 @@ export class ShareView {
                             <svg class="ic text-4xl mb-4" aria-hidden="true"><use href="#i-warning"/></svg>
                             <h2 class="text-2xl font-bold mb-4 text-red-500">المشكلة</h2>
                             <p class="text-lg text-gray-600 leading-relaxed">
-                                ${pi.startupHypothesis?.problem || 'لم يتم تحديد المشكلة بالتفصيل.'}
+                                ${escapeHtml(pi.startupHypothesis?.problem || 'لم يتم تحديد المشكلة بالتفصيل.')}
                             </p>
                         </div>
                         <div class="p-8 bg-white rounded-3xl shadow-xl border border-gray-100 transform hover:-translate-y-2 transition-transform duration-500 delay-100">
                             <svg class="ic text-4xl mb-4" aria-hidden="true"><use href="#i-lightbulb"/></svg>
                             <h2 class="text-2xl font-bold mb-4 text-green-500">الحل المقترح</h2>
                             <p class="text-lg text-gray-600 leading-relaxed">
-                                ${pi.startupHypothesis?.solution || 'لم يتم تحديد الحل بالتفصيل.'}
+                                ${escapeHtml(pi.startupHypothesis?.solution || 'لم يتم تحديد الحل بالتفصيل.')}
                             </p>
                             <div class="mt-4 pt-4 border-t border-gray-100">
                                 <strong class="text-sm text-gray-400">السر الخاص (Unfair Advantage):</strong>
-                                <p class="text-sm text-gray-600 mt-1">${pi.unfairAdvantage?.insightText || pi.startupHypothesis?.insight || 'غير محدد'}</p>
+                                <p class="text-sm text-gray-600 mt-1">${escapeHtml(pi.unfairAdvantage?.insightText || pi.startupHypothesis?.insight || 'غير محدد')}</p>
                             </div>
                         </div>
                     </div>
@@ -121,7 +122,7 @@ export class ShareView {
 
                         <div class="mt-12 p-8 bg-gray-50 rounded-2xl border-l-4 border-gold">
                             <h3 class="font-bold text-lg mb-2">ملخص استراتيجي</h3>
-                            <p class="text-gray-600 leading-relaxed">${execSummary.split('\n')[0]}</p>
+                            <p class="text-gray-600 leading-relaxed">${escapeHtml(execSummary.split('\n')[0])}</p>
                         </div>
                     </div>
                 </section>

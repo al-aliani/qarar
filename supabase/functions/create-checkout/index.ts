@@ -75,9 +75,11 @@ Deno.serve(async (req: Request) => {
     if (valid) discountPercent = Number(coupon.discount_percent || 0);
   }
   const discount = Math.round(subtotal * discountPercent) / 100;
-  const taxable = Math.max(0, subtotal - discount);
-  const vat = Math.round(taxable * 15) / 100;
-  const total = Math.round((taxable + vat) * 100) / 100;
+  // الأسعار في pricing.ts شاملة ضريبة القيمة المضافة (15%): المبلغ المعلن هو المحصّل
+  // بالضبط. نستخرج مكوّن الضريبة من داخل الإجمالي (VAT-inclusive) بدل إضافته فوق السعر
+  // — فالعميل يدفع 299/1999/4999 كما هو معلن، والضريبة مبيّنة للفاتورة فقط.
+  const total = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
+  const vat = Math.round((total - total / 1.15) * 100) / 100;
 
   const { data: orderRow, error: insertError } = await adminClient
     .from('orders')

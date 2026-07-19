@@ -58,10 +58,13 @@ export async function createMoyasarCheckout(
 }
 
 /** استخراج الحالة من حمولة webhook فاتورة Moyasar (type: 'invoice_paid' وغيرها). */
-export function parseMoyasarWebhookStatus(payload: any): 'paid' | 'failed' | 'unknown' {
+export function parseMoyasarWebhookStatus(payload: any): 'paid' | 'failed' | 'refunded' | 'unknown' {
   const type = payload?.type;
   const status = payload?.data?.status;
   if (type === 'invoice_paid' || status === 'paid') return 'paid';
+  // الاسترداد يصل بنفس معرّف الفاتورة (provider_ref) — يُربط مباشرةً بالطلب المدفوع
+  // فيُسحب الوصول (hasActivePayment يتحقق من status='paid' حصراً).
+  if (type === 'invoice_refunded' || status === 'refunded') return 'refunded';
   if (type === 'invoice_failed' || status === 'failed') return 'failed';
   return 'unknown';
 }

@@ -10,9 +10,9 @@ export const CURRENCY_SYMBOL = '﷼';
 /** الباقات الأربع. كل الاشتراكات والطلبات تبدأ من داخل المنصة. */
 export const PRICING_PACKAGES = [
     { id: 'free', name: 'مجانية', price: 0, unit: '﷼', channel: 'app' },
-    { id: 'self', name: 'ذاتي', price: 249, unit: '﷼ / دراسة', channel: 'app' },
-    { id: 'reviewed', name: 'مراجَع بخبير', price: 990, unit: '﷼ / دراسة', channel: 'app' },
-    { id: 'full', name: 'خدمة كاملة', price: 2900, unit: '﷼ / دراسة', channel: 'app' }
+    { id: 'self', name: 'ذاتي', price: 299, unit: '﷼ / دراسة', channel: 'app' },
+    { id: 'reviewed', name: 'مراجَع بخبير', price: 1999, unit: '﷼ / دراسة', channel: 'app' },
+    { id: 'full', name: 'خدمة كاملة', price: 4999, unit: '﷼ / دراسة', channel: 'app' }
 ];
 
 /**
@@ -25,7 +25,7 @@ const PAID_PACKAGES = PRICING_PACKAGES.filter(p => p.price > 0);
 export const PRICE_MIN = Math.min(...PAID_PACKAGES.map(p => p.price));
 export const PRICE_MAX = Math.max(...PAID_PACKAGES.map(p => p.price));
 
-/** تنسيق السعر بأرقام لاتينية مع فاصل آلاف (مطابقةً لعرض صفحة الهبوط: 2,900). */
+/** تنسيق السعر بأرقام لاتينية مع فاصل آلاف (مطابقةً لعرض صفحة الهبوط: 4,999). */
 export function formatPrice(n) {
     return new Intl.NumberFormat('en-US').format(Number(n) || 0);
 }

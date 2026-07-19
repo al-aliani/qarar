@@ -8,7 +8,7 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { verifyStripeSignature } from '../_shared/webhookVerify.ts';
-import { parseStripeWebhookStatus, getStripeSessionId } from '../_shared/providers/stripe.ts';
+import { parseStripeWebhookStatus, getStripeSessionId, getStripePaymentIntent } from '../_shared/providers/stripe.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return new Response('method_not_allowed', { status: 405 });
@@ -31,25 +31,36 @@ Deno.serve(async (req: Request) => {
   }
 
   const status = parseStripeWebhookStatus(event);
-  const providerRef = getStripeSessionId(event);
-  if (!providerRef) return new Response('missing_provider_ref', { status: 400 });
   if (status === 'unknown') return new Response('ok', { status: 200 }); // حدث لا يهمّنا
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-  const { data, error } = await adminClient
-    .from('orders')
-    .update({
-      status,
-      paid_at: status === 'paid' ? new Date().toISOString() : null,
-      metadata: event,
-    })
-    .eq('provider', 'stripe')
-    .eq('provider_ref', providerRef)
-    .eq('status', 'pending')
-    .select('id');
+  const updateFields: Record<string, unknown> = { status, metadata: event };
+  let matcher = adminClient.from('orders').update(updateFields).eq('provider', 'stripe');
+
+  if (status === 'refunded') {
+    // حدث charge.refunded يحمل كائن charge (بـ payment_intent) لا session، فلا يطابق
+    // provider_ref (session id). نربطه بالطلب عبر provider_payment_intent المحفوظ وقت
+    // الدفع، ونحدّث طلباً paid فقط. تحويل الحالة إلى 'refunded' يسحب الوصول تلقائياً.
+    const paymentIntent = getStripePaymentIntent(event);
+    if (!paymentIntent) return new Response('missing_payment_intent', { status: 400 });
+    matcher = matcher.eq('provider_payment_intent', paymentIntent).eq('status', 'paid');
+  } else {
+    // paid/failed: الربط عبر session id (provider_ref)، وتحديث طلب pending فقط (idempotency).
+    const sessionId = getStripeSessionId(event);
+    if (!sessionId) return new Response('missing_provider_ref', { status: 400 });
+    if (status === 'paid') {
+      updateFields.paid_at = new Date().toISOString();
+      // نحفظ payment_intent الآن ليتيح ربط أي استرداد لاحق (charge.refunded) بهذا الطلب.
+      const paymentIntent = getStripePaymentIntent(event);
+      if (paymentIntent) updateFields.provider_payment_intent = paymentIntent;
+    }
+    matcher = matcher.eq('provider_ref', sessionId).eq('status', 'pending');
+  }
+
+  const { data, error } = await matcher.select('id');
 
   if (error) {
     console.error('[webhook-stripe] update failed:', error);
