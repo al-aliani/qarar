@@ -7,6 +7,7 @@
 import { getAuthUser } from '../../supabaseClient.js';
 import { AuthGuard } from '../middleware/AuthGuard.js';
 import { listOrders } from '../services/PaymentService.js';
+import { openTaxInvoice } from '../utils/zatcaInvoice.js';
 
 const TIER_LABELS = {
     self: 'الباقة الذاتية',
@@ -66,7 +67,7 @@ export class BillingHistoryView {
                         <a href="#/home" id="billingEmptyPricingLink" class="btn btn--secondary mt-2">عرض الباقات</a>
                     ` : `
                         <div class="space-y-3">
-                            ${orders.map((o) => {
+                            ${orders.map((o, idx) => {
                                 const status = STATUS_META[o.status] || STATUS_META.pending;
                                 return `
                                     <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
@@ -74,9 +75,10 @@ export class BillingHistoryView {
                                             <div class="font-bold">${TIER_LABELS[o.tier] || o.tier}</div>
                                             <div class="text-xs text-muted mt-1">${formatDate(o.paid_at || o.created_at)}</div>
                                         </div>
-                                        <div style="display:flex;align-items:center;gap:10px;">
+                                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                                             <span class="font-bold">${formatAmount(o)}</span>
                                             <span class="badge ${status.badge}">${status.label}</span>
+                                            ${o.status === 'paid' ? `<button type="button" class="btn btn--ghost btn--sm" data-invoice="${idx}">فاتورة ضريبية</button>` : ''}
                                         </div>
                                     </div>
                                 `;
@@ -94,6 +96,14 @@ export class BillingHistoryView {
         this.container.querySelector('#billingEmptyPricingLink')?.addEventListener('click', (e) => {
             e.preventDefault();
             this.onBack();
+        });
+
+        // فاتورة ضريبية مبسّطة (ZATCA) — تُفتح في نافذة للطباعة/الحفظ PDF للطلبات المدفوعة
+        this.container.querySelectorAll('[data-invoice]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const o = orders[Number(btn.dataset.invoice)];
+                if (o) openTaxInvoice(o);
+            });
         });
     }
 }
