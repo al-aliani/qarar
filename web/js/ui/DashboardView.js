@@ -1038,12 +1038,17 @@ export class DashboardView {
         ].filter(Boolean).join('');
 
         const safeName = escapeHtml(project.name || 'مشروع بدون اسم');
+        // مسودات بلا اسم مميز (تُركت أثناء معالج التأسيس) تحمل جميعاً نفس الاسم الافتراضي
+        // "مشروع جديد" — بلا هذا التمييز تتراكم بصمت في القائمة بلا طريقة للتفريق بينها،
+        // خصوصاً لمن يقارن فروعاً متعددة. لا نغيّر الاسم المخزَّن (تُبقي حوار إعادة التسمية
+        // والنسخ يعملان على الاسم الحقيقي)، فقط نضيف طابعاً زمنياً للعرض هنا.
+        const displayName = project.name === 'مشروع جديد' ? `${safeName} — ${date}` : safeName;
         return `
-            <div class="project-card dv-card dv-project" data-id="${project.id}" role="button" tabindex="0" aria-label="فتح دراسة ${safeName}">
+            <div class="project-card dv-card dv-project" data-id="${project.id}" role="button" tabindex="0" aria-label="فتح دراسة ${displayName}">
                 <div class="dv-project__head">
                     <span class="dv-card__ic dv-card__ic--soft dv-card__ic--sm">${icon('i-chart')}</span>
                     <div class="dv-project__id">
-                        <h3 class="dv-project__name" title="${safeName}">${safeName}</h3>
+                        <h3 class="dv-project__name" title="${displayName}">${displayName}</h3>
                         <p class="dv-project__date">آخر تعديل: <span class="dv-num">${date}</span></p>
                     </div>
                     <span class="dvh-project__enter" aria-hidden="true">${inlineIcon('chev')}</span>
@@ -1063,7 +1068,8 @@ export class DashboardView {
                 <div class="dv-project__actions">
                     <button class="btn btn--sm btn--secondary dv-project__open btn-open" data-id="${project.id}">فتح</button>
                     <button class="btn btn--sm btn--ghost dv-iconbtn btn-share" data-id="${project.id}" title="تصدير الدراسة (PDF/Excel/Word)">${icon('i-share')}</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-duplicate" data-id="${project.id}" title="نسخ المشروع">${icon('i-clipboard')}</button>
+                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-rename" data-id="${project.id}" data-name="${safeName}" title="إعادة تسمية">${icon('i-pen')}</button>
+                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-duplicate" data-id="${project.id}" data-name="${safeName}" title="نسخ المشروع لبدء فرع جديد">${icon('i-clipboard')}</button>
                     <button class="btn btn--sm btn--ghost dv-iconbtn dv-iconbtn--danger btn-delete" data-id="${project.id}" title="نقل لسلة المحذوفات">${icon('i-trash')}</button>
                 </div>
             </div>
@@ -1519,23 +1525,49 @@ export class DashboardView {
             });
         });
 
-        // Duplicate Project (نسخ مشروع — خطة التطوير)
+        // Duplicate Project — نسخ لبدء فرع جديد (اسم مخصص + خيار نسخة فارغة بنفس القالب)
         this.container.querySelectorAll('.btn-duplicate').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const id = (e.target.closest('[data-id]') || e.target).dataset?.id;
+                const target = e.target.closest('[data-id]') || e.target;
+                const id = target.dataset?.id;
                 if (!id) return;
+                const { promptDuplicateProject } = await import('../utils/duplicateProjectDialog.js');
+                const result = await promptDuplicateProject(id, target.dataset?.name);
+                if (result) this.render();
+            });
+        });
+
+        // Rename Project — إعادة تسمية مباشرة من قائمة الدراسات، بلا حاجة لفتح الدراسة كاملة
+        this.container.querySelectorAll('.btn-rename').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const target = e.target.closest('[data-id]') || e.target;
+                const id = target.dataset?.id;
+                if (!id) return;
+                const { value: newName } = await Swal.fire({
+                    title: 'إعادة تسمية الدراسة',
+                    input: 'text',
+                    inputValue: target.dataset?.name || '',
+                    showCancelButton: true,
+                    confirmButtonText: 'حفظ',
+                    cancelButtonText: 'إلغاء',
+                    customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-secondary' },
+                    buttonsStyling: false,
+                    inputValidator: (value) => !value?.trim() ? 'أدخل اسماً للدراسة' : undefined
+                });
+                if (!newName?.trim()) return;
                 try {
-                    const result = await ProjectManager.duplicateProject(id);
+                    const result = await ProjectManager.renameProject(id, newName.trim());
                     if (result.success) {
-                        toast.success('تم نسخ المشروع بنجاح');
+                        toast.success('تم تحديث اسم الدراسة');
                         this.render();
                     } else {
-                        toast.error(result.error || 'فشل نسخ المشروع');
+                        toast.error(result.error || 'فشل تحديث الاسم');
                     }
                 } catch (err) {
-                    console.error('Duplicate failed:', err);
-                    toast.error('فشل نسخ المشروع');
+                    console.error('Rename failed:', err);
+                    toast.error('فشل تحديث الاسم');
                 }
             });
         });

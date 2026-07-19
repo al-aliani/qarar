@@ -76,6 +76,9 @@ test('mobile journey keeps wizard and wide tables usable', async ({ page }) => {
     await expect(advancedMode).toBeVisible({ timeout: 5000 });
     await advancedMode.click();
     await page.locator('#btnBlankCreate').click();
+    // معالج التأسيس (renderFoundationWizard) يظهر داخل المعرض بعد الإنشاء؛
+    // «تخطي التأسيس» (fw_btnBack بالخطوة 1) يستدعي skipWizard() فيغلق المعرض ويهبط في الدراسة.
+    await page.locator('#fw_btnBack').click();
     await expect(galleryOverlay).not.toBeVisible({ timeout: 5000 });
 
     // الهبوط على معلومات المشروع؛ الخريطة المشتركة متاحة من كل خطوة بعد ذلك.

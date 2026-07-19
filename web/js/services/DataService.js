@@ -218,6 +218,45 @@ export class DataService {
             ];
         }
 
+        // تدقيق اختبار عميل مبتدئ 2026-07-19: مخبز/مطبخ سحابي/ضيافة/SaaS كانت تسقط على
+        // fallback "مدير مشروع + عمال" العام أدناه بلا علاقة بحجم النشاط الفعلي (راجع
+        // نفس الفجوة في generatePositions/generateRevenueStreams بـInternalAIGenerator.js).
+        const isBakery = /مخبز|حلويات/.test(activity);
+        if (isBakery) {
+            return [
+                { position: 'مدير/مديرة المخبز', nationality: 'saudi', count: 1, salary: 6000, months: 12, isVariable: false },
+                { position: 'حلواني/خباز', nationality: 'expat', count: Math.max(1, Math.ceil(Number(size || 60) / 60)), salary: 4200, months: 12, isVariable: false },
+                { position: 'كاشير وخدمة عملاء', nationality: 'saudi', count: 1, salary: 4000, months: 12, isVariable: false }
+            ];
+        }
+
+        const isCloudKitchen = /مطبخ سحابي|سحابي/.test(activity);
+        if (isCloudKitchen) {
+            return [
+                { position: 'مدير/مديرة المطبخ', nationality: 'saudi', count: 1, salary: 6500, months: 12, isVariable: false },
+                { position: 'شيف / طاهي', nationality: 'expat', count: Math.max(1, Math.ceil(Number(size || 60) / 40)), salary: 4500, months: 12, isVariable: false },
+                { position: 'منسق طلبات وتوصيل', nationality: 'expat', count: 1, salary: 3200, months: 12, isVariable: true }
+            ];
+        }
+
+        const isCatering = /ضيافة|بوفيه/.test(activity);
+        if (isCatering) {
+            return [
+                { position: 'مدير/مديرة الضيافة', nationality: 'saudi', count: 1, salary: 7000, months: 12, isVariable: false },
+                { position: 'شيف / مسؤول التحضير', nationality: 'expat', count: 1, salary: 5000, months: 12, isVariable: false },
+                { position: 'عامل ضيافة (حسب المناسبات)', nationality: 'expat', count: 2, salary: 2800, months: 12, isVariable: true }
+            ];
+        }
+
+        const isSaaS = /saas|برمجيات/.test(activity);
+        if (isSaaS) {
+            return [
+                { position: 'مدير/مديرة المنتج', nationality: 'saudi', count: 1, salary: 9000, months: 12, isVariable: false },
+                { position: 'مطور برمجيات', nationality: 'expat', count: 1, salary: 8000, months: 12, isVariable: false },
+                { position: 'دعم فني ومبيعات', nationality: 'saudi', count: 1, salary: 4500, months: 12, isVariable: false }
+            ];
+        }
+
         const staffing = [];
         // Default logic
         staffing.push({ position: 'مدير مشروع', nationality: 'saudi', count: 1, salary: 6000, months: 12, isVariable: false });

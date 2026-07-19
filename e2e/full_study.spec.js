@@ -27,6 +27,9 @@ test.describe('دورة دراسة الجدوى الكاملة', () => {
       if (await advancedMode.isVisible().catch(() => false)) {
         await advancedMode.click();
         await galleryOverlay.locator('#btnBlankCreate').click();
+        // معالج التأسيس (renderFoundationWizard) يظهر داخل المعرض بعد الإنشاء؛
+        // «تخطي التأسيس» (fw_btnBack بالخطوة 1) يستدعي skipWizard() فيغلق المعرض.
+        await galleryOverlay.locator('#fw_btnBack').click();
       }
       await expect(galleryOverlay).not.toBeVisible({ timeout: 5000 });
     }

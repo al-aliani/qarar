@@ -1340,7 +1340,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('feasibility:showGlobalAnalytics', async () => {
     try {
       const { GlobalAnalyticsView } = await import('./js/ui/GlobalAnalyticsView.js');
-      const view = new GlobalAnalyticsView('wizardContainer');
+      const view = new GlobalAnalyticsView('wizardContainer', { onBack: showLandingDashboard });
       await view.render();
     } catch (err) {
       console.error('GlobalAnalyticsView load failed:', err);
@@ -2621,6 +2621,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (btnAISettings && aiSettingsModal) {
     btnAISettings.addEventListener('click', () => aiSettingsModal.showModal());
+    // أزرار إغلاق النافذة (كانت onclick مضمّنة يمنعها CSP الصارم في الإنتاج)
+    aiSettingsModal.querySelectorAll('.modal-close, #btnAiSettingsOk').forEach((b) =>
+      b.addEventListener('click', () => aiSettingsModal.close())
+    );
+  }
+
+  // زر «الرسوم البيانية التفاعلية» — كان onclick مضمّناً يمنعه CSP الصارم في الإنتاج
+  const btnGoCharts = document.getElementById('btnGoCharts');
+  if (btnGoCharts) {
+    btnGoCharts.addEventListener('click', () => { window.location.href = '/financial_charts.html'; });
   }
   // تنظيف: إزالة أي مفتاح OpenAI مخزَّن سابقاً (لم يعد يُستخدم)
   try { localStorage.removeItem('openai_api_key'); } catch (_) {}

@@ -53,6 +53,13 @@ export default defineConfig({
             input: {
                 main: resolve(__dirname, 'web/index.html'),
                 landing: resolve(__dirname, 'web/landing.html'),
+                // صفحات تسويقية مربوطة من هيدر صفحة الهبوط (landing.html) — بدون إدراجها
+                // هنا كانت تُبنى فتُرجع 404/تُبتلع بواسطة SPA rewrite في الإنتاج (تظهر
+                // كأنها تفتح التطبيق بدل الصفحة). أضيفت 2026-07-19 ضمن إصلاحات الجاهزية.
+                pricing: resolve(__dirname, 'web/pricing.html'),
+                why: resolve(__dirname, 'web/why.html'),
+                faq: resolve(__dirname, 'web/faq.html'),
+                deliverables: resolve(__dirname, 'web/deliverables.html'),
                 terms: resolve(__dirname, 'web/terms.html'),
                 privacy: resolve(__dirname, 'web/privacy.html'),
                 disclaimer: resolve(__dirname, 'web/disclaimer.html'),

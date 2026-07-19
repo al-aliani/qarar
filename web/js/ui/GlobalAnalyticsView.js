@@ -14,13 +14,19 @@ import { escapeHtml } from '../utils/escape.js';
 const PAGE_SIZE = 12;
 
 export class GlobalAnalyticsView {
-    constructor(containerOrId) {
+    constructor(containerOrId, options = {}) {
         this.container = typeof containerOrId === 'string'
             ? document.getElementById(containerOrId)
             : containerOrId;
         this.headers = [];
         this.rows = [];
         this.loadedCount = 0;
+        // تدقيق: هذا الزر كان يضبط window.location.hash = '#/home' مباشرة — يفتح
+        // هذه الصفحة أصلاً لا يغيّر الهاش عن '#/home' (يُفتح عبر حدث feasibility:showGlobalAnalytics
+        // لا توجيه هاش)، فتعيين نفس القيمة لا يُطلق hashchange والزر لا يعمل إطلاقاً.
+        // onBack (يمرّره app.js كـ showLandingDashboard، بنفس نمط بقية الشاشات المشابهة)
+        // يستدعي الرسم مباشرة بدل انتظار حدث متصفّح قد لا يقع.
+        this.onBack = options.onBack || (() => { window.location.hash = '#/home'; });
     }
 
     async render() {
@@ -30,13 +36,11 @@ export class GlobalAnalyticsView {
             <div class="global-analytics-view" style="max-width:960px;margin:0 auto;padding:var(--s-4) 0;">
                 <button type="button" id="btnAnalyticsBack" class="btn btn--ghost mb-4" style="display:inline-flex;align-items:center;gap:8px;">← العودة للوحة التحكم</button>
                 <h2 class="section-title"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> لوحة الإحصائيات الشاملة</h2>
-                <p class="text-muted mb-4">رأس المال والعائد الحقيقي عبر كل دراساتك المحفوظة — لا دراسة واحدة.</p>
+                <p class="text-muted mb-4">رأس المال والعائد الحقيقي عبر كل دراساتك المحفوظة — لا دراسة واحدة. انسخ أي دراسة من الجدول أدناه لبدء فرع جديد.</p>
                 <div id="analyticsBody"><p class="text-sm text-muted">جاري تحميل دراساتك...</p></div>
             </div>
         `;
-        this.container.querySelector('#btnAnalyticsBack')?.addEventListener('click', () => {
-            window.location.hash = '#/home';
-        });
+        this.container.querySelector('#btnAnalyticsBack')?.addEventListener('click', () => this.onBack());
 
         this.headers = (await ProjectManager.getActiveProjects()) || [];
         this.headers.sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
@@ -66,6 +70,7 @@ export class GlobalAnalyticsView {
                 const ind = getOfficialIndicators(result);
                 if (!ind || (ind.npv == null && ind.roi == null)) continue;
                 this.rows.push({
+                    id: h.id,
                     name: h.name || 'دراسة بلا اسم',
                     npv: ind.npv,
                     irr: ind.irr,
@@ -115,6 +120,7 @@ export class GlobalAnalyticsView {
                             <th style="padding:10px 12px;">IRR</th>
                             <th style="padding:10px 12px;">ROI</th>
                             <th style="padding:10px 12px;">فترة الاسترداد</th>
+                            <th style="padding:10px 12px;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -125,6 +131,9 @@ export class GlobalAnalyticsView {
                                 <td style="padding:10px 12px;" class="text-mono">${formatPercent(r.irr)}</td>
                                 <td style="padding:10px 12px;" class="text-mono">${formatPercent(r.roi)}</td>
                                 <td style="padding:10px 12px;" class="text-mono">${formatPayback(r.paybackPeriod)}</td>
+                                <td style="padding:10px 12px;">
+                                    <button type="button" class="btn btn--sm btn--ghost btn-branch-duplicate" data-id="${r.id}" data-name="${escapeHtml(r.name)}" title="نسخ هذه الدراسة لبدء فرع جديد">نسخ لفرع جديد</button>
+                                </td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -135,5 +144,23 @@ export class GlobalAnalyticsView {
         `;
 
         body.querySelector('#btnAnalyticsLoadMore')?.addEventListener('click', () => this.loadMore());
+
+        // نسخ لبدء فرع جديد — هذا بالضبط الوعد المكتوب في بطاقة «محاكي التوسع والفروع»
+        // على الرئيسية («قارن دراساتك، وانسخ أي دراسة لبدء فرع جديد») والذي لم يكن منفَّذاً هنا فعلياً.
+        body.querySelectorAll('.btn-branch-duplicate').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const target = e.currentTarget;
+                const id = target.dataset.id;
+                if (!id) return;
+                const { promptDuplicateProject } = await import('../utils/duplicateProjectDialog.js');
+                const result = await promptDuplicateProject(id, target.dataset.name);
+                if (!result) return;
+                this.headers = [];
+                this.rows = [];
+                this.loadedCount = 0;
+                await this.render();
+            });
+        });
     }
 }

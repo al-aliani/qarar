@@ -1490,6 +1490,12 @@ export function generatePositions(state) {
     const isLogistics = /لوجستي|شحن|نقل|تخزين|توزيع|استيراد|تصدير/i.test(sector);
     const isIndustrial = /صناع|مصنع|إنتاج|تصنيع/i.test(sector);
     const isService = /استشار|خدمي|صالة|رياض/i.test(sector);
+    // نفس فجوة generateRevenueStreams أعلاه (راجع تعليقها) — تسقط بلا هذه الفروع على
+    // fallback "مدير/مديرة المشروع + موظف تنفيذي×2" العام بلا علاقة بحجم النشاط الفعلي.
+    const isBakery = /مخبز|حلويات/i.test(sector);
+    const isCloudKitchen = /مطبخ سحابي|سحابي/i.test(sector);
+    const isCatering = /ضيافة|بوفيه/i.test(sector);
+    const isSaaS = /saas|برمجيات/i.test(sector);
 
     let positions = [];
 
@@ -1513,6 +1519,30 @@ export function generatePositions(state) {
             { position: 'مدير الفرع', nationality: 'saudi', count: 1, salary: 7000, months: 12, isVariable: false },
             { position: 'بائع/بائعة', nationality: 'expat', count: 2, salary: 3000, months: 12, isVariable: false },
             { position: 'أمين مخزن', nationality: 'expat', count: 1, salary: 3200, months: 12, isVariable: false }
+        ];
+    } else if (isBakery) {
+        positions = [
+            { position: 'مدير/مديرة المخبز', nationality: 'saudi', count: 1, salary: 6000, months: 12, isVariable: false },
+            { position: 'حلواني/خباز', nationality: 'expat', count: 2, salary: 4200, months: 12, isVariable: false },
+            { position: 'كاشير وخدمة عملاء', nationality: 'saudi', count: 1, salary: 4000, months: 12, isVariable: false }
+        ];
+    } else if (isCloudKitchen) {
+        positions = [
+            { position: 'مدير/مديرة المطبخ', nationality: 'saudi', count: 1, salary: 6500, months: 12, isVariable: false },
+            { position: 'شيف / طاهي', nationality: 'expat', count: 2, salary: 4500, months: 12, isVariable: false },
+            { position: 'منسق طلبات وتوصيل', nationality: 'expat', count: 1, salary: 3200, months: 12, isVariable: true }
+        ];
+    } else if (isCatering) {
+        positions = [
+            { position: 'مدير/مديرة الضيافة', nationality: 'saudi', count: 1, salary: 7000, months: 12, isVariable: false },
+            { position: 'شيف / مسؤول التحضير', nationality: 'expat', count: 1, salary: 5000, months: 12, isVariable: false },
+            { position: 'عامل ضيافة (حسب المناسبات)', nationality: 'expat', count: 2, salary: 2800, months: 12, isVariable: true }
+        ];
+    } else if (isSaaS) {
+        positions = [
+            { position: 'مدير/مديرة المنتج', nationality: 'saudi', count: 1, salary: 9000, months: 12, isVariable: false },
+            { position: 'مطور برمجيات', nationality: 'expat', count: 1, salary: 8000, months: 12, isVariable: false },
+            { position: 'دعم فني ومبيعات', nationality: 'saudi', count: 1, salary: 4500, months: 12, isVariable: false }
         ];
     } else if (isHealth) {
         positions = [
@@ -1910,6 +1940,16 @@ export function generateRevenueStreams(state) {
     const isEducation = /تعليم|مدرسة|جامعة|تدريب|أكاديم|دورات/i.test(sector);
     const isLogistics = /لوجستي|شحن|نقل|تخزين|توزيع/i.test(sector);
     const isIndustrial = /صناع|مصنع|إنتاج|تصنيع/i.test(sector);
+    // تدقيق اختبار عميل مبتدئ 2026-07-19: 3 خيارات غذائية و3 خيارات تقنية من قائمة
+    // "نوع النشاط" (fieldOptions.js CONCEPT_OPTIONS) لا تطابق أياً من الأنماط أعلاه فتسقط
+    // على fallback عام واحد (150 عميل × 200 ريال) بلا علاقة باقتصادياتها الفعلية — رأس
+    // مال/توظيف مضخّم بشدة لمشروع مبتدئ صغير (مخبز منزلي مثلاً)، وقد يقلب القرار NO-GO
+    // بلا سبب حقيقي. مطبخ سحابي/ضيافة منفصلان عن المخبز لاختلاف نموذج الإيراد (توصيل
+    // فقط، أو عقود مناسبات) لا لمجرد التصنيف.
+    const isBakery = /مخبز|حلويات/i.test(sector);
+    const isCloudKitchen = /مطبخ سحابي|سحابي/i.test(sector);
+    const isCatering = /ضيافة|بوفيه/i.test(sector);
+    const isSaaS = /saas|برمجيات/i.test(sector);
 
     if (isCafe) {
         return [
@@ -1933,6 +1973,21 @@ export function generateRevenueStreams(state) {
         ];
     }
     if (isRetail) return [{ service: 'مبيعات التجزئة', customersPerMonth: 800, avgPrice: 85, growthRate: 0.06 }];
+    if (isBakery) {
+        return [
+            { service: 'مبيعات المخبز اليومية (كيك، حلويات، معجنات)', customersPerMonth: 900, avgPrice: 35, growthRate: 0.08 },
+            { service: 'طلبات مناسبات وكيك حسب الطلب', customersPerMonth: 40, avgPrice: 450, growthRate: 0.10 }
+        ];
+    }
+    if (isCloudKitchen) {
+        return [{ service: 'طلبات التوصيل عبر التطبيقات', customersPerMonth: 900, avgPrice: 50, growthRate: 0.15, platformCommissionRate: 0.25 }];
+    }
+    if (isCatering) {
+        return [{ service: 'عقود ضيافة وبوفيه للمناسبات', customersPerMonth: 15, avgPrice: 3500, growthRate: 0.10 }];
+    }
+    if (isSaaS) {
+        return [{ service: 'اشتراكات المنصة/التطبيق الشهرية', customersPerMonth: 120, avgPrice: 250, growthRate: 0.15 }];
+    }
     if (isHealth) {
         return [
             { service: 'استشارات وفحوص', customersPerMonth: 180, avgPrice: 180, growthRate: 0.08 },

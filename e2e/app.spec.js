@@ -14,9 +14,32 @@ test.describe('محاكي الجدوى — E2E', () => {
         // (انظر main.css) — التنقّل الأساسي الحالي هو #categoryStepper. زر التصدير
         // نفسه يختلف معرّفه بين الصفحة الرئيسية (لوحة التحكم) وداخل الدراسة (#headerExportMenu)
         // — نطابق أي عنصر نصّه "تصدير" بدل معرّف واحد يتغيّر حسب السياق.
+        // التطبيق يقلع إلى لوحة التحكم (DashboardView) لا إلى دراسة مباشرة، فشريط
+        // التصنيفات (#categoryStepper) وزر التصدير لا يظهران إلا بعد فتح دراسة فعلية.
+        // ننشئ دراسة فارغة (نفس تدفّق critical_path) ثم نتحقق من عناصر مساحة الدراسة.
+        await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
         await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
-        const categoryNav = page.locator('#categoryStepper').first();
+        // waitFor صريح (لا isVisible لحظي) — لوحة التحكم تُرسم بعد فحص async لحالة
+        // المستخدم، ففحص لحظي مبكر يتخطّى الإنشاء فلا يظهر #field-name (نفس نمط full-project-cycle الناجح).
+        const btnNew = page.locator('#btnNewProjectEmpty, #cardFullStudy').first();
+        await btnNew.waitFor({ state: 'visible', timeout: 10000 });
+        await btnNew.click();
+        const galleryOverlay = page.locator('#templateGalleryOverlay');
+        await expect(galleryOverlay).toBeVisible({ timeout: 8000 });
+        await galleryOverlay.locator('#btnStartBlank').click();
+        const advancedMode = galleryOverlay.locator('.mode-card[data-mode="advanced"]');
+        if (await advancedMode.isVisible().catch(() => false)) {
+            await advancedMode.click();
+            await galleryOverlay.locator('#btnBlankCreate').click();
+            await galleryOverlay.locator('#fw_btnBack').click(); // تخطي معالج التأسيس
+        }
+        await expect(galleryOverlay).not.toBeVisible({ timeout: 5000 });
+        // بعد الإنشاء يُحمَّل عرض الدراسة (حقل الاسم ظاهر). شريط التنقّل متجاوب:
+        // #categoryStepper (8 تصنيفات) على الشاشات العريضة، و#macroJourneyStepper
+        // (3 مراحل) على الضيّقة — نتحقق من ظهور أيّهما بدل الإصرار على الثابت المخفي.
+        await expect(page.locator('#field-name')).toBeVisible({ timeout: 10000 });
+        const categoryNav = page.locator('#macroJourneyStepper:visible, #categoryStepper:visible').first();
         await expect(categoryNav).toBeVisible({ timeout: 10000 });
         const exportBtn = page.locator('button:visible, a:visible').filter({ hasText: 'تصدير' }).first();
         await expect(exportBtn).toBeVisible({ timeout: 5000 });

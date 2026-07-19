@@ -122,6 +122,22 @@ export class ProjectManager {
     }
 
     /**
+     * Rename project — from the dashboard project list (no need to open the study)
+     */
+    static async renameProject(id, newName) {
+        const trimmed = (newName || '').trim();
+        if (!trimmed) return { success: false, error: 'الاسم فارغ' };
+
+        const { data } = (await this.loadProject(id)) || {};
+        if (!data) return { success: false, error: 'المشروع غير موجود' };
+
+        data.projectInfo = data.projectInfo || {};
+        data.projectInfo.name = trimmed;
+
+        return await this.saveProject(data);
+    }
+
+    /**
      * Get Deleted Projects (Trash)
      */
     static async getDeletedProjects() {
@@ -140,7 +156,9 @@ export class ProjectManager {
     /**
      * Duplicate project — استنساخ دراسة موجودة
      * @param {string} id - معرف المشروع الأصلي
-     * @param {object} options - { structureOnly: boolean } — نسخ الهيكل فقط (بدون بيانات) أو كامل
+     * @param {object} options - { structureOnly: boolean, newName?: string }
+     *   structureOnly: نسخة فرع جديد فارغة (نفس المنتجات/شروط الامتياز، بدون أي أرقام تشغيلية
+     *   من الفرع الأصلي) بدل نسخة طبق الأصل — لمشغّلي السلاسل الذين يبدأون فرعاً برواتب/إيجار مختلفة.
      * @returns {Promise<{success: boolean, id?: string, error?: string}>}
      */
     static async duplicateProject(id, options = {}) {
@@ -153,30 +171,36 @@ export class ProjectManager {
             const projectInfo = original.projectInfo || {};
             const originalName = projectInfo.name || 'مشروع';
             const newId = crypto.randomUUID();
+            const newName = options.newName?.trim() || `نسخة من ${originalName}`;
 
-            const duplicated = {
-                ...original,
-                projectInfo: {
-                    ...projectInfo,
-                    id: newId,
-                    name: `نسخة من ${originalName}`,
-                    deleted: false, // Ensure copy is not deleted
-                    status: 'draft'
-                }
-            };
-
+            let duplicated;
             if (options.structureOnly) {
-                // مسح البيانات التفصيلية والاحتفاظ بالهيكل فقط
+                // نسخ «قالب» الفرع فقط: المنتجات/الخدمات وشروط الامتياز تبقى (هوية السلسلة)،
+                // وكل قسم آخر (تكاليف، رواتب، إيرادات، تمويل...) يُعاد لحالته الفارغة الافتراضية
+                // بدل نسخ أرقام الفرع الأصلي حرفياً.
                 const { createEmptyStudy } = await import('../core/schema.js');
                 const empty = createEmptyStudy();
-                duplicated.projectInfo = { ...empty.projectInfo, ...duplicated.projectInfo, id: newId, name: `نسخة من ${originalName}` };
-                duplicated.executiveSummary = empty.executiveSummary;
-                duplicated.marketing = empty.marketing;
-                duplicated.revenue = empty.revenue;
-                duplicated.costs = empty.costs;
-                duplicated.financing = empty.financing;
-                duplicated.riskAnalysis = empty.riskAnalysis;
-                duplicated.appendices = empty.appendices;
+                const preservedProjectInfoKeys = ['products', 'introServices', 'customerValues', 'businessModel', 'franchiseDetails', 'concept', 'description'];
+                const newProjectInfo = { ...empty.projectInfo, id: newId, name: newName };
+                preservedProjectInfoKeys.forEach((key) => {
+                    if (projectInfo[key] !== undefined) newProjectInfo[key] = projectInfo[key];
+                });
+                duplicated = { ...empty, id: newId, projectInfo: newProjectInfo };
+                // appSettings (وضع الدراسة: مصغّر/بسيط/مفصّل) إعداد قالب لا رقم تشغيلي —
+                // بلا هذا السطر كل فرع جديد يُعاد لوضع "مفصّل" الافتراضي حتى لو اختار
+                // صاحب السلسلة عمداً وضعاً أخف لكل فروعه.
+                if (original.appSettings) duplicated.appSettings = original.appSettings;
+            } else {
+                duplicated = {
+                    ...original,
+                    projectInfo: {
+                        ...projectInfo,
+                        id: newId,
+                        name: newName,
+                        deleted: false, // Ensure copy is not deleted
+                        status: 'draft'
+                    }
+                };
             }
 
             const saveResult = await this.saveProject(duplicated);

@@ -207,7 +207,7 @@
           ⋯ المزيد
         </button>
         <div id="sidebarSecondaryActions" style="display: none;">
-          <button id="btnGoCharts" class="btn btn--ghost w-full mb-2" title="عرض الرسوم البيانية" onclick="window.location.href='/financial_charts.html'">
+          <button id="btnGoCharts" class="btn btn--ghost w-full mb-2" title="عرض الرسوم البيانية">
             <svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> الرسوم البيانية التفاعلية
           </button>
           <button id="btnLoadStudy" class="btn btn--ghost w-full mb-2" title="تحميل دراسة من ملف JSON">
@@ -277,14 +277,14 @@
   
   <dialog id="aiSettingsModal" class="modal" aria-labelledby="aiSettingsTitle">
     <div class="modal-content" style="max-width: 500px;">
-      <button type="button" class="modal-close" onclick="this.closest('dialog').close()" aria-label="إغلاق">&times;</button>
+      <button type="button" class="modal-close" aria-label="إغلاق">&times;</button>
       <h3 id="aiSettingsTitle" class="mb-3"><svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg> كيف يُولَّد المحتوى؟</h3>
       <p class="text-muted mb-4">تُولَّد نصوص المسودّات (وصف السوق، SWOT، المخاطر…) محلياً داخل متصفحك من مدخلات دراستك ومؤشرات النموذج المالي — لا صندوق أسود ولا إرسال لأي خادم خارجي.</p>
       <div class="alert alert--info mb-4">
         <strong>ملاحظة:</strong> كل النصوص المولّدة مسودّات استرشادية تحتاج مراجعتك وإسنادها بمصادرك قبل التقديم لممول. الأرقام المالية تأتي من محرك الحساب لا من نموذج لغوي.
       </div>
       <div class="d-flex justify-end gap-2">
-        <button type="button" class="btn btn--primary" onclick="document.getElementById('aiSettingsModal').close()">فهمت</button>
+        <button type="button" id="btnAiSettingsOk" class="btn btn--primary">فهمت</button>
       </div>
     </div>
   </dialog>

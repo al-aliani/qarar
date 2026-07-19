@@ -39,6 +39,9 @@ test.describe('Critical Path: Full User Journey', () => {
       if (await advancedMode.isVisible().catch(() => false)) {
         await advancedMode.click();
         await galleryOverlay.locator('#btnBlankCreate').click();
+        // بعد «إنشاء الدراسة» يظهر معالج التأسيس (renderFoundationWizard) داخل المعرض نفسه
+        // بدل إغلاقه فوراً؛ «تخطي التأسيس» (fw_btnBack بالخطوة 1) يستدعي skipWizard() فيغلق المعرض.
+        await galleryOverlay.locator('#fw_btnBack').click();
       }
       await expect(galleryOverlay).not.toBeVisible({ timeout: 5000 });
     }
@@ -86,7 +89,7 @@ test.describe('Critical Path: Full User Journey', () => {
     await expect(page.locator('.export-modal')).toBeVisible({ timeout: 8000 });
     await expect(page.locator('.export-modal [data-type="excel"]')).toBeVisible();
     await expect(page.locator('.export-modal [data-type="pdf"]')).toBeVisible();
-    await expect(page.locator('.export-modal [data-type="bank"]')).toBeVisible();
+    await expect(page.locator('.export-modal [data-type="lending_ready"]')).toBeVisible();
     await expect(page.locator('.export-modal [data-type="pptx"]')).toBeVisible();
     await expect(page.locator('.export-modal [data-type="word"]')).toBeVisible();
     await expect(page.locator('.export-modal [data-type="investor_dashboard"]')).toBeVisible();

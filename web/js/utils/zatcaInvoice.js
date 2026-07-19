@@ -69,6 +69,7 @@ export function renderInvoiceHtml(order, merchant, qrDataUrl) {
         <div>${escapeHtml(m.name || '')}</div>
         <div>الرقم الضريبي: ${vatCell}</div>
         ${m.crNumber ? `<div>س.ت: <span class="ltr">${escapeHtml(m.crNumber)}</span></div>` : ''}
+        ${m.unifiedNumber ? `<div>الرقم الموحّد: <span class="ltr">${escapeHtml(m.unifiedNumber)}</span></div>` : ''}
         ${m.address ? `<div>${escapeHtml(m.address)}</div>` : ''}
       </div>
       <div class="box">

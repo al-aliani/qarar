@@ -12,7 +12,7 @@ test.describe('التصدير والقوائم', () => {
         await page.waitForLoadState('domcontentloaded');
         await page.locator('#headerExportMenu').click();
         await expect(page.locator('.export-modal')).toBeVisible({ timeout: 8000 });
-        await expect(page.locator('.export-modal [data-type="bank"], .export-modal button:has-text("بنكي"), .export-modal button:has-text("التقرير البنكي")').first()).toBeVisible({ timeout: 3000 });
+        await expect(page.locator('.export-modal [data-type="lending_ready"], .export-modal button:has-text("بنك التنمية"), .export-modal button:has-text("جاهز للإقراض")').first()).toBeVisible({ timeout: 3000 });
     });
 
     test('قائمة التصدير تحتوي خيار Excel', async ({ page }) => {
