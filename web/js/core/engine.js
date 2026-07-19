@@ -1240,6 +1240,10 @@ export function calculateStudy(study, overrides) {
             payback: paybackOut,
             roi: roi / 100,
             breakEvenPointValue: breakEvenValue,
+            // breakEvenValue=0 غامض: قد يعني تعادلاً مستحيلاً (هامش مساهمة ≤ 0، يخسر على كل وحدة)
+            // أو غياب تكاليف ثابتة (يتعادل فوراً). هذا العلَم يميّزهما كي لا تعرض اللوحة
+            // «هامش أمان لنقطة التعادل = 100%» لمشروع لا يمكنه التعادل أصلاً.
+            breakEvenAchievable: cmRatio > 0,
             breakEvenUnits: Math.round(breakEvenUnits),
             dscr: dscrYear1 != null ? Number(dscrYear1.toFixed(2)) : null,
             profitMargin: year1Revenue > 0 ? (incomeStatement[0].netIncome / year1Revenue) : 0,

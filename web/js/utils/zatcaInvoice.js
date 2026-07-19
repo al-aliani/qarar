@@ -27,6 +27,8 @@ export function renderInvoiceHtml(order, merchant, qrDataUrl) {
     const total = Number(order.total_sar ?? order.amount_sar ?? 0);
     const vat = Number(order.vat_sar ?? 0);
     const net = Math.max(0, total - vat);
+    const subtotal = Number(order.subtotal_sar ?? total);
+    const discount = Number(order.discount_sar ?? 0);
     const ts = order.paid_at || order.created_at || '';
     const items = (Array.isArray(order.items) && order.items.length)
         ? order.items
@@ -81,6 +83,8 @@ export function renderInvoiceHtml(order, merchant, qrDataUrl) {
     </div>
     <table><thead><tr><th>البند</th><th class="ltr">المبلغ (شامل الضريبة)</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="tot">
+      ${discount > 0 ? `<div><span>الإجمالي قبل الخصم</span><span class="ltr">${money(subtotal)} ﷼</span></div>
+      <div><span>الخصم${order.coupon_code ? ' (' + escapeHtml(order.coupon_code) + ')' : ''}</span><span class="ltr">−${money(discount)} ﷼</span></div>` : ''}
       <div><span>الإجمالي قبل الضريبة</span><span class="ltr">${money(net)} ﷼</span></div>
       <div><span>ضريبة القيمة المضافة (15%)</span><span class="ltr">${money(vat)} ﷼</span></div>
       <div class="g"><span>الإجمالي المستحق</span><span class="ltr">${money(total)} ﷼</span></div>
@@ -104,6 +108,18 @@ export async function openTaxInvoice(order) {
     try { qr = await QRCode.toDataURL(tlv, { margin: 1, width: 150 }); } catch (_) { /* بلا QR أفضل من فشل الفاتورة */ }
     const html = renderInvoiceHtml(order, m, qr);
     const win = window.open('', '_blank');
-    if (win) { win.document.write(html); win.document.close(); win.focus(); }
+    if (win) {
+        win.document.write(html); win.document.close(); win.focus();
+    } else {
+        // النافذة محظورة (مانع النوافذ المنبثقة): ننزّل الفاتورة كملف HTML بدل الفشل الصامت.
+        try {
+            const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `فاتورة_ضريبية_${String(order.id || '').slice(0, 8)}.html`;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (_) { /* لا مزيد من التراجع الممكن */ }
+    }
     return html;
 }

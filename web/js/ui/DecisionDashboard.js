@@ -98,7 +98,11 @@ export class DecisionDashboard {
         const mcProbability = Number.isFinite(Number(mcLastRun?.successProbability)) ? Number(mcLastRun.successProbability) : null;
         const year1Revenue = Number(results?.incomeStatement?.[0]?.revenue) || 0;
         const breakEvenRevenue = Number(results?.indicators?.breakEvenPointValue) || 0;
-        const breakEvenMargin = year1Revenue > 0 ? Math.max(0, 1 - (breakEvenRevenue / year1Revenue)) : null;
+        // breakEvenPointValue=0 يحتمل معنيين متعاكسين: تعادل مستحيل (هامش مساهمة ≤ 0) أو بلا تكاليف ثابتة.
+        // بلا التمييز كان مشروع يخسر على كل وحدة يُظهر «هامش أمان 100%» مضلِّلاً — نعتمد علَم المحرك،
+        // فعند استحالة التعادل يُعرض «—» (null) بدل نسبة أمان كاذبة.
+        const breakEvenAchievable = results?.indicators?.breakEvenAchievable !== false;
+        const breakEvenMargin = (breakEvenAchievable && year1Revenue > 0) ? Math.max(0, 1 - (breakEvenRevenue / year1Revenue)) : null;
         const minCumulativeCash = Array.isArray(results?.cashFlow) && results.cashFlow.length
             ? Math.min(...results.cashFlow.map(row => Number(row.cumulative)).filter(Number.isFinite))
             : null;

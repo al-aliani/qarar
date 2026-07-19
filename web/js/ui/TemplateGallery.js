@@ -330,7 +330,7 @@ export class TemplateGallery {
             
             if (this.wizardData.products) {
                 // محاولة ذكية لتقسيم النص إلى قائمة منتجات إذا استخدم أسطر جديدة
-                const lines = this.wizardData.products.split('\\n').map(l => l.replace(/^\\d+[.-]?\\s*/, '').trim()).filter(Boolean);
+                const lines = this.wizardData.products.split('\n').map(l => l.replace(/^\d+[.-]?\s*/, '').trim()).filter(Boolean);
                 if (lines.length > 0) {
                     const productsList = lines.map(name => ({ id: Date.now().toString() + Math.random(), name, type: 'product' }));
                     this.store.updatePath('projectInfo', 'products', productsList);
