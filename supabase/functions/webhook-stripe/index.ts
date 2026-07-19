@@ -67,7 +67,11 @@ Deno.serve(async (req: Request) => {
     return new Response('db_error', { status: 500 });
   }
   if (!data || data.length === 0) {
-    console.log('[webhook-stripe] no matching pending order (already processed or unknown ref):', providerRef);
+    // المرجع المستخدم في المطابقة يختلف بحسب الفرع (payment_intent للاسترداد، session id
+    // للدفع/الفشل). كان السطر يشير إلى متغيّر providerRef محذوف بعد إعادة الهيكلة →
+    // ReferenceError/500 على كل مسار «لا مطابقة» (إعادة تسليم مكرّرة أو استرداد بلا طلب).
+    const logRef = status === 'refunded' ? getStripePaymentIntent(event) : getStripeSessionId(event);
+    console.log('[webhook-stripe] no matching order (already processed or unknown ref):', logRef);
   } else if (status === 'paid') {
     // إدخال طلبات "مراجَع بخبير" المدفوعة حديثاً إلى طابور المراجعين تلقائياً —
     // شرط review_status='none' يمنع إعادة إدخال طلب سبق أن دخل السير (استقبال

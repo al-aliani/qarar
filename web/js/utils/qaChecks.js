@@ -100,6 +100,33 @@ export async function runQAChecks(state, results) {
                 });
             }
 
+            // تنبيه: نص إرشادي بين أقواس مربعة لم يُستبدل (من اقتراحات «العصا السحرية»
+            // مثل «[صف ميزة موقعك]») قد يتسرّب حرفياً إلى التقرير المُصدَّر إن قبله المستخدم
+            // دون تحرير. نمسح كل القيم النصية للحالة بحثاً عن بقايا [...] (لا يحجب — تنبيه فقط).
+            try {
+                const bracketRe = /\[[^\][]{5,}\]/;
+                const seen = new Set();
+                const walk = (obj) => {
+                    if (!obj || typeof obj !== 'object') return;
+                    for (const val of Object.values(obj)) {
+                        if (typeof val === 'string') {
+                            const m = val.match(bracketRe);
+                            if (m) seen.add(m[0]);
+                        } else if (val && typeof val === 'object') {
+                            walk(val);
+                        }
+                    }
+                };
+                walk(state);
+                if (seen.size > 0) {
+                    qaResults.softWarnings.push({
+                        code: 'UNREPLACED_PLACEHOLDER_TEXT',
+                        message: `يوجد نص إرشادي بين أقواس لم تستبدله بعد (مثل: «${[...seen][0]}»). استبدله بمحتوى مشروعك الفعلي قبل التصدير حتى لا يظهر حرفياً في التقرير.`,
+                        path: 'content'
+                    });
+                }
+            } catch (_) { /* لا نُفشل الـQA بسبب فحص إرشادي */ }
+
             // جاهزية النسخة للبيع/التمويل: هذه البنود لا تكسر الحسابات، لكنها تخفض جودة الدراسة أمام مستشار أو ممول.
             {
                 const marketText = String(state?.marketing?.marketAnalysis?.summary || state?.marketing?.marketAnalysis?.description || '').trim();

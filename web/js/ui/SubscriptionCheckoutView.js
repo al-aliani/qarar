@@ -24,7 +24,16 @@ export class SubscriptionCheckoutView {
         if (candidateId) {
             try { saved = (await ProjectManager.loadProject(candidateId))?.data || null; } catch (_) { saved = null; }
         }
-        if (!saved) { this._renderNoStudy(); return; }
+        // لا يكفي أن تكون الدراسة "محفوظة": الزائر القادم من الهبوط تُنشأ له دراسة فارغة
+        // تلقائياً وتُزامَن خلال أقل من ثانية (feas_project_<id>)، فيمرّ وجودها ويدفع على
+        // دراسة مؤقتة يهجرها ثم يبني دراسته الحقيقية فيبقى تقريرها مقفلاً رغم الدفع.
+        // نشترط دراسة "ذات معنى" (لها اسم فعلي — أول ما يلتقطه المعالج، وهو "" في الفارغة)
+        // وإلا نوجّهه لبناء دراسته والدفع من داخلها. الفحص يخطئ في الاتجاه الآمن: إن اعتُبرت
+        // دراسة حقيقية فارغةً فأسوأ أثر توجيهٌ لبدء دراسة، لا دفعٌ يضيع.
+        // الاسم يُقرأ من الحالة الحيّة (ما يعمل عليه العميل الآن) لا من النسخة المحفوظة
+        // (قد تتأخّر مزامنتها)، مع بقاء اشتراط أن الدراسة محفوظة فعلاً (saved) ليصحّ ربط الطلب.
+        const isMeaningful = !!saved && String(state.projectInfo?.name || '').trim().length > 0;
+        if (!isMeaningful) { this._renderNoStudy(); return; }
         this.studyId = candidateId;
         this._renderCheckout();
     }
