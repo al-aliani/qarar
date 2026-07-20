@@ -191,7 +191,7 @@ export class MonshaatReportGenerator {
                 return wrap(`
                 <div class="monshaat-kpi">
                     <div class="monshaat-kpi-card"><div class="label">صافي القيمة الحالية</div><div class="value ${(ind.npv || 0) > 0 ? 'positive' : 'negative'}">${_fmt(ind.npv || 0)}</div></div>
-                    <div class="monshaat-kpi-card"><div class="label">معدل العائد الداخلي</div><div class="value">${((ind.irr || 0) * 100).toFixed(1)}%</div></div>
+                    <div class="monshaat-kpi-card"><div class="label">معدل العائد الداخلي</div><div class="value">${SAFE.pctText(ind.irr)}</div></div>
                     <div class="monshaat-kpi-card"><div class="label">فترة الاسترداد</div><div class="value">${SAFE.payback(ind.paybackPeriod ?? ind.payback)}</div></div>
                     <div class="monshaat-kpi-card"><div class="label">نقطة التعادل (ريال)</div><div class="value">${_fmt(ind.breakEvenPointValue || 0)}</div></div>
                 </div>

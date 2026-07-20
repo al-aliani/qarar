@@ -457,7 +457,10 @@ export class ExportMenu {
         // ═══ بوابة الجودة الصارمة (QA Gate) ═══
         // لا يخرج أي تقرير موجَّه للعميل/الممول إذا كانت الدراسة ناقصة أو متناقضة.
         // تُستثنى النسخ الاحتياطية للبيانات الخام فقط (JSON / مجلد / تصدير خارجي).
-        const RAW_EXPORTS = new Set(['json', 'folder_json', 'investor_dashboard', 'gsheets']);
+        // تدقيق جولة الموقع 2026-07-20 (بند #12): كان CSV غائباً عن هذه المجموعة فيدخل بوابة
+        // الجودة ويُحجب للدراسة الناقصة، بينما JSON (نفس الفئة «مجاني/بيانات خام») يمرّ — تناقض.
+        // CSV ملخّص بيانات خام للاستيراد لا تقرير نهائي، فيمرّ بلا حاجز كنيّة التصميم الموثّقة.
+        const RAW_EXPORTS = new Set(['json', 'csv', 'folder_json', 'investor_dashboard', 'gsheets']);
         if (!RAW_EXPORTS.has(type)) {
             let qa = null;
             try { qa = await runQAChecks(state, results); } catch (e) { console.warn('QA gate error:', e); }

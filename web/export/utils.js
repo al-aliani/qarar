@@ -2,6 +2,7 @@
  * Shared export utilities: sanitization, XLSX loader, date/num helpers.
  * Used by excelExporter, sectionExporter, csvExporter, and other export modules.
  */
+import { formatIrrPct } from '../js/utils/indicatorFormat.js';
 
 
 /**
@@ -66,8 +67,17 @@ export function safePayback(v) {
     return n.toFixed(1) + ' سنة';
 }
 
-/** {@see safeNum} {@see safePct} {@see safePayback} */
-export const SAFE = { num: safeNum, pct: safePct, payback: safePayback };
+/**
+ * نصّ النسبة الأمين: كسر → «15.5%»، لكن null/غير منتهٍ → «غير محقق» (لا «0.0%» كاذبة).
+ * تدقيق جولة الموقع 2026-07-20 (بند #1/#13): safePct تُرجع 0 للغائب فتُظهر IRR غير
+ * محقّق كأنه عائد حقيقي 0%. يفوّض للمصدر الموحّد formatIrrPct. صفر حقيقي يبقى «0.0%».
+ */
+export function safePctText(v, digits = 1) {
+    return formatIrrPct(v, digits);
+}
+
+/** {@see safeNum} {@see safePct} {@see safePayback} {@see safePctText} */
+export const SAFE = { num: safeNum, pct: safePct, payback: safePayback, pctText: safePctText };
 
 /**
  * @param {unknown} v

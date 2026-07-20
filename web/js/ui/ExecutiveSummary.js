@@ -6,6 +6,7 @@
 import { calculateStudy as runFullModel, resolveDecisionThresholds } from '../core/engine.js';
 import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
 import { hasMinimumRevenueData } from '../utils/dataSufficiency.js';
+import { formatIrrPct } from '../utils/indicatorFormat.js';
 import { calculateProjectScore } from '../core/scoring.js';
 import { checkDriversAgainstBenchmarks, SECTOR_BENCHMARKS, resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
 import { aiConnector } from '../services/AIConnector.js'; // Updated: use unified AI service
@@ -263,9 +264,9 @@ export class ExecutiveSummary {
         const highlights = [
             { label: 'إجمالي الاستثمار', value: this.formatCurrency(inv), icon: icon('i-bank') },
             { label: 'صافي القيمة الحالية', value: this.formatCurrency(ind.npv ?? 0), icon: icon('i-chart'), positive: (ind.npv ?? 0) > 0, term: 'NPV' },
-            { label: 'معدل العائد الداخلي', value: `${((ind.irr ?? 0) * 100).toFixed(1)}%`, icon: icon('i-chart'), term: 'IRR' },
+            { label: 'معدل العائد الداخلي', value: formatIrrPct(ind.irr), icon: icon('i-chart'), term: 'IRR' },
             { label: 'فترة الاسترداد', value: (payback != null && Number.isFinite(payback) && payback > 0 && payback < 900) ? `${payback.toFixed(1)} سنة` : 'غير محقق', icon: icon('i-clock'), term: 'PAYBACK' },
-            { label: 'العائد على الاستثمار', value: `${((ind.roi ?? 0) * 100).toFixed(0)}%`, icon: icon('i-chart'), term: 'ROI' }
+            { label: 'العائد على الاستثمار', value: formatIrrPct(ind.roi, 0), icon: icon('i-chart'), term: 'ROI' }
         ];
 
         return `

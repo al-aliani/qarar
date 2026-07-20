@@ -84,7 +84,7 @@ export class PitchDeckExporter {
                     </div>
                     <div style="padding:32px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:16px;text-align:center;">
                         <div style="font-size:14px;color:#94a3b8;margin-bottom:12px;">معدل العائد الداخلي</div>
-                        <div style="font-size:36px;font-weight:800;color:#60a5fa;">${((ind.irr || 0) * 100).toFixed(1)}%</div>
+                        <div style="font-size:36px;font-weight:800;color:#60a5fa;">${SAFE.pctText(ind.irr)}</div>
                     </div>
                     <div style="padding:32px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:16px;text-align:center;">
                         <div style="font-size:14px;color:#94a3b8;margin-bottom:12px;">فترة الاسترداد</div>

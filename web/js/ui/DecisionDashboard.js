@@ -1159,7 +1159,12 @@ export class DecisionDashboard {
         if (!d.hasBlockers && !d.isSaas && Math.abs(Number(d.fundingGap || 0)) <= gapThreshold && !d.loanAmount) return '';
 
         const statusClass = d.hasBlockers ? 'dd-status--warning' : 'dd-status--success';
-        const title = d.hasBlockers ? 'حواجز التمويل قبل البنك' : 'التمويل متوازن مبدئياً';
+        // العنوان يُشتق من إشارة الفجوة نفسها (كالرقاقة) لا من hasBlockers وحده — بلا ذلك
+        // كان الفائض (لا يرفع تنبيهاً) يُظهر «التمويل متوازن» بجوار رقاقة «فائض X» المتناقضة
+        // (تدقيق جولة الموقع 2026-07-20، بند #2). الفائض ليس حاجزاً، لكنه ليس «متوازناً» أيضاً.
+        const title = d.hasBlockers
+            ? 'حواجز التمويل قبل البنك'
+            : (Number(d.fundingGap || 0) < -gapThreshold ? 'تمويل فائض عن الحاجة' : 'التمويل متوازن مبدئياً');
         const bankLabel = d.bankReady ? 'جاهز بنكياً مبدئياً' : 'غير جاهز بنكياً بعد';
         const investorLabel = d.isSaas
             ? 'قراءة المستثمر: تعتمد على إثبات النمو، CAC، الاحتفاظ، والعقود المسبقة.'
