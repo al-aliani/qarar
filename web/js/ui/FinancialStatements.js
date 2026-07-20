@@ -6,7 +6,6 @@ import { calculateStudy as runFullModel } from '../core/engine.js';
 import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
 import ApexCharts from 'apexcharts';
 import { CountUp } from 'countup.js';
-import html2pdf from 'html2pdf.js';
 import { loadXLSX } from '../../export/utils.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
@@ -205,8 +204,10 @@ export class FinancialStatements {
         });
 
         // PDF Export
-        this.container.querySelector('#btnExportPdf')?.addEventListener('click', () => {
+        this.container.querySelector('#btnExportPdf')?.addEventListener('click', async () => {
             const element = this.container.querySelector('#financial-statements-content');
+            // استيراد كسول: html2pdf يحزم html2canvas+jsPDF (ثقيلة) — لا نُحمّلها إلا عند نقر التصدير فعلاً.
+            const { default: html2pdf } = await import('html2pdf.js');
             html2pdf().from(element).set({
                 margin: 10,
                 filename: 'القوائم_المالية.pdf',
