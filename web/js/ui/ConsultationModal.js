@@ -79,7 +79,7 @@ export class ConsultationModal {
                     ${hasBookingUrl
                         ? `<div class="flex gap-2 items-center">
                             <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn-block btn-book-consultation"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg> الذهاب لجدولة الموعد</a>
-                            <button type="button" class="btn btn--ghost btn--sm btn-edit-consultation-url" title="تعديل الرابط"><svg class="ic" aria-hidden="true"><use href="#i-pen"/></svg></button>
+                            <button type="button" class="btn btn--ghost btn--sm btn-edit-consultation-url" aria-label="تعديل رابط جدولة المواعيد" title="تعديل الرابط"><svg class="ic" aria-hidden="true"><use href="#i-pen"/></svg></button>
                            </div>`
                         : `<div class="consultation-url-setup">
                             <label class="text-sm font-medium mb-2 block">أدخل رابط جدولة المواعيد (Calendly / Cal.com)</label>

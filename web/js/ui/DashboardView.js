@@ -1067,10 +1067,10 @@ export class DashboardView {
 
                 <div class="dv-project__actions">
                     <button class="btn btn--sm btn--secondary dv-project__open btn-open" data-id="${project.id}">فتح</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-share" data-id="${project.id}" title="تصدير الدراسة (PDF/Excel/Word)">${icon('i-share')}</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-rename" data-id="${project.id}" data-name="${safeName}" title="إعادة تسمية">${icon('i-pen')}</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-duplicate" data-id="${project.id}" data-name="${safeName}" title="نسخ المشروع لبدء فرع جديد">${icon('i-clipboard')}</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn dv-iconbtn--danger btn-delete" data-id="${project.id}" title="نقل لسلة المحذوفات">${icon('i-trash')}</button>
+                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-share" data-id="${project.id}" aria-label="تصدير الدراسة (PDF/Excel/Word)" title="تصدير الدراسة (PDF/Excel/Word)">${icon('i-share')}</button>
+                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-rename" data-id="${project.id}" data-name="${safeName}" aria-label="إعادة تسمية" title="إعادة تسمية">${icon('i-pen')}</button>
+                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-duplicate" data-id="${project.id}" data-name="${safeName}" aria-label="نسخ المشروع لبدء فرع جديد" title="نسخ المشروع لبدء فرع جديد">${icon('i-clipboard')}</button>
+                    <button class="btn btn--sm btn--ghost dv-iconbtn dv-iconbtn--danger btn-delete" data-id="${project.id}" aria-label="نقل لسلة المحذوفات" title="نقل لسلة المحذوفات">${icon('i-trash')}</button>
                 </div>
             </div>
         `;
