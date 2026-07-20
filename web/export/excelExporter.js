@@ -182,7 +182,7 @@ export class ExcelExporter {
             ['التكاليف التشغيلية السنوية', SAFE.num(op.totalAnnual)],
             ['الإيرادات السنة الأولى', SAFE.num(proj?.total ?? proj?.revenue)],
             ['صافي القيمة الحالية', SAFE.num(ind.npv)],
-            ['معدل العائد الداخلي', (SAFE.pct(ind.irr) || 0).toFixed(1) + '%'],
+            ['معدل العائد الداخلي', SAFE.pctText(ind.irr)],
             ['فترة الاسترداد', SAFE.payback(ind.paybackPeriod ?? ind.payback)],
             ['نسبة DSCR', formatDscr(this.results?.indicators?.dscr)],
             ['', ''],
@@ -481,8 +481,6 @@ export class ExcelExporter {
         const dscr = this.results?.dscrAnalysis || [];
         const lang = this.lang;
 
-        const irrVal = SAFE.pct(ind.irr);
-        const roiVal = SAFE.pct(ind.roi);
         const marginVal = SAFE.pct(ind.profitMargin);
         // المحرك يعيد التعادل بوحدات سنوية — البند معنون «وحدات/شهر» فنقسم على 12.
         // (كان يسقط إلى breakEvenPointValue وهو مبلغ بالريال لا وحدات!)
@@ -495,9 +493,9 @@ export class ExcelExporter {
             ['', ''],
             ['المؤشرات الأساسية', ''],
             [t('npv', lang), SAFE.num(ind.npv)],
-            [t('irr', lang), irrVal.toFixed(1) + '%'],
+            [t('irr', lang), SAFE.pctText(ind.irr)],
             [t('payback_period', lang), SAFE.payback(ind.paybackPeriod ?? ind.payback)],
-            [t('roi', lang), roiVal.toFixed(1) + '%'],
+            [t('roi', lang), SAFE.pctText(ind.roi)],
             ['هامش الربح الصافي', marginVal.toFixed(1) + '%'],
             ['نقطة التعادل (وحدات/شهر)', Math.round(breakevenMonthly)],
             ['', ''],
@@ -781,14 +779,14 @@ export class ExcelExporter {
         const data = [
             ['السيناريوهات'],
             ['', ''],
-            ['السيناريو', 'تغيّر الإيراد', 'تغيّر التكلفة', 'الوصف', 'NPV', 'IRR %', 'فترة الاسترداد'],
+            ['السيناريو', 'تغيّر الإيراد', 'تغيّر التكلفة', 'الوصف', 'NPV', 'IRR', 'فترة الاسترداد'],
             [
                 'متشائم',
                 (SAFE.num(p.revenueChange) * 100).toFixed(0) + '%',
                 (SAFE.num(p.costChange) * 100).toFixed(0) + '%',
                 (p.description || '—').toString(),
                 SAFE.num(p.results?.indicators?.npv),
-                (SAFE.pct(p.results?.indicators?.irr) || 0).toFixed(1),
+                SAFE.pctText(p.results?.indicators?.irr),
                 payback(p),
             ],
             [
@@ -797,7 +795,7 @@ export class ExcelExporter {
                 (SAFE.num(b.costChange) * 100).toFixed(0) + '%',
                 (b.description || '—').toString(),
                 SAFE.num(b.results?.indicators?.npv),
-                (SAFE.pct(b.results?.indicators?.irr) || 0).toFixed(1),
+                SAFE.pctText(b.results?.indicators?.irr),
                 payback(b),
             ],
             [
@@ -806,7 +804,7 @@ export class ExcelExporter {
                 (SAFE.num(o.costChange) * 100).toFixed(0) + '%',
                 (o.description || '—').toString(),
                 SAFE.num(o.results?.indicators?.npv),
-                (SAFE.pct(o.results?.indicators?.irr) || 0).toFixed(1),
+                SAFE.pctText(o.results?.indicators?.irr),
                 payback(o),
             ],
         ];
@@ -875,7 +873,7 @@ export async function exportGrantCard(studyData, financialResults) {
         ['إجمالي الاستثمار (ريال)', SAFE.num(cap.total)],
         ['الإيرادات السنة الأولى (ريال)', SAFE.num(proj?.total ?? proj?.revenue)],
         ['صافي القيمة الحالية (ريال)', SAFE.num(ind.npv)],
-        ['معدل العائد الداخلي %', (SAFE.pct(ind.irr) || 0).toFixed(1) + '%'],
+        ['معدل العائد الداخلي %', SAFE.pctText(ind.irr)],
         ['فترة الاسترداد', SAFE.payback(ind.paybackPeriod ?? ind.payback)],
         ['', ''],
         ['تاريخ التصدير', formatExportDateTime()],

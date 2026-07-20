@@ -42,7 +42,7 @@ export function exportToCSV(studyData, financialResults, filename = 'feasibility
         ['التكاليف التشغيلية السنوية', SAFE.num(op.totalAnnual)],
         ['الإيرادات السنة الأولى', SAFE.num(proj?.total ?? proj?.revenue)],
         ['صافي القيمة الحالية', SAFE.num(ind.npv)],
-        ['معدل العائد الداخلي', (SAFE.pct(ind.irr) || 0).toFixed(1) + '%'],
+        ['معدل العائد الداخلي', SAFE.pctText(ind.irr)],
         ['فترة الاسترداد', SAFE.payback(ind.paybackPeriod ?? ind.payback)],
         ['نسبة DSCR', formatDscr(ind.dscr)],
         ['', ''],
