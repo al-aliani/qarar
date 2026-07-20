@@ -4,6 +4,7 @@
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { calculateProjectScore } from '../core/scoring.js';
+import { formatIrrPct } from '../utils/indicatorFormat.js';
 
 export class PresentationView {
     constructor(store) {
@@ -162,7 +163,7 @@ export class PresentationView {
                 title: 'أبرز المؤشرات المالية (5 سنوات)',
                 items: [
                     { label: 'صافي القيمة الحالية', value: this.formatCurrency(results.indicators?.npv), color: 'text-green-400' },
-                    { label: 'معدل العائد الداخلي', value: ((results.indicators?.irr || 0) * 100).toFixed(1) + '%', color: 'text-blue-400' },
+                    { label: 'معدل العائد الداخلي', value: formatIrrPct(results.indicators?.irr), color: 'text-blue-400' },
                     { label: 'فترة الاسترداد', value: this.formatPayback(results.indicators?.paybackPeriod ?? results.indicators?.payback), color: 'text-purple-400' },
                     { label: 'متوسط هامش الربح', value: (((results.indicators?.netMargin ?? (results.incomeStatement?.[0]?.revenue > 0 ? (results.incomeStatement[0].netIncome / results.incomeStatement[0].revenue) : 0)) || 0) * 100).toFixed(1) + '%', color: 'text-yellow-400' },
                 ]
