@@ -69,9 +69,11 @@ export function explainDecisionBreakers(study = {}, results = {}) {
             path: 'financing.sources.bankLoan.amount',
             title: 'تغطية خدمة الدين',
             tooltipKey: 'DSCR',
-            explanation: dscr == null
-                ? 'DSCR غير قابل للحساب غالباً بسبب EBITDA سالبة أو صفرية في السنة الأولى.'
-                : `DSCR الحالي ${num(dscr).toFixed(2)}x أقل من المستهدف ${targetDSCR.toFixed(2)}x.`,
+            explanation: dscr != null
+                ? `DSCR الحالي ${num(dscr).toFixed(2)}x أقل من المستهدف ${targetDSCR.toFixed(2)}x.`
+                : (indicators.dscrReason === 'no_debt_service'
+                    ? 'DSCR غير قابل للحساب لعدم وجود خدمة دين في السنة الأولى (لا قرض أو فترة سماح كاملة).'
+                    : 'DSCR غير قابل للحساب لأن CFADS (النقد المتاح لخدمة الدين = EBITDA − الزكاة/الضريبة − الإحلال) صفر أو سالب — لا يعني بالضرورة أن EBITDA سالبة.'),
             action: 'خفّض مبلغ القرض، زد فترة السماح، ارفع رأس المال الذاتي، أو أثبت إيرادات مسبقة.'
         });
     }

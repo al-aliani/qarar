@@ -1144,6 +1144,7 @@ export class DecisionDashboard {
             fundingGap,
             fundingGapThreshold,
             dscr,
+            dscrReason: results?.indicators?.dscrReason ?? null,
             targetDSCR,
             loanAmount,
             y1Ebitda,
@@ -1175,9 +1176,11 @@ export class DecisionDashboard {
                 ? `فائض ${this.formatCurrency(Math.abs(d.fundingGap))}`
                 : 'متوازن';
         const dscrLabel = d.dscr == null ? 'غير قابل للحساب' : `${Number(d.dscr).toFixed(2)}x`;
-        const dscrTitle = d.dscr == null
-            ? 'DSCR = EBITDA ÷ أقساط الدين. EBITDA السنة الأولى سالبة أو صفرية هنا، فالنسبة غير قابلة للحساب فعلياً — راجع بطاقة EBITDA بجانبها.'
-            : 'DSCR = EBITDA ÷ أقساط الدين (أصل + فائدة). البنوك عادة تطلب 1.25x فأعلى.';
+        const dscrTitle = d.dscr != null
+            ? 'DSCR = CFADS ÷ أقساط الدين (أصل + فائدة). البنوك عادة تطلب 1.25x فأعلى.'
+            : (d.dscrReason === 'no_debt_service'
+                ? 'DSCR غير قابل للحساب لعدم وجود خدمة دين في السنة الأولى (لا قرض أو فترة سماح كاملة).'
+                : 'DSCR غير قابل للحساب لأن CFADS (النقد المتاح لخدمة الدين = EBITDA − الزكاة/الضريبة − الإحلال) صفر أو سالب في السنة الأولى — لا يعني بالضرورة أن EBITDA سالبة.');
 
         return `
             <div class="card dd-status ${statusClass}">
