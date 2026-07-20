@@ -1112,8 +1112,8 @@ export class DashboardView {
         const btnLogin = this.container.querySelector('#dashboardLogin');
         if (btnLogin) {
             btnLogin.addEventListener('click', async () => {
-                const { PhoneAuthModal } = await import('./PhoneAuthModal.js');
-                new PhoneAuthModal('authModalContainer', {
+                const { AuthModal } = await import('./AuthModalStub.js');
+                new AuthModal('authModalContainer', {
                     onSuccess: () => this.render() // Refresh dashboard on success
                 }).open();
             });
