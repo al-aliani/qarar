@@ -21,8 +21,6 @@ import { createStripeCheckout } from '../_shared/providers/stripe.ts';
 import { createTamaraCheckout } from '../_shared/providers/tamara.ts';
 import { selectedAddons } from '../_shared/catalog.ts';
 
-const APP_ORIGIN = Deno.env.get('APP_ORIGIN') || 'http://localhost:5173';
-
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -32,6 +30,18 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405);
+
+  // أمني/تشغيلي: منه تُبنى روابط العودة بعد الدفع لدى Moyasar/Stripe/Tamara. الافتراضي
+  // الصامت 'http://localhost:5173' كان بلوكر إطلاق: إن نُسي سرّ APP_ORIGIN في بيئة
+  // الإنتاج، يُعاد توجيه كل عميل دفع فعلاً إلى localhost (صفحة ميتة) فيظن أنه دفع بلا
+  // نتيجة. البديل الآمن: اشتقاق الأصل من ترويسة Origin للطلب — يضبطها المتصفح ولا يمكن
+  // لسكربت الصفحة تزويرها عبر الأصول، فتعكس موقع الاستدعاء الحقيقي؛ ورابط العودة يحمل
+  // فقط ?order=<id> لصفحة حالة (الفتح الفعلي عبر webhook موقّع)، فلا خطر إعادة توجيه.
+  const configuredOrigin = Deno.env.get('APP_ORIGIN');
+  const APP_ORIGIN = configuredOrigin || req.headers.get('origin') || 'http://localhost:5173';
+  if (!configuredOrigin) {
+    console.warn('[create-checkout] APP_ORIGIN غير مضبوط — اشتقاق الأصل من ترويسة الطلب:', APP_ORIGIN);
+  }
 
   const authHeader = req.headers.get('Authorization') || '';
   const jwt = authHeader.replace(/^Bearer\s+/i, '');
