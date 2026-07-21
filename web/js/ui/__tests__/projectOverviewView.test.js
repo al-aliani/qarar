@@ -82,6 +82,11 @@ describe('ProjectOverviewView — بوابة «لا قرار على بيانات
         expect(html).toContain('لا يوجد قرار بعد');
         expect(html).not.toContain('is-nogo');
         expect(html).not.toContain('لماذا هذا القرار');
+        // تدقيق 2026-07-20: الخلاصة التنفيذية تقرأ results.decision الخام (='NO-GO')
+        // فكانت تُسرّب «القرار يشير إلى عدم الجدوى» تحت شارة «لا يوجد قرار بعد» على نفس
+        // الشاشة — تناقض. الملخّص الآن مُبوَّب بنفس شرط الشارة فيختفي كاملاً على الدراسة الصفرية.
+        expect(html).not.toContain('عدم الجدوى');
+        expect(html).not.toContain('الخلاصة التنفيذية');
     });
 
     it('يعرض القرار وأسبابه حين ينتجهما المحرك فعلاً', async () => {

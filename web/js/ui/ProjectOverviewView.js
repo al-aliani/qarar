@@ -114,6 +114,11 @@ export class ProjectOverviewView {
         const indicators = getOfficialIndicators(results || {});
         const completeness = calculateStudyCompleteness(data);
         // القرار يُعرض فقط حين يكون للنموذج مخرَج فعلي — لا لمجرّد أن المحرك أعاد قيمة.
+        // نفس `decision` يبوِّب الخلاصة التنفيذية أدناه (السطر 124): generateExecutiveSummary
+        // تقرأ results.decision الخام (='NO-GO' لدراسة صفرية) فتُصدر «القرار يشير إلى عدم
+        // الجدوى» — عرضها تحت شارة «لا يوجد قرار بعد» على نفس الشاشة تناقض. فنُخفي الملخّص
+        // كاملاً ما لم يوجد قرار حقيقي (تدقيق 2026-07-20: تسرّب سردي كان يظهر رغم أن
+        // الشارة والمؤشرات مُبوَّبتان صحيحاً — الثغرة كانت في الملخّص وحده).
         const decision = hasRealModel(indicators) ? (results?.decision || null) : null;
 
         this.container.innerHTML = `
@@ -121,7 +126,7 @@ export class ProjectOverviewView {
                 ${this._renderHeader(data, completeness, headerName)}
                 ${decision ? this._renderDecision(decision, results) : this._renderInsufficient(completeness)}
                 ${this._renderIndicators(indicators)}
-                ${this._renderSummary(data, results)}
+                ${decision ? this._renderSummary(data, results) : ''}
                 ${this._renderActions()}
             </div>
         `;
