@@ -1909,8 +1909,9 @@ document.addEventListener('DOMContentLoaded', async () => {
               toast.success('تم فتح نسخة تجريبية. يمكنك تعديل الأرقام بأمان ولن تتأثر دراسة المالك الأصلي.', 8000);
           });
           
-          // Redirect to wizard start
-          window.location.hash = '#/0';
+          // Redirect to wizard start — المسار الصحيح 'step/N' (لا '0' المجرّد الذي
+          // لا يطابق أي فرع في routeToView فيسقط لصفحة «غير موجودة»).
+          window.location.hash = '#/step/0';
           return;
       }
 
