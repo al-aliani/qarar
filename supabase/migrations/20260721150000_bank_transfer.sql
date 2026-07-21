@@ -43,6 +43,37 @@ $$;
 
 grant execute on function public.admin_confirm_bank_transfer(uuid) to authenticated;
 
+-- 3) سرد التحويلات البنكية المعلّقة للأدمن (للتأكيد من لوحة الإدارة بدل SQL يدوي).
+create or replace function public.admin_list_pending_bank_transfers()
+returns table (
+  order_id uuid,
+  tier text,
+  amount_sar numeric,
+  study_id uuid,
+  study_title text,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+begin
+  if not public.is_admin(auth.uid()) then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+    select o.id, o.tier, coalesce(o.total_sar, o.amount_sar), o.study_id, s.title, o.created_at
+    from public.orders o
+    left join public.studies s on s.id = o.study_id
+    where o.provider = 'bank_transfer' and o.status = 'pending'
+    order by o.created_at desc;
+end;
+$$;
+
+grant execute on function public.admin_list_pending_bank_transfers() to authenticated;
+
 -- ══════════════════════════════════════════════════════════════════════════
 -- تحقق يدوي بعد التطبيق (SQL Editor):
 --   -- أدمن يؤكّد طلب تحويل بنكي (يجب أن ينجح):

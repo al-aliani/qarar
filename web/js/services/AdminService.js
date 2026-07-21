@@ -47,6 +47,16 @@ export function getProductFunnelStats(days = 30) {
     return callAdminRpc('admin_product_funnel_stats', { days });
 }
 
+/** التحويلات البنكية المعلّقة بانتظار تأكيد وصول الحوالة (قناة الدفع اليدوية). */
+export function getPendingBankTransfers() {
+    return callAdminRpc('admin_list_pending_bank_transfers');
+}
+
+/** تأكيد وصول حوالة بنكية → الطلب paid ويُفتح التصدير للعميل. @param {string} orderId */
+export function confirmBankTransfer(orderId) {
+    return callAdminRpc('admin_confirm_bank_transfer', { target_order_id: orderId });
+}
+
 /**
  * @param {string|null} eventName - فلترة حسب اسم حدث معيّن، أو null لكل الأحداث
  * @param {number} days - نافذة زمنية بالأيام (افتراضي 30)

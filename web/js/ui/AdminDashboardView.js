@@ -36,6 +36,7 @@ const TABS = [
     { key: 'platform', label: 'الجمهور والمنصات' },
     { key: 'experiments', label: 'التجارب A/B' },
     { key: 'subscriptions', label: 'الاشتراكات والباقات' },
+    { key: 'bank_transfers', label: 'التحويلات البنكية' },
     { key: 'satisfaction', label: 'الرضا والآراء' },
     { key: 'team', label: 'الفريق والدعم' },
     { key: 'content', label: 'المحتوى والصفحات' },
@@ -185,6 +186,11 @@ export class AdminDashboardView {
 
         if (tabKey === 'subscriptions') {
             await this._renderSubscriptionsTab(contentEl);
+            return;
+        }
+
+        if (tabKey === 'bank_transfers') {
+            await this._renderBankTransfersTab(contentEl);
             return;
         }
 
@@ -1953,6 +1959,53 @@ export class AdminDashboardView {
                 await this._renderExperimentsTab(contentEl);
             });
         }
+    }
+
+    async _renderBankTransfersTab(contentEl) {
+        contentEl.innerHTML = '<p class="admin-loading">جارٍ تحميل التحويلات البنكية المعلّقة…</p>';
+        const res = await AdminService.getPendingBankTransfers();
+        if (!res.ok) {
+            contentEl.innerHTML = `<p class="admin-error">تعذّر تحميل التحويلات البنكية: ${this._esc(res.error)}</p>`;
+            return;
+        }
+        const rows = Array.isArray(res.data) ? res.data : [];
+        const TIER = { self: 'ذاتي', reviewed: 'مراجَع بخبير', full: 'خدمة كاملة' };
+        const head = `<div class="admin-behavior-controls"><div><span class="admin-eyebrow">التحويلات البنكية</span><h3 class="admin-card__title" style="margin:4px 0 0;">طلبات بانتظار تأكيد وصول الحوالة (${rows.length})</h3></div></div>`;
+        if (rows.length === 0) {
+            contentEl.innerHTML = `${head}<p class="admin-table__empty">لا توجد تحويلات بنكية معلّقة حالياً.</p>`;
+            return;
+        }
+        const body = rows.map((r) => `
+            <tr>
+                <td>${this._esc(r.study_title || '—')}</td>
+                <td>${this._esc(TIER[r.tier] || r.tier || '—')}</td>
+                <td>${this._esc(Number(r.amount_sar || 0).toLocaleString('en-US'))} ريال</td>
+                <td dir="ltr">${this._esc(String(r.order_id || '').slice(0, 8))}</td>
+                <td>${this._esc(r.created_at ? new Date(r.created_at).toLocaleDateString('ar-SA-u-nu-latn') : '—')}</td>
+                <td><button type="button" class="btn btn--sm btn--primary bank-confirm-btn" data-order="${this._esc(r.order_id)}">تأكيد وصول الحوالة</button></td>
+            </tr>`).join('');
+        contentEl.innerHTML = `${head}
+            <p class="text-sm text-muted mb-2">أكّد الطلب بعد التحقق فعلياً من وصول المبلغ إلى حساب الشركة — سيُفتح التصدير للعميل فوراً.</p>
+            <div class="admin-table-wrap"><table class="admin-table">
+                <thead><tr><th>الدراسة</th><th>الباقة</th><th>المبلغ</th><th>رقم الطلب</th><th>التاريخ</th><th>إجراء</th></tr></thead>
+                <tbody>${body}</tbody>
+            </table></div>`;
+        contentEl.querySelectorAll('.bank-confirm-btn').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                if (!window.confirm('هل تأكّدت من وصول الحوالة إلى حساب الشركة؟ سيُفتح التصدير للعميل فوراً.')) return;
+                btn.disabled = true;
+                btn.textContent = 'جارٍ التأكيد...';
+                const r = await AdminService.confirmBankTransfer(btn.dataset.order);
+                if (r.ok) {
+                    toast.success('تم تأكيد الدفع وفتح التصدير للعميل.');
+                    await this._renderBankTransfersTab(contentEl);
+                } else {
+                    toast.error(r.error || 'تعذّر تأكيد التحويل.');
+                    btn.disabled = false;
+                    btn.textContent = 'تأكيد وصول الحوالة';
+                }
+            });
+        });
     }
 
     async _renderSubscriptionsTab(contentEl) {
