@@ -1793,6 +1793,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       onIdle: async () => {
         toast.info('انتهت الجلسة بسبب الخمول (30 دقيقة).');
         try {
+          // بلوكر #31: لا يوجد مستخدم حاضر هنا ليؤكّد تحذير دراسات غير مُزامَنة
+          // (كزر الخروج اليدوي) — نحاول رفعها للسحابة أولاً بأفضل جهد بينما الجلسة
+          // لا تزال صالحة، قبل مسح signOut() غير المشروط لـfeas_project_* المحلية.
+          const { getUnsyncedLocalProjects, trySyncUnsyncedProjects } = await import('./js/utils/signOutGuard.js');
+          const unsynced = await getUnsyncedLocalProjects();
+          if (unsynced.length) await trySyncUnsyncedProjects(unsynced);
           const { signOut } = await import('./supabaseClient.js');
           await signOut();
         } catch (_) { }

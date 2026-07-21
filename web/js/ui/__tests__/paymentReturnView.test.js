@@ -8,6 +8,11 @@ vi.mock('../../services/PaymentService.js', () => ({
     getOrderStatus: (...a) => getOrderStatusMock(...a),
 }));
 
+const captureMessageMock = vi.fn();
+vi.mock('../../utils/monitoring.js', () => ({
+    monitoring: { captureMessage: captureMessageMock },
+}));
+
 // تدقيق 2026-07-10: buildWhatsAppLink صار يُعيد null بلا رقم مضبوط (تراجع رشيق) بدل
 // رابط مكسور. WHATSAPP_NUMBER يُحسَب مرة واحدة عند تحميل config.js، فنُموِّه الدالة
 // مباشرة لاختبار مسار "الرقم مضبوط فعلياً" بمعزل عن توقيت تحميل الوحدات.
@@ -23,6 +28,24 @@ describe('PaymentReturnView', () => {
     beforeEach(() => {
         document.body.innerHTML = '<div id="root"></div>';
         getOrderStatusMock.mockReset();
+        captureMessageMock.mockClear();
+    });
+
+    it('بلوكر #43: حالة failed تُبلَّغ للمراقبة (لا تختفي بصفحة العميل فقط)', async () => {
+        getOrderStatusMock.mockResolvedValue('failed');
+        const { PaymentReturnView } = await import('../PaymentReturnView.js');
+        const view = new PaymentReturnView('root', { orderId: 'order-1' });
+        await view.render();
+        expect(captureMessageMock).toHaveBeenCalledTimes(1);
+        expect(captureMessageMock).toHaveBeenCalledWith(expect.stringContaining('order-1'), 'warning', { orderId: 'order-1', status: 'failed' });
+    });
+
+    it('بلوكر #43: حالة paid لا تستدعي المراقبة (لا حاجة لتنبيه على نجاح)', async () => {
+        getOrderStatusMock.mockResolvedValue('paid');
+        const { PaymentReturnView } = await import('../PaymentReturnView.js');
+        const view = new PaymentReturnView('root', { orderId: 'order-1' });
+        await view.render();
+        expect(captureMessageMock).not.toHaveBeenCalled();
     });
 
     it('بلا orderId: يعرض خطأً فوراً بلا أي استطلاع', async () => {

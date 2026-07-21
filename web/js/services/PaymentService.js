@@ -100,6 +100,13 @@ export async function listOrders() {
     const { user } = await getAuthUser();
     if (!user) return [];
 
+    // تنظيف ضمني: طلبات pending قديمة (>24 ساعة، غير تحويل بنكي) صارت متروكة —
+    // بلا cron خارجي، فأول مرة يفتح المستخدم سجل فواتيره ننهي صلاحيتها فعلياً
+    // (RPC مقيّدة بـauth.uid() ضمن الدالة نفسها، انظر migration
+    // 20260721200000_expire_stale_pending_orders.sql). فشلها لا يمنع عرض السجل.
+    const { error: expireError } = await supabase.rpc('expire_stale_pending_orders');
+    if (expireError) console.warn('[PaymentService] فشل تنظيف الطلبات المنتهية:', expireError.message);
+
     const { data, error } = await supabase
         .from('orders')
         .select('id, tier, amount_sar, subtotal_sar, discount_sar, vat_sar, total_sar, amount_paid_sar, amount_due_sar, coupon_code, items, currency, status, study_id, created_at, paid_at')

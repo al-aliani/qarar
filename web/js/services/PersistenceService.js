@@ -97,6 +97,12 @@ export class PersistenceService {
             return { success: true, location: 'local' };
         } catch (e) {
             console.error("PersistenceService.save error:", e);
+            // بلوكر #43: فشل حفظ سحابي كان يُسجَّل بconsole فقط — لا يصل لأي مراقبة
+            // (لا Sentry ولا سجل تدقيق)، فيختفي صامتاً حتى لو Sentry مضبوط فعلياً.
+            try {
+                const { monitoring } = await import('../utils/monitoring.js');
+                monitoring.captureException(e, { source: 'PersistenceService.save', studyId: id });
+            } catch (_) { /* لا نمنع نجاح الحفظ المحلي بسبب فشل الإبلاغ نفسه */ }
             // إبلاغ صادق: الحفظ المحلي نجح لكن المزامنة السحابية فشلت —
             // كان يُبلَّغ success بلا تمييز فتظهر رسالة «تم الحفظ» رغم فشل السحابة
             return { success: true, location: 'local', cloudSyncFailed: true, error: `Cloud sync failed: ${e.message}` };

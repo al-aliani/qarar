@@ -1209,32 +1209,11 @@ export class DashboardView {
             window.location.hash = '#/billing';
         });
 
-        // Logout
+        // Logout — تحذير الدراسات غير المُزامَنة موحَّد بـsignOutGuard.js (بلوكر
+        // #30/#31)، يشاركه أيضاً زر صفحة الحساب وحاول الآن دفع المسار الثالث.
         this.container.querySelector('#btnLogout')?.addEventListener('click', async () => {
-            // signOut() يمسح كل مفاتيح feas_project_ من هذا الجهاز (مقصود لخصوصية
-            // الأجهزة المشتركة) — لكن كان يفعل ذلك بلا أي تحذير عن دراسات لم تُزامَن
-            // مع السحابة بعد، فتُفقَد نهائياً. نتحقق أولاً ونحذّر تحديداً إن وُجدت.
-            let unsyncedCount = 0;
-            try {
-                const all = await ProjectManager.getAllProjects();
-                unsyncedCount = all.filter(p => p.source === 'local').length;
-            } catch (_) { /* تجاهل: لا نمنع الخروج بسبب فشل الفحص نفسه */ }
-
-            const result = await Swal.fire({
-                title: 'هل أنت متأكد؟',
-                text: unsyncedCount > 0
-                    ? `لديك ${unsyncedCount} دراسة محفوظة على هذا الجهاز فقط ولم تُزامَن مع السحابة — ستُحذف نهائياً عند تسجيل الخروج. صدّر نسخة احتياطية أولاً إن أردت الاحتفاظ بها.`
-                    : 'هل تود تسجيل الخروج؟',
-                icon: unsyncedCount > 0 ? 'error' : 'warning',
-                showCancelButton: true,
-                confirmButtonText: unsyncedCount > 0 ? 'نعم، احذف وسجّل الخروج' : 'نعم، سجّل الخروج',
-                cancelButtonText: 'إلغاء',
-                customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
-                buttonsStyling: false
-            });
-            if (result.isConfirmed) {
-                await signOut();
-            }
+            const { confirmAndSignOut } = await import('../utils/signOutGuard.js');
+            await confirmAndSignOut(Swal);
         });
 
         // New Project (Standard / Full Study)
