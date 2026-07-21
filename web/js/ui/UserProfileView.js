@@ -3,7 +3,7 @@
  * تعرض في المنطقة الرئيسية عند طلب "حسابي"
  */
 
-import { getSupabaseClient, getAuthUser, updateUserDisplayName, getUserProfile, updateUserProfile, signOut } from '../../supabaseClient.js';
+import { getSupabaseClient, getAuthUser, updateUserDisplayName, getUserProfile, updateUserProfile } from '../../supabaseClient.js';
 import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
 import { toast } from '../utils/toast.js';
 import { trackEvent } from '../utils/analytics.js';
@@ -51,7 +51,7 @@ export class UserProfileView {
         // حذف الحساب: نُحيله لطلب عبر الدعم بدل حذف تلقائي فوري — بعض بياناتك
         // (الفواتير) يجب الاحتفاظ بها نظاماً حتى بعد طلب الحذف (انظر privacy.html
         // §6 "الاحتفاظ والأمان")، فالحذف الفوري الكامل قد يخالف هذا الالتزام نفسه.
-        const deleteAccountMailto = 'mailto:bin.sahib.est@gmail.com'
+        const deleteAccountMailto = 'mailto:contact@shafaq.info'
             + '?subject=' + encodeURIComponent('طلب حذف حسابي — منصة قرار')
             + '&body=' + encodeURIComponent('أرغب في حذف حسابي نهائياً من منصة قرار.\nالبريد المرتبط بالحساب: ' + (user.email || user.phone || ''));
 
@@ -195,9 +195,18 @@ export class UserProfileView {
         });
 
         document.getElementById('btnUserProfileLogout')?.addEventListener('click', async () => {
-            auditLog(ACTIONS.LOGOUT, {});
-            toast.info('تم تسجيل الخروج');
-            await signOut();
+            // بلوكر #30: كان يمسح دراسات محلية غير مُزامَنة بلا تحذير — نفس حماية
+            // زر لوحة التحكم الآن عبر signOutGuard.js المشترك.
+            const [{ default: Swal }, { confirmAndSignOut }] = await Promise.all([
+                import('sweetalert2'),
+                import('../utils/signOutGuard.js'),
+            ]);
+            await confirmAndSignOut(Swal, {
+                beforeSignOut: () => {
+                    auditLog(ACTIONS.LOGOUT, {});
+                    toast.info('تم تسجيل الخروج');
+                },
+            });
         });
     }
 }

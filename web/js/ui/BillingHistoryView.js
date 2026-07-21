@@ -21,6 +21,7 @@ const STATUS_META = {
     paid: { label: 'مدفوع', badge: 'badge--success' },
     failed: { label: 'فشل', badge: 'badge--danger' },
     refunded: { label: 'مسترَد', badge: 'badge--neutral' },
+    expired: { label: 'منتهي الصلاحية', badge: 'badge--neutral' },
 };
 
 function formatDate(iso) {

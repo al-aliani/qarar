@@ -12,6 +12,7 @@
 import { getOrderStatus } from '../services/PaymentService.js';
 import { buildWhatsAppLink } from '../config.js';
 import { trackEvent } from '../utils/analytics.js';
+import { monitoring } from '../utils/monitoring.js';
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_ATTEMPTS = 10; // ~20 ثانية إجمالاً قبل عرض رسالة "لا يزال قيد المعالجة"
@@ -52,7 +53,12 @@ export class PaymentReturnView {
     _renderState(state, extraMessage = '') {
         if (!this.container) return;
         if (state === 'paid') trackEvent('payment_success', { orderId: this.orderId });
-        if (state === 'failed' || state === 'refunded') trackEvent('payment_error', { orderId: this.orderId, status: state });
+        if (state === 'failed' || state === 'refunded') {
+            trackEvent('payment_error', { orderId: this.orderId, status: state });
+            // بلوكر #43: فشل/استرداد دفع لم يكن يصل لأي مراقبة (لا Sentry ولا حتى
+            // console مميَّز) — كان يظهر للعميل فقط بصفحة العودة، بلا أي أثر يراه الأدمن.
+            monitoring.captureMessage(`Payment ${state}: order ${this.orderId}`, 'warning', { orderId: this.orderId, status: state });
+        }
         const messages = {
             loading: { icon: 'i-reset', title: 'جاري تأكيد الدفع...', body: 'لحظات فقط بينما نتحقق من نجاح عملية الدفع.', showContinue: false, showWhatsApp: false },
             paid: { icon: 'i-check', title: 'تم الدفع بنجاح', body: 'تم تفعيل الوصول لتصدير التقرير النهائي لهذه الدراسة.', showContinue: true, showWhatsApp: false },

@@ -56,10 +56,13 @@ describe('كشف الاسترداد في مُحلِّلات أحداث المز�
     expect(parseStripe({ type: 'payment_intent.payment_failed' })).toBe('failed');
   });
 
-  it('Tamara: refunded/partially_refunded → refunded (وتبقى approved=paid)', () => {
+  it('Tamara: refunded/partially_refunded → refunded (وapproved لم يعد يُعامَل كـpaid — بلوكر #12)', () => {
     expect(parseTamara({ order_status: 'refunded' })).toBe('refunded');
     expect(parseTamara({ order_status: 'partially_refunded' })).toBe('refunded');
-    expect(parseTamara({ order_status: 'approved' })).toBe('paid');
+    // بلوكر #12 (تدقيق 2026-07-21): 'approved' موافقة/حجز فقط لا قبض فعلي — لم يعد
+    // يُعامَل كـ'paid' (كان يفتح تصدير التقرير قبل تأكيد قبض المبلغ فعلياً).
+    expect(parseTamara({ order_status: 'approved' })).toBe('unknown');
+    expect(parseTamara({ order_status: 'captured' })).toBe('paid');
     expect(parseTamara({ order_status: 'declined' })).toBe('failed');
   });
 });

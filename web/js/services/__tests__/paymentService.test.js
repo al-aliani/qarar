@@ -2,18 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const getAuthUserMock = vi.fn(async () => ({ user: null }));
 const invokeMock = vi.fn(async () => ({ data: null, error: null }));
+const rpcMock = vi.fn(async () => ({ data: null, error: null }));
 const selectChain = {
     select: vi.fn(),
     eq: vi.fn(),
     limit: vi.fn(),
     single: vi.fn(),
+    order: vi.fn(),
 };
 const fromMock = vi.fn(() => selectChain);
 
 vi.mock('../../../supabaseClient.js', () => ({
     getSupabaseClient: vi.fn(async () => ({
         ok: true,
-        supabase: { functions: { invoke: invokeMock }, from: fromMock },
+        supabase: { functions: { invoke: invokeMock }, from: fromMock, rpc: rpcMock },
     })),
     getAuthUser: (...a) => getAuthUserMock(...a),
 }));
@@ -124,5 +126,36 @@ describe('getOrderStatus', () => {
         selectChain.single.mockResolvedValue({ data: null, error: { message: 'not found' } });
         const { getOrderStatus } = await import('../PaymentService.js');
         expect(await getOrderStatus('missing')).toBeNull();
+    });
+});
+
+describe('listOrders', () => {
+    beforeEach(() => {
+        getAuthUserMock.mockReset().mockResolvedValue({ user: { id: 'u1' } });
+        rpcMock.mockReset().mockResolvedValue({ data: null, error: null });
+        selectChain.select.mockReturnThis();
+        selectChain.order.mockResolvedValue({ data: [{ id: 'order-1', status: 'expired' }], error: null });
+        fromMock.mockClear();
+    });
+
+    it('ينظّف الطلبات المنتهية (RPC) قبل جلب السجل — بلوكر #9', async () => {
+        const { listOrders } = await import('../PaymentService.js');
+        await listOrders();
+        expect(rpcMock).toHaveBeenCalledWith('expire_stale_pending_orders');
+        expect(fromMock).toHaveBeenCalledWith('orders');
+    });
+
+    it('فشل تنظيف الـRPC لا يمنع عرض السجل', async () => {
+        rpcMock.mockResolvedValue({ data: null, error: { message: 'rpc down' } });
+        const { listOrders } = await import('../PaymentService.js');
+        const result = await listOrders();
+        expect(result).toEqual([{ id: 'order-1', status: 'expired' }]);
+    });
+
+    it('زائر غير مسجَّل ⇒ [] بلا استدعاء RPC أو استعلام', async () => {
+        getAuthUserMock.mockResolvedValue({ user: null });
+        const { listOrders } = await import('../PaymentService.js');
+        expect(await listOrders()).toEqual([]);
+        expect(rpcMock).not.toHaveBeenCalled();
     });
 });

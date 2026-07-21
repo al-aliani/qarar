@@ -16,6 +16,12 @@ export interface TamaraCheckoutParams {
   amountSar: number;
   description: string;
   callbackUrl: string;
+  /**
+   * رابط إشعار الخادم-إلى-خادم (webhook-tamara)، منفصل عمداً عن callbackUrl
+   * (صفحة SPA بالمتصفح). خلطهما كان بلوكر #12: تمارا كانت تُرسل الإشعار
+   * الحقيقي لصفحة أمامية لا تستقبله أبداً، فلا يصل التأكيد للخادم إطلاقاً.
+   */
+  notificationUrl: string;
   metadata: Record<string, string>;
 }
 
@@ -55,7 +61,7 @@ export async function createTamaraCheckout(
         success: params.callbackUrl,
         failure: params.callbackUrl,
         cancel: params.callbackUrl,
-        notification: params.callbackUrl,
+        notification: params.notificationUrl,
       },
       metadata: params.metadata,
     }),
@@ -76,7 +82,12 @@ export async function createTamaraCheckout(
 /** استخراج الحالة من حمولة webhook تمارا (order_status: approved/captured/declined/...). */
 export function parseTamaraWebhookStatus(payload: any): 'paid' | 'failed' | 'refunded' | 'unknown' {
   const status = String(payload?.order_status || payload?.status || '').toLowerCase();
-  if (status === 'approved' || status === 'captured' || status === 'fully_captured') return 'paid';
+  // بلوكر #12: 'approved' يعني تمارا وافقت/حجزت المبلغ فقط — القبض الفعلي (capture)
+  // خطوة منفصلة قد لم تصل بعد. اعتبارها 'paid' كان يفتح تصدير التقرير قبل تأكيد قبض
+  // المبلغ فعلياً. ننتظر فقط captured/fully_captured (الإشارة الوحيدة لقبض حقيقي حسب
+  // توثيق تمارا) — سواء وصلت تلقائياً (حساب auto-capture) أو لاحقاً بعد Capture API
+  // يدوي، لا نفترض أياً منهما، ننتظر الحدث الفعلي فقط.
+  if (status === 'captured' || status === 'fully_captured') return 'paid';
   // الاسترداد (كلي أو جزئي) يصل بنفس order_id (provider_ref) — يُسحب الوصول.
   if (status === 'refunded' || status === 'partially_refunded') return 'refunded';
   if (status === 'declined' || status === 'canceled' || status === 'cancelled' || status === 'expired') return 'failed';

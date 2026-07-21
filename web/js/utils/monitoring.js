@@ -25,6 +25,12 @@ class MonitoringService {
         if (this.sentryDsn && isProduction) {
             this._initSentry();
         } else {
+            // بلوكر #43: كانت الحالة الفعلية (بلا DSN بالإنتاج) تُسجَّل بنفس رسالة
+            // "✅" المطمئنة اللي تظهر بالتطوير — لا فرق مرئي يلفت نظر أحد. أخطاء
+            // الدفع/الحفظ بهذه الحالة تبقى محلية بمتصفح العميل فقط، لا يراها أحد.
+            if (isProduction && !this.sentryDsn) {
+                console.error('[Monitoring] ⚠️ VITE_SENTRY_DSN غير مضبوط بالإنتاج — الأخطاء (بما فيها فشل الدفع/الحفظ) تبقى محلية بمتصفح العميل فقط ولا تصل لأي مراقبة مركزية.');
+            }
             // Fallback: Use console-based error tracking
             this._initConsoleTracking();
         }

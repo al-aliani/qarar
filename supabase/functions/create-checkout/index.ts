@@ -151,10 +151,14 @@ Deno.serve(async (req: Request) => {
       providerRef = result.providerRef;
     } else if (provider === 'tamara') {
       const apiToken = Deno.env.get('TAMARA_API_TOKEN')!;
+      // bلوكر #12: إشعار الخادم-إلى-خادم يجب أن يصل webhook-tamara (Edge Function)
+      // لا صفحة SPA الأمامية (returnUrl) — تلك لا تستقبل استدعاءات خادمية إطلاقاً.
+      const notificationUrl = `${supabaseUrl}/functions/v1/webhook-tamara`;
       const result = await createTamaraCheckout(apiToken, {
         amountSar: total,
         description: `قرار — باقة ${pkg.name}`,
         callbackUrl: returnUrl,
+        notificationUrl,
         metadata: { orderId, tier: pkg.id, userId },
       });
       checkoutUrl = result.checkoutUrl;

@@ -17,6 +17,7 @@ describe('createTamaraCheckout', () => {
             amountSar: 990,
             description: 'باقة مراجَع بخبير',
             callbackUrl: 'https://app.example.com/payment-return',
+            notificationUrl: 'https://project.supabase.co/functions/v1/webhook-tamara',
             metadata: { tier: 'reviewed', orderId: 'order-1' },
         });
 
@@ -34,10 +35,26 @@ describe('createTamaraCheckout', () => {
             amountSar: 100,
             description: 'test',
             callbackUrl: 'https://x.com',
+            notificationUrl: 'https://project.supabase.co/functions/v1/webhook-tamara',
             metadata: {},
         });
         const [, options] = fetchMock.mock.calls[0];
         expect(options.headers.Authorization).toBe('Bearer token_secret');
+    });
+
+    it('بلوكر #12: يوجّه merchant_url.notification لرابط webhook منفصل عن صفحة العودة، لا نفسها', async () => {
+        await createTamaraCheckout('token', {
+            amountSar: 100,
+            description: 'test',
+            callbackUrl: 'https://app.example.com/#/payment-return?order=order-1',
+            notificationUrl: 'https://project.supabase.co/functions/v1/webhook-tamara',
+            metadata: {},
+        });
+        const [, options] = fetchMock.mock.calls[0];
+        const body = JSON.parse(options.body);
+        expect(body.merchant_url.notification).toBe('https://project.supabase.co/functions/v1/webhook-tamara');
+        expect(body.merchant_url.notification).not.toBe(body.merchant_url.success);
+        expect(body.merchant_url.success).toBe('https://app.example.com/#/payment-return?order=order-1');
     });
 
     it('يُعيد providerRef وcheckoutUrl من استجابة Tamara', async () => {
@@ -45,6 +62,7 @@ describe('createTamaraCheckout', () => {
             amountSar: 100,
             description: 'test',
             callbackUrl: 'https://x.com',
+            notificationUrl: 'https://project.supabase.co/functions/v1/webhook-tamara',
             metadata: {},
         });
         expect(result.providerRef).toBe('ord_abc123');
@@ -54,17 +72,26 @@ describe('createTamaraCheckout', () => {
     it('يرمي خطأً واضحاً عند فشل الطلب (لا يُعيد نتيجة صامتة فارغة)', async () => {
         fetchMock.mockResolvedValueOnce({ ok: false, status: 401, text: async () => 'Unauthorized' });
         await expect(
-            createTamaraCheckout('bad_token', { amountSar: 100, description: 'x', callbackUrl: 'https://x.com', metadata: {} })
+            createTamaraCheckout('bad_token', {
+                amountSar: 100,
+                description: 'x',
+                callbackUrl: 'https://x.com',
+                notificationUrl: 'https://project.supabase.co/functions/v1/webhook-tamara',
+                metadata: {},
+            })
         ).rejects.toThrow(/401/);
     });
 });
 
 describe('parseTamaraWebhookStatus', () => {
-    it('approved ⇒ paid', () => {
-        expect(parseTamaraWebhookStatus({ order_status: 'approved' })).toBe('paid');
+    it('بلوكر #12: approved (موافقة/حجز بلا قبض فعلي) ⇒ unknown، لا paid — لا يفتح القفل قبل القبض', () => {
+        expect(parseTamaraWebhookStatus({ order_status: 'approved' })).toBe('unknown');
     });
-    it('captured ⇒ paid', () => {
+    it('captured (قبض فعلي مؤكَّد) ⇒ paid', () => {
         expect(parseTamaraWebhookStatus({ order_status: 'captured' })).toBe('paid');
+    });
+    it('fully_captured ⇒ paid', () => {
+        expect(parseTamaraWebhookStatus({ order_status: 'fully_captured' })).toBe('paid');
     });
     it('declined ⇒ failed', () => {
         expect(parseTamaraWebhookStatus({ order_status: 'declined' })).toBe('failed');
