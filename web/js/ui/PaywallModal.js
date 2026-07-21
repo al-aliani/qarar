@@ -211,6 +211,13 @@ export class PaywallModal {
             window.location.href = result.checkoutUrl;
             return;
         }
+        // كوبون خصم 100%: الخادم أكّد الطلب paid مباشرة بلا مزوّد دفع — نوجّه لنفس
+        // صفحة نتيجة الدفع التي يعود لها العميل بعد أي مزوّد حقيقي، لإعادة استخدام
+        // منطقها الموجود (فتح التصدير + رسالة النجاح) بدل بناء مسار جديد.
+        if (result.ok && result.freeViaCoupon) {
+            window.location.hash = `#/payment-return?order=${result.orderId}`;
+            return;
+        }
 
         showErr(result.error || 'تعذّر بدء عملية الدفع. حاول مرة أخرى لاحقاً.');
         trackEvent('payment_error', { tier, provider, message: result.error || 'checkout_failed' });

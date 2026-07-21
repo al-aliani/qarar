@@ -125,6 +125,14 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ orderId, bankTransfer: true, amount: total });
   }
 
+  // كوبون خصم 100%: total=0 — مزوّدو الدفع (Moyasar/Stripe/Tamara) يرفضون مبلغاً
+  // صفرياً، فيفشل إنشاء الجلسة ويعلق الطلب pending للأبد بلا سبب واضح للعميل. لا
+  // شيء فعلياً للتحصيل هنا، فنؤكّد الطلب مباشرة كما لو دُفع بالكامل بالكوبون.
+  if (total === 0) {
+    await adminClient.from('orders').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', orderId);
+    return jsonResponse({ orderId, freeViaCoupon: true, amount: 0 });
+  }
+
   const returnUrl = `${APP_ORIGIN}/#/payment-return?order=${orderId}`;
 
   try {
