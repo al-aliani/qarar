@@ -1,5 +1,5 @@
 /** Optional analytics bridge. It stays inert until the product config provides GA4/Meta. */
-import { getSupabaseClient, getAuthUser } from '../../supabaseClient.js';
+import { getSupabaseClient } from '../../supabaseClient.js';
 
 function getSessionId() {
     try {
@@ -83,15 +83,16 @@ export function trackEvent(name, params = {}) {
         // تسجيل حقيقي (2026-07-16) — جدول events تقرأه لوحة الأدمن عبر
         // admin_events_stats. غير منتظِر عمداً: تتبّع السلوك لا يجوز أن يؤخّر
         // أي إجراء فعلي في الواجهة.
+        // تدقيق 2026-07-21 (بند #47): إدراج مباشر عبر .insert() كان بلا أي حدّ
+        // معدّل من anon — استُبدل بـRPC track_event التي تفرض حدّاً خادمياً
+        // (500/10 دقائق لكل جلسة) وتشتقّ user_id من الجلسة خادمياً بدل العميل.
         (async () => {
             const { supabase, ok } = await getSupabaseClient();
             if (!ok || !supabase) return;
-            const { user } = await getAuthUser();
-            await supabase.from('events').insert({
-                user_id: user?.id || null,
-                session_id: getSessionId(),
-                event_name: name,
-                props: eventParams,
+            await supabase.rpc('track_event', {
+                p_event_name: name,
+                p_props: eventParams,
+                p_session_id: getSessionId(),
             });
         })().catch(() => {
             // التتبّع لا يجب أن يقاطع تجربة المستخدم أبداً

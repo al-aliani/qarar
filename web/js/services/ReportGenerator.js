@@ -1291,7 +1291,7 @@ export class ReportGenerator {
                             <tr>
                                 <td>${c.value}</td>
                                 <td>${formatCurrency(c.kpis.npv)}</td>
-                                <td>${(c.kpis.irr * 100).toFixed(1)}%</td>
+                                <td>${c.kpis.irr == null ? 'غير محقق' : (c.kpis.irr * 100).toFixed(1) + '%'}</td>
                                 <td>${c.kpis.payback?.toFixed(1) || '-'}</td>
                             </tr>
                         `).join('')}

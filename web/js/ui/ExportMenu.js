@@ -24,10 +24,14 @@ import { renderReviewStatusBadge } from './components/ReviewStatusBadge.js';
 
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
 
+// batch_zip واستشارة الخبير غير مرتبطين بمسار معيّن (ممول/مستثمر/بيانات) — يُضافان
+// لكل المجموعات الثلاث كي لا يختفيا كلياً (كانا مبنيَّين ويعملان لكن بلا أي طريق
+// وصول بعد تبسيط القائمة لثلاثة مسارات فلترة).
+const ALWAYS_VISIBLE_TYPES = ['batch_zip', 'consultation'];
 const EXPORT_PATHS = {
-    lending: new Set(['pdf', 'excel', 'word', 'pptx', 'lending_ready', 'monshaat', 'financier', 'review_copy', 'professional_review']),
-    investor: new Set(['pitch', 'pptx', 'accelerator_pitch', 'incubator_pitch', 'crowdfunding_pitch', 'grant', 'investor_one_pager', 'investor_dashboard', 'pitch_script']),
-    data: new Set(['json', 'csv', 'share_link', 'folder_json', 'gsheets'])
+    lending: new Set(['pdf', 'excel', 'word', 'pptx', 'lending_ready', 'monshaat', 'financier', 'review_copy', 'professional_review', ...ALWAYS_VISIBLE_TYPES]),
+    investor: new Set(['pitch', 'pptx', 'accelerator_pitch', 'incubator_pitch', 'crowdfunding_pitch', 'grant', 'investor_one_pager', 'investor_dashboard', 'pitch_script', ...ALWAYS_VISIBLE_TYPES]),
+    data: new Set(['json', 'csv', 'share_link', 'folder_json', 'gsheets', ...ALWAYS_VISIBLE_TYPES])
 };
 
 // تدقيق 2026-07-08 (ملاحظة عالية #39): صيغ التقرير النهائي الاحترافي (قرار المالك:

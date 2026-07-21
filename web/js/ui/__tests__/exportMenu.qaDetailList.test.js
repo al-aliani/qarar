@@ -125,6 +125,17 @@ describe('ExportMenu — قائمة تحذيرات فحص الجودة المف�
         expect(document.querySelector('[data-type="pitch"]').hidden).toBe(true);
     });
 
+    it('حزمة ZIP واستشارة الخبير تبقيان ظاهرتين تحت المسارات الثلاثة كلها (تدقيق 2026-07-21: كانتا مبنيتين وتعملان لكن أخفاهما تبسيط المسارات الثلاثة كلياً)', async () => {
+        const menu = new ExportMenu('exportMenuOverlay', fakeStore(createEmptyStudy()));
+        await menu.open();
+
+        for (const path of ['lending', 'investor', 'data']) {
+            document.querySelector(`[data-export-path="${path}"]`).click();
+            expect(document.querySelector('[data-type="batch_zip"]').hidden).toBe(false);
+            expect(document.querySelector('[data-type="consultation"]').hidden).toBe(false);
+        }
+    });
+
     it('مركز الإصلاح يعرض السبب والأثر ويطبّق إصلاحاً آمناً لاسم المشروع', async () => {
         const study = createEmptyStudy();
         study.projectInfo.concept = 'مقهى مختص';
