@@ -43,6 +43,10 @@ export function getSharingStats() {
     return callAdminRpc('admin_sharing_stats');
 }
 
+export function getProductFunnelStats(days = 30) {
+    return callAdminRpc('admin_product_funnel_stats', { days });
+}
+
 /**
  * @param {string|null} eventName - فلترة حسب اسم حدث معيّن، أو null لكل الأحداث
  * @param {number} days - نافذة زمنية بالأيام (افتراضي 30)

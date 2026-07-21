@@ -1,4 +1,7 @@
 import { getSupabaseClient } from '../supabaseClient.js';
+import { trackEvent } from './utils/analytics.js';
+
+trackEvent('public_page_view', { page: window.location.pathname.split('/').pop() || 'index.html' });
 
 const form = document.querySelector('[data-public-application]');
 if (form) {
@@ -25,7 +28,11 @@ if (form) {
             summary: String(values.summary || '').trim()
         });
         if (error) status.textContent = 'لم يتم إرسال الطلب. تحقق من البيانات وحاول مجددًا.';
-        else { status.textContent = 'تم استلام طلبك بنجاح، وسنتواصل معك بعد مراجعته.'; form.reset(); }
+        else {
+            trackEvent('public_application_submitted', { application_type: form.dataset.publicApplication || 'unknown' });
+            status.textContent = 'تم استلام طلبك بنجاح، وسنتواصل معك بعد مراجعته.';
+            form.reset();
+        }
         submit.disabled = false; submit.textContent = 'إرسال الطلب';
     });
 }
