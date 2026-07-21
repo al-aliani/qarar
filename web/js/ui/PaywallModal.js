@@ -4,26 +4,35 @@
  * فعلي يمنع الوصول المجاني للتقرير النهائي — فجوة ثقة مباشرة بين التسويق والمنتج.
  *
  * تدقيق 2026-07-09 (أتمتة الدفع): أُضيف دفع فعلي (Moyasar/Stripe عبر
- * PaymentService.js → Edge Functions) لكل الباقات المدفوعة. الباقة "ذاتي" (self)
- * تعتمد الدفع المباشر كخيار أول (channel:'app' أصلاً في pricing.js)؛ باقتا
- * "مراجَع بخبير"/"خدمة كاملة" (channel:'whatsapp') تُبقي واتساب كخيار أول عمداً
- * (تتطلبان تدخلاً بشرياً فعلياً — مراجعة/إعداد يدوي — لا مجرد فتح قفل تلقائي)
- * مع إضافة الدفع المباشر كخيار ثانٍ لمن يفضّل الدفع فوراً دون انتظار محادثة.
+ * PaymentService.js → Edge Functions) لكل الباقات المدفوعة. القرار الحالي:
+ * الباقات المدفوعة الثلاث (ذاتي/مراجَع بخبير/خدمة كاملة) كلها channel:'app'
+ * في pricing.js، وتُعرض بنفس أزرار الدفع المباشر داخل المنصة (مدى/تمارا/Stripe)
+ * بلا أي مسار واتساب. المراجعة/الإعداد اليدوي في باقتَي «مراجَع بخبير»/«خدمة
+ * كاملة» يجريان بعد إتمام الدفع لا قبله.
  */
 import { PRICING_PACKAGES, formatPrice } from '../core/pricing.js';
 import { REFUND_POLICY } from '../config.js';
 import { startCheckout } from '../services/PaymentService.js';
-import { trackEvent } from '../utils/analytics.js';
-
-const PACKAGE_FEATURES = {
-    self: ['قوالب مختصين', 'مؤشرات فورية', 'تصدير PDF/Excel/Word', 'تعديل حي غير محدود'],
-    reviewed: ['كل ما في الباقة الذاتية', 'مراجعة مختص لدراستك', 'تحليل حساسية موسّع', 'تسليم خلال 24–48 ساعة'],
-    full: ['كل ما في المراجَعة', 'جمع وتنظيم المدخلات نيابة عنك', 'تقرير مُعَدّ للممول', 'جلسة شرح + قائمة تعديلات'],
-};
+import { getExperimentVariant, trackEvent } from '../utils/analytics.js';
+import { trapFocus } from '../utils/focusTrap.js';
 
 function escapeHtml(str) {
     if (str == null) return '';
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// المحرّك قد يحفظ NO-GO افتراضياً عندما تكون كل المؤشرات أصفاراً. لا نعرض
+// هذه النتيجة للمستخدم كقرار فعلي داخل بوابة الدفع قبل وجود نموذج مالي حقيقي.
+function hasRealModelResults(results) {
+    const indicators = results?.indicators || {};
+    const hasNonZeroIndicator = [
+        indicators.npv,
+        indicators.irr,
+        indicators.roi,
+        indicators.breakEvenPointValue,
+        indicators.profitMargin
+    ].some(value => Number(value) !== 0 && Number.isFinite(Number(value)));
+    return hasNonZeroIndicator || Number(indicators.paybackPeriod) > 0;
 }
 
 export class PaywallModal {
@@ -46,6 +55,8 @@ export class PaywallModal {
         document.body.style.overflow = 'hidden';
         this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
         document.addEventListener('keydown', this._onEscape);
+        this._removeFocusTrap?.();
+        this._removeFocusTrap = trapFocus(this.overlay.querySelector('[role="dialog"]'), { initial: '.paywall-close' });
     }
 
     close() {
@@ -55,6 +66,8 @@ export class PaywallModal {
             document.removeEventListener('keydown', this._onEscape);
             this._onEscape = null;
         }
+        this._removeFocusTrap?.();
+        this._removeFocusTrap = null;
     }
 
     render() {
@@ -64,15 +77,20 @@ export class PaywallModal {
         // ملاحظة شفافية: لو زار العميل لوحة القرار قبل التصدير (النسق المعتاد) تكون
         // results.decision محفوظة بالفعل بمخزن الحالة (انظر DecisionDashboard.js) — لا
         // تمنع الشراء، تُوضّح فقط أن التقرير سيشرح توصية غير إيجابية لا أن الدفع "يفتح" GO.
-        const decision = state.results?.decision;
+        const decision = hasRealModelResults(state.results) ? state.results?.decision : null;
         const decisionNote = decision === 'NO-GO'
             ? '<div class="alert alert--danger mb-3">دراستك أظهرت توصية عدم المضي (NO-GO) حالياً — هذا التقرير يوضّح لماذا، وهو ما يحميك من قرار استثماري خاطئ لا أنه يمنعك من الشراء.</div>'
             : decision === 'REVISE'
                 ? '<div class="alert alert--warning mb-3">دراستك تحتاج مراجعة (REVISE) حالياً — هذا التقرير يوضّح النقاط التي تحتاج تعديلاً.</div>'
                 : '';
 
-        const cards = PRICING_PACKAGES.filter(pkg => pkg.price > 0).map(pkg => {
-            const features = PACKAGE_FEATURES[pkg.id] || [];
+        const pricingVariant = getExperimentVariant('pricing_cards', ['control', 'recommended_first']);
+        const paidPackages = PRICING_PACKAGES.filter(pkg => pkg.price > 0);
+        const orderedPackages = pricingVariant === 'recommended_first'
+            ? [...paidPackages].sort((a, b) => Number(b.recommended) - Number(a.recommended))
+            : paidPackages;
+        const cards = orderedPackages.map(pkg => {
+            const features = pkg.features || [];
             const payButtons = `
                 <div class="paywall-pay-buttons" style="display:flex;flex-direction:column;gap:6px;">
                     <button type="button" class="btn btn--primary btn-block btn-pay-now" data-package="${pkg.id}" data-provider="moyasar">
@@ -86,9 +104,12 @@ export class PaywallModal {
                     </button>
                 </div>`;
             return `
-                <div class="card paywall-package-card" data-package-card="${pkg.id}" style="padding:16px;border-radius:12px;">
+                <div class="card paywall-package-card ${pkg.recommended ? 'paywall-package-card--recommended' : ''}" data-package-card="${pkg.id}" style="padding:16px;border-radius:12px;">
+                    ${pkg.recommended ? '<span class="paywall-recommended">الأكثر مناسبة للتقديم</span>' : ''}
                     <h4 style="margin:0 0 4px;">${escapeHtml(pkg.name)}</h4>
                     <div class="text-gold" style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">${formatPrice(pkg.price)} <span style="font-size:0.9rem;font-weight:400;">${escapeHtml(pkg.unit)}</span></div>
+                    <p class="text-xs" style="margin:0 0 4px;">${escapeHtml(pkg.audience || '')}</p>
+                    <p class="text-xs text-muted" style="margin:0 0 8px;">التسليم: ${escapeHtml(pkg.delivery || 'فوري')}</p>
                     <ul style="margin:0 0 12px;padding-inline-start:18px;font-size:0.85rem;color:var(--c-text-muted,#94a3b8);">
                         ${features.map(f => `<li>${escapeHtml(f)}</li>`).join('')}
                     </ul>
@@ -105,6 +126,7 @@ export class PaywallModal {
                 </div>
                 <div class="modal-body">
                     <p class="text-muted mb-4">${escapeHtml(this.formatLabel)} متاح ضمن الباقات المدفوعة. اختر الباقة وطريقة الدفع لإكمال الطلب داخل المنصة.</p>
+                    <button type="button" id="btnPreviewLockedReport" class="btn btn--secondary btn-block mb-3"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> معاينة التقرير قبل الشراء</button>
                     <div id="paywallPayError" class="text-danger text-sm mb-2" style="display:none;"></div>
                     ${decisionNote}
                     <div class="paywall-packages-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
@@ -124,6 +146,12 @@ export class PaywallModal {
 
         this.overlay.querySelectorAll('.btn-pay-now').forEach(btn => {
             btn.addEventListener('click', () => this._handlePayNow(btn));
+        });
+        this.overlay.querySelector('#btnPreviewLockedReport')?.addEventListener('click', async () => {
+            const { ReportPreviewModal } = await import('./ReportPreviewModal.js');
+            const formatLabel = this.formatLabel;
+            this.close();
+            await new ReportPreviewModal(this.store, 'reportPreviewOverlay', () => this.open(formatLabel)).open(formatLabel);
         });
 
         this._applyPreferredTierHighlight();
@@ -148,7 +176,7 @@ export class PaywallModal {
             badge.className = 'text-xs text-gold mb-1';
             badge.textContent = 'اختيارك المفضّل';
             card.insertBefore(badge, card.firstChild);
-        } catch (_) {}
+        } catch {}
     }
 
     async _handlePayNow(btn) {
@@ -175,6 +203,7 @@ export class PaywallModal {
         }
 
         showErr(result.error || 'تعذّر بدء عملية الدفع. حاول مرة أخرى لاحقاً.');
+        trackEvent('payment_error', { tier, provider, message: result.error || 'checkout_failed' });
         btn.disabled = false;
         btn.textContent = orig;
     }

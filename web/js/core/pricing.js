@@ -9,10 +9,22 @@ export const CURRENCY_SYMBOL = '﷼';
 
 /** الباقات الأربع. كل الاشتراكات والطلبات تبدأ من داخل المنصة. */
 export const PRICING_PACKAGES = [
-    { id: 'free', name: 'مجانية', price: 0, unit: '﷼', channel: 'app' },
-    { id: 'self', name: 'ذاتي', price: 299, unit: '﷼ / دراسة', channel: 'app' },
-    { id: 'reviewed', name: 'مراجَع بخبير', price: 1999, unit: '﷼ / دراسة', channel: 'app' },
-    { id: 'full', name: 'خدمة كاملة', price: 4999, unit: '﷼ / دراسة', channel: 'app' }
+    {
+        id: 'free', name: 'مجانية', price: 0, unit: '﷼', channel: 'app', audience: 'لاختبار الفكرة وبناء المسودة', delivery: 'فوري',
+        features: ['إدخال الدراسة وحفظها', 'لوحة المؤشرات الأساسية', 'نسخة احتياطية JSON وCSV']
+    },
+    {
+        id: 'self', name: 'ذاتي', price: 299, unit: '﷼ / دراسة', channel: 'app', audience: 'لمن يملك بياناته ويريد التقرير فوراً', delivery: 'فوري',
+        features: ['كل أدوات بناء الدراسة', 'بوابة الجودة وتفسير المؤشرات', 'PDF وExcel وWord والتقرير البنكي']
+    },
+    {
+        id: 'reviewed', name: 'مراجَع بخبير', price: 1999, unit: '﷼ / دراسة', channel: 'app', recommended: true, audience: 'للتقديم لممول أو شريك بثقة أعلى', delivery: '24–48 ساعة',
+        features: ['كل ما في الباقة الذاتية', 'مراجعة مختص موثقة', 'قائمة ملاحظات واعتماد النسخة النهائية']
+    },
+    {
+        id: 'full', name: 'خدمة كاملة', price: 4999, unit: '﷼ / دراسة', channel: 'app', audience: 'لمن يريد تجهيز الدراسة والملف نيابة عنه', delivery: 'حسب اكتمال البيانات',
+        features: ['جمع وتنظيم المدخلات', 'تقرير معد للممول', 'جلسة شرح وقائمة تعديلات نهائية']
+    }
 ];
 
 /**
@@ -21,6 +33,13 @@ export const PRICING_PACKAGES = [
  * والمجانية غياب سعر لا سعر. بدون هذا الاستثناء كانت صفحة الهبوط تعلن
  * «من 0 ريالاً» (landing.html:1244 يكتب PRICE_MIN في [data-price-min]).
  */
+export const PRICING_COMPARISON = Object.freeze({
+    free: { limit: 'إنشاء وحفظ دراسة أولية', unlock: 'المؤشرات والتصدير الاحترافي ومراجعة الخبير', includes: ['إدخال البيانات الأساسية', 'حفظ التقدم', 'استكشاف مسار الدراسة'] },
+    self: { limit: 'ترخيص دراسة واحدة لكل عملية دفع', unlock: 'مراجعة خبير متخصصة عند الترقية', includes: ['المؤشرات المالية والتحليل', 'تصدير PDF وExcel وWord', 'تعديل حي غير محدود للدراسة المدفوعة'] },
+    reviewed: { limit: 'دراسة واحدة مع مراجعة قطاعية', unlock: 'جمع المدخلات وبناء الدراسة نيابة عنك', includes: ['كل مزايا الذاتي', 'مراجعة الافتراضات والمخاطر', 'تحليل حساسية وتوصيات', 'تسليم خلال 24–48 ساعة بعد اكتمال البيانات'] },
+    full: { limit: 'دراسة واحدة تُنفّذ مع الفريق', unlock: '—', includes: ['جمع وتنظيم المدخلات', 'بناء ومراجعة الدراسة', 'تقرير للممول أو الشريك', 'جلسة شرح وقائمة تعديلات قبل التنفيذ'] }
+});
+
 const PAID_PACKAGES = PRICING_PACKAGES.filter(p => p.price > 0);
 export const PRICE_MIN = Math.min(...PAID_PACKAGES.map(p => p.price));
 export const PRICE_MAX = Math.max(...PAID_PACKAGES.map(p => p.price));

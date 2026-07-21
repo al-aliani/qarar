@@ -52,11 +52,11 @@
         <div class="lp-card">
           <h2>ذاتي — 299 ﷼ / دراسة</h2>
           <p class="text-muted">لمن يريد بناء دراسته بنفسه على المنصة بمؤشرات فورية.</p>
-          <ul><li>قوالب مختصين عند اعتمادها</li><li>مؤشرات مالية فورية</li><li>تصدير PDF وExcel</li><li>تعديل حي غير محدود</li></ul>
+          <ul><li>قوالب مختصين عند اعتمادها</li><li>مؤشرات مالية فورية</li><li>تصدير PDF وExcel وWord</li><li>تعديل حي غير محدود</li></ul>
           <a href="./index.html?auth=1&pkg=self" class="btn btn--outline" style="margin-top:10px">ابدأ الآن</a>
         </div>
         <div class="lp-card">
-          <h2>مراجَع بخبير — 1999 ﷼ / دراسة</h2>
+          <h2>مراجَع بخبير — 1,999 ﷼ / دراسة</h2>
           <p class="text-muted">نبني الدراسة ونراجع الافتراضات قبل التسليم.</p>
           <ul><li>كل مزايا الباقة الذاتية</li><li>مراجعة مختص حسب القطاع</li><li>تحليل حساسية وتوصيات</li><li>تسليم خلال 24 إلى 48 ساعة</li></ul>
           <a href="./index.html?auth=1&pkg=reviewed" class="btn btn--primary" style="margin-top:10px">ابدأ الآن</a>
@@ -68,7 +68,23 @@
           <a href="./index.html?auth=1&pkg=full" class="btn btn--primary" style="margin-top:10px">ابدأ الآن</a>
         </div>
       </div>
+      <section id="comparison" class="lp-card" style="grid-column:1/-1;overflow:auto">
+        <h2>مقارنة الباقات والحدود الفعلية</h2>
+        <p class="text-muted">كل باقة تُشترى لكل دراسة؛ لا توجد حدود مخفية أو اشتراك شهري تلقائي.</p>
+        <table style="width:100%;border-collapse:collapse;text-align:right" aria-label="مقارنة الباقات">
+          <thead><tr><th>الباقة</th><th>المتاح الآن</th><th>الحد</th><th>يفتح عند الترقية</th></tr></thead>
+          <tbody id="pricingComparisonRows"></tbody>
+        </table>
+      </section>
     </main>
     <script src="./js/theme-init.js"></script>
+    <script type="module">
+      import { PRICING_PACKAGES, PRICING_COMPARISON, formatPrice } from './js/core/pricing.js';
+      const rows = document.getElementById('pricingComparisonRows');
+      if (rows) rows.innerHTML = PRICING_PACKAGES.map((plan) => {
+        const detail = PRICING_COMPARISON[plan.id];
+        return `<tr><th>${plan.name} — ${formatPrice(plan.price)} ${plan.unit}</th><td>${detail.includes.join('، ')}</td><td>${detail.limit}</td><td>${detail.unlock}</td></tr>`;
+      }).join('');
+    </script>
   </body>
 </html>
