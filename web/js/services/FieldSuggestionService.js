@@ -18,7 +18,7 @@ const MAX_CHUNK_SIZE = 8;
  * @param {Object} projectContext - بيانات المشروع (state أو projectInfo)
  * @returns {Promise<string>} النص المقترح
  */
-export async function generateSuggestion(fieldName, currentValue, projectContext) {
+export async function generateSuggestion(fieldName, currentValue, projectContext, tone = 'professional') {
     const projectInfo = projectContext?.projectInfo ?? projectContext ?? {};
     const state = { projectInfo };
 
@@ -26,7 +26,7 @@ export async function generateSuggestion(fieldName, currentValue, projectContext
     // يمرّ أولاً عبر الخادم بمهلة 20 ثانية، فيبدو الزر «صامتاً» طوال الانتظار قبل السقوط
     // للمولّد الداخلي. الآن نبدأ بالداخلي (فوري وحتمي) ونجعل الخادم بديلاً احتياطياً فقط.
     try {
-        const internal = generateFieldSuggestion(fieldName, currentValue, state);
+        const internal = generateFieldSuggestion(fieldName, currentValue, state, tone);
         if (typeof internal === 'string' && internal.trim()) return internal;
     } catch (e) {
         console.warn('generateSuggestion internal path failed', e);
@@ -36,7 +36,7 @@ export async function generateSuggestion(fieldName, currentValue, projectContext
     try {
         const result = await connector.query('field_suggestion', 'field_suggestion', {
             projectInfo,
-            context: { fieldName, currentValue: currentValue || '' }
+            context: { fieldName, currentValue: currentValue || '', tone }
         });
         return typeof result === 'string' ? result : (result?.text ?? result?.content ?? '');
     } catch (e) {
@@ -50,14 +50,12 @@ export async function generateSuggestion(fieldName, currentValue, projectContext
  * @param {string} fieldName
  * @param {string} currentValue
  * @param {Object} projectContext
- * @param {function(string): void} onChunk - يُستدعى عند كل قطعة (نص تراكمي حتى الآن)
- * @param {function(): void} onDone - يُستدعى عند الانتهاء
- * @param {function(string): void} onError - يُستدعى عند الخطأ
+ * @param {Object} options - { onChunk, onDone, onError, tone }
  */
-export async function generateSuggestionStreaming(fieldName, currentValue, projectContext, { onChunk, onDone, onError }) {
+export async function generateSuggestionStreaming(fieldName, currentValue, projectContext, { onChunk, onDone, onError, tone = 'professional' }) {
     let fullText = '';
     try {
-        fullText = await generateSuggestion(fieldName, currentValue, projectContext);
+        fullText = await generateSuggestion(fieldName, currentValue, projectContext, tone);
     } catch (e) {
         if (onError) onError(e?.message || 'فشل التوليد');
         if (onDone) onDone();

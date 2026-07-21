@@ -499,53 +499,124 @@ export class Wizard {
             });
         }
 
-        // عصا سحرية: اقتراح/إعادة صياغة تدفقية لكل textarea
+        // عصا سحرية: استوديو التوليد المتقدم (Advanced Content Generator)
         this.container.querySelectorAll('.btn-magic-wand').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
+            
+            // تحديث حالة الزر إذا كان هناك نص مبدئي (طوّر فكرتي)
+            const updateBtnState = () => {
+                const textarea = btn.closest('.input-with-ai')?.querySelector('textarea');
+                const span = btn.querySelector('span');
+                if (textarea && span) {
+                    span.textContent = textarea.value.trim().length > 0 ? '✨ طوّر فكرتي' : '✨ اكتب لي';
+                }
+            };
+            
+            const textareaForBtn = btn.closest('.input-with-ai')?.querySelector('textarea');
+            if (textareaForBtn) {
+                textareaForBtn.addEventListener('input', updateBtnState);
+                updateBtnState(); // تهيئة أولية
+            }
+
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // إغلاق أي قائمة مفتوحة سابقاً
+                document.querySelectorAll('.ai-generator-dropdown').forEach(d => d.remove());
+                
                 const key = btn.getAttribute('data-key');
                 const textarea = btn.closest('.input-with-ai')?.querySelector('textarea');
-                if (!key || !textarea) return;
-                if (btn.disabled) return;
-                const state = this.store.get();
-                const currentValue = textarea.value || '';
-                // حماية من فقدان النص: إن كان الحقل يحوي كتابة فعلية للمستخدم، نؤكّد قبل الاستبدال.
-                // يجب أن يحدث هذا التحقق قبل أي تغيير في حالة الزر (disabled/aria-busy/title)
-                // وإلا يبقى الزر معطّلاً للأبد إن ضغط المستخدم "إلغاء" (bug: زر عالق).
-                if (currentValue.trim().length > 0 &&
-                    !confirm('سيستبدل الاقتراح النصَّ الحالي في هذا الحقل. هل تريد المتابعة؟')) {
-                    return;
-                }
-                btn.disabled = true;
-                btn.setAttribute('aria-busy', 'true');
-                const originalTitle = btn.getAttribute('title');
-                btn.setAttribute('title', 'جاري التوليد...');
-                const previousValue = currentValue; // للتراجع عند الفشل
-                trackEvent('ai_wand_use', { type: 'text', key });
-                try {
-                    await generateSuggestionStreaming(key, currentValue, state, {
-                        onChunk: (chunk) => { textarea.value = chunk; },
-                        onDone: () => {
-                            const target = getSuggestionUpdateTarget(stepId, key, textarea);
-                            this.store.updatePath(target.section, target.path, textarea.value);
+                if (!key || !textarea || btn.disabled) return;
+
+                // إنشاء القائمة المنسدلة
+                const dropdown = document.createElement('div');
+                dropdown.className = 'ai-generator-dropdown';
+                dropdown.innerHTML = `
+                    <button type="button" data-tone="professional">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 21.6V20a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v1.6M17 14l-5-5-5 5M12 9v9"/></svg>
+                        احترافي ورسمي
+                    </button>
+                    <button type="button" data-tone="creative">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        إبداعي وتسويقي
+                    </button>
+                    <button type="button" data-tone="bullets">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                        نقاط مختصرة
+                    </button>
+                `;
+
+                // التموضع
+                const rect = btn.getBoundingClientRect();
+                dropdown.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+                dropdown.style.left = rect.left + 'px';
+                document.body.appendChild(dropdown);
+
+                // إغلاق عند النقر خارجاً
+                const closeDropdown = (evt) => {
+                    if (!dropdown.contains(evt.target)) {
+                        dropdown.remove();
+                        document.removeEventListener('click', closeDropdown);
+                    }
+                };
+                setTimeout(() => document.addEventListener('click', closeDropdown), 10);
+
+                // أحداث أزرار القائمة
+                dropdown.querySelectorAll('button').forEach(optionBtn => {
+                    optionBtn.addEventListener('click', async () => {
+                        dropdown.remove();
+                        document.removeEventListener('click', closeDropdown);
+                        
+                        const tone = optionBtn.getAttribute('data-tone');
+                        const state = this.store.get();
+                        const currentValue = textarea.value || '';
+                        
+                        btn.disabled = true;
+                        btn.setAttribute('aria-busy', 'true');
+                        const originalTitle = btn.getAttribute('title');
+                        btn.setAttribute('title', 'جاري التوليد...');
+                        
+                        // تأثير التوهج الحي
+                        textarea.classList.add('glow-ai-typing');
+                        textarea.value = ''; // تفريغ للنص الجديد
+                        
+                        const previousValue = currentValue;
+                        trackEvent('ai_wand_use', { type: 'text', key, tone });
+                        
+                        try {
+                            await generateSuggestionStreaming(key, currentValue, state, {
+                                tone,
+                                onChunk: (chunk) => { textarea.value = chunk; },
+                                onDone: () => {
+                                    const target = getSuggestionUpdateTarget(stepId, key, textarea);
+                                    this.store.updatePath(target.section, target.path, textarea.value);
+                                    btn.disabled = false;
+                                    btn.removeAttribute('aria-busy');
+                                    btn.setAttribute('title', originalTitle || 'اقتراح أو إعادة صياغة');
+                                    textarea.classList.remove('glow-ai-typing');
+                                    updateBtnState();
+                                    toast.success('تم صياغة النص بنجاح.');
+                                },
+                                onError: (msg) => {
+                                    textarea.value = previousValue; 
+                                    btn.disabled = false;
+                                    btn.removeAttribute('aria-busy');
+                                    btn.setAttribute('title', originalTitle || 'اقتراح أو إعادة صياغة');
+                                    textarea.classList.remove('glow-ai-typing');
+                                    updateBtnState();
+                                    toast.error(msg || 'فشل التوليد');
+                                }
+                            });
+                        } catch (err) {
                             btn.disabled = false;
                             btn.removeAttribute('aria-busy');
                             btn.setAttribute('title', originalTitle || 'اقتراح أو إعادة صياغة');
-                            toast.success('تم اقتراح النص. يمكنك التعديل كما تريد.');
-                        },
-                        onError: (msg) => {
-                            textarea.value = previousValue; // استعادة نص المستخدم عند الفشل
-                            btn.disabled = false;
-                            btn.removeAttribute('aria-busy');
-                            btn.setAttribute('title', originalTitle || 'اقتراح أو إعادة صياغة');
-                            toast.error(msg || 'فشل التوليد');
+                            textarea.classList.remove('glow-ai-typing');
+                            updateBtnState();
+                            toast.error('فشل اقتراح النص');
                         }
                     });
-                } catch (err) {
-                    btn.disabled = false;
-                    btn.removeAttribute('aria-busy');
-                    btn.setAttribute('title', originalTitle || 'اقتراح أو إعادة صياغة');
-                    toast.error('فشل اقتراح النص');
-                }
+                });
             });
         });
 
