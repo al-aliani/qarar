@@ -16,6 +16,7 @@ import { DatabaseFilesView } from './DatabaseFilesView.js';
 import { STEPS, SIDEBAR_SECTIONS } from '../core/wizardSteps.js';
 import { stepReportType, stepCanReport, STEP_TYPE_BADGE } from '../core/stepReportType.js';
 import { DATA_SOURCE_CATALOG } from '../services/DataConnectors.js';
+import { trackEvent } from '../utils/analytics.js';
 
 const FOLDERS_STORAGE_KEY = 'feas_folders';
 
@@ -1112,8 +1113,8 @@ export class DashboardView {
         const btnLogin = this.container.querySelector('#dashboardLogin');
         if (btnLogin) {
             btnLogin.addEventListener('click', async () => {
-                const { PhoneAuthModal } = await import('./PhoneAuthModal.js');
-                new PhoneAuthModal('authModalContainer', {
+                const { AuthModal } = await import('./AuthModalStub.js');
+                new AuthModal('authModalContainer', {
                     onSuccess: () => this.render() // Refresh dashboard on success
                 }).open();
             });
@@ -1185,6 +1186,7 @@ export class DashboardView {
             try { current = localStorage.getItem('feas_theme') || 'light'; } catch (_) { /* تجاهل */ }
             if (current === 'auto') current = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             const next = current === 'light' ? 'dark' : 'light';
+            trackEvent('theme_toggle', { theme: next });
             try { localStorage.setItem('feas_theme', next); } catch (_) { /* تجاهل */ }
             document.documentElement.setAttribute('data-theme', next);
             const btn = e.currentTarget;
@@ -1507,6 +1509,7 @@ export class DashboardView {
                 });
                 if (result.isConfirmed) {
                     const id = (e.target.closest('[data-id]') || e.target).dataset?.id;
+                    trackEvent('study_delete_confirmed', { surface: 'dashboard' });
                     await ProjectManager.deleteProject(id);
                     // تدقيق 2026-07-17: طبقتا تخزين مستقلتان لا تتزامنان — ProjectManager يضبط
                     // deleted:true في feas_project_<id> فقط، بينما حلقة autosave الخاصة بـstore

@@ -17,6 +17,8 @@
 .app-shell.dashboard-mode .category-stepper { display: none !important; }
 .app-header__brand { font-weight: 700; font-size: 1.1rem; color: var(--c-p-500); }
 .app-header__actions { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.sync-indicator { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 8px; color: var(--c-text-muted); font-size: .72rem; white-space: nowrap; }
+.sync-indicator .ic { width: 15px; height: 15px; }
 /* موضع ثابت يجيب عن سؤال «أين أنا؟» من دون تحويل الهيدر إلى شريط خطوات مزدحم. */
 .stage-bar { flex: 1; min-width: 180px; max-width: 320px; display: flex; }
 .stage-badge {

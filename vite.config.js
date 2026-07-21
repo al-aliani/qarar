@@ -77,12 +77,20 @@ export default defineConfig({
                 investor: resolve(__dirname, 'web/investor.html'),
                 partners: resolve(__dirname, 'web/partners.html'),
                 charts: resolve(__dirname, 'web/financial_charts.html'),
+                admin: resolve(__dirname, 'web/admin.html'),
                 // dashboard.html (لوحة "Premium"): أُوقف بناؤها للإنتاج (2026-07-16) — نموذج React
                 // تجريبي منفصل تمامًا عن محرك الحسابات الحقيقي (بيانات وهمية ثابتة)، وزر الدفع
                 // فيه وهمي بالكامل (يستدعي /api/pay غير الموجود، السعر 199$ لا علاقة له بالتسعير
                 // الحقيقي بالريال). الكود المصدري (src/App.jsx وغيره) باقٍ في المستودع لو
                 // احتاج تطويرها بشكل صحيح لاحقاً — فقط لم تعد تُنسخ لمجلد الإنتاج dist/.
             },
+            output: {
+                manualChunks: {
+                    exceljs: ['exceljs'],
+                    pptx: ['pptxgenjs'],
+                    apexcharts: ['apexcharts']
+                }
+            }
         },
     },
     optimizeDeps: {
@@ -262,4 +270,7 @@ export default defineConfig({
             },
         }
     },
+    worker: {
+        format: 'es'
+    }
 });

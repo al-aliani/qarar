@@ -52,6 +52,16 @@ export class AIChatModal {
         if (this.isOpen) this.render();
     }
 
+    addProactiveBadge() {
+        const badge = document.getElementById('aiChatBadge');
+        if (badge) badge.style.display = 'block';
+    }
+
+    clearProactiveBadge() {
+        const badge = document.getElementById('aiChatBadge');
+        if (badge) badge.style.display = 'none';
+    }
+
     /**
      * إنشاء زر عائم وتهيئة الـ modal
      */
@@ -63,8 +73,11 @@ export class AIChatModal {
         this.fab.type = 'button';
         this.fab.className = 'ai-chat-fab';
         this.fab.setAttribute('aria-label', 'فتح المستشار الذكي');
-        this.fab.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.6 0-3.1-.4-4.4-1.2L3 20.5l1.7-4.9A8.5 8.5 0 1 1 21 11.5Z"/></svg><span class="ai-chat-fab-label">المستشار الذكي</span>';
-        this.fab.addEventListener('click', () => this.toggle());
+        this.fab.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.6 0-3.1-.4-4.4-1.2L3 20.5l1.7-4.9A8.5 8.5 0 1 1 21 11.5Z"/></svg><span class="ai-chat-fab-label">المستشار الذكي</span><span id="aiChatBadge" class="ai-chat-badge" style="display: none;"></span>';
+        this.fab.addEventListener('click', () => {
+            this.clearProactiveBadge();
+            this.toggle();
+        });
         document.body.appendChild(this.fab);
         this._bindFabAvoidance();
 
@@ -95,6 +108,8 @@ export class AIChatModal {
                 .ai-chat-suggest:hover { background: var(--c-surface-3, #e2e8f0); }
                 .ai-chat-tip { margin: 12px 16px 0; padding: 10px 12px; border-radius: 10px; background: var(--c-gold-subtle); border-inline-start: 3px solid var(--c-gold-500); font-size: 12.5px; color: var(--c-text-main); line-height: 1.6; }
                 .ai-chat-tip b { color: var(--c-gold-500); }
+                .ai-chat-badge { position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: var(--c-danger-500, #ef4444); border-radius: 50%; border: 2px solid var(--c-bg-card, #fff); }
+                .ai-chat-fab { position: relative; }
             `;
             document.head.appendChild(style);
         }

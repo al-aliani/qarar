@@ -1,0 +1,59 @@
+/* Accessibility and Mobile Enhancements */
+
+/* 1. Increase touch targets for mobile */
+@media (max-width: 768px) {
+    .btn, 
+    .input, 
+    select.input, 
+    textarea.input,
+    .export-option,
+    .export-card {
+        min-height: 44px;
+    }
+    
+    .btn-icon {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 8px;
+    }
+
+    .modal-close,
+    .btn-close {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* 2. Better keyboard focus states */
+*:focus-visible {
+    outline: 2px solid var(--c-primary, #0e5b44);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(14, 91, 68, 0.2);
+    border-radius: 4px; /* Fallback */
+}
+
+/* Specific focus fixes */
+.btn:focus-visible, 
+.input:focus-visible, 
+select:focus-visible, 
+textarea:focus-visible {
+    outline: none; /* Rely on box-shadow from existing styles or above */
+    border-color: var(--c-primary, #0e5b44);
+    box-shadow: 0 0 0 3px rgba(14, 91, 68, 0.3);
+}
+
+/* 3. Screen reader only class (if needed beyond what's in index.html) */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}

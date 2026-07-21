@@ -1,3 +1,5 @@
+import Chart from 'chart.js/auto';
+
 // charts.js - Powered by Chart.js
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Revenue vs Costs Line Chart (Break-even)

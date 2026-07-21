@@ -3,23 +3,13 @@
  * Network-first للكود (JS/CSS/HTML) حتى تصل التحديثات فوراً، مع fallback للكاش دون اتصال.
  * (كان Cache-first — فكانت إصلاحات الكود لا تصل المستخدمين أبداً حتى يتغيّر اسم الكاش يدوياً.)
  */
-const CACHE_NAME = 'feasibility-v4';
+const CACHE_NAME = 'feasibility-v5';
 
 // أصول حرجة تُخزَّن عند التثبيت
 const PRECACHE_URLS = [
     '/',
     '/index.html',
-    '/css/main.css',
-    '/css/variables.css',
-    '/css/utilities.css',
-    '/css/layout.css',
-    '/css/components.css',
-    '/css/toast.css',
-    '/css/tooltip.css',
-    '/js/core/store.js',
-    '/js/core/engine.js',
-    '/js/core/schema.js',
-    '/app.js',
+    '/landing.html',
     '/manifest.json'
 ];
 
@@ -67,8 +57,8 @@ self.addEventListener('push', (e) => {
     }
     const opts = {
         body: data.body || '',
-        icon: '/icon-192.png',
-        badge: '/icon-72.png',
+        icon: '/brand-icon.svg',
+        badge: '/brand-icon.svg',
         tag: data.tag || 'feasibility',
         requireInteraction: false
     };

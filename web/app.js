@@ -1881,16 +1881,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  const renderShareRoute = async (projectId) => {
-    const sidebarEl = document.querySelector('.sidebar');
-    const stepperNavEl = document.getElementById('stepperNav');
-    const breadcrumbBar = document.getElementById('breadcrumbBar');
-    if (sidebarEl) sidebarEl.style.display = 'none';
-    if (stepperNavEl) stepperNavEl.style.display = 'none';
-    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+  const renderShareRoute = async (shareToken) => {
     try {
+      const { getSharedStudy } = await import('./js/services/ShareService.js');
+      const shared = shareToken ? await getSharedStudy(shareToken) : null;
+      
+      if (shared && shared.permission === 'edit_copy') {
+          // Sandbox Mode (Fork / Trial Copy)
+          // Restore normal layout since we are going into the wizard
+          const sidebarEl = document.querySelector('.sidebar');
+          if (sidebarEl) sidebarEl.style.removeProperty('display');
+          if (document.getElementById('stepperNav')) document.getElementById('stepperNav').style.removeProperty('display');
+          if (document.getElementById('breadcrumbBar')) document.getElementById('breadcrumbBar').style.removeProperty('display');
+          const mainContainer = document.querySelector('.main-content');
+          if (mainContainer) {
+            mainContainer.classList.add('lg:mr-64');
+            mainContainer.classList.remove('w-full', 'px-0', 'py-0');
+          }
+          
+          // Create unique clone
+          const newId = crypto.randomUUID ? crypto.randomUUID() : 'sandbox-' + Date.now();
+          const sandboxData = { ...(shared.data || {}), id: newId };
+          if (sandboxData.projectInfo) sandboxData.projectInfo.id = newId;
+          
+          store.setState(sandboxData);
+          import('./js/utils/toast.js').then(({ toast }) => {
+              toast.success('تم فتح نسخة تجريبية. يمكنك تعديل الأرقام بأمان ولن تتأثر دراسة المالك الأصلي.', 8000);
+          });
+          
+          // Redirect to wizard start
+          window.location.hash = '#/0';
+          return;
+      }
+
+      // Read-Only Pitch Deck (view)
+      const sidebarEl = document.querySelector('.sidebar');
+      const stepperNavEl = document.getElementById('stepperNav');
+      const breadcrumbBar = document.getElementById('breadcrumbBar');
+      const mainContainer = document.querySelector('.main-content');
+
+      if (sidebarEl) sidebarEl.style.display = 'none';
+      if (stepperNavEl) stepperNavEl.style.display = 'none';
+      if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+      if (mainContainer) {
+        mainContainer.classList.remove('lg:mr-64');
+        mainContainer.classList.add('w-full', 'px-0', 'py-0');
+      }
+
       const { ShareView } = await import('./js/ui/ShareView.js');
-      new ShareView('wizardContainer', store, null).render(projectId);
+      new ShareView('wizardContainer', store, null).render(shareToken);
     } catch (e) {
       console.error('ShareView load failed:', e);
       toast.error('تعذر فتح صفحة المشاركة');
@@ -2814,6 +2853,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Escape' && mobileNav?.classList.contains('is-open')) {
       toggleMobileMenu(false);
     }
+  });
+
+  // المستشار الذكي التفاعلي المتقدم (Proactive Context-Aware AI)
+  let proactiveDebounce = null;
+  let shownProactiveInsights = new Set();
+  
+  store.subscribe((state, section) => {
+    // Only run if relevant sections change
+    const relevantSections = ['hr', 'operational', 'revenue', 'technical', 'assumptions'];
+    if (section && !relevantSections.includes(section)) return;
+    
+    if (proactiveDebounce) clearTimeout(proactiveDebounce);
+    proactiveDebounce = setTimeout(async () => {
+      try {
+        const { hasMinimumRevenueData } = await import('./js/utils/dataSufficiency.js');
+        if (!hasMinimumRevenueData(state)) return;
+        
+        const { calculateStudy } = await import('./js/core/engine.js');
+        const { SmartAdvisor } = await import('./js/services/SmartAdvisor.js');
+        
+        const results = calculateStudy(state);
+        const analysis = SmartAdvisor.analyze(results, state);
+        
+        if (analysis?.insights?.length > 0) {
+          const topInsight = analysis.insights[0];
+          const insightHash = topInsight.message.substring(0, 30);
+          
+          if (!shownProactiveInsights.has(insightHash)) {
+             shownProactiveInsights.add(insightHash);
+             toast.info(`المستشار يلاحظ: ${topInsight.message.substring(0, 80)}... \n هل نناقش التفاصيل؟`, 6000);
+             if (window.aiChatModal && typeof window.aiChatModal.addProactiveBadge === 'function') {
+                 window.aiChatModal.addProactiveBadge();
+             }
+          }
+        }
+      } catch (e) {
+        // silently ignore calculation errors during proactive checks
+      }
+    }, 2500);
   });
 
   // إشارة نجاح التهيئة لحارس init-watchdog.js — يمنعه من عرض شاشة الخطأ.
