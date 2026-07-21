@@ -439,10 +439,10 @@ export class TemplateGallery {
             
             if (template.data) {
                 for (const [section, sectionData] of Object.entries(template.data)) {
-                    this.store.dispatch({ type: 'UPDATE_SECTION', payload: { section, data: sectionData } });
+                    this.store.update(section, sectionData);
                 }
             }
-            
+
             this.store.update('appSettings', { mode: selectedMode });
             if (clientName || preparedBy) {
                 this.store.updatePath('projectInfo', 'clientName', clientName);

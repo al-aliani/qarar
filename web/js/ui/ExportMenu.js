@@ -238,6 +238,13 @@ export class ExportMenu {
                                 <p>عرض تقديمي 7 شرائح للمستثمرين</p>
                             </div>
                         </button>
+                        <button type="button" class="export-card" data-type="batch_zip" aria-label="تنزيل حزمة المشروع كاملة (Word + Excel + PowerPoint) في ملف ZIP">
+                            <div class="icon">${icon('i-download')}</div>
+                            <div class="info">
+                                <h4>حزمة المشروع (ZIP)</h4>
+                                <p>Word + Excel + PowerPoint دفعة واحدة</p>
+                            </div>
+                        </button>
                     </div>
 
                     <div class="export-category-title mt-6 mb-2 text-gold font-bold">للمستثمرين والمسرّعات</div>
@@ -670,7 +677,15 @@ export class ExportMenu {
                     
                     const { trackExport } = await import('../../export/exportTracking.js');
                     trackExport(result.blob, { fileType: type, fileName: result.fileName, studyId: state.projectInfo?.id, studyName: state.projectInfo?.name });
-                    
+
+                    // سجل محلي (يعمل حتى للزائر غير المسجّل، بخلاف trackExport السحابي) — كان
+                    // قسم «السجل المحلي» في مركز التنزيلات فارغاً دائماً لأن recordLocalExport لم يُستدعَ.
+                    const { recordLocalExport } = await import('../services/LocalExportHistory.js');
+                    recordLocalExport(
+                        { filename: result.fileName, mimeType: result.blob?.type, size: result.blob?.size },
+                        { studyId: state.projectInfo?.id, studyName: state.projectInfo?.name }
+                    );
+
                     break;
                 }
 

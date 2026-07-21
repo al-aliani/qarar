@@ -1968,6 +1968,9 @@ export class AdminDashboardView {
         const revenueData = revenue.ok ? (revenue.data || {}) : {};
         const tierRows = Array.isArray(revenueData.by_tier) ? revenueData.by_tier : [];
         const providerRows = Array.isArray(revenueData.by_provider) ? revenueData.by_provider : [];
+        // admin_revenue_stats لا يُرجع paid_orders؛ نشتقّه من مجموع طلبات الباقات (by_tier)
+        // بدل قراءة مفتاح غير موجود يبقى 0 دائماً.
+        const paidOrdersTotal = tierRows.reduce((sum, r) => sum + Number(r.count || 0), 0);
         const startRows = starts.data?.by_prop || [];
         const preferenceRows = preferences.data?.by_prop || [];
         const successTotal = successes.ok ? (successes.data?.daily || []).reduce((sum, row) => sum + Number(row.count || 0), 0) : 0;
@@ -1985,7 +1988,7 @@ export class AdminDashboardView {
             <div class="admin-behavior-controls"><div><span class="admin-eyebrow">الاشتراكات والباقات</span><h3 class="admin-card__title" style="margin:4px 0 0;">صحة الباقات ومزوّدي الدفع</h3></div><label class="admin-period-control">الفترة<select id="subscriptionsDaysSelect" class="admin-select"><option value="7">7 أيام</option><option value="30">30 يومًا</option><option value="90">90 يومًا</option></select></label></div>
             <div class="admin-tile-grid admin-tile-grid--executive">
                 ${this._tile('الإيراد الكلي', formatCurrency(revenueData.total_revenue_sar || 0))}
-                ${this._tile('الطلبات المدفوعة', formatNumber(revenueData.paid_orders || 0))}
+                ${this._tile('الطلبات المدفوعة', formatNumber(paidOrdersTotal))}
                 ${this._tile('نجاح الدفع في الفترة', formatNumber(successTotal))}
                 ${this._tile('أخطاء الدفع في الفترة', formatNumber(errorTotal))}
                 ${this._tile('الباقات النشطة', formatNumber(tierRows.length))}

@@ -2005,7 +2005,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (breadcrumbBar) breadcrumbBar.style.display = 'none';
     try {
       const { DownloadsCenterView } = await import('./js/ui/DownloadsCenterView.js');
-      const view = new DownloadsCenterView(wizardContainer, { onBack: () => showLandingDashboard() });
+      // onRegenerate: أزرار «إعادة التصدير/التوليد» كانت ميتة (القيمة الافتراضية دالة فارغة).
+      // نعيد المستخدم للوحة التحكم حيث يفتح دراسته ويُعيد التصدير من قائمة التصدير.
+      const view = new DownloadsCenterView(wizardContainer, {
+        onBack: () => showLandingDashboard(),
+        onRegenerate: () => { window.location.hash = '#/home'; }
+      });
       await view.render();
     } catch (e) {
       console.error('DownloadsCenterView load failed:', e);
