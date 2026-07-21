@@ -1,8 +1,11 @@
 import { WordExporter } from './wordExporter.js';
 import { ExcelExporter } from './excelExporter.js';
 import { PPTXExporter } from './pptxExporter.js';
+import { calculateStudy } from '../js/core/engine.js';
 
-// Worker needs a mock store that just returns the state
+// WordExporter/PPTXExporter يقبلان store ويستدعيان getState() داخلياً؛ أما ExcelExporter
+// فتوقيعه (studyData, financialResults, options) ولا يستدعي getState — لذا نمرّر له الحالة
+// والنتائج المحسوبة صراحةً، وإلا خرج مصنّف فارغ (كان يُمرَّر له الـstore بالخطأ).
 class MockStore {
     constructor(state) {
         this.state = state;
@@ -15,39 +18,31 @@ class MockStore {
 self.onmessage = async (e) => {
     const { type, state, options } = e.data;
     const store = new MockStore(state);
-    
+
     try {
         let result;
         if (type === 'word') {
-            const exporter = new WordExporter(store);
-            result = await exporter.export();
+            result = await new WordExporter(store, options).export();
         } else if (type === 'excel') {
-            const exporter = new ExcelExporter(store);
-            result = await exporter.export(options);
+            result = await new ExcelExporter(state, calculateStudy(state), options).export();
         } else if (type === 'pptx') {
-            const exporter = new PPTXExporter(store);
-            result = await exporter.export();
+            result = await new PPTXExporter(store).export();
         } else if (type === 'batch_zip') {
             const JSZip = (await import('jszip')).default || await import('jszip');
             const zip = new JSZip();
-            
-            // 1. Generate Word
-            const wordExporter = new WordExporter(store);
-            const wordResult = await wordExporter.export();
-            if (wordResult.success) zip.file(wordResult.fileName, wordResult.blob);
-            
-            // 2. Generate Excel
-            const excelExporter = new ExcelExporter(store);
-            const excelResult = await excelExporter.export(options);
+            const results = calculateStudy(state);
+
+            const wordResult = await new WordExporter(store, options).export();
+            if (wordResult.blob) zip.file(wordResult.fileName, wordResult.blob);
+
+            const excelResult = await new ExcelExporter(state, results, options).export();
             if (excelResult.blob) zip.file(excelResult.fileName, excelResult.blob);
-            
-            // 3. Generate PPTX
-            const pptxExporter = new PPTXExporter(store);
-            const pptxResult = await pptxExporter.export();
-            if (pptxResult.success) zip.file(pptxResult.fileName, pptxResult.blob);
-            
+
+            const pptxResult = await new PPTXExporter(store).export();
+            if (pptxResult.blob) zip.file(pptxResult.fileName, pptxResult.blob);
+
             const zipBlob = await zip.generateAsync({ type: 'blob' });
-            
+
             const { sanitizeFilename } = await import('./utils.js');
             const projName = state.projectInfo?.name || 'دراسة_جدوى';
             result = {
@@ -57,7 +52,12 @@ self.onmessage = async (e) => {
         } else {
             throw new Error(`Unsupported export type in worker: ${type}`);
         }
-        
+
+        if (!result || !result.blob) {
+            self.postMessage({ status: 'error', error: 'لم يُنتج التصدير ملفاً صالحاً' });
+            return;
+        }
+
         self.postMessage({
             status: 'success',
             blob: result.blob,

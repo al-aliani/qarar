@@ -80,15 +80,20 @@ export class PPTXExporter {
             // لا توثّق صراحة أمان استدعاء write()/writeFile() معاً على نفس الكائن بعد
             // أن يفعل أحدهما شيئاً داخلياً، فنطلب الـBlob أولاً حين الحالة الأصلية مضمونة.
             // فشل هذا السطر تحديداً لا يمنع writeFile (التنزيل الفعلي) من إتمام عمله.
-            let trackingBlob = null;
-            try { trackingBlob = await this.pptx.write({ outputType: 'blob' }); } catch (_) {}
+            let blob = null;
+            try { blob = await this.pptx.write({ outputType: 'blob' }); } catch (_) {}
 
-            await this.pptx.writeFile({ fileName });
-            if (trackingBlob) {
-                const { trackExport } = await import('./exportTracking.js');
-                trackExport(trackingBlob, { fileType: 'pptx', fileName, studyId: this.state.projectInfo?.id, studyName: this.state.projectInfo?.name });
+            // writeFile ينشئ <a> وينقره عبر DOM — متاح على الخيط الرئيسي فقط لا داخل
+            // Web Worker (لا document). داخل الـWorker نُرجع الـblob فقط ويتولّى الخيط
+            // الرئيسي التنزيل عبر downloadBlob؛ وعلى الخيط الرئيسي نُنزّل مباشرة كالسابق.
+            if (typeof document !== 'undefined') {
+                await this.pptx.writeFile({ fileName });
+                if (blob) {
+                    const { trackExport } = await import('./exportTracking.js');
+                    trackExport(blob, { fileType: 'pptx', fileName, studyId: this.state.projectInfo?.id, studyName: this.state.projectInfo?.name });
+                }
             }
-            return { success: true, fileName };
+            return { success: !!blob, fileName, blob };
         } catch (error) {
             console.error('[PPTX Export]', error);
             return { success: false, error: error?.message || 'فشل التصدير' };

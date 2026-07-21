@@ -453,7 +453,9 @@ export class ExportMenu {
 
         this.overlay.querySelector('#btnOpenQaFixCenter')?.addEventListener('click', () => this._openQaFixCenter());
         this.overlay.querySelector('#btnOpenDownloadsCenter')?.addEventListener('click', () => {
-            window.dispatchEvent(new CustomEvent('feasibility:showDownloadsCenter'));
+            // مركز التنزيلات يُفتح عبر المسار الهاشي #/downloads (renderDownloadsRoute) —
+            // لا يوجد مستمع لحدث feasibility:showDownloadsCenter فكان الزر ميتاً.
+            window.location.hash = '#/downloads';
             this.close();
         });
 

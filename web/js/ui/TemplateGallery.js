@@ -55,9 +55,12 @@ function applyProjectTypeDrafts(store, projectType) {
         ]);
     }
     if (!Array.isArray(state.hr?.positions) || state.hr.positions.length === 0) {
+        // مسودات براتب 0: نترك nationality فارغة عمداً — تعيين 'expat' كان يحقن رسوم
+        // وافد صامتة (مكتب عمل/تذكرة/إقامة ≈ 12,750 ريال/سنة) قبل أن يُدخل المستخدم
+        // راتباً فعلياً، خلافاً لمبدأ «لا تكلفة صامتة» في المشروع.
         store.updatePath('hr', 'positions', [
             { position: 'مدير تشغيل', nationality: 'saudi', count: 1, salary: 0, months: 12, suggestedDraft: true },
-            { position: 'طاقم خدمة أو مطبخ', nationality: 'expat', count: 1, salary: 0, months: 12, suggestedDraft: true },
+            { position: 'طاقم خدمة أو مطبخ', nationality: '', count: 1, salary: 0, months: 12, suggestedDraft: true },
         ]);
     }
 }
@@ -91,104 +94,102 @@ export class TemplateGallery {
             {
                 id: 'fb',
                 name: 'مطعم / مقهى',
-                description: 'يتضمن تراخيص البلدية، والغذاء والدواء (SFDA)، ومعدات المطبخ، ورواتب الطاقم الافتراضية.',
+                description: 'يبدأ بتراخيص البلدية والغذاء والدواء (SFDA) ومعدات المطبخ وطاقم مبدئي — أرقام إرشادية تُعدّلها ببياناتك.',
                 icon: 'i-store',
                 data: {
                     projectInfo: { sector: 'الأغذية والمشروبات', concept: 'مطعم / مقهى' },
                     legal: {
                         licenses: [
-                            { name: 'سجل تجاري', cost: 1200 },
-                            { name: 'رخصة البلدية', cost: 3000 },
-                            { name: 'ترخيص هيئة الغذاء والدواء SFDA', cost: 1000 },
-                            { name: 'رخصة الدفاع المدني', cost: 1500 }
+                            { name: 'سجل تجاري', price: 1200, quantity: 1 },
+                            { name: 'رخصة البلدية', price: 3000, quantity: 1 },
+                            { name: 'ترخيص هيئة الغذاء والدواء SFDA', price: 1000, quantity: 1 },
+                            { name: 'رخصة الدفاع المدني', price: 1500, quantity: 1 }
                         ]
                     },
-                    capex: {
-                        items: [
-                            { name: 'تجهيزات المطبخ (أفران، ثلاجات)', amount: 60000, category: 'معدات' },
-                            { name: 'نظام نقاط البيع (POS)', amount: 5000, category: 'تقنية' },
-                            { name: 'أثاث الصالة', amount: 35000, category: 'أثاث' },
-                            { name: 'ديكورات وتجهيزات أولية', amount: 80000, category: 'ديكور' }
+                    technical: {
+                        equipment: [
+                            { name: 'تجهيزات المطبخ (أفران، ثلاجات)', price: 60000, quantity: 1 },
+                            { name: 'نظام نقاط البيع (POS)', price: 5000, quantity: 1 },
+                            { name: 'أثاث الصالة', price: 35000, quantity: 1 },
+                            { name: 'ديكورات وتجهيزات أولية', price: 80000, quantity: 1 }
                         ]
                     },
-                    opex: {
-                        salaries: [
-                            { role: 'طاهٍ رئيسي', monthlySalary: 5000, count: 1 },
-                            { role: 'مساعد طباخ', monthlySalary: 3000, count: 2 },
-                            { role: 'كاشير / مقدم طعام', monthlySalary: 3500, count: 2 },
-                            { role: 'عامل نظافة', monthlySalary: 2000, count: 2 }
-                        ],
-                        items: [
-                            { name: 'إيجار المحل', amount: 8000, frequency: 'monthly', category: 'fixed' },
-                            { name: 'تسويق', amount: 2000, frequency: 'monthly', category: 'marketing' }
+                    hr: {
+                        positions: [
+                            { position: 'طاهٍ رئيسي', salary: 5000, count: 1, months: 12, nationality: 'saudi' },
+                            { position: 'مساعد طباخ', salary: 3000, count: 2, months: 12, nationality: 'saudi' },
+                            { position: 'كاشير / مقدم طعام', salary: 3500, count: 2, months: 12, nationality: 'saudi' },
+                            { position: 'عامل نظافة', salary: 2000, count: 2, months: 12, nationality: 'saudi' }
                         ]
-                    }
+                    },
+                    administrative: { administrative: [{ name: 'إيجار المحل', monthly: 8000 }] },
+                    marketing: { campaigns: [{ name: 'تسويق', type: 'operating', monthly: 2000 }] }
                 }
             },
             {
                 id: 'tech',
                 name: 'تطبيق إلكتروني / منصة رقمية',
-                description: 'يتضمن خوادم الاستضافة، تراخيص البرمجيات، وفريق التطوير والدعم الأساسي.',
+                description: 'يبدأ بخوادم الاستضافة وتراخيص البرمجيات وفريق تطوير مبدئي — أرقام إرشادية تُعدّلها ببياناتك.',
                 icon: 'i-server',
                 data: {
                     projectInfo: { sector: 'تقنية المعلومات', concept: 'تطبيق إلكتروني / منصة رقمية' },
                     legal: {
                         licenses: [
-                            { name: 'سجل تجاري للتقنية', cost: 1200 },
-                            { name: 'توثيق منصة الأعمال', cost: 1000 }
+                            { name: 'سجل تجاري للتقنية', price: 1200, quantity: 1 },
+                            { name: 'توثيق منصة الأعمال', price: 1000, quantity: 1 }
                         ]
                     },
-                    capex: {
-                        items: [
-                            { name: 'أجهزة كمبيوتر للمطورين', amount: 20000, category: 'معدات' },
-                            { name: 'تراخيص برمجيات وأدوات (سنوي)', amount: 8000, category: 'تقنية' },
-                            { name: 'برمجة التطبيق (Outsourcing)', amount: 150000, category: 'تأسيس' }
+                    technical: {
+                        equipment: [
+                            { name: 'أجهزة كمبيوتر للمطورين', price: 20000, quantity: 1 },
+                            { name: 'تراخيص برمجيات وأدوات (سنوي)', price: 8000, quantity: 1 },
+                            { name: 'برمجة التطبيق (Outsourcing)', price: 150000, quantity: 1 }
                         ]
                     },
-                    opex: {
-                        salaries: [
-                            { role: 'مطور واجهات', monthlySalary: 8000, count: 1 },
-                            { role: 'مطور خلفية (Backend)', monthlySalary: 10000, count: 1 },
-                            { role: 'مسؤول تسويق رقمي', monthlySalary: 6000, count: 1 },
-                            { role: 'دعم فني', monthlySalary: 4000, count: 1 }
-                        ],
-                        items: [
-                            { name: 'خوادم استضافة (سحابية)', amount: 1500, frequency: 'monthly', category: 'fixed' },
-                            { name: 'تسويق رقمي', amount: 5000, frequency: 'monthly', category: 'marketing' }
+                    hr: {
+                        positions: [
+                            { position: 'مطور واجهات', salary: 8000, count: 1, months: 12, nationality: 'saudi' },
+                            { position: 'مطور خلفية (Backend)', salary: 10000, count: 1, months: 12, nationality: 'saudi' },
+                            { position: 'مسؤول تسويق رقمي', salary: 6000, count: 1, months: 12, nationality: 'saudi' },
+                            { position: 'دعم فني', salary: 4000, count: 1, months: 12, nationality: 'saudi' }
                         ]
-                    }
+                    },
+                    administrative: { administrative: [{ name: 'خوادم استضافة (سحابية)', monthly: 1500 }] },
+                    marketing: { campaigns: [{ name: 'تسويق رقمي', type: 'operating', monthly: 5000 }] }
                 }
             },
             {
                 id: 'retail',
                 name: 'متجر تجزئة / معرض',
-                description: 'يتضمن أرفف العرض، كاميرات المراقبة، ديكور المعرض، ونظام المبيعات.',
+                description: 'يبدأ بأرفف العرض وكاميرات المراقبة وديكور المعرض ونظام المبيعات — أرقام إرشادية تُعدّلها ببياناتك.',
                 icon: 'i-shopping-bag',
                 data: {
                     projectInfo: { sector: 'التجزئة والتجارة', concept: 'متجر تجزئة / معرض' },
                     legal: {
                         licenses: [
-                            { name: 'سجل تجاري', cost: 1200 },
-                            { name: 'رخصة البلدية', cost: 3000 },
-                            { name: 'ترخيص الدفاع المدني', cost: 1500 }
+                            { name: 'سجل تجاري', price: 1200, quantity: 1 },
+                            { name: 'رخصة البلدية', price: 3000, quantity: 1 },
+                            { name: 'ترخيص الدفاع المدني', price: 1500, quantity: 1 }
                         ]
                     },
-                    capex: {
-                        items: [
-                            { name: 'نظام نقاط البيع (POS)', amount: 4000, category: 'تقنية' },
-                            { name: 'أرفف العرض وتجهيزات المحل', amount: 30000, category: 'معدات' },
-                            { name: 'كاميرات مراقبة', amount: 5000, category: 'معدات' },
-                            { name: 'ديكورات المحل واللوحة', amount: 45000, category: 'ديكور' }
+                    technical: {
+                        equipment: [
+                            { name: 'نظام نقاط البيع (POS)', price: 4000, quantity: 1 },
+                            { name: 'أرفف العرض وتجهيزات المحل', price: 30000, quantity: 1 },
+                            { name: 'كاميرات مراقبة', price: 5000, quantity: 1 },
+                            { name: 'ديكورات المحل واللوحة', price: 45000, quantity: 1 }
                         ]
                     },
-                    opex: {
-                        salaries: [
-                            { role: 'مدير معرض', monthlySalary: 5000, count: 1 },
-                            { role: 'بائع / ممثل مبيعات', monthlySalary: 4000, count: 2 }
-                        ],
-                        items: [
-                            { name: 'إيجار المعرض', amount: 10000, frequency: 'monthly', category: 'fixed' },
-                            { name: 'مصاريف تشغيل أخرى', amount: 1500, frequency: 'monthly', category: 'variable' }
+                    hr: {
+                        positions: [
+                            { position: 'مدير معرض', salary: 5000, count: 1, months: 12, nationality: 'saudi' },
+                            { position: 'بائع / ممثل مبيعات', salary: 4000, count: 2, months: 12, nationality: 'saudi' }
+                        ]
+                    },
+                    administrative: {
+                        administrative: [
+                            { name: 'إيجار المعرض', monthly: 10000 },
+                            { name: 'مصاريف تشغيل أخرى', monthly: 1500 }
                         ]
                     }
                 }
@@ -196,33 +197,35 @@ export class TemplateGallery {
             {
                 id: 'services',
                 name: 'مكتب خدمات / استشارات',
-                description: 'يتضمن الترخيص المهني، الأثاث المكتبي، وأجهزة الحاسب للمستشارين.',
+                description: 'يبدأ بالترخيص المهني والأثاث المكتبي وأجهزة الحاسب — أرقام إرشادية تُعدّلها ببياناتك.',
                 icon: 'i-users',
                 data: {
                     projectInfo: { sector: 'الخدمات والاستشارات', concept: 'مكتب خدمات / استشارات' },
                     legal: {
                         licenses: [
-                            { name: 'سجل تجاري', cost: 1200 },
-                            { name: 'ترخيص مهني', cost: 2000 },
-                            { name: 'رخصة البلدية', cost: 2500 }
+                            { name: 'سجل تجاري', price: 1200, quantity: 1 },
+                            { name: 'ترخيص مهني', price: 2000, quantity: 1 },
+                            { name: 'رخصة البلدية', price: 2500, quantity: 1 }
                         ]
                     },
-                    capex: {
-                        items: [
-                            { name: 'أثاث مكتبي (طاولات، كراسي)', amount: 25000, category: 'أثاث' },
-                            { name: 'أجهزة حاسب وملحقاتها', amount: 15000, category: 'معدات' },
-                            { name: 'ديكور وتجهيز المقر', amount: 30000, category: 'ديكور' }
+                    technical: {
+                        equipment: [
+                            { name: 'أثاث مكتبي (طاولات، كراسي)', price: 25000, quantity: 1 },
+                            { name: 'أجهزة حاسب وملحقاتها', price: 15000, quantity: 1 },
+                            { name: 'ديكور وتجهيز المقر', price: 30000, quantity: 1 }
                         ]
                     },
-                    opex: {
-                        salaries: [
-                            { role: 'مستشار / أخصائي', monthlySalary: 12000, count: 1 },
-                            { role: 'مسؤول مبيعات', monthlySalary: 5000, count: 1 },
-                            { role: 'موظف استقبال', monthlySalary: 4000, count: 1 }
-                        ],
-                        items: [
-                            { name: 'إيجار المكتب', amount: 6000, frequency: 'monthly', category: 'fixed' },
-                            { name: 'اشتراكات وتسويق', amount: 2000, frequency: 'monthly', category: 'fixed' }
+                    hr: {
+                        positions: [
+                            { position: 'مستشار / أخصائي', salary: 12000, count: 1, months: 12, nationality: 'saudi' },
+                            { position: 'مسؤول مبيعات', salary: 5000, count: 1, months: 12, nationality: 'saudi' },
+                            { position: 'موظف استقبال', salary: 4000, count: 1, months: 12, nationality: 'saudi' }
+                        ]
+                    },
+                    administrative: {
+                        administrative: [
+                            { name: 'إيجار المكتب', monthly: 6000 },
+                            { name: 'اشتراكات وتسويق', monthly: 2000 }
                         ]
                     }
                 }
@@ -356,7 +359,7 @@ export class TemplateGallery {
         
         if (template.data) {
             for (const [section, sectionData] of Object.entries(template.data)) {
-                this.store.dispatch({ type: 'UPDATE_SECTION', payload: { section, data: sectionData } });
+                this.store.update(section, sectionData);
             }
         }
         

@@ -1904,7 +1904,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const sandboxData = { ...(shared.data || {}), id: newId };
           if (sandboxData.projectInfo) sandboxData.projectInfo.id = newId;
           
-          store.setState(sandboxData);
+          store.set(store.mergeWithDefaults(sandboxData));
           import('./js/utils/toast.js').then(({ toast }) => {
               toast.success('تم فتح نسخة تجريبية. يمكنك تعديل الأرقام بأمان ولن تتأثر دراسة المالك الأصلي.', 8000);
           });
@@ -2855,7 +2855,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // المستشار الذكي التفاعلي المتقدم (Proactive Context-Aware AI)
+  // المستشار الذكي التفاعلي المتقدم (Hyper-Proactive AI)
   let proactiveDebounce = null;
   let shownProactiveInsights = new Set();
   
@@ -2882,7 +2882,40 @@ document.addEventListener('DOMContentLoaded', async () => {
           
           if (!shownProactiveInsights.has(insightHash)) {
              shownProactiveInsights.add(insightHash);
-             toast.info(`المستشار يلاحظ: ${topInsight.message.substring(0, 80)}... \n هل نناقش التفاصيل؟`, 6000);
+             
+             // Determine severity
+             let isCritical = topInsight.type === 'danger' || topInsight.message.includes('خسارة') || topInsight.message.includes('سالبة');
+             let isPositive = topInsight.type === 'success' || topInsight.message.includes('ممتاز') || topInsight.message.includes('جيد جداً');
+             
+             // Highlight fields based on context
+             const allInputs = document.querySelectorAll('.input, .input-with-ai textarea');
+             allInputs.forEach(el => {
+                 el.classList.remove('pulse-danger-field', 'pulse-warning-field', 'pulse-success-field');
+                 if (isCritical && topInsight.message.includes('رواتب') && el.closest('#table-positions')) el.classList.add('pulse-danger-field');
+                 else if (isCritical && topInsight.message.includes('إيجار') && el.dataset.key?.includes('rent')) el.classList.add('pulse-danger-field');
+                 else if (!isCritical && !isPositive && topInsight.message.includes('رواتب') && el.closest('#table-positions')) el.classList.add('pulse-warning-field');
+             });
+
+             setTimeout(() => {
+                 allInputs.forEach(el => el.classList.remove('pulse-danger-field', 'pulse-warning-field', 'pulse-success-field'));
+             }, 8000);
+
+             // toast.js يعرض الرسالة عبر textContent (لا HTML) — فأي وسوم تظهر كنص خام
+             // للعميل. نبني نصاً عادياً؛ التفاعل «كيف أحلها؟» متاح عبر شارة المستشار الذكي
+             // (addProactiveBadge أدناه) التي تفتح نافذة المحادثة.
+             const toastLabel = isCritical ? '🔴 تنبيه حرج' : isPositive ? '🟢 أداء ممتاز' : '🟡 ملاحظة استراتيجية';
+             const toastMsg = `${toastLabel}: ${topInsight.message}`;
+
+             if (isCritical) {
+                 toast.error(toastMsg, 10000);
+                 // Subtle Audio Cues (if critical)
+                 try { new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU').play(); } catch(e){}
+             } else if (isPositive) {
+                 toast.success(toastMsg, 6000);
+             } else {
+                 toast.info(toastMsg, 8000);
+             }
+
              if (window.aiChatModal && typeof window.aiChatModal.addProactiveBadge === 'function') {
                  window.aiChatModal.addProactiveBadge();
              }

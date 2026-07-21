@@ -16,11 +16,11 @@ const assumptionRows = [
 export function buildStudyConfidence(state = {}, results = {}, qa = null) {
     const assumptions = state.assumptions || {};
     const project = state.projectInfo || {};
-    const revenueStreams = state.revenue?.revenueStreams || [];
+    const revenueStreams = state.revenue?.streams || [];
     const scoreParts = [
         Boolean(project.name || project.concept),
         revenueStreams.length > 0,
-        finite(state.technical?.totalCost) || finite(results?.investment?.total),
+        finite(results?.capex?.total) || finite(state.financing?.totalInvestment),
         finite(state.financing?.sources?.equity?.amount) || finite(state.financing?.sources?.bankLoan?.amount),
         finite(assumptions.discountRate),
     ];

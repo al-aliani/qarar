@@ -62,7 +62,7 @@ export class BankReportGenerator {
     static calculateResults(state) {
         try {
             return runFullModel(state);
-        } catch {
+        } catch (e) {
             console.error('Bank report calc error', e);
             return {};
         }

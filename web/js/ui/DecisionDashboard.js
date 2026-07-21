@@ -782,7 +782,7 @@ export class DecisionDashboard {
         // استيراد نسخة احتياطية (JSON Backup)
         const btnImportBackup = this.container.querySelector('#btnImportBackup');
         if (btnImportBackup) {
-            const handler = async () => {
+            const handler = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
                 
