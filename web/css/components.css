@@ -3622,6 +3622,13 @@ button.qa-detail-item:hover {
     gap: var(--s-3);
 }
 
+/* محدِّد مسار التصدير يُخفي البطاقات عبر خاصية hidden — لكن .export-card{display:flex}
+   من أصل المؤلف يتغلّب على [hidden]{display:none} الافتراضية للمتصفح، فتبقى ظاهرة.
+   نُعيد الأولوية للإخفاء صراحةً. */
+.export-card[hidden] {
+    display: none !important;
+}
+
 .export-card {
     background: var(--c-bg-card);
     border: 1px solid var(--c-border);

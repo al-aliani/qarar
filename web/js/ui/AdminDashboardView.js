@@ -491,7 +491,7 @@ export class AdminDashboardView {
         const alerts = [];
 
         if (paymentErrors > 0) {
-            alerts.push(this._executiveAlert('أولوية مالية', formatNumber(paymentErrors), 'danger', 'أخطاء دفع خلال آخر ٣٠ يوماً تحتاج مراجعة قبل زيادة الإنفاق التسويقي.'));
+            alerts.push(this._executiveAlert('أولوية مالية', formatNumber(paymentErrors), 'danger', `أخطاء دفع خلال آخر ${periodLabel} تحتاج مراجعة قبل زيادة الإنفاق التسويقي.`));
         }
         if (pendingReviews > 0) {
             alerts.push(this._executiveAlert('أولوية تشغيلية', formatNumber(pendingReviews), 'warning', 'طلبات تنتظر المراجعة؛ تسريعها يحسن زمن التسليم وتجربة العميل.'));
@@ -559,7 +559,7 @@ export class AdminDashboardView {
                             <span class="admin-eyebrow">صحة المنتج</span>
                             <h3 class="admin-card__title">الإشارات التشغيلية</h3>
                         </div>
-                        <span class="admin-period-badge">٣٠ يوماً</span>
+                        <span class="admin-period-badge">${periodLabel}</span>
                     </div>
                     <div class="admin-signal-list">
                         <div class="admin-signal-row"><span>دراسات جديدة</span><strong>${this._esc(formatNumber(funnel.new_studies ?? 0))}</strong></div>
@@ -1205,13 +1205,14 @@ export class AdminDashboardView {
             // Relative to max (Retention)
             const retentionPercent = Math.round((count / maxViews) * 100);
 
-            const dropoffStyle = dropOffPercent > 30 ? 'color: #ef4444; font-weight: bold;' : 'color: var(--c-text-muted);';
-            const dropoffLabel = dropOffPercent > 0 ? `<span dir="ltr" style="${dropoffStyle}">-${dropOffPercent}%</span>` : '<span class="text-muted">—</span>';
+            // _table يعقّم كل خلية عبر _esc (يهرّب < و>)، فتمرير HTML هنا يعرض الوسوم
+            // كنص خام. نمرّر قيماً نصية بسيطة (نسبة النجاة/التسرب) بدل أشرطة/وسوم HTML.
+            const dropoffLabel = dropOffPercent > 0 ? `-${dropOffPercent}%` : '—';
 
             return [
                 `خطوة ${e.value}`,
                 count,
-                `<div style="width: 100px; height: 6px; background: var(--c-surface-2); border-radius: 3px; overflow: hidden; margin-top: 6px;"><div style="width: ${retentionPercent}%; height: 100%; background: var(--c-primary);"></div></div>`,
+                `${retentionPercent}%`,
                 dropoffLabel
             ];
         });
