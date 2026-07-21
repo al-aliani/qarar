@@ -105,9 +105,26 @@ export default defineConfig({
             '../supabase/**/*.{test,spec}.{js,mjs,cjs,ts}'
         ],
         environment: 'node',
+        // تدقيق 2026-07-20: المهلة الافتراضية 5000ms كانت تُفشل اختبارات ثقيلة *سليمة*
+        // (تصدير exceljs/jszip، تصيير DOM) فقط تحت ازدحام المعالج — أي عند تشغيل المجموعة
+        // بالتوازي مع عمليات ثقيلة أخرى تُشبع الأنوية. فشل توقيت لا عطل منطقي: الاختبار
+        // الفاشل يختلف عشوائياً بين التشغيلات (excelExporter مرة، shareStudyView أخرى)،
+        // والمجموعة خضراء حتمياً بلا ازدحام. رفع المهلة يزيل هذه الإيجابيات الكاذبة دون
+        // إخفاء أي خطأ حقيقي — اختبار معلّق فعلاً سيتجاوز 20s ويظهر كفشل صريح.
+        testTimeout: 20000,
+        hookTimeout: 20000,
         coverage: {
             provider: 'v8',
-            enabled: true,
+            // تدقيق 2026-07-20: كانت enabled:true تفرض التغطية على كل `npm test` (=vitest run).
+            // مولّد coverage-v8 يفشل في نهاية التشغيل بـ ENOENT (errno -4058) على ملفات
+            // web/coverage/.tmp/coverage-*.json لأن جذر المشروع مسار عربي (G:\دراسة الجدوى)
+            // يُرمَّز %D8%.. عند إعادة قراءته، فيخرج `npm test` برمز 1 رغم نجاح كل الاختبارات
+            // (1669/1669 خضراء). لا حيلة محمولة لتفادي ترميز الجذر العربي محلياً (أي مسار
+            // نسبي للتغطية يبقى تحته، والمطلق ASCII يكسر CI/لينكس). الحل: فصل التغطية عن
+            // `npm test` الافتراضي (حلقة تطوير سريعة نظيفة، خروج 0 محلياً)، وإبقاؤها opt-in
+            // عبر `npm run test:coverage` (=vitest run --coverage؛ العلَم يُعيد enabled:true) —
+            // حيث يعمل حاجز الانحدار (thresholds أدناه) على CI بمسار ASCII كما كان.
+            enabled: false,
             reporter: ['text', 'html'],
             reportsDirectory: './coverage',
             // تدقيق 2026-07-08: كانت lines/functions/branches/statements هنا مباشرة تحت
