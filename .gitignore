@@ -43,6 +43,7 @@ experience_brain.db
 #     من كود المشروع؛ إضافتها بـgit add عادي تُنتج embedded repo مكسور) ===
 .agents/
 
+# === Vercel ===
 .vercel
 .env*
 
