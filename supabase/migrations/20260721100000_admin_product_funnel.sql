@@ -26,12 +26,15 @@ begin
   select jsonb_build_object(
     'new_studies', (select count(*) from public.studies where created_at > now() - (days || ' days')::interval),
     'study_created_events', (select count(*) from public.events where event_name = 'study_created' and created_at > now() - (days || ' days')::interval),
-    'paid_users', (select count(*) from public.profiles where subscription_tier in ('pro', 'enterprise')),
-    'free_users', (select count(*) from public.profiles where coalesce(subscription_tier, 'free') = 'free'),
+    -- paid_users: عملاء دفعوا فعلاً (user_id مميّز في orders المدفوعة) — لا
+    -- profiles.subscription_tier المُجمَّد (يبقى 'free' دائماً: مُشغِّل يمنع تعديله من
+    -- الواجهة، والصلاحية تُقرأ من app_metadata، ونموذج الدفع لكل-دراسة لا اشتراك).
+    'paid_users', (select count(distinct user_id) from public.orders where status = 'paid'),
+    'free_users', greatest(0, (select count(*) from public.profiles) - (select count(distinct user_id) from public.orders where status = 'paid')),
     'paid_orders', (select count(*) from public.orders where status = 'paid' and paid_at > now() - (days || ' days')::interval),
-    'payment_errors',
-      (select count(*) from public.events where event_name = 'payment_error' and created_at > now() - (days || ' days')::interval)
-      + (select count(*) from public.orders where status = 'failed' and created_at > now() - (days || ' days')::interval),
+    -- payment_errors: مصدر واحد موثوق (orders.status='failed') — الجمع مع حدث
+    -- payment_error كان يَعُدّ الفشل مرتين ويحتسب الاستردادات المشروعة كأخطاء.
+    'payment_errors', (select count(*) from public.orders where status = 'failed' and created_at > now() - (days || ' days')::interval),
     'avg_completion_minutes', (
       select round(avg(extract(epoch from (completed_at - started_at)) / 60)::numeric, 1)
       from completion_pairs

@@ -18,7 +18,20 @@ security definer
 set search_path = public
 stable
 as $$
-  select s.title, s.sector, s.data, ss.permission, ss.hide_sensitive
+  -- أمني: عند hide_sensitive نجرّد الأقسام المالية الحساسة (الرواتب، التكاليف
+  -- التفصيلية، هيكل التمويل، المصاريف) من data داخل الدالة نفسها قبل الإرجاع — لا
+  -- نعتمد على إخفاء المتصفح وحده. كان إرسال data كاملاً يجعل الإخفاء تجميلياً: يفتح
+  -- المستلم تبويب الشبكة فيرى JSON كامل الدراسة. عامل jsonb '-' يحذف مفاتيح المستوى
+  -- الأعلى؛ نبقي projectInfo/revenue/marketSizing/assumptions لعرض النتائج العليا.
+  select
+    s.title,
+    s.sector,
+    case when ss.hide_sensitive
+      then (s.data - 'hr' - 'technical' - 'financing' - 'administrative' - 'marketing' - 'opex' - 'capex')
+      else s.data
+    end as data,
+    ss.permission,
+    ss.hide_sensitive
   from public.study_shares ss
   join public.studies s on s.id = ss.study_id
   where ss.share_token = p_token
