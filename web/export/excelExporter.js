@@ -106,19 +106,21 @@ export class ExcelExporter {
         XLSX.utils.move_last_sheet_to_front(workbook);
 
         const outFilename = `${baseName}_${exportDateISO()}.xlsx`;
-        await XLSX.writeFile(workbook, outFilename);
-
-        // نسخة Blob لمركز التنزيلات (2026-07-16) — workbook._wb هو كائن ExcelJS
-        // الحقيقي وراء xlsxShim.js (انظر تعليقه)؛ writeBuffer() دالة تسلسل خالصة
-        // آمنة الاستدعاء مرتين، فلا حاجة لتعديل الـshim نفسه (ملف حسّاس أمنياً —
-        // بديل قصديّ لثغرة CVSS 7.8 في مكتبة xlsx الأصلية، لا يُمَسّ إلا للضرورة).
+        let blob = null;
         try {
             const buffer = await workbook._wb.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            const { trackExport } = await import('./exportTracking.js');
-            trackExport(blob, { fileType: 'excel', fileName: outFilename, studyId: this.data?.projectInfo?.id, studyName: projectName });
+            blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+                const { trackExport } = await import('./exportTracking.js');
+                trackExport(blob, { fileType: 'excel', fileName: outFilename, studyId: this.data?.projectInfo?.id, studyName: projectName });
+            }
         } catch (_) { /* لا يمنع نجاح التصدير المحلي أعلاه */ }
 
+        if (typeof window === 'undefined' || typeof document === 'undefined') {
+            return { success: true, blob, fileName: outFilename };
+        }
+
+        await XLSX.writeFile(workbook, outFilename);
         return outFilename;
     }
 
@@ -182,7 +184,7 @@ export class ExcelExporter {
             ['التكاليف التشغيلية السنوية', SAFE.num(op.totalAnnual)],
             ['الإيرادات السنة الأولى', SAFE.num(proj?.total ?? proj?.revenue)],
             ['صافي القيمة الحالية', SAFE.num(ind.npv)],
-            ['معدل العائد الداخلي', (SAFE.pct(ind.irr) || 0).toFixed(1) + '%'],
+            ['معدل العائد الداخلي', SAFE.pctText(ind.irr)],
             ['فترة الاسترداد', SAFE.payback(ind.paybackPeriod ?? ind.payback)],
             ['نسبة DSCR', formatDscr(this.results?.indicators?.dscr)],
             ['', ''],
@@ -481,8 +483,6 @@ export class ExcelExporter {
         const dscr = this.results?.dscrAnalysis || [];
         const lang = this.lang;
 
-        const irrVal = SAFE.pct(ind.irr);
-        const roiVal = SAFE.pct(ind.roi);
         const marginVal = SAFE.pct(ind.profitMargin);
         // المحرك يعيد التعادل بوحدات سنوية — البند معنون «وحدات/شهر» فنقسم على 12.
         // (كان يسقط إلى breakEvenPointValue وهو مبلغ بالريال لا وحدات!)
@@ -495,9 +495,9 @@ export class ExcelExporter {
             ['', ''],
             ['المؤشرات الأساسية', ''],
             [t('npv', lang), SAFE.num(ind.npv)],
-            [t('irr', lang), irrVal.toFixed(1) + '%'],
+            [t('irr', lang), SAFE.pctText(ind.irr)],
             [t('payback_period', lang), SAFE.payback(ind.paybackPeriod ?? ind.payback)],
-            [t('roi', lang), roiVal.toFixed(1) + '%'],
+            [t('roi', lang), SAFE.pctText(ind.roi)],
             ['هامش الربح الصافي', marginVal.toFixed(1) + '%'],
             ['نقطة التعادل (وحدات/شهر)', Math.round(breakevenMonthly)],
             ['', ''],
@@ -781,14 +781,14 @@ export class ExcelExporter {
         const data = [
             ['السيناريوهات'],
             ['', ''],
-            ['السيناريو', 'تغيّر الإيراد', 'تغيّر التكلفة', 'الوصف', 'NPV', 'IRR %', 'فترة الاسترداد'],
+            ['السيناريو', 'تغيّر الإيراد', 'تغيّر التكلفة', 'الوصف', 'NPV', 'IRR', 'فترة الاسترداد'],
             [
                 'متشائم',
                 (SAFE.num(p.revenueChange) * 100).toFixed(0) + '%',
                 (SAFE.num(p.costChange) * 100).toFixed(0) + '%',
                 (p.description || '—').toString(),
                 SAFE.num(p.results?.indicators?.npv),
-                (SAFE.pct(p.results?.indicators?.irr) || 0).toFixed(1),
+                SAFE.pctText(p.results?.indicators?.irr),
                 payback(p),
             ],
             [
@@ -797,7 +797,7 @@ export class ExcelExporter {
                 (SAFE.num(b.costChange) * 100).toFixed(0) + '%',
                 (b.description || '—').toString(),
                 SAFE.num(b.results?.indicators?.npv),
-                (SAFE.pct(b.results?.indicators?.irr) || 0).toFixed(1),
+                SAFE.pctText(b.results?.indicators?.irr),
                 payback(b),
             ],
             [
@@ -806,7 +806,7 @@ export class ExcelExporter {
                 (SAFE.num(o.costChange) * 100).toFixed(0) + '%',
                 (o.description || '—').toString(),
                 SAFE.num(o.results?.indicators?.npv),
-                (SAFE.pct(o.results?.indicators?.irr) || 0).toFixed(1),
+                SAFE.pctText(o.results?.indicators?.irr),
                 payback(o),
             ],
         ];
@@ -875,7 +875,7 @@ export async function exportGrantCard(studyData, financialResults) {
         ['إجمالي الاستثمار (ريال)', SAFE.num(cap.total)],
         ['الإيرادات السنة الأولى (ريال)', SAFE.num(proj?.total ?? proj?.revenue)],
         ['صافي القيمة الحالية (ريال)', SAFE.num(ind.npv)],
-        ['معدل العائد الداخلي %', (SAFE.pct(ind.irr) || 0).toFixed(1) + '%'],
+        ['معدل العائد الداخلي %', SAFE.pctText(ind.irr)],
         ['فترة الاسترداد', SAFE.payback(ind.paybackPeriod ?? ind.payback)],
         ['', ''],
         ['تاريخ التصدير', formatExportDateTime()],

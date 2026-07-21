@@ -2,6 +2,7 @@
  * Shared export utilities: sanitization, XLSX loader, date/num helpers.
  * Used by excelExporter, sectionExporter, csvExporter, and other export modules.
  */
+import { formatIrrPct } from '../js/utils/indicatorFormat.js';
 
 
 /**
@@ -66,8 +67,17 @@ export function safePayback(v) {
     return n.toFixed(1) + ' سنة';
 }
 
-/** {@see safeNum} {@see safePct} {@see safePayback} */
-export const SAFE = { num: safeNum, pct: safePct, payback: safePayback };
+/**
+ * نصّ النسبة الأمين: كسر → «15.5%»، لكن null/غير منتهٍ → «غير محقق» (لا «0.0%» كاذبة).
+ * تدقيق جولة الموقع 2026-07-20 (بند #1/#13): safePct تُرجع 0 للغائب فتُظهر IRR غير
+ * محقّق كأنه عائد حقيقي 0%. يفوّض للمصدر الموحّد formatIrrPct. صفر حقيقي يبقى «0.0%».
+ */
+export function safePctText(v, digits = 1) {
+    return formatIrrPct(v, digits);
+}
+
+/** {@see safeNum} {@see safePct} {@see safePayback} {@see safePctText} */
+export const SAFE = { num: safeNum, pct: safePct, payback: safePayback, pctText: safePctText };
 
 /**
  * @param {unknown} v
@@ -120,7 +130,36 @@ export function downloadBlob(blob, filename) {
     document.body.appendChild(a);
     a.click();
     a.remove();
+    try {
+        window.dispatchEvent(new CustomEvent('feasibility:download', {
+            detail: {
+                filename,
+                mimeType: blob?.type || '',
+                size: blob?.size || 0
+            }
+        }));
+    } catch (_) {
+        // Non-browser test runners may not expose CustomEvent/window fully.
+    }
     setTimeout(() => URL.revokeObjectURL(url), 200);
+}
+
+/** بيانات تعريف موحّدة لكل صيغ التصدير. */
+export function getExportMetadata(state, exportedAt = new Date()) {
+    const project = state?.projectInfo || {};
+    const dateText = (value) => {
+        if (!value) return 'غير محدد';
+        try { return new Date(value).toLocaleDateString('ar-SA'); } catch (_) { return 'غير محدد'; }
+    };
+    return {
+        projectName: String(project.name || project.projectName || 'دراسة جدوى').trim(),
+        studyId: state?.id || project.id || '',
+        studyVersion: String(state?.version || '4.0.0'),
+        exportVersion: '1.0',
+        createdAt: dateText(state?.createdAt),
+        updatedAt: dateText(state?.updatedAt),
+        exportedAt: exportedAt instanceof Date ? exportedAt.toLocaleString('ar-SA') : String(exportedAt || ''),
+    };
 }
 
 let _xlsxLoadPromise = null;
@@ -140,7 +179,7 @@ export function loadXLSX() {
     if (typeof globalThis.XLSX !== 'undefined') return Promise.resolve();
     if (_xlsxLoadPromise) return _xlsxLoadPromise;
     _xlsxLoadPromise = import('./xlsxShim.js')
-        .then(({ utils, writeFile }) => { window.XLSX = { utils, writeFile }; })
+        .then(({ utils, writeFile }) => { globalThis.XLSX = { utils, writeFile }; })
         .catch((e) => {
             _xlsxLoadPromise = null; // اسمح بإعادة المحاولة عند فشل التحميل
             throw new Error('تعذّر تحميل مكتبة Excel (XLSX): ' + (e?.message || e));

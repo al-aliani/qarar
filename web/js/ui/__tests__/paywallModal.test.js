@@ -7,10 +7,10 @@
  * (من pricing.js، مصدر الحقيقة الوحيد) والدفع داخل المنصة بلا طلب عبر واتساب.
  *
  * تدقيق 2026-07-09 (أتمتة الدفع): القرار السابق ("لا بوابة دفع، تواصل يدوي فقط")
- * حُدِّث صراحة — أُضيف دفع فعلي (Moyasar/Stripe) لكل الباقات الثلاث. الباقة
- * "ذاتي" (channel:'app') تُقدِّم الدفع المباشر أولاً؛ الباقتان الأخريان
- * (channel:'whatsapp') تُبقيان واتساب أولاً (تتطلبان تدخلاً بشرياً فعلياً) مع
- * الدفع المباشر كخيار ثانٍ. هذا الملف يثبّت كلا المسارين معاً.
+ * حُدِّث صراحة — أُضيف دفع فعلي (Moyasar/Stripe) لكل الباقات الثلاث، وكلها
+ * channel:'app' في pricing.js تُعرض بالدفع المباشر داخل المنصة بلا أي زر واتساب.
+ * هذا الملف يثبّت أن الباقات الثلاث (ذاتي/مراجَع بخبير/خدمة كاملة) تعرض الدفع
+ * داخل المنصة بلا زر واتساب.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PaywallModal } from '../PaywallModal.js';
@@ -132,6 +132,16 @@ describe('PaywallModal — عرض الباقات المدفوعة بأسعار p
         expect(document.querySelector('.paywall-modal').textContent).toContain('نسخة للممول');
     });
 
+    it('يعرض معاينة قبل الشراء ويشرح الجمهور ومدة التسليم لكل باقة', () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore());
+        modal.open('التقرير البنكي');
+        expect(document.getElementById('btnPreviewLockedReport')).not.toBeNull();
+        const reviewed = document.querySelector('[data-package-card="reviewed"]');
+        expect(reviewed.textContent).toContain('للتقديم لممول أو شريك');
+        expect(reviewed.textContent).toContain('24–48 ساعة');
+        expect(reviewed.textContent).toContain('الأكثر مناسبة للتقديم');
+    });
+
     it('زر الإغلاق (×) يُغلق النافذة (يزيل صنف is-open ويستعيد التمرير)', () => {
         const modal = new PaywallModal('paywallOverlay', fakeStore());
         modal.open('تقرير PDF شامل');
@@ -157,7 +167,7 @@ describe('PaywallModal — ملاحظة شفافية عند توصية NO-GO/REV
     });
 
     it('results.decision = NO-GO: تظهر ملاحظة تحذيرية ولا تمنع عرض الباقات', () => {
-        const modal = new PaywallModal('paywallOverlay', fakeStore({ results: { decision: 'NO-GO' } }));
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ results: { decision: 'NO-GO', indicators: { npv: -50000, roi: -0.2 } } }));
         modal.open('تقرير PDF شامل');
 
         const note = document.querySelector('.alert--danger');
@@ -166,7 +176,7 @@ describe('PaywallModal — ملاحظة شفافية عند توصية NO-GO/REV
     });
 
     it('results.decision = REVISE: تظهر ملاحظة تنبيه', () => {
-        const modal = new PaywallModal('paywallOverlay', fakeStore({ results: { decision: 'REVISE' } }));
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ results: { decision: 'REVISE', indicators: { irr: 0.08 } } }));
         modal.open('تقرير PDF شامل');
 
         const note = document.querySelector('.alert--warning');
@@ -175,6 +185,19 @@ describe('PaywallModal — ملاحظة شفافية عند توصية NO-GO/REV
 
     it('results.decision = GO: لا تظهر أي ملاحظة', () => {
         const modal = new PaywallModal('paywallOverlay', fakeStore({ results: { decision: 'GO' } }));
+        modal.open('تقرير PDF شامل');
+
+        expect(document.querySelector('.alert--danger')).toBeNull();
+        expect(document.querySelector('.alert--warning')).toBeNull();
+    });
+
+    it('قرار NO-GO محفوظ مع مؤشرات صفرية لا يُعرض كقرار حقيقي قبل اكتمال النموذج المالي', () => {
+        const modal = new PaywallModal('paywallOverlay', fakeStore({
+            results: {
+                decision: 'NO-GO',
+                indicators: { npv: 0, irr: 0, roi: 0, breakEvenPointValue: 0, profitMargin: 0, paybackPeriod: null }
+            }
+        }));
         modal.open('تقرير PDF شامل');
 
         expect(document.querySelector('.alert--danger')).toBeNull();

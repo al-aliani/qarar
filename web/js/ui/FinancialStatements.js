@@ -6,7 +6,6 @@ import { calculateStudy as runFullModel } from '../core/engine.js';
 import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
 import ApexCharts from 'apexcharts';
 import { CountUp } from 'countup.js';
-import html2pdf from 'html2pdf.js';
 import { loadXLSX } from '../../export/utils.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
@@ -204,15 +203,64 @@ export class FinancialStatements {
             if (this.onNavigate) this.onNavigate(this.stepIndex + 1);
         });
 
-        // PDF Export
-        this.container.querySelector('#btnExportPdf')?.addEventListener('click', () => {
+        // PDF Export (using native print to avoid heavy html2pdf library)
+        this.container.querySelector('#btnExportPdf')?.addEventListener('click', async () => {
             const element = this.container.querySelector('#financial-statements-content');
-            html2pdf().from(element).set({
-                margin: 10,
-                filename: 'القوائم_المالية.pdf',
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-            }).save();
+            if (!element) return;
+            
+            const win = window.open('', '_blank');
+            if (!win) {
+                if (window.toast) toast.error('تعذر فتح النافذة للطباعة. يرجى السماح بالنوافذ المنبثقة.');
+                else alert('تعذر فتح النافذة للطباعة. يرجى السماح بالنوافذ المنبثقة.');
+                return;
+            }
+
+            const htmlContent = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>القوائم المالية</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+        body { font-family: 'Tajawal', sans-serif; padding: 20px; color: #333; background: #fff; }
+        .table-container { margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; page-break-inside: avoid; }
+        th, td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: right; }
+        th { background-color: #f8fafc; font-weight: 700; color: #1e293b; }
+        tr:nth-child(even) { background-color: #f8fafc; }
+        h3 { color: #0f172a; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; page-break-after: avoid; }
+        .text-success { color: #16a34a; }
+        .text-danger { color: #dc2626; }
+        .font-bold { font-weight: 700; }
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            @page { margin: 15mm; size: A4 landscape; }
+        }
+    </style>
+</head>
+<body>
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h2 style="margin: 0; color: #1e293b;">القوائم المالية التقديرية</h2>
+    </div>
+    ${element.innerHTML}
+</body>
+</html>`;
+
+            win.document.write(htmlContent);
+            win.document.close();
+            win.focus();
+            
+            setTimeout(() => win.print(), 350);
+            
+            // Track export if function exists globally or in a known module
+            try {
+                const { trackExport } = await import('../../export/exportTracking.js');
+                const state = this.store ? this.store.getState() : {};
+                const projName = state.projectInfo?.name || 'دراسة';
+                trackExport(null, { fileType: 'pdf', fileName: `القوائم_المالية_${projName}.pdf`, studyId: state.projectInfo?.id, studyName: state.projectInfo?.name });
+            } catch (e) {
+                console.warn('Could not track export:', e);
+            }
         });
 
         // Excel Export

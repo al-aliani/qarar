@@ -5,6 +5,7 @@
 
 import { InternalAIGenerator } from './InternalAIGenerator.js';
 import { SmartAdvisor } from './SmartAdvisor.js';
+import { trackEvent } from '../utils/analytics.js';
 
 // توليد محلي فقط: لا يوجد اتصال بأي مزوّد LLM خارجي. النقاط الخارجية (OpenAI/Anthropic/…)
 // غير مفعّلة ومحذوفة عمداً كي لا يوحي الكود بذكاء خارجي غير موجود. المصدر الوحيد للمحتوى
@@ -348,17 +349,37 @@ export class AIConnector {
      * عند useInternalOnly أو فشل الخادم: استخدام _runInternalFallback للأنواع المعروفة
      */
     async query(prompt, type = 'general', data = {}) {
+        const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const eventBase = { type, provider: this.provider, model: this.model };
+        const trackCompletion = (source, outcome) => {
+            const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+            trackEvent('ai_request_completed', {
+                ...eventBase,
+                source,
+                outcome,
+                duration_ms: Math.max(0, Math.round(now - startedAt)),
+            });
+        };
         const cacheKey = this._buildCacheKey(type, data);
         const cached = this._getFromCache(cacheKey);
-        if (cached !== undefined) return cached;
+        if (cached !== undefined) {
+            trackEvent('ai_cache_hit', eventBase);
+            trackCompletion('cache', 'success');
+            return cached;
+        }
 
         const runInternal = () => this._runInternalFallback(type, data);
 
         if (this.useInternalOnly) {
             const r = runInternal();
-            if (r !== undefined) { this._setCache(cacheKey, r); return r; }
+            if (r !== undefined) {
+                this._setCache(cacheKey, r);
+                trackCompletion('internal', 'success');
+                return r;
+            }
             // null = «لا ناتج» — لا نعيد نص خطأ قد يحفظه المستدعي كمحتوى قسم في التقرير
             console.warn(`AIConnector: لا يتوفر مولّد داخلي للنوع "${type}"`);
+            trackCompletion('internal', 'empty');
             return null;
         }
 
@@ -381,19 +402,29 @@ export class AIConnector {
             if (isEmpty) {
                 this._notifyLocalFallback();
                 const r = runInternal();
-                if (r !== undefined) { this._setCache(cacheKey, r); return r; }
+                if (r !== undefined) {
+                    this._setCache(cacheKey, r);
+                    trackCompletion('fallback', 'success');
+                    return r;
+                }
+                trackCompletion('server', 'empty');
                 return null;
             }
 
             this._setCache(cacheKey, content);
+            trackCompletion('server', 'success');
             return content;
         } catch (error) {
             console.error('Internal Brain query error:', error);
             this._notifyLocalFallback();
             const r = runInternal();
-            if (r !== undefined) return r;
+            if (r !== undefined) {
+                trackCompletion('fallback', 'success');
+                return r;
+            }
             // null = «لا ناتج» — كانت رسالة الخطأ هنا تجتاز فحص typeof string لدى المستدعين
             // وتُحفظ كنص قسم «دراسة السوق» ثم تُطبع حرفياً في تقرير منشآت
+            trackCompletion('server', 'error');
             return null;
         }
     }

@@ -99,6 +99,9 @@ function fireChange(el) {
 function fireInput(el) {
     el.dispatchEvent(new Event('input', { bubbles: true }));
 }
+function fireFocusOut(el) {
+    el.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+}
 
 describe('CentralAssumptionsView — التزام القيم بنفس مسارات المخزون الفعلية', () => {
     beforeEach(() => {
@@ -279,6 +282,25 @@ describe('CentralAssumptionsView — مبالغ التمويل + إعادة حس
         // النسب تُعاد حسابها لكل المصادر الأربعة من مجموعها (200000+100000=300000)
         expect(sources.equity.percentage).toBeCloseTo(66.7, 1);
         expect(sources.bankLoan.percentage).toBeCloseTo(33.3, 1);
+    });
+
+    it('فقد التركيز بـTab يلتزم بمبلغ التمويل حتى لو لم يطلق المتصفح change', () => {
+        const store = makeStore(healthyStudy());
+        const updateSpy = vi.spyOn(store, 'update');
+        const view = new CentralAssumptionsView('c', store);
+        view.render();
+
+        const input = document.getElementById('caEquityAmount');
+        input.value = '64080';
+        fireFocusOut(input);
+
+        expect(store.getState().financing.sources.equity.amount).toBe(64080);
+        expect(input.value).toBe('64080');
+
+        // المسار الطبيعي في المتصفح قد يطلق change ثم focusout؛ لا نكرر الحفظ.
+        fireChange(input);
+        fireFocusOut(input);
+        expect(updateSpy).toHaveBeenCalledTimes(1);
     });
 
     it('تعديل مبلغ القرض البنكي يكتب financing.sources.bankLoan.amount دون مسّ سعر الفائدة', () => {

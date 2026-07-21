@@ -12,7 +12,22 @@ import { stepIndexById } from '../../core/wizardSteps.js';
 import { ExportMenu } from '../ExportMenu.js';
 
 function fakeStore(state) {
-    return { getState: () => state, get: () => state, update: vi.fn(), notify: vi.fn() };
+    return {
+        getState: () => state,
+        get: () => state,
+        update: vi.fn(),
+        notify: vi.fn(),
+        updatePath: vi.fn((section, path, value) => {
+            if (!state[section]) state[section] = {};
+            const keys = path.split('.');
+            let target = state[section];
+            for (let i = 0; i < keys.length - 1; i += 1) {
+                if (!target[keys[i]]) target[keys[i]] = {};
+                target = target[keys[i]];
+            }
+            target[keys[keys.length - 1]] = value;
+        })
+    };
 }
 
 describe('ExportMenu — قائمة تحذيرات فحص الجودة المفصّلة (#export-qa-badge)', () => {
@@ -82,5 +97,68 @@ describe('ExportMenu — قائمة تحذيرات فحص الجودة المف�
 
         expect(el.innerHTML).not.toContain('<img');
         expect(el.innerHTML).toContain('&lt;img');
+    });
+
+    it('قائمة التصدير تبدأ بثلاثة مسارات رئيسية وتفلتر الصيغ حسب المسار المختار', async () => {
+        const menu = new ExportMenu('exportMenuOverlay', fakeStore(createEmptyStudy()));
+        await menu.open();
+
+        const paths = Array.from(document.querySelectorAll('.export-path-card'));
+        expect(paths).toHaveLength(3);
+
+        expect(document.querySelector('[data-type="lending_ready"]').hidden).toBe(false);
+        expect(document.querySelector('[data-type="pitch"]').hidden).toBe(true);
+        expect(document.querySelector('[data-type="json"]').hidden).toBe(true);
+
+        document.querySelector('[data-export-path="investor"]').click();
+        expect(document.querySelector('[data-type="pitch"]').hidden).toBe(false);
+        expect(document.querySelector('[data-type="pptx"]').hidden).toBe(false);
+        expect(document.querySelector('[data-type="accelerator_pitch"]').hidden).toBe(false);
+        expect(document.querySelector('[data-type="grant"]').hidden).toBe(false);
+        expect(document.querySelector('[data-type="lending_ready"]').hidden).toBe(true);
+
+        document.querySelector('[data-export-path="data"]').click();
+        expect(document.querySelector('[data-type="json"]').hidden).toBe(false);
+        expect(document.querySelector('[data-type="share_link"]').hidden).toBe(false);
+        expect(document.querySelector('[data-type="folder_json"]').hidden).toBe(false);
+        expect(document.querySelector('[data-type="gsheets"]').hidden).toBe(false);
+        expect(document.querySelector('[data-type="pitch"]').hidden).toBe(true);
+    });
+
+    it('مركز الإصلاح يعرض السبب والأثر ويطبّق إصلاحاً آمناً لاسم المشروع', async () => {
+        const study = createEmptyStudy();
+        study.projectInfo.concept = 'مقهى مختص';
+        const store = fakeStore(study);
+        const menu = new ExportMenu('exportMenuOverlay', store);
+        await menu.open();
+
+        document.getElementById('btnOpenQaFixCenter').click();
+
+        const fixCenter = document.getElementById('qaFixCenterOverlay');
+        expect(fixCenter).toBeTruthy();
+        expect(fixCenter.textContent).toContain('السبب:');
+        expect(fixCenter.textContent).toContain('الأثر على التقرير:');
+
+        const nameFix = Array.from(fixCenter.querySelectorAll('.qa-fix-action'))
+            .find((btn) => btn.dataset.action === 'project_name');
+        expect(nameFix).toBeTruthy();
+        nameFix.click();
+
+        expect(store.updatePath).toHaveBeenCalledWith('projectInfo', 'name', 'مقهى مختص');
+        expect(study.projectInfo.name).toBe('مقهى مختص');
+    });
+});
+
+describe('ExportMenu confidence and download history', () => {
+    beforeEach(() => {
+        document.body.innerHTML = `<div id="exportMenuOverlay"></div>`;
+    });
+
+    it('shows the confidence disclosure and a direct route to download history', async () => {
+        const menu = new ExportMenu('exportMenuOverlay', fakeStore(createEmptyStudy()));
+        await menu.open();
+
+        expect(document.getElementById('export-confidence-panel').textContent).toContain('درجة موثوقية النتائج');
+        expect(document.getElementById('btnOpenDownloadsCenter')).toBeTruthy();
     });
 });

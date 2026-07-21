@@ -281,7 +281,7 @@ export class FinancialDashboard {
                     </div>
                     <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">
                         <div class="kpi-label text-muted">العائد على الاستثمار (ROI)</div>
-                        <div class="kpi-value ${(indicators.roi || 0) >= decisionThresholds.minROI ? 'positive' : 'negative'}">${this.formatPercent(indicators.roi || 0)}</div>
+                        <div class="kpi-value ${(indicators.roi || 0) >= decisionThresholds.minROI ? 'positive' : 'negative'}">${this.formatPercent(indicators.roi)}</div>
                         <p class="text-xs text-muted mt-1">عائد سنوي على إجمالي الاستثمار</p>
                     </div>
                     <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">

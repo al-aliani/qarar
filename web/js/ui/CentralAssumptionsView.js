@@ -51,6 +51,7 @@ export class CentralAssumptionsView {
         this._unsubscribe = null;
         this._destroyed = false;
         this._onContainerChange = (e) => this._handleFieldCommit(e.target);
+        this._onContainerFocusOut = (e) => this._handleFieldCommit(e.target);
     }
 
     cleanup() {
@@ -58,6 +59,7 @@ export class CentralAssumptionsView {
         if (this._recomputeTimer) { clearTimeout(this._recomputeTimer); this._recomputeTimer = null; }
         if (this._unsubscribe) { this._unsubscribe(); this._unsubscribe = null; }
         this.container?.removeEventListener('change', this._onContainerChange);
+        this.container?.removeEventListener('focusout', this._onContainerFocusOut);
     }
 
     render() {
@@ -183,6 +185,10 @@ export class CentralAssumptionsView {
         // لا لكل ضغطة مفتاح (فخّ 0.1 الموثَّق).
         this.container.removeEventListener('change', this._onContainerChange);
         this.container.addEventListener('change', this._onContainerChange);
+        // بعض المتصفحات/أدوات الإدخال لا تطلق change عند التنقل بـTab بعد تعديل
+        // حقل نصي. focusout يضمن حفظ القيمة عند مغادرة الحقل كما تعد الواجهة.
+        this.container.removeEventListener('focusout', this._onContainerFocusOut);
+        this.container.addEventListener('focusout', this._onContainerFocusOut);
     }
 
     _runOptimalMix() {
@@ -453,6 +459,10 @@ export class CentralAssumptionsView {
         const state = this.store.getState();
         const list = Array.isArray(state.revenue?.streams) ? state.revenue.streams : [];
         if (rowIndex < 0 || rowIndex >= list.length) return; // الصف قد يكون حُذف من مكان آخر
+        if (Number(list[rowIndex]?.[field] || 0) === value) {
+            if (el) el.value = String(value);
+            return;
+        }
         const updated = list.map((row, i) => (i === rowIndex ? { ...row, [field]: value } : row));
         this.store.updatePath(SECTIONS.REVENUE, 'streams', updated);
         if (el) el.value = String(value); // تطبيع العرض (أرقام هندية → غربية) بعد الالتزام
@@ -465,6 +475,10 @@ export class CentralAssumptionsView {
         const state = this.store.getState();
         const list = Array.isArray(state.hr?.positions) ? state.hr.positions : [];
         if (rowIndex < 0 || rowIndex >= list.length) return;
+        if (Number(list[rowIndex]?.count || 0) === value) {
+            if (el) el.value = String(value);
+            return;
+        }
         const updated = list.map((row, i) => (i === rowIndex ? { ...row, count: value } : row));
         this.store.updatePath(SECTIONS.HR, 'positions', updated);
         if (el) el.value = String(value);
@@ -493,6 +507,10 @@ export class CentralAssumptionsView {
         const state = this.store.getState();
         const financing = { ...(state.financing || {}) };
         financing.sources = { ...(financing.sources || {}) };
+        if (Number(financing.sources[sourceKey]?.amount || 0) === amount) {
+            if (el) el.value = String(amount);
+            return;
+        }
         financing.sources[sourceKey] = { ...(financing.sources[sourceKey] || {}), amount };
         this._recalcSourcePercentages(financing.sources);
         this.store.update(SECTIONS.FINANCING, financing);
@@ -502,6 +520,11 @@ export class CentralAssumptionsView {
     _commitLoanInterestRate(rawValue, el) {
         const parsed = DynamicTable.parseLenientNumber(rawValue);
         const pct = parsed == null ? 0 : Math.max(0, parsed);
+        const current = Number(this.store.getState().financing?.sources?.bankLoan?.interestRate || 0);
+        if (current === pct / 100) {
+            if (el) el.value = String(pct);
+            return;
+        }
         this.store.updatePath(SECTIONS.FINANCING, 'sources.bankLoan.interestRate', pct / 100);
         if (el) el.value = String(pct);
     }
@@ -509,6 +532,11 @@ export class CentralAssumptionsView {
     _commitPercentAssumption(key, rawValue, el) {
         const parsed = DynamicTable.parseLenientNumber(rawValue);
         const pct = parsed == null ? 0 : Math.max(0, parsed);
+        const current = Number(this.store.getState().assumptions?.[key] || 0);
+        if (current === pct / 100) {
+            if (el) el.value = String(pct);
+            return;
+        }
         this.store.updatePath(SECTIONS.ASSUMPTIONS, key, pct / 100);
         if (el) el.value = String(pct);
     }
@@ -516,6 +544,10 @@ export class CentralAssumptionsView {
     _commitRampUpMonths(rawValue, el) {
         const parsed = DynamicTable.parseLenientNumber(rawValue);
         const months = parsed == null ? 0 : Math.max(0, Math.min(24, Math.round(parsed)));
+        if (Number(this.store.getState().assumptions?.rampUpMonths || 0) === months) {
+            if (el) el.value = String(months);
+            return;
+        }
         this.store.updatePath(SECTIONS.ASSUMPTIONS, 'rampUpMonths', months);
         if (el) el.value = String(months);
     }

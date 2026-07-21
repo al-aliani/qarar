@@ -186,3 +186,49 @@ describe('recordShareView', () => {
         await expect(recordShareView('tok-abc')).resolves.toBeUndefined();
     });
 });
+
+describe('share feedback', () => {
+    beforeEach(() => {
+        rpcMock.mockReset().mockResolvedValue({ data: null, error: null });
+    });
+
+    it('rejects a feedback message that is too short before calling the RPC', async () => {
+        const { submitShareFeedback } = await import('../ShareService.js');
+        const result = await submitShareFeedback('tok-123', { body: 'x' });
+
+        expect(result.ok).toBe(false);
+        expect(rpcMock).not.toHaveBeenCalled();
+    });
+
+    it('sends a read-only reviewer comment through the token RPC', async () => {
+        const { submitShareFeedback } = await import('../ShareService.js');
+        const result = await submitShareFeedback('tok-123', {
+            kind: 'revision_request', authorName: 'Reviewer', body: 'Please update the revenue assumption.'
+        });
+
+        expect(result).toEqual({ ok: true });
+        expect(rpcMock).toHaveBeenCalledWith('add_share_feedback', {
+            p_token: 'tok-123', p_kind: 'revision_request', p_author_name: 'Reviewer',
+            p_body: 'Please update the revenue assumption.'
+        });
+    });
+
+    it('returns the owner feedback list from the protected RPC', async () => {
+        rpcMock.mockResolvedValue({ data: [{ id: 'f1', kind: 'comment', body: 'Looks good' }], error: null });
+        const { listStudyShareFeedback } = await import('../ShareService.js');
+
+        await expect(listStudyShareFeedback('study-1')).resolves.toEqual([
+            { id: 'f1', kind: 'comment', body: 'Looks good' }
+        ]);
+        expect(rpcMock).toHaveBeenCalledWith('list_study_share_feedback', { p_study_id: 'study-1' });
+    });
+
+    it('returns a friendly result when the feedback RPC rejects', async () => {
+        rpcMock.mockRejectedValue(new Error('network down'));
+        const { submitShareFeedback } = await import('../ShareService.js');
+
+        await expect(submitShareFeedback('tok-123', { body: 'A complete note' })).resolves.toEqual({
+            ok: false, error: 'network down'
+        });
+    });
+});

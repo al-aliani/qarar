@@ -38,7 +38,7 @@ export const STEPS = [
   // (marketing.competitors). أُبقيت البطاقة هناك لأنها أغنى (بحث OSM حي + مولّد داخلي +
   // AI)، وأُضيف لها الحقلان الناقصان (estimatedDailyCustomers/estimatedAvgTicket) كي لا
   // يُفقد أي عمود تقرير كان يقرأهما من نسخة الجدول القديمة.
-  { id: SECTIONS.MARKETING, label: "الدراسة السوقية", tables: ['marketAnalysis', 'historicalData', 'supplyDemandBalance', 'competitorBenchmarking', 'marketingPlan'], gridSize: 'full', stepType: 'جدول', icon: 'i-chart' },
+  { id: SECTIONS.MARKETING, label: "الدراسة السوقية", tables: ['historicalData', 'supplyDemandBalance', 'competitorBenchmarking', 'marketingPlan'], gridSize: 'full', stepType: 'جدول', icon: 'i-chart' },
   { id: 'pricingOptimizer', label: "التسعير المثالي", isPricingOptimizer: true, gridSize: 'half', stepType: 'أداة', icon: 'i-bolt' },
   { id: SECTIONS.STRATEGIC, label: "التحليل الاستراتيجي", isStrategic: true, isAdvancedStep: true, gridSize: 'full', stepType: 'تحليل', icon: 'i-scale' },
   { id: SECTIONS.REVENUE, label: "مصادر الإيرادات", tables: ['revenueStreams'], isAdvancedStep: true, gridSize: 'full', stepType: 'جدول', icon: 'i-bank' },
@@ -269,7 +269,7 @@ export { getPhaseForStep, getStepHelp };
    المشكلة: المعالج كان 41 «خطوة» خطّية تخلط الإدخال بالنتائج، ففقد المستخدم
    إحساس التقدّم (يظن أن أمامه ٢٠ خطوة عمل بينما نصفها «اقرأ نتيجة»).
 
-   الحل — بلا لمس المحرّكات: تبقى STEPS كاملةً (٤١) كسجل مرجعي للمحرّكات والحفظ
+   الحل — بلا لمس المحرّكات: تبقى STEPS كاملةً (٤٢) كسجل مرجعي للمحرّكات والحفظ
    والتوجيه (تقرأ البيانات بمعرّف القسم — أي حذف يكسر الحسابات). نضيف فوقها
    «تدفّقاً» لكل خطوة، ونشتق منه قوائم عرض جديدة دون حذف أي شيء:
      • input      → خطوة إدخال فعلية يملؤها المستخدم (١٦ خطوة = مسار المعالج الجديد)

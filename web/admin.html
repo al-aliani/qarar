@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لوحة الإدارة | منصة الجدوى</title>
+  <meta name="description" content="لوحة تحكم الإدارة للإحصائيات والأداء" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>" type="image/svg+xml" />
+  
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <link rel="stylesheet" href="./css/variables.css" />
+  <link rel="stylesheet" href="./css/bundle.css" />
+  <style>
+    :root { --font-ui: 'IBM Plex Sans Arabic', system-ui, sans-serif; }
+    body { 
+        margin: 0; 
+        background: var(--c-bg-app); 
+        color: var(--c-text-main); 
+        min-height: 100vh;
+        font-family: var(--font-ui);
+    }
+    
+    .admin-container {
+        max-w: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .kpi-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s, background 0.2s;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .kpi-title {
+        font-size: 0.875rem;
+        color: var(--c-text-muted);
+        margin-bottom: 0.5rem;
+    }
+
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--c-primary);
+        line-height: 1.2;
+    }
+
+    .kpi-trend {
+        font-size: 0.75rem;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .trend-up { color: var(--c-success, #10b981); }
+    .trend-down { color: var(--c-danger, #ef4444); }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: #fff;
+    }
+
+    .data-table-wrapper {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: right;
+    }
+
+    .data-table th, .data-table td {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .data-table th {
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--c-text-muted);
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .data-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .data-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-badge.success { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .status-badge.warning { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .status-badge.danger { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+    #loadingOverlay {
+        position: fixed;
+        inset: 0;
+        background: var(--c-bg-app);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        transition: opacity 0.3s;
+    }
+    
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255,255,255,0.1);
+        border-top-color: var(--c-primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+    <div id="loadingOverlay">
+        <div class="flex flex-col items-center gap-4">
+            <div class="spinner"></div>
+            <p class="text-muted">جاري تحميل الإحصائيات...</p>
+        </div>
+    </div>
+
+    <div class="admin-container" style="max-width: 1200px; margin: 0 auto;">
+        <header class="admin-header">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    <svg class="ic text-primary" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                    لوحة تحكم الإدارة
+                </h1>
+                <p class="text-sm text-muted mt-1">مؤشرات الأداء الرئيسية والتحويل</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="btnRefresh" class="btn btn--secondary btn--sm">تحديث الإحصائيات</button>
+                <a href="./" class="btn btn--ghost btn--sm">العودة للمنصة</a>
+            </div>
+        </header>
+
+        <!-- Main KPIs -->
+        <div class="kpi-grid" id="mainKpis">
+            <div class="kpi-card">
+                <div class="kpi-title">إجمالي الدراسات الجديدة</div>
+                <div class="kpi-value" id="kpiNewStudies">--</div>
+                <div class="kpi-trend trend-up" id="kpiNewStudiesTrend">أخر 30 يوم</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">معدل التحويل (مجاني -> مدفوع)</div>
+                <div class="kpi-value" id="kpiConversionRate">--%</div>
+                <div class="kpi-trend text-muted">متوسط كل المستخدمين</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">متوسط مدة الإكمال</div>
+                <div class="kpi-value" id="kpiCompletionTime">-- د</div>
+                <div class="kpi-trend text-muted">الوقت الفعال للدراسة</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">أخطاء الدفع الأخيرة</div>
+                <div class="kpi-value text-danger" id="kpiPaymentErrors">--</div>
+                <div class="kpi-trend trend-down">يحتاج مراجعة</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem;">
+            
+            <!-- Most Used Exports -->
+            <div>
+                <h2 class="section-title">أكثر الصادرات استخداماً</h2>
+                <div class="data-table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>الصيغة</th>
+                                <th>عدد المرات</th>
+                                <th>النسبة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="exportStatsTable">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- User Drop-offs -->
+            <div>
+                <h2 class="section-title">نقاط خروج المستخدمين (Drop-offs)</h2>
+                <div class="data-table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>الخطوة / الصفحة</th>
+                                <th>عدد المغادرات</th>
+                                <th>معدل الخروج</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dropoffStatsTable">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- SVG Sprites (inline fallback for standalone page) -->
+    <svg style="display:none">
+        <symbol id="i-doc" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="14 2 14 8 20 8"/><line fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" x1="16" y1="13" x2="8" y2="13"/><line fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" x1="16" y1="17" x2="8" y2="17"/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="10 9 9 9 8 9"/></symbol>
+    </svg>
+
+    <script type="module" src="./js/admin.js"></script>
+</body>
+</html>

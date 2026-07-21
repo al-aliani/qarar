@@ -7,6 +7,7 @@
 import { getAuthUser } from '../../supabaseClient.js';
 import { submitTicket, listMyTickets, getTicketWithMessages, addMessage } from '../services/TicketService.js';
 import { toast } from '../utils/toast.js';
+import { trackEvent } from '../utils/analytics.js';
 
 const STATUS_META = {
     open: { label: 'مفتوحة', badge: 'badge--warning' },
@@ -106,6 +107,7 @@ export class SupportTicketsView {
             showErr('');
             const result = await submitTicket({ subject: subjectEl.value, body: bodyEl.value });
             if (!result.ok) { showErr(result.error || 'فشل إرسال التذكرة'); return; }
+            trackEvent('support_ticket_created', { category: 'support' });
             toast.success('تم إرسال تذكرتك — سنرد عليك قريباً');
             await this.render();
         });
@@ -175,6 +177,7 @@ export class SupportTicketsView {
                 replyErr.style.display = 'block';
                 return;
             }
+            trackEvent('support_ticket_reply_sent', { surface: 'ticket_thread' });
             await this.render();
             // إعادة فتح نفس التذكرة بعد إعادة الرسم الكاملة
             this.openTicketId = null;

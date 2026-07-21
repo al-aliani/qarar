@@ -8,6 +8,83 @@
     box-shadow: var(--shadow-sm);
 }
 
+/* ── معاينة التقرير وبطاقات التحويل — Premium V2 ── */
+.report-preview-overlay { z-index: 10020; }
+.report-preview-modal {
+    width: min(1100px, calc(100vw - 28px));
+    max-height: 92vh;
+    border-radius: 24px !important;
+    background: var(--v2-glass-bg, rgba(17, 24, 39, .86)) !important;
+    border: 1px solid var(--v2-glass-border, rgba(255, 255, 255, .1)) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .38) !important;
+    color: #f4f8f6;
+}
+.report-preview-modal h2,
+.report-preview-modal h3,
+.report-preview-modal strong { color: #f7fbf9 !important; }
+.report-preview-modal p,
+.report-preview-modal small,
+.report-preview-modal .report-preview-footer,
+.report-preview-modal .report-preview-lock { color: rgba(235, 244, 240, .78); }
+.report-preview-kicker,
+.paywall-recommended {
+    display: inline-flex;
+    width: max-content;
+    padding: 5px 10px;
+    border-radius: 999px;
+    color: var(--c-gold-500, #d7aa4a);
+    background: color-mix(in srgb, var(--c-gold-500, #d7aa4a) 13%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c-gold-500, #d7aa4a) 32%, transparent);
+    font-size: .72rem;
+    font-weight: 800;
+}
+.report-preview-body {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    overflow: auto;
+}
+.report-preview-page {
+    position: relative;
+    min-height: 430px;
+    padding: 28px;
+    overflow: hidden;
+    border-radius: 18px;
+    color: #f4f8f6;
+    background: var(--v2-glass-bg, rgba(255, 255, 255, .05)) !important;
+    border: 1px solid var(--v2-glass-border, rgba(255, 255, 255, .1)) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+}
+.report-preview-page:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0, 0, 0, .25); border-color: rgba(255, 255, 255, .2) !important; }
+.report-preview-cover { display: flex; flex-direction: column; justify-content: center; text-align: center; background: linear-gradient(145deg, rgba(14, 91, 68, .34), rgba(28, 68, 112, .22)) !important; }
+.report-preview-logo { color: var(--c-gold-500, #d7aa4a); font-size: 2rem; font-weight: 900; filter: drop-shadow(0 0 8px rgba(215, 170, 74, .35)); }
+.report-preview-readiness { display: grid; gap: 4px; margin-top: 30px; }
+.report-preview-readiness strong { color: var(--c-gold-500, #d7aa4a); font-size: 2.6rem; }
+.report-preview-watermark { position: absolute; inset: 45% auto auto -18%; transform: rotate(-32deg); width: 140%; color: rgba(255, 255, 255, .055); font-size: 4rem; font-weight: 900; text-align: center; pointer-events: none; }
+.report-preview-kpis { display: grid; gap: 9px; margin: 20px 0; }
+.report-preview-kpis div { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--c-surface-2) 80%, transparent); }
+.report-preview-kpis strong { color: var(--c-gold-500, #d7aa4a); }
+.report-preview-insight { margin-top: 12px; padding: 12px; border-inline-start: 3px solid var(--c-success); border-radius: 10px; background: color-mix(in srgb, var(--c-surface-2) 74%, transparent); }
+.report-preview-insight p, .report-preview-insight small { display: block; margin: 5px 0 0; color: rgba(235, 244, 240, .78); line-height: 1.55; }
+.report-preview-locked ul { display: grid; gap: 12px; margin: 24px 0; }
+.report-preview-lock { margin-top: 24px; padding: 18px; border-radius: 14px; color: var(--c-text-muted); background: rgba(0, 0, 0, .16); border: 1px dashed var(--v2-glass-border, rgba(255, 255, 255, .12)); }
+.report-preview-footer { justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.report-preview-footer > span { flex: 1 1 320px; }
+.paywall-package-card { position: relative; background: var(--v2-glass-bg, rgba(255,255,255,.05)) !important; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--v2-glass-border, rgba(255,255,255,.1)) !important; transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease; }
+.paywall-package-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,.25); border-color: rgba(255,255,255,.2) !important; }
+.paywall-package-card--recommended { border-color: color-mix(in srgb, var(--c-gold-500, #d7aa4a) 55%, transparent) !important; box-shadow: 0 0 30px rgba(215,170,74,.1); }
+.paywall-recommended { margin-bottom: 8px; }
+
+@media (max-width: 850px) {
+    .report-preview-body { grid-template-columns: 1fr; }
+    .report-preview-page { min-height: auto; }
+    .report-preview-footer { align-items: stretch; flex-direction: column; }
+}
+
 /* --- Buttons: حبّة بتدرج أخضر — نفس لغة landing --- */
 .btn {
     display: inline-flex;
@@ -3543,6 +3620,13 @@ button.qa-detail-item:hover {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: var(--s-3);
+}
+
+/* محدِّد مسار التصدير يُخفي البطاقات عبر خاصية hidden — لكن .export-card{display:flex}
+   من أصل المؤلف يتغلّب على [hidden]{display:none} الافتراضية للمتصفح، فتبقى ظاهرة.
+   نُعيد الأولوية للإخفاء صراحةً. */
+.export-card[hidden] {
+    display: none !important;
 }
 
 .export-card {

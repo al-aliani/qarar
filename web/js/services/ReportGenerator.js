@@ -12,6 +12,7 @@ import { DEFAULT_REPORT_SECTION_ORDER } from '../core/schema.js';
 import { BANK_COMPLIANCE_SENTENCE } from '../config.js';
 import { getOptionLabel } from '../core/fieldOptions.js';
 import { t, yearColumnLabel } from '../i18n/reportStrings.js';
+import { buildFinancingDiagnostics } from '../utils/financingDiagnostics.js';
 
 /** عناوين الأقسام (لفهرس المحتويات وترتيب التصدير) */
 const REPORT_SECTION_LABELS = {
@@ -63,46 +64,7 @@ export class ReportGenerator {
     }
 
     static getFinancingDiagnostics(state, results) {
-        const financing = state?.financing || {};
-        const loan = financing.sources?.bankLoan || {};
-        const loanAmount = Number(loan.amount || results?.loanSchedule?.loanAmount || 0);
-        const targetDSCR = Number.isFinite(Number(financing.targetDSCR)) ? Number(financing.targetDSCR) : 1.25;
-        const fundingGap = Number(results?.financingCheck?.fundingGap ?? 0);
-        // مرآة لعتبة مادية الفجوة في engine.js (تدقيق ٢٠٢٦-٠٧-٠٩) — بلا هذا، انحراف تقريب
-        // عادي بين خطوة التمويل والاستثمار المُعاد حسابه لاحقاً يُظهر تحذيراً حرجاً في التقرير.
-        const fundingGapThreshold = Number(
-            results?.financingCheck?.fundingGapMaterialityThreshold
-            ?? Math.max(1000, Number(results?.financingCheck?.totalInvestment ?? 0) * 0.01)
-        );
-        const dscr = results?.indicators?.dscr ?? null;
-        const y1Ebitda = Number(results?.incomeStatement?.[0]?.ebitda ?? NaN);
-        const concept = String(state?.projectInfo?.concept || state?.projectInfo?.sector || '');
-        const isSaas = /saas|منصة|تطبيق|برمجي|تقني|موقع دراسة جدوى/i.test(concept);
-        const dscrBlocked = loanAmount > 0 && (dscr == null || dscr < targetDSCR);
-        const alerts = [];
-
-        if (fundingGap > fundingGapThreshold) {
-            alerts.push({ title: 'فجوة تمويل غير مغطاة', text: 'مصادر التمويل أقل من إجمالي الاستثمار المطلوب.' });
-        }
-        if (dscrBlocked) {
-            alerts.push({ title: 'تغطية خدمة الدين غير كافية', text: 'القرض لا يحقق DSCR السنة الأولى حسب الحد المستهدف.' });
-        }
-        if (isSaas && loanAmount > 0 && (!Number.isFinite(y1Ebitda) || y1Ebitda <= 0)) {
-            alerts.push({ title: 'قراءة البنك تختلف عن قراءة المستثمر', text: 'مشروع SaaS قد يكون واعداً استثمارياً لكنه يحتاج إثبات نمو أو تمويل أخف قبل ملف بنكي.' });
-        }
-
-        return {
-            alerts,
-            fundingGap,
-            fundingGapThreshold,
-            dscr,
-            y1Ebitda,
-            loanAmount,
-            targetDSCR,
-            dscrBlocked,
-            isSaas,
-            bankReady: alerts.length === 0
-        };
+        return buildFinancingDiagnostics(state, results);
     }
 
     static renderFinancingDiagnostics(d, fmt) {
@@ -157,6 +119,9 @@ export class ReportGenerator {
             month: 'long',
             day: 'numeric'
         });
+        const exportVersion = '1.0';
+        const studyVersion = String(state.version || '4.0.0');
+        const exportDateTime = new Date().toLocaleString('ar-SA');
 
         const v = validateStudy(state);
         const validationNotice = !v.valid && v.errors?.length
@@ -542,6 +507,14 @@ export class ReportGenerator {
                             <div class="report-meta-item">
                                 <strong>تاريخ الإعداد</strong>
                                 <span>${date}</span>
+                            </div>
+                            <div class="report-meta-item">
+                                <strong>رقم إصدار الدراسة</strong>
+                                <span>${escapeHtml(studyVersion)} • قالب التصدير ${exportVersion}</span>
+                            </div>
+                            <div class="report-meta-item">
+                                <strong>تاريخ ووقت التصدير</strong>
+                                <span>${escapeHtml(exportDateTime)}</span>
                             </div>
                             <div class="report-meta-item">
                                 <strong>النشاط</strong>

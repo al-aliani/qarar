@@ -211,3 +211,109 @@
 #presentationOverlay {
     background: radial-gradient(circle at center, #1f2937 0%, #000000 100%);
 }
+
+/* 7. Hyper-Proactive Animations & Styles */
+@keyframes pulse-danger {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.pulse-danger-field {
+    animation: pulse-danger 2s infinite !important;
+    border-color: var(--c-danger-500, #ef4444) !important;
+    background-color: rgba(239, 68, 68, 0.05) !important;
+}
+
+@keyframes pulse-warning {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+.pulse-warning-field {
+    animation: pulse-warning 2s infinite !important;
+    border-color: #f59e0b !important;
+    background-color: rgba(245, 158, 11, 0.05) !important;
+}
+
+@keyframes pulse-success {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.pulse-success-field {
+    animation: pulse-success 2s infinite !important;
+    border-color: #10b981 !important;
+    background-color: rgba(16, 185, 129, 0.05) !important;
+}
+
+@keyframes glow-ai-typing {
+    0% { box-shadow: 0 0 5px rgba(176,125,44, 0.2); border-color: rgba(176,125,44, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(176,125,44, 0.8); border-color: rgba(176,125,44, 1); }
+    100% { box-shadow: 0 0 5px rgba(176,125,44, 0.2); border-color: rgba(176,125,44, 0.5); }
+}
+
+.glow-ai-typing {
+    animation: glow-ai-typing 1.5s infinite !important;
+    transition: all 0.3s ease;
+}
+
+/* Actionable Toasts Customization */
+.toast-actionable-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    margin-top: 8px;
+    margin-inline-end: 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.2);
+    color: #fff;
+    transition: all 0.2s;
+}
+.toast-actionable-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Dropdown for Smart Generator */
+.ai-generator-dropdown {
+    position: absolute;
+    background: var(--c-bg-card, #fff);
+    border: 1px solid var(--c-border, #e2e8f0);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    min-width: 180px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.ai-generator-dropdown button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 14px;
+    border: none;
+    background: none;
+    text-align: right;
+    font-size: 13px;
+    color: var(--c-text-main);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.ai-generator-dropdown button:hover {
+    background: var(--c-surface-2, #f8fafc);
+}
+.ai-generator-dropdown button svg {
+    width: 14px;
+    height: 14px;
+    color: var(--gold);
+}

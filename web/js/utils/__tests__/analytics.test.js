@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const insertMock = vi.fn(async () => ({ data: null, error: null }));
@@ -39,7 +42,7 @@ describe('trackEvent', () => {
             expect.objectContaining({
                 user_id: 'u1',
                 event_name: 'export_click',
-                props: { format: 'pdf' },
+                props: expect.objectContaining({ format: 'pdf' }),
             })
         );
     });
@@ -58,5 +61,17 @@ describe('trackEvent', () => {
         expect(() => trackEvent('x', {})).not.toThrow();
         await flushMicrotasks();
         expect(insertMock).not.toHaveBeenCalled();
+    });
+
+    it('يحفظ مصدر الزيارة الأول ويضيف وسوم UTM إلى الأحداث اللاحقة', async () => {
+        window.history.replaceState({}, '', '/?utm_source=linkedin&utm_campaign=launch');
+        const { trackEvent } = await import('../analytics.js');
+        trackEvent('study_start', {});
+        await flushMicrotasks();
+        expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+            props: expect.objectContaining({ utm_source: 'linkedin', utm_campaign: 'launch' }),
+        }));
+        window.history.replaceState({}, '', '/');
+        sessionStorage.removeItem('qarar_first_touch_attribution');
     });
 });

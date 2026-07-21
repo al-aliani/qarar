@@ -35,7 +35,7 @@ export class RefundPolicyModal {
     }
 
     render() {
-        const policy = REFUND_POLICY || { shortTitle: 'ضمان الاسترداد', fullText: 'جرب مجاناً — ضمان استرداد خلال 15 يوم إن وُجد اشتراك.' };
+        const policy = REFUND_POLICY || { shortTitle: 'ضمان الاسترداد', fullText: 'ضمان استرداد خلال 15 يوم على كل الباقات المدفوعة.' };
 
         this.overlay.innerHTML = `
             <div class="modal-card refund-policy-modal animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="refund-policy-title" style="max-width: 500px;">

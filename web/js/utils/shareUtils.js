@@ -2,12 +2,13 @@
  * WhatsApp Share Utility
  * Allows users to share study summary via WhatsApp
  */
+import { formatIrrPct } from './indicatorFormat.js';
 
 export function shareViaWhatsApp(studyData, results) {
     try {
         const projectName = studyData.projectInfo?.name || 'دراسة الجدوى';
         const npv = results?.indicators?.npv || 0;
-        const irr = results?.indicators?.irr || 0;
+        const irr = results?.indicators?.irr;
         const decision = results?.decision || 'قيد المراجعة';
 
         // Format numbers
@@ -23,7 +24,7 @@ export function shareViaWhatsApp(studyData, results) {
 📊 نتائج دراسة الجدوى:
 
 💰 صافي القيمة الحالية (NPV): ${formatNumber(npv)} ريال
-📈 معدل العائد الداخلي (IRR): ${((irr || 0) * 100).toFixed(1)}%
+📈 معدل العائد الداخلي (IRR): ${formatIrrPct(irr)}
 
 ✅ القرار: *${decision}*
 

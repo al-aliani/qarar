@@ -85,8 +85,12 @@ describe('Wizard batch-4 — XSS، الأزرار العالقة، اتساق ا
     // ────────────────────────────────────────────────────────────────
     // 2) زر العصا السحرية — لا يعلق بعد إلغاء confirm()
     // ────────────────────────────────────────────────────────────────
-    describe('البند 2 — زر العصا السحرية لا يعلق بعد الضغط على «إلغاء»', () => {
-        it('disabled يبقى false بعد confirm() ⇒ false، ويمكن النقر عليه مجدداً', () => {
+    describe('البند 2 — زر العصا السحرية يفتح قائمة النبرة ولا يعلق', () => {
+        // تحديث 2026-07-21: أُعيد تصميم الزر (النقر يفتح قائمة اختيار النبرة
+        // احترافي/إبداعي/نقاط، ثم يُبثّ النص عند اختيار نبرة) بدل confirm() على النقر.
+        // كل مسارات النهاية (onDone/onError/catch) تُعيد disabled=false، فلا يعلق الزر.
+        // كان الاختبار القديم يتحقق من confirm()-على-النقر ولم يعد موجوداً.
+        it('النقر يفتح القائمة، والزر لا يُعطّل، ويمكن إعادة فتحه', () => {
             const state = createEmptyStudy();
             state.projectInfo.description = 'نص وصف موجود بالفعل كتبه المستخدم';
 
@@ -103,19 +107,16 @@ describe('Wizard batch-4 — XSS، الأزرار العالقة، اتساق ا
             expect(wandBtn).toBeTruthy();
             expect(wandBtn.disabled).toBe(false);
 
-            // المستخدم يضغط «إلغاء» على confirm() لأن الحقل يحوي نصاً بالفعل
-            vi.spyOn(window, 'confirm').mockReturnValue(false);
-
+            // النقر يفتح قائمة النبرة دون تعطيل الزر أو استبدال النص بعد
             wandBtn.click();
-
-            // BUG (قبل الإصلاح): كان btn.disabled يُضبط true قبل فحص confirm()، فيبقى
-            // معطّلاً للأبد بعد الإلغاء. الإصلاح: الفحص قبل أي تعديل لحالة الزر.
+            expect(document.querySelector('.ai-generator-dropdown')).toBeTruthy();
             expect(wandBtn.disabled).toBe(false);
             expect(wandBtn.hasAttribute('aria-busy')).toBe(false);
 
-            // إثبات إضافي: النقر مجدداً لا يُحجب بحارس `if (btn.disabled) return`
+            // النقر مجدداً لا يُحجب بحارس `if (btn.disabled) return` — يعيد فتح القائمة
             wandBtn.click();
-            expect(window.confirm).toHaveBeenCalledTimes(2);
+            expect(document.querySelector('.ai-generator-dropdown')).toBeTruthy();
+            expect(wandBtn.disabled).toBe(false);
         });
     });
 

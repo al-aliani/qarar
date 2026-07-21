@@ -32,6 +32,9 @@ class StudyStore {
         this._saveQueue = []; // Queue for pending saves
         this._versionHistory = []; // آخر 10 نسخ للاستعادة (في الذاكرة)
         this._versionHistoryMax = 10;
+        this._undoStack = [];
+        this._redoStack = [];
+        this._undoMax = 50;
         this._dirty = false; // تغييرات غير محفوظة (لتنبيه الخروج — مركز تنمية)
         // Load is async, but we don't await in constructor
         this.load().catch(err => {
@@ -423,6 +426,29 @@ class StudyStore {
         return this._versionHistory.map(v => ({ timestamp: v.timestamp, state: v.state }));
     }
 
+    canUndo() { return this._undoStack.length > 0; }
+    canRedo() { return this._redoStack.length > 0; }
+
+    async undo() {
+        if (!this.canUndo()) return false;
+        this._redoStack.push(this._cloneState(this.state));
+        this.state = this.mergeWithDefaults(this._undoStack.pop());
+        this._dirty = true;
+        await this.saveLocal();
+        this.notify();
+        return true;
+    }
+
+    async redo() {
+        if (!this.canRedo()) return false;
+        this._undoStack.push(this._cloneState(this.state));
+        this.state = this.mergeWithDefaults(this._redoStack.pop());
+        this._dirty = true;
+        await this.saveLocal();
+        this.notify();
+        return true;
+    }
+
     /**
      * استعادة إصدار سابق من الذاكرة (بالفهرس 0 = الأقدم في القائمة الحالية)
      * @param {number} index - index in _versionHistory (0 = oldest of last N)
@@ -475,12 +501,26 @@ class StudyStore {
     }
 
     set(data) {
+        this._recordUndo();
         this.state = data;
+        this._redoStack = [];
         this.save();
         this.notify();
     }
 
+    _cloneState(value) {
+        try { return structuredClone(value); } catch (_) { return JSON.parse(JSON.stringify(value)); }
+    }
+
+    _recordUndo() {
+        if (!this.state) return;
+        this._undoStack.push(this._cloneState(this.state));
+        if (this._undoStack.length > this._undoMax) this._undoStack.shift();
+        this._redoStack = [];
+    }
+
     updateSection(section, data) {
+        this._recordUndo();
         // Auto-initialize if missing (migration for old saves)
         if (!this.state[section]) {
             console.warn(`Section ${section} missing, initializing from schema...`);
@@ -546,6 +586,7 @@ class StudyStore {
     }
 
     updatePath(section, path, value) {
+        this._recordUndo();
         // Auto-initialize if missing (migration for old saves)
         if (this.state[section] === undefined) {
             console.warn(`Section ${section} missing, initializing from schema...`);

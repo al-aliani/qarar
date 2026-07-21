@@ -963,6 +963,11 @@ export function calculateStudy(study, overrides) {
     const dscrYear1 = debtServiceYear1 > 0 && year1Cfads > 0
         ? year1Cfads / debtServiceYear1
         : null;
+    // يميّز سببَي null المتعاكسين (بند #3 من تدقيق الجولة 2026-07-20): لا خدمة دين
+    // (لا قرض أو سماح كامل — DSCR «لا ينطبق») مقابل CFADS ≤ 0 (النقد المتاح لخدمة الدين
+    // = EBITDA − الزكاة/الضريبة − الإحلال، وقد يكون EBITDA موجباً بينما CFADS سالب).
+    // كانت كل التفسيرات تنسب null لـ«EBITDA سالبة/صفرية» خطأً، فيتناقض مع بطاقة EBITDA الخضراء.
+    const dscrReason = dscrYear1 != null ? null : (debtServiceYear1 <= 0 ? 'no_debt_service' : 'no_cfads');
     const dscrAnalysis = loanScheduleData ? incomeStatement.slice(0, loanTerm).map((stmt, idx) => {
         const y = idx + 1;
         const debtService = loanYear(y)?.totalPayment || 0;
@@ -1240,8 +1245,13 @@ export function calculateStudy(study, overrides) {
             payback: paybackOut,
             roi: roi / 100,
             breakEvenPointValue: breakEvenValue,
+            // breakEvenValue=0 غامض: قد يعني تعادلاً مستحيلاً (هامش مساهمة ≤ 0، يخسر على كل وحدة)
+            // أو غياب تكاليف ثابتة (يتعادل فوراً). هذا العلَم يميّزهما كي لا تعرض اللوحة
+            // «هامش أمان لنقطة التعادل = 100%» لمشروع لا يمكنه التعادل أصلاً.
+            breakEvenAchievable: cmRatio > 0,
             breakEvenUnits: Math.round(breakEvenUnits),
             dscr: dscrYear1 != null ? Number(dscrYear1.toFixed(2)) : null,
+            dscrReason,
             profitMargin: year1Revenue > 0 ? (incomeStatement[0].netIncome / year1Revenue) : 0,
             grossMargin: year1Revenue > 0 ? ((year1Revenue - year1VariableCosts) / year1Revenue) : 0,
             netMargin: year1Revenue > 0 ? (incomeStatement[0].netIncome / year1Revenue) : 0,
@@ -1296,7 +1306,9 @@ export function calculateStudy(study, overrides) {
             const minDscr = resolveDecisionThresholds(study.assumptions?.thresholds, financing).targetDSCR;
             if (loanAmount > 0 && (dscrYear1 == null || dscrYear1 < minDscr)) {
                 if (d.decision === 'GO') d.decision = 'REVISE';
-                const dscrText = dscrYear1 == null ? 'غير قابل للحساب بسبب EBITDA سالبة/صفرية' : dscrYear1.toFixed(2);
+                const dscrText = dscrYear1 != null ? dscrYear1.toFixed(2)
+                    : (debtServiceYear1 <= 0 ? 'غير قابل للحساب — لا خدمة دين في السنة الأولى'
+                        : 'غير قابل للحساب لأن CFADS (النقد المتاح لخدمة الدين) صفر أو سالب — لا يعني EBITDA سالبة');
                 d.decisionReasons.unshift(
                     `تغطية خدمة الدين في السنة الأولى (${dscrText}) أقل من الحد المستهدف ${minDscr.toFixed(2)} — راجع مبلغ القرض أو فترة السماح أو أضف رأس مال عامل`
                 );

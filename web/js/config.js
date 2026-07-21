@@ -12,9 +12,6 @@ export const APP_CONFIG = {
     enableGeoMap: true
 };
 
-/** القيمة الافتراضية لجهة إعداد الدراسة في نموذج المشروع الفارغ. */
-export const DEFAULT_STUDY_PREPARED_BY = 'مؤسسة بن صاحب التجارية — عبدالعزيز العلياني';
-
 /**
  * بيانات المنشأة النظامية (شركة شفق الاعمال التجارية) — تُستخدم في الفاتورة الضريبية
  * (ZATCA) وهوية التاجر في التذييل. مُعبّأة بالبيانات الرسمية للمنشأة (2026-07-19).
@@ -52,7 +49,7 @@ export const MONSHAAT_MODEL_URL = 'https://monshaat.gov.sa/ar/node/13993';
 export const IPA_FRAMEWORK_URL = 'https://www.ipa.edu.sa/ar';
 
 /** سياسة التجربة / الاسترداد (Upmetrics / LivePlan — للعرض في اللوحة أو التذييل) */
-export const TRIAL_OR_REFUND_TEXT = 'جرب مجاناً — ضمان استرداد خلال 15 يوم إن وُجد اشتراك.';
+export const TRIAL_OR_REFUND_TEXT = 'جرب مجاناً — ضمان استرداد خلال 15 يوم على كل الباقات المدفوعة.';
 
 /** سياسة الاسترداد الكاملة (المهمة 2 — خطة التفوق) */
 export const REFUND_POLICY = {
@@ -61,12 +58,12 @@ export const REFUND_POLICY = {
     /** العنوان المختصر */
     shortTitle: 'ضمان استرداد خلال 15 يوم',
     /** النص الكامل */
-    fullText: `إذا لم تُرضِك نتائج الدراسة أو جودة التقرير خلال ${15} يوماً من تاريخ الاشتراك، يمكنك طلب استرداد كامل للمبلغ المدفوع.
+    fullText: `إذا لم تُرضِك نتائج الدراسة أو جودة التقرير خلال ${15} يوماً من تاريخ الدفع، يمكنك طلب استرداد كامل للمبلغ المدفوع.
 
 الشروط:
-• يُطبَّق على اشتراكات مدفوعة فقط (إن وُجدت).
+• يُطبَّق على جميع الباقات المدفوعة (إن وُجدت).
 • يجب تقديم الطلب خلال ${15} يوماً من تاريخ الدفع.
-• الخدمات المجانية (جدوى سريعة، دراسة كاملة بدون اشتراك) لا تخضع للاسترداد لكونها مجانية أصلاً.
+• الباقة المجانية لا تخضع للاسترداد لكونها مجانية أصلاً ولا يترتب عليها مبلغ مدفوع.
 
 كيفية الطلب: تواصل مع إدارة المنصة عبر البريد أو نموذج التواصل مع وصف موجز لسبب الطلب.`
 
@@ -74,7 +71,7 @@ export const REFUND_POLICY = {
 
 /** عرض التسعير بوضوح (PlanGuru / Business Plan Shop — شهري/سنوي، المميزات، حد التجربة) */
 export const PRICING_DISPLAY = {
-    freeTrial: 'حد التجربة المجاني: جدوى سريعة + دراسة كاملة بدون اشتراك.',
+    freeTrial: 'ابدأ مجاناً: أنشئ مشروعاً واحفظ تقدمك، ثم رقِّ الباقة عند الحاجة إلى المخرجات المدفوعة.',
     /** الباقات المعلنة — مشتقّة من المصدر الموحّد web/js/core/pricing.js (لا تُكتب يدوياً هنا ولا في landing.html). */
     packages: PRICING_PACKAGES,
     /** سعر البداية المعلن (نص جاهز إن احتيج) — يُشتقّ من أقل باقة. */
@@ -143,6 +140,32 @@ export function buildWhatsAppLink(text) {
     const isConfigured = /^\d{10,15}$/.test(WHATSAPP_NUMBER);
     if (!isConfigured) return null;
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text || '')}`;
+}
+
+/**
+ * إعداد الدفع بالتحويل البنكي — يُقرأ من web/public/bank-transfer-config.js وقت التشغيل.
+ * يُعيد الكائن فقط إن كان مُفعَّلاً والآيبان بصيغة سعودية صحيحة (SA + 22 خانة) واسم
+ * المستفيد موجوداً — وإلا null، فيُخفي المستدعي (PaywallModal) خيار التحويل البنكي
+ * (تراجع رشيق: لا نعرض حساباً ناقصاً/غير محقّق أبداً).
+ * @returns {{beneficiaryName:string,bankName:string,iban:string,accountNumber?:string,swift?:string}|null}
+ */
+export function getBankTransferConfig() {
+    const cfg = (typeof window !== 'undefined' && window.BANK_TRANSFER) || null;
+    if (!cfg || cfg.enabled !== true) return null;
+    const iban = String(cfg.iban || '').replace(/\s+/g, '').toUpperCase();
+    const beneficiaryName = String(cfg.beneficiaryName || '').trim();
+    // آيبان سعودي: SA + رقمَي فحص + 20 خانة = 24 محرفاً إجمالاً.
+    if (!/^SA\d{22}$/.test(iban) || !beneficiaryName) {
+        console.warn('[قرار] التحويل البنكي مُفعَّل لكن الآيبان/اسم المستفيد غير صالح — عدّل web/public/bank-transfer-config.js.');
+        return null;
+    }
+    return {
+        beneficiaryName,
+        bankName: String(cfg.bankName || '').trim(),
+        iban,
+        accountNumber: String(cfg.accountNumber || '').trim(),
+        swift: String(cfg.swift || '').trim(),
+    };
 }
 
 /**

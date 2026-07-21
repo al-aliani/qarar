@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { BankReportGenerator } from '../BankReportGenerator.js';
 
 function makeStore(state) {
@@ -61,5 +61,31 @@ describe('BankReportGenerator — قسم الضمانات وخانة الاعت�
         const state = { ...BASE_STATE, financing: { sources: { bankLoan: { amount: 100000, bank: 'riyad' } } } };
         const html = BankReportGenerator.generateHTML(makeStore(state));
         expect(html).toContain('بنك الرياض');
+    });
+
+    it('يضم طلب التمويل واستخدام الأموال وتفسير المؤشرات وقائمة جاهزية الممول', () => {
+        const html = BankReportGenerator.generateHTML(makeStore(BASE_STATE));
+        expect(html).toContain('طلب التمويل واستخدام الأموال');
+        expect(html).toContain('كيف تُقرأ المؤشرات ومصدر كل رقم');
+        expect(html).toContain('قائمة جاهزية التقديم للممول');
+        expect(html).toContain('مصدر الأرقام: محرك قرار المالي');
+    });
+
+    it('فائض التمويل يظهر كمراجعة مطلوبة لا كجاهزية بنكية', () => {
+        const state = {
+            ...BASE_STATE,
+            financing: { sources: { equity: { amount: 500000 }, bankLoan: { amount: 0 } } }
+        };
+        const results = {
+            capex: { total: 64080, capitalStructure: {} },
+            financingCheck: { fundingGap: -435920, fundingGapMaterialityThreshold: 1000, totalInvestment: 64080 },
+            indicators: { dscr: null, dscrReason: 'no_debt_service' },
+            incomeStatement: [{ ebitda: 100000 }]
+        };
+        vi.spyOn(BankReportGenerator, 'calculateResults').mockReturnValueOnce(results);
+        const html = BankReportGenerator.generateHTML(makeStore(state));
+        expect(html).toContain('مراجعة مطلوبة قبل تقديم الملف للبنك');
+        expect(html).toContain('فائض');
+        expect(html).not.toContain('جاهز بنكياً مبدئياً حسب التمويل وDSCR');
     });
 });

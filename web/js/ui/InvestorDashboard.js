@@ -6,6 +6,7 @@
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { animateCounter } from '../utils/ui.js';
+import { formatIrrPct } from '../utils/indicatorFormat.js';
 
 /**
  * يهرّب الحروف الحساسة في HTML لمنع حقن السكربتات (XSS) عبر قيم يتحكم بها المستخدم.
@@ -182,7 +183,7 @@ export class InvestorDashboard {
                         <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
                             ${this.renderMetricCard('إجمالي الاستثمار', formatCurrency(data.financing.totalInvestment || 0), '<svg class="ic" aria-hidden="true"><use href="#i-bank"/></svg>')}
                             ${this.renderMetricCard('صافي القيمة الحالية (NPV)', formatCurrency(data.indicators.npv || 0), '<svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg>', (data.indicators.npv || 0) > 0)}
-                            ${this.renderMetricCard('معدل العائد (IRR)', ((data.indicators.irr || 0) * 100).toFixed(1) + '%', '<svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg>')}
+                            ${this.renderMetricCard('معدل العائد (IRR)', formatIrrPct(data.indicators.irr), '<svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg>')}
                             ${this.renderMetricCard('فترة الاسترداد', (data.indicators.paybackPeriod || '—') + ' سنة', '<svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>')}
                         </div>
                     </div>
@@ -322,7 +323,7 @@ export function buildPitchPayload(state, results) {
         },
         indicators: {
             npv: indicators.npv || 0,
-            irr: indicators.irr || 0,
+            irr: indicators.irr ?? null,
             paybackPeriod: indicators.paybackPeriod ?? null
         },
         partnerNeeds: (results && results.partnerNeeds) || []

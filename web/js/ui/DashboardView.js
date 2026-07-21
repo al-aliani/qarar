@@ -16,6 +16,7 @@ import { DatabaseFilesView } from './DatabaseFilesView.js';
 import { STEPS, SIDEBAR_SECTIONS } from '../core/wizardSteps.js';
 import { stepReportType, stepCanReport, STEP_TYPE_BADGE } from '../core/stepReportType.js';
 import { DATA_SOURCE_CATALOG } from '../services/DataConnectors.js';
+import { trackEvent } from '../utils/analytics.js';
 
 const FOLDERS_STORAGE_KEY = 'feas_folders';
 
@@ -1067,10 +1068,10 @@ export class DashboardView {
 
                 <div class="dv-project__actions">
                     <button class="btn btn--sm btn--secondary dv-project__open btn-open" data-id="${project.id}">فتح</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-share" data-id="${project.id}" title="تصدير الدراسة (PDF/Excel/Word)">${icon('i-share')}</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-rename" data-id="${project.id}" data-name="${safeName}" title="إعادة تسمية">${icon('i-pen')}</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-duplicate" data-id="${project.id}" data-name="${safeName}" title="نسخ المشروع لبدء فرع جديد">${icon('i-clipboard')}</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn dv-iconbtn--danger btn-delete" data-id="${project.id}" title="نقل لسلة المحذوفات">${icon('i-trash')}</button>
+                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-share" data-id="${project.id}" aria-label="تصدير الدراسة (PDF/Excel/Word)" title="تصدير الدراسة (PDF/Excel/Word)">${icon('i-share')}</button>
+                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-rename" data-id="${project.id}" data-name="${safeName}" aria-label="إعادة تسمية" title="إعادة تسمية">${icon('i-pen')}</button>
+                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-duplicate" data-id="${project.id}" data-name="${safeName}" aria-label="نسخ المشروع لبدء فرع جديد" title="نسخ المشروع لبدء فرع جديد">${icon('i-clipboard')}</button>
+                    <button class="btn btn--sm btn--ghost dv-iconbtn dv-iconbtn--danger btn-delete" data-id="${project.id}" aria-label="نقل لسلة المحذوفات" title="نقل لسلة المحذوفات">${icon('i-trash')}</button>
                 </div>
             </div>
         `;
@@ -1185,6 +1186,7 @@ export class DashboardView {
             try { current = localStorage.getItem('feas_theme') || 'light'; } catch (_) { /* تجاهل */ }
             if (current === 'auto') current = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             const next = current === 'light' ? 'dark' : 'light';
+            trackEvent('theme_toggle', { theme: next });
             try { localStorage.setItem('feas_theme', next); } catch (_) { /* تجاهل */ }
             document.documentElement.setAttribute('data-theme', next);
             const btn = e.currentTarget;
@@ -1507,6 +1509,7 @@ export class DashboardView {
                 });
                 if (result.isConfirmed) {
                     const id = (e.target.closest('[data-id]') || e.target).dataset?.id;
+                    trackEvent('study_delete_confirmed', { surface: 'dashboard' });
                     await ProjectManager.deleteProject(id);
                     // تدقيق 2026-07-17: طبقتا تخزين مستقلتان لا تتزامنان — ProjectManager يضبط
                     // deleted:true في feas_project_<id> فقط، بينما حلقة autosave الخاصة بـstore

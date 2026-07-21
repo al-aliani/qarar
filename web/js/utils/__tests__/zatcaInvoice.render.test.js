@@ -42,4 +42,34 @@ describe('فاتورة ZATCA — هوية التاجر مُعبّأة والفا
         expect(html).toContain(MERCHANT_INFO.unifiedNumber);
         expect(html).toContain('الرقم الموحّد');
     });
+
+    // بند #3 من تدقيق جولة الموقع 2026-07-20: فاتورة بكوبون كانت تعرض بنوداً بأسعارها
+    // الكاملة (299) بينما «الإجمالي المستحق» بعد الخصم (269.10) دون سطر خصم — مجموع
+    // البنود ≠ الإجمالي. يجب إظهار «الإجمالي قبل الخصم» + «الخصم» ليتّسق الحساب.
+    it('فاتورة بخصم (كوبون): تُظهر الإجمالي قبل الخصم وسطر الخصم واسم الكوبون', () => {
+        const discounted = {
+            id: 'a1b2c3d4-9999',
+            tier: 'self',
+            subtotal_sar: 299,
+            discount_sar: 29.9,
+            total_sar: 269.1,
+            vat_sar: 35.1,
+            coupon_code: 'WELCOME10',
+            paid_at: '2026-07-19T12:00:00Z',
+            provider: 'moyasar',
+            items: [{ name: 'الباقة الذاتية', price: 299 }],
+        };
+        const html = renderInvoiceHtml(discounted, MERCHANT_INFO, '');
+        expect(html).toContain('الإجمالي قبل الخصم');
+        expect(html).toContain('الخصم');
+        expect(html).toContain('WELCOME10');
+        expect(html).toContain('299.00'); // الإجمالي قبل الخصم = مجموع البنود
+        expect(html).toContain('29.90'); // مبلغ الخصم
+        expect(html).toContain('269.10'); // الإجمالي المستحق بعد الخصم
+    });
+
+    it('فاتورة بلا خصم: لا تُظهر سطر الخصم', () => {
+        const html = renderInvoiceHtml(order, MERCHANT_INFO, '');
+        expect(html).not.toContain('الإجمالي قبل الخصم');
+    });
 });

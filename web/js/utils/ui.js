@@ -15,6 +15,10 @@ export function animateCounter(element, end, options = {}) {
     const isCurrency = options.isCurrency || false;
     const isPercent = options.isPercent || false;
 
+    const schedule = typeof requestAnimationFrame === 'function'
+        ? requestAnimationFrame
+        : (callback) => setTimeout(() => callback(performance.now()), 16);
+
     function update(currentTime) {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
@@ -40,9 +44,9 @@ export function animateCounter(element, end, options = {}) {
         element.setAttribute('data-value', current);
 
         if (progress < 1) {
-            requestAnimationFrame(update);
+            schedule(update);
         }
     }
 
-    requestAnimationFrame(update);
+    schedule(update);
 }

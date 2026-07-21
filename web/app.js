@@ -1881,16 +1881,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  const renderShareRoute = async (projectId) => {
-    const sidebarEl = document.querySelector('.sidebar');
-    const stepperNavEl = document.getElementById('stepperNav');
-    const breadcrumbBar = document.getElementById('breadcrumbBar');
-    if (sidebarEl) sidebarEl.style.display = 'none';
-    if (stepperNavEl) stepperNavEl.style.display = 'none';
-    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+  const renderShareRoute = async (shareToken) => {
     try {
+      const { getSharedStudy } = await import('./js/services/ShareService.js');
+      const shared = shareToken ? await getSharedStudy(shareToken) : null;
+      
+      if (shared && shared.permission === 'edit_copy') {
+          // Sandbox Mode (Fork / Trial Copy)
+          // Restore normal layout since we are going into the wizard
+          const sidebarEl = document.querySelector('.sidebar');
+          if (sidebarEl) sidebarEl.style.removeProperty('display');
+          if (document.getElementById('stepperNav')) document.getElementById('stepperNav').style.removeProperty('display');
+          if (document.getElementById('breadcrumbBar')) document.getElementById('breadcrumbBar').style.removeProperty('display');
+          const mainContainer = document.querySelector('.main-content');
+          if (mainContainer) {
+            mainContainer.classList.add('lg:mr-64');
+            mainContainer.classList.remove('w-full', 'px-0', 'py-0');
+          }
+          
+          // Create unique clone
+          const newId = crypto.randomUUID ? crypto.randomUUID() : 'sandbox-' + Date.now();
+          const sandboxData = { ...(shared.data || {}), id: newId };
+          if (sandboxData.projectInfo) sandboxData.projectInfo.id = newId;
+          
+          store.set(store.mergeWithDefaults(sandboxData));
+          import('./js/utils/toast.js').then(({ toast }) => {
+              toast.success('تم فتح نسخة تجريبية. يمكنك تعديل الأرقام بأمان ولن تتأثر دراسة المالك الأصلي.', 8000);
+          });
+          
+          // Redirect to wizard start — المسار الصحيح 'step/N' (لا '0' المجرّد الذي
+          // لا يطابق أي فرع في routeToView فيسقط لصفحة «غير موجودة»).
+          window.location.hash = '#/step/0';
+          return;
+      }
+
+      // Read-Only Pitch Deck (view)
+      const sidebarEl = document.querySelector('.sidebar');
+      const stepperNavEl = document.getElementById('stepperNav');
+      const breadcrumbBar = document.getElementById('breadcrumbBar');
+      const mainContainer = document.querySelector('.main-content');
+
+      if (sidebarEl) sidebarEl.style.display = 'none';
+      if (stepperNavEl) stepperNavEl.style.display = 'none';
+      if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+      if (mainContainer) {
+        mainContainer.classList.remove('lg:mr-64');
+        mainContainer.classList.add('w-full', 'px-0', 'py-0');
+      }
+
       const { ShareView } = await import('./js/ui/ShareView.js');
-      new ShareView('wizardContainer', store, null).render(projectId);
+      new ShareView('wizardContainer', store, null).render(shareToken);
     } catch (e) {
       console.error('ShareView load failed:', e);
       toast.error('تعذر فتح صفحة المشاركة');
@@ -1965,7 +2005,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (breadcrumbBar) breadcrumbBar.style.display = 'none';
     try {
       const { DownloadsCenterView } = await import('./js/ui/DownloadsCenterView.js');
-      const view = new DownloadsCenterView(wizardContainer, { onBack: () => showLandingDashboard() });
+      // onRegenerate: أزرار «إعادة التصدير/التوليد» كانت ميتة (القيمة الافتراضية دالة فارغة).
+      // نعيد المستخدم للوحة التحكم حيث يفتح دراسته ويُعيد التصدير من قائمة التصدير.
+      const view = new DownloadsCenterView(wizardContainer, {
+        onBack: () => showLandingDashboard(),
+        onRegenerate: () => { window.location.hash = '#/home'; }
+      });
       await view.render();
     } catch (e) {
       console.error('DownloadsCenterView load failed:', e);
@@ -2814,6 +2859,78 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Escape' && mobileNav?.classList.contains('is-open')) {
       toggleMobileMenu(false);
     }
+  });
+
+  // المستشار الذكي التفاعلي المتقدم (Hyper-Proactive AI)
+  let proactiveDebounce = null;
+  let shownProactiveInsights = new Set();
+  
+  store.subscribe((state, section) => {
+    // Only run if relevant sections change
+    const relevantSections = ['hr', 'operational', 'revenue', 'technical', 'assumptions'];
+    if (section && !relevantSections.includes(section)) return;
+    
+    if (proactiveDebounce) clearTimeout(proactiveDebounce);
+    proactiveDebounce = setTimeout(async () => {
+      try {
+        const { hasMinimumRevenueData } = await import('./js/utils/dataSufficiency.js');
+        if (!hasMinimumRevenueData(state)) return;
+        
+        const { calculateStudy } = await import('./js/core/engine.js');
+        const { SmartAdvisor } = await import('./js/services/SmartAdvisor.js');
+        
+        const results = calculateStudy(state);
+        const analysis = SmartAdvisor.analyze(results, state);
+        
+        if (analysis?.insights?.length > 0) {
+          const topInsight = analysis.insights[0];
+          const insightHash = topInsight.message.substring(0, 30);
+          
+          if (!shownProactiveInsights.has(insightHash)) {
+             shownProactiveInsights.add(insightHash);
+             
+             // Determine severity
+             let isCritical = topInsight.type === 'danger' || topInsight.message.includes('خسارة') || topInsight.message.includes('سالبة');
+             let isPositive = topInsight.type === 'success' || topInsight.message.includes('ممتاز') || topInsight.message.includes('جيد جداً');
+             
+             // Highlight fields based on context
+             const allInputs = document.querySelectorAll('.input, .input-with-ai textarea');
+             allInputs.forEach(el => {
+                 el.classList.remove('pulse-danger-field', 'pulse-warning-field', 'pulse-success-field');
+                 if (isCritical && topInsight.message.includes('رواتب') && el.closest('#table-positions')) el.classList.add('pulse-danger-field');
+                 else if (isCritical && topInsight.message.includes('إيجار') && el.dataset.key?.includes('rent')) el.classList.add('pulse-danger-field');
+                 else if (!isCritical && !isPositive && topInsight.message.includes('رواتب') && el.closest('#table-positions')) el.classList.add('pulse-warning-field');
+             });
+
+             setTimeout(() => {
+                 allInputs.forEach(el => el.classList.remove('pulse-danger-field', 'pulse-warning-field', 'pulse-success-field'));
+             }, 8000);
+
+             // toast.js يعرض الرسالة عبر textContent (لا HTML) — فأي وسوم تظهر كنص خام
+             // للعميل. نبني نصاً عادياً؛ التفاعل «كيف أحلها؟» متاح عبر شارة المستشار الذكي
+             // (addProactiveBadge أدناه) التي تفتح نافذة المحادثة.
+             const toastLabel = isCritical ? '🔴 تنبيه حرج' : isPositive ? '🟢 أداء ممتاز' : '🟡 ملاحظة استراتيجية';
+             const toastMsg = `${toastLabel}: ${topInsight.message}`;
+
+             if (isCritical) {
+                 toast.error(toastMsg, 10000);
+                 // Subtle Audio Cues (if critical)
+                 try { new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU').play(); } catch(e){}
+             } else if (isPositive) {
+                 toast.success(toastMsg, 6000);
+             } else {
+                 toast.info(toastMsg, 8000);
+             }
+
+             if (window.aiChatModal && typeof window.aiChatModal.addProactiveBadge === 'function') {
+                 window.aiChatModal.addProactiveBadge();
+             }
+          }
+        }
+      } catch (e) {
+        // silently ignore calculation errors during proactive checks
+      }
+    }, 2500);
   });
 
   // إشارة نجاح التهيئة لحارس init-watchdog.js — يمنعه من عرض شاشة الخطأ.

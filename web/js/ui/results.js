@@ -1,5 +1,6 @@
 
 import { formatSAR, formatPct, formatNum } from "../../report/constants.js";
+import { formatIrrPct } from "../utils/indicatorFormat.js";
 
 export function renderResults(container, outputs) {
   if (!container) return;
@@ -44,7 +45,7 @@ export function renderResults(container, outputs) {
 
   const metrics = [
     { label: "صافي القيمة الحالية (NPV)", value: formatSAR.format(kpis.npv || 0), color: (kpis.npv || 0) > 0 ? "green" : "red" },
-    { label: "معدل العائد الداخلي (IRR)", value: formatPct.format(kpis.irr || 0), color: (kpis.irr || 0) > 0.1 ? "green" : "orange" },
+    { label: "معدل العائد الداخلي (IRR)", value: formatIrrPct(kpis.irr), color: (kpis.irr || 0) > 0.1 ? "green" : "orange" },
     { label: "فترة الاسترداد", value: paybackText, color: "blue" },
     { label: "مضاعف الاستثمار (PI)", value: formatNum.format((kpis.npv + (base.cashFlow?.[0]?.cashFlow ? -base.cashFlow[0].cashFlow : 0)) / -(base.cashFlow?.[0]?.cashFlow || 1)) + "x", color: "gray" },
     { label: "نقطة التعادل (سنوية)", value: Number.isFinite(breakEvenValue) && breakEvenValue > 0 ? formatSAR.format(breakEvenValue) : "غير محسوبة", color: "gray" }

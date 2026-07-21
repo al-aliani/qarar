@@ -43,6 +43,11 @@ experience_brain.db
 #     من كود المشروع؛ إضافتها بـgit add عادي تُنتج embedded repo مكسور) ===
 .agents/
 
-# Vercel
+# === Vercel ===
 .vercel
 .env*
+
+# === مخلّفات مؤقتة محلية (لا تُلتزَم) ===
+vite.config.js.timestamp-*.mjs
+/patch*.cjs
+/artifacts-*.png

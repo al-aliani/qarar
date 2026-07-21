@@ -225,14 +225,11 @@ CREATE TRIGGER on_study_deleted
 -- 7. Views
 -- ============================================
 
--- View for study list with user info
-CREATE OR REPLACE VIEW public.studies_with_owner AS
-SELECT
-    s.*,
-    p.full_name as owner_name,
-    p.company_name as owner_company
-FROM public.studies s
-LEFT JOIN public.profiles p ON s.user_id = p.id;
+-- أُزيل view «studies_with_owner» بتاريخ 2026-07-21: أي CREATE VIEW في Postgres
+-- يتجاوز RLS على الجداول الأساسية افتراضياً (ما لم يُحدَّد security_invoker=true)،
+-- وهذا الـview كان مانوحاً لـanon/authenticated افتراضياً من Supabase — أي تسريب
+-- لكل بيانات كل الدراسات بلا مصادقة إن أُعيد تشغيل هذا الملف. غير مستخدَم في أي
+-- كود تطبيق. راجع supabase/migrations/20260721160000_drop_studies_with_owner_view.sql.
 
 -- ============================================
 -- 8. Storage Bucket for Attachments

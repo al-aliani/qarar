@@ -8,6 +8,7 @@
  */
 import { PRICING_PACKAGES, formatPrice, CURRENCY_SYMBOL } from '../core/pricing.js';
 import { updateUserProfile } from '../../supabaseClient.js';
+import { trackEvent } from '../utils/analytics.js';
 
 function escapeHtml(str) {
     if (str == null) return '';
@@ -24,6 +25,7 @@ export class PackagePreferenceModal {
 
     open() {
         if (this.overlay) return;
+        trackEvent('package_preference_view', {});
         this.overlay = document.createElement('div');
         this.overlay.id = 'packagePreferenceModalOverlay';
         this.overlay.className = 'modal-overlay is-open';
@@ -70,6 +72,7 @@ export class PackagePreferenceModal {
         this.overlay.querySelectorAll('[data-tier]').forEach((btn) => {
             btn.addEventListener('click', async () => {
                 const tier = btn.dataset.tier;
+                trackEvent('package_preference_selected', { tier });
                 this.overlay.querySelectorAll('[data-tier]').forEach((b) => { b.disabled = true; });
                 showErr('');
                 const { ok, error } = await updateUserProfile({ preferred_tier: tier });

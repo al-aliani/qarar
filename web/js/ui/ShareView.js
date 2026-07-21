@@ -14,6 +14,7 @@ import { getSharedStudy, recordShareView } from '../services/ShareService.js';
 import { toast } from '../utils/toast.js';
 import { getOfficialIndicators } from '../core/resultContract.js';
 import { escapeHtml } from '../utils/escape.js';
+import { trackEvent } from '../utils/analytics.js';
 
 export class ShareView {
     constructor(containerId, store, onNavigate) {
@@ -30,7 +31,9 @@ export class ShareView {
         }
         // مرة واحدة لكل تحميل صفحة (لا لكل تفاعل لاحق) — نمط DocSend لتتبّع "فُتح X مرة".
         recordShareView(shareToken);
+        trackEvent('share_view', { view_mode: 'investor', hide_sensitive: !!shared.hide_sensitive });
         this._shareToken = shareToken;
+        this._hideSensitive = shared.hide_sensitive;
 
         const state = shared.data || {};
         const pi = state.projectInfo || {};
@@ -176,12 +179,14 @@ export class ShareView {
     }
 
     formatMoney(value) {
+        if (this._hideSensitive) return 'مخفي';
         const n = Number(value);
         if (!Number.isFinite(n)) return '-';
         return Math.round(n).toLocaleString();
     }
 
     formatPercent(value) {
+        if (this._hideSensitive) return 'مخفي';
         const n = Number(value);
         if (!Number.isFinite(n)) return '-';
         const percent = Math.abs(n) <= 1 ? n * 100 : n;
@@ -202,12 +207,14 @@ export class ShareView {
         });
 
         this.container.querySelector('#btnPrintShare')?.addEventListener('click', () => {
+            trackEvent('share_print', { view_mode: 'investor' });
             window.print();
         });
 
         // حلقة نمو: يحمل توكن المشاركة كمعامل ?ref= — app.js يلتقطه عند التحميل الكامل
         // ويحفظه لإرفاقه لاحقاً بأول تسجيل حساب فعلي (AuthModalStub.js → signUp()).
         this.container.querySelector('#btnTryFreeReferral')?.addEventListener('click', () => {
+            trackEvent('share_referral_click', { view_mode: 'investor' });
             const url = new URL(window.location.href);
             url.hash = '';
             if (this._shareToken) url.searchParams.set('ref', this._shareToken);

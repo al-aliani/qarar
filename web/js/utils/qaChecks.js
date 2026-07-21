@@ -37,6 +37,8 @@ export async function runQAChecks(state, results) {
             qaResults.hardErrors.push({
                 code: 'MISSING_FINANCIAL_STATEMENTS',
                 message: 'القوائم المالية غير مكتملة. يرجى إكمال المدخلات المالية الأساسية.',
+                impact: 'لا يمكن تصدير التقرير، ستظهر الجداول المالية كأصفار.',
+                suggestion: 'الانتقال إلى خطوة الإيرادات والتكاليف وتعبئة التقديرات الأولية.',
                 path: 'financial'
             });
         }
@@ -46,6 +48,8 @@ export async function runQAChecks(state, results) {
             qaResults.hardErrors.push({
                 code: 'MISSING_KPIS',
                 message: 'مؤشرات الأداء الرئيسية (NPV, IRR) غير محسوبة.',
+                impact: 'صفحة المؤشرات المالية في التقرير ستكون فارغة، مما يمنع اتخاذ قرار استثماري.',
+                suggestion: 'حساب المؤشرات عبر محرك التحليل.',
                 path: 'kpis'
             });
         }
@@ -55,6 +59,9 @@ export async function runQAChecks(state, results) {
             qaResults.softWarnings.push({
                 code: 'FINANCIAL_ASSUMPTIONS_MISSING',
                 message: 'معدل الخصم وأشهر رأس المال العامل غير مكتملين؛ قد تكون مؤشرات NPV والسيولة مبنية على قيم افتراضية.',
+                impact: 'دقة تقييم المشروع (NPV) ستكون منخفضة لاعتمادها على افتراضات عامة وليست مخصصة.',
+                suggestion: 'تعيين معدل خصم (12%) ورأس مال عامل (3 أشهر).',
+                suggestionAction: { type: 'patch', path: 'assumptions', value: { discountRate: 12, workingCapitalMonths: 3 } },
                 path: 'assumptions'
             });
         }
@@ -71,6 +78,9 @@ export async function runQAChecks(state, results) {
                 qaResults.hardErrors.push({
                     code: 'NO_REVENUE',
                     message: 'لا توجد إيرادات مُقدّرة (إيراد السنة الأولى = صفر). أضِف مصادر الإيراد أو توقعات المبيعات قبل التصدير.',
+                    impact: 'قائمة الدخل ستكون خاسرة بالكامل ولا يمكن تقييم الجدوى الاقتصادية للمشروع.',
+                    suggestion: 'تعيين إيراد شهري افتراضي (50,000 ريال) للتجربة.',
+                    suggestionAction: { type: 'patch', path: 'revenue', value: { streams: [{ name: 'مبيعات تقديرية', amount: 50000, frequency: 'monthly' }] } },
                     path: 'revenue'
                 });
             }
@@ -79,6 +89,9 @@ export async function runQAChecks(state, results) {
                 qaResults.hardErrors.push({
                     code: 'REVENUE_WITHOUT_COSTS',
                     message: 'توجد إيرادات دون أي تكاليف تشغيل — نتيجة غير منطقية. أدخِل التكاليف الثابتة والمتغيرة.',
+                    impact: 'نسبة هامش الربح ستكون 100% وهي نتيجة مستحيلة اقتصادياً، مما يفقد الدراسة مصداقيتها.',
+                    suggestion: 'إضافة تكلفة رواتب وإيجار شهرية تقديرية.',
+                    suggestionAction: { type: 'patch', path: 'opex', value: { items: [{ name: 'إيجار وتكاليف تشغيلية', amount: 15000, frequency: 'monthly' }] } },
                     path: 'opex'
                 });
             }
@@ -87,6 +100,9 @@ export async function runQAChecks(state, results) {
                 qaResults.softWarnings.push({
                     code: 'NO_CAPEX',
                     message: 'لا توجد تكاليف تأسيسية (استثمار رأسمالي = صفر). تأكّد أن هذا مقصود.',
+                    impact: 'لا يوجد رأس مال مطلوب لبدء المشروع، وهذا غير واقعي لمعظم المشاريع ويثير قلق الممول.',
+                    suggestion: 'إضافة ميزانية تأسيس وتجهيزات تقديرية (100,000 ريال).',
+                    suggestionAction: { type: 'patch', path: 'capex', value: { items: [{ name: 'تجهيزات ومعدات', amount: 100000 }] } },
                     path: 'capex'
                 });
             }
@@ -96,6 +112,9 @@ export async function runQAChecks(state, results) {
                 qaResults.softWarnings.push({
                     code: 'PROJECT_NAME_MISSING',
                     message: 'اسم المشروع غير محدد — سيظهر فارغاً في ترويسة التقرير.',
+                    impact: 'يظهر "دراسة جديدة" أو مساحة فارغة في كافة صفحات التقرير المصدر.',
+                    suggestion: 'تسمية المشروع بـ "مشروع تجاري مقترح".',
+                    suggestionAction: { type: 'patch', path: 'projectInfo.name', value: 'مشروع تجاري مقترح' },
                     path: 'projectInfo.name'
                 });
             }
@@ -119,9 +138,12 @@ export async function runQAChecks(state, results) {
                 };
                 walk(state);
                 if (seen.size > 0) {
+                    const placeholder = [...seen][0];
                     qaResults.softWarnings.push({
                         code: 'UNREPLACED_PLACEHOLDER_TEXT',
-                        message: `يوجد نص إرشادي بين أقواس لم تستبدله بعد (مثل: «${[...seen][0]}»). استبدله بمحتوى مشروعك الفعلي قبل التصدير حتى لا يظهر حرفياً في التقرير.`,
+                        message: `يوجد نص إرشادي بين أقواس لم تستبدله بعد (مثل: «${placeholder}»). استبدله بمحتوى مشروعك الفعلي قبل التصدير حتى لا يظهر حرفياً في التقرير.`,
+                        impact: 'ظهور نصوص استرشادية حرفياً في التقرير يظهر عدم احترافية ويضعف مصداقية الدراسة.',
+                        suggestion: `البحث عن "${placeholder}" في الأقسام واستبدالها بالمعلومة المطلوبة.`,
                         path: 'content'
                     });
                 }
@@ -134,6 +156,9 @@ export async function runQAChecks(state, results) {
                     qaResults.softWarnings.push({
                         code: 'MARKET_NARRATIVE_MISSING',
                         message: 'تحليل السوق النصي مختصر أو غير موجود — أضف وصفاً مدعوماً للطلب، الشريحة المستهدفة، واتجاهات السوق قبل بيع الدراسة كنسخة مخصصة.',
+                        impact: 'يبدو التقرير مفرغاً من سياق السوق للممول مما يضعف الثقة بالطلب المتوقع.',
+                        suggestion: 'كتابة نص تسويقي أولي حول قوة الطلب والفرصة المتاحة في السوق.',
+                        suggestionAction: { type: 'patch', path: 'marketing.marketAnalysis.summary', value: 'يشهد السوق المستهدف نمواً مطرداً مع زيادة وعي المستهلكين. هناك فرصة كبيرة لتغطية الفجوة في الطلب من خلال تقديم خدمات عالية الجودة بأسعار تنافسية تلبي تطلعات الشريحة المستهدفة.' },
                         path: 'marketing.marketAnalysis.summary'
                     });
                 }
@@ -143,6 +168,9 @@ export async function runQAChecks(state, results) {
                     qaResults.softWarnings.push({
                         code: 'COMPETITORS_MISSING',
                         message: 'تحليل المنافسين غير كافٍ — أضف منافسين محليين على الأقل مع نقاط القوة والضعف والأسعار/الحركة التقريبية. هذا من أهم ما يرفع الدراسة من 7/10 إلى مستوى تمويلي.',
+                        impact: 'نقص في دراسة البيئة التنافسية يعطي انطباعاً بعدم الإلمام بالسوق.',
+                        suggestion: 'إضافة منافسين افتراضيين كنموذج أولي.',
+                        suggestionAction: { type: 'patch', path: 'marketing.competitors', value: [{ name: 'المنافس أ', strength: 'انتشار واسع', weakness: 'أسعار مرتفعة' }, { name: 'المنافس ب', strength: 'أسعار منخفضة', weakness: 'جودة متوسطة' }] },
                         path: 'marketing.competitors'
                     });
                 }
@@ -152,6 +180,9 @@ export async function runQAChecks(state, results) {
                     qaResults.softWarnings.push({
                         code: 'TARGET_LOCATION_MISSING',
                         message: 'النطاق الجغرافي غير محدد بدقة (حي/منطقة مستهدفة) — دراسة مقهى بلا حي واضح تجعل أرقام السوق والمنافسين عامة أكثر من اللازم.',
+                        impact: 'فقدان دقة تقديرات حجم السوق الجغرافية.',
+                        suggestion: 'تحديد النطاق بـ "منطقة الرياض - حي العليا".',
+                        suggestionAction: { type: 'patch', path: 'marketSizing.targetNeighborhood', value: 'الرياض - حي العليا' },
                         path: 'marketSizing.targetNeighborhood'
                     });
                 }
@@ -161,6 +192,9 @@ export async function runQAChecks(state, results) {
                     qaResults.softWarnings.push({
                         code: 'LICENSES_MISSING',
                         message: 'التراخيص والرسوم غير موثقة — أضف السجل التجاري، رخصة البلدية، الدفاع المدني، وأي اشتراطات غذائية/تشغيلية حسب النشاط.',
+                        impact: 'يعتبر الممول المشروع مخاطرة قانونية إذا لم تُدرج التراخيص وتكاليفها.',
+                        suggestion: 'إضافة التراخيص الأساسية (سجل تجاري، رخصة بلدية).',
+                        suggestionAction: { type: 'patch', path: 'legal.licenses', value: [{ name: 'سجل تجاري', cost: 1200 }, { name: 'رخصة البلدية', cost: 3000 }] },
                         path: 'legal.licenses'
                     });
                 } else {
@@ -174,6 +208,9 @@ export async function runQAChecks(state, results) {
                         qaResults.softWarnings.push({
                             code: 'SFDA_LICENSE_MISSING',
                             message: 'مشروع أغذية/مشروبات بلا رخصة هيئة الغذاء والدواء (SFDA) في قائمة التراخيص — إلزامية لمنشآت الأغذية في السعودية.',
+                            impact: 'دراسة قطاع أغذية بلا ترخيص بلدي وSFDA تُرفض فوراً من صناديق التمويل.',
+                            suggestion: 'إضافة "ترخيص هيئة الغذاء والدواء".',
+                            suggestionAction: { type: 'push', path: 'legal.licenses', value: { name: 'ترخيص هيئة الغذاء والدواء SFDA', cost: 1000 } },
                             path: 'legal.licenses'
                         });
                     }
@@ -184,6 +221,9 @@ export async function runQAChecks(state, results) {
                     qaResults.softWarnings.push({
                         code: 'REFERENCES_MISSING',
                         message: 'لا توجد مصادر ومراجع في الملاحق — أضف مصادر السوق/السكان/القطاع أو روابط الجهات الرسمية لرفع مصداقية الدراسة.',
+                        impact: 'يعتبر الممول الأرقام غير المرجعية افتراضات شخصية مما يقلل احتمالية قبول التمويل.',
+                        suggestion: 'إضافة "بيانات الهيئة العامة للإحصاء" كمرجع.',
+                        suggestionAction: { type: 'patch', path: 'appendices.references', value: [{ title: 'الهيئة العامة للإحصاء', link: 'https://stats.gov.sa/' }] },
                         path: 'appendices.references'
                     });
                 }
@@ -191,6 +231,9 @@ export async function runQAChecks(state, results) {
                     qaResults.softWarnings.push({
                         code: 'PRICE_QUOTES_MISSING',
                         message: 'لا توجد عروض أسعار أو مرفقات أسعار للمعدات والتجهيزات — النسخة التمويلية القوية تحتاج عروض موردين أو مصادر أسعار واضحة.',
+                        impact: 'تكاليف التأسيس تعتبر غير موثوقة وقد تُرفض الميزانية المقترحة.',
+                        suggestion: 'إضافة ملاحظة "الأسعار استرشادية بناءً على السوق المحلي".',
+                        suggestionAction: { type: 'patch', path: 'appendices.priceQuotes', value: [{ title: 'متوسط أسعار السوق المحلي (استرشادي)', file: null }] },
                         path: 'appendices.priceQuotes'
                     });
                 }
@@ -201,6 +244,9 @@ export async function runQAChecks(state, results) {
                     qaResults.softWarnings.push({
                         code: 'RISK_PLAN_WEAK',
                         message: 'خطة المخاطر تحتاج تفصيلاً أكثر — وثّق 5 مخاطر رئيسية على الأقل مع خطة تخفيف واضحة ومسؤول/إجراء لكل خطر.',
+                        impact: 'خطة إدارة المخاطر ستبدو ضعيفة أو منسوخة مما يدل على قلة دراسة لواقع المشروع.',
+                        suggestion: 'إضافة مخاطر وتدابير تخفيف نموذجية للمخاطر المالية والتشغيلية.',
+                        suggestionAction: { type: 'patch', path: 'riskAnalysis.risks', value: [{ title: 'ضعف السيولة', impact: 'High', mitigation: 'تأمين احتياطي نقدي وتسهيلات ائتمانية' }, { title: 'دخول منافسين جدد', impact: 'Medium', mitigation: 'تقديم جودة أعلى وبناء ولاء للعملاء' }, { title: 'تأخر التوريد', impact: 'Medium', mitigation: 'تعدد الموردين' }, { title: 'نقص العمالة', impact: 'Low', mitigation: 'عقود استقدام وحوافز أداء' }, { title: 'تغير التشريعات', impact: 'Medium', mitigation: 'المتابعة القانونية المستمرة' }] },
                         path: 'riskAnalysis.risks'
                     });
                 }

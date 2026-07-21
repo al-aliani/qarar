@@ -150,6 +150,35 @@ describe('AuthModalStub — تحدي 2FA (AAL) + auditLog للتسجيل/OAuth',
         expect(getAALMock).not.toHaveBeenCalled();
     });
 
+    // تدقيق جاهزية 2026-07-21 (مخاطرة H4): عند تفعيل «تأكيد البريد» في Supabase، signUp
+    // يُعيد user بلا session — كان الكود يعامله كدخول ناجح (onSuccess يحدّث اللوحة كأن
+    // المستخدم داخل بينما لا جلسة، فيفشل كل حفظ سحابي). الآن: رسالة تأكيد، لا onSuccess.
+    it('تسجيل جديد بلا جلسة (تأكيد بريد معلّق): يعرض رسالة تأكيد ولا يُعامَل كدخول', async () => {
+        signUpSdkMock.mockResolvedValueOnce({ data: { user: { email: 'a@b.com' }, session: null }, error: null });
+        const { AuthModal } = await import('../AuthModalStub.js');
+        const onSuccess = vi.fn();
+        const modal = new AuthModal('c', { onSuccess });
+        modal.open();
+        await fillAndSubmit(modal.overlay, { signUp: true });
+        await waitUntil(() => (modal.overlay?.querySelector('#authModalError')?.textContent || '').includes('تأكيد'));
+
+        expect(onSuccess).not.toHaveBeenCalled();
+        expect(modal.overlay).not.toBeNull(); // النافذة لم تُغلق
+        expect(modal.overlay.querySelector('#authModalError').textContent).toContain('رابط تأكيد');
+    });
+
+    it('تسجيل جديد بجلسة نشطة (تأكيد تلقائي): يُعامَل كدخول ناجح ويستدعي onSuccess', async () => {
+        signUpSdkMock.mockResolvedValueOnce({ data: { user: { email: 'a@b.com' }, session: { access_token: 'tok' } }, error: null });
+        const { AuthModal } = await import('../AuthModalStub.js');
+        const onSuccess = vi.fn();
+        const modal = new AuthModal('c', { onSuccess });
+        modal.open();
+        await fillAndSubmit(modal.overlay, { signUp: true });
+        await waitUntil(() => onSuccess.mock.calls.length > 0);
+
+        expect(onSuccess).toHaveBeenCalledTimes(1);
+    });
+
     it('تسجيل حساب جديد بجوال غير صالح: يُرفض ولا يستدعي signUp إطلاقاً', async () => {
         const { AuthModal } = await import('../AuthModalStub.js');
         const modal = new AuthModal('c', {});

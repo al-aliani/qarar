@@ -216,9 +216,18 @@ export async function exportExcel(study, results) {
     wsK.getCell(`E${row}`).value = num(c.cumulative);
   }
   wsK.getCell("B15").value = num(ind.npv);
-  // IRR كسر + تنسيق مئوي: 1.02 يُعرض «102.0%» — كان يُكتب خاماً فيُقرأ «1.02%»
-  wsK.getCell("B16").value = frac(ind.irr);
-  wsK.getCell("B16").numFmt = PCT_FMT;
+  // IRR كسر + تنسيق مئوي: 1.02 يُعرض «102.0%» — كان يُكتب خاماً فيُقرأ «1.02%».
+  // IRR غير محقق (null/غير منتهٍ) لا يُكتب «0.0%» أبداً — كان frac(null)=0 يُظهر عائداً
+  // صفرياً حقيقياً يناقض لوحة القرار التي تقول «غير محقق» (نفس مبدأ فترة الاسترداد أدناه).
+  // ملاحظة: Number(null)=0 (منتهٍ!) — لذا نفحص != null صراحةً قبل Number، تماماً كما
+  // في formatIrrPct، وإلا عاد فخ null→0 نفسه الذي نصلحه.
+  if (ind.irr != null && Number.isFinite(Number(ind.irr))) {
+    wsK.getCell("B16").value = frac(ind.irr);
+    wsK.getCell("B16").numFmt = PCT_FMT;
+  } else {
+    wsK.getCell("B16").value = "غير محقق";
+    wsK.getCell("B16").numFmt = 'General';
+  }
   wsK.getCell("B17").value = num(ind.profitabilityIndex);
   wsK.getCell("B17").numFmt = '0.00';
   // فترة استرداد غير محققة لا تُكتب 0 أبداً
@@ -245,8 +254,15 @@ export async function exportExcel(study, results) {
     wsSc.getCell("D8").value = num(sc.optimistic.kpis?.npv);
     [["B9", sc.pessimistic], ["C9", sc.base], ["D9", sc.optimistic]].forEach(([addr, s]) => {
       const c = wsSc.getCell(addr);
-      c.value = frac(s.kpis?.irr);
-      c.numFmt = PCT_FMT;
+      // IRR سيناريو غير محقق لا يُكتب «0.0%» (نفس معالجة الخلية B16 أعلاه — فحص != null
+      // قبل Number لأن Number(null)=0 منتهٍ).
+      if (s.kpis?.irr != null && Number.isFinite(Number(s.kpis.irr))) {
+        c.value = frac(s.kpis.irr);
+        c.numFmt = PCT_FMT;
+      } else {
+        c.value = "غير محقق";
+        c.numFmt = 'General';
+      }
     });
     const label = (s) => (s.kpis?.npv > 0 && s.kpis?.irr > 0) ? 'GO' : (s.kpis?.npv > 0 ? 'مشروط' : 'NO-GO');
     wsSc.getCell("B10").value = label(sc.pessimistic);

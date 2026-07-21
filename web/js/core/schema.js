@@ -435,6 +435,9 @@ export function createEmptyStudy() {
                 // { name: "حملة إطلاق", type: "capital", amount: 50000, notes: "" }
                 // { name: "إعلانات شهرية", type: "operating", monthly: 5000, notes: "" }
             ],
+            marketingPlan: [
+                // { objective: "", channel: "", budget: 0, timeline: "", kpi: "", notes: "" }
+            ],
             // الموردون (جدول تفصيلي — الفجوة المعيارية)
             suppliers: [
                 // { name: "", supplyNature: "", availability: "", avgDeliveryDays: 0, notes: "" }
@@ -1012,6 +1015,15 @@ export const TABLE_SCHEMAS = {
         ],
         showTotal: false
     },
+    capacityUtilization: {
+        title: 'تدرج الطاقة التشغيلية',
+        columns: [
+            { key: 'year', label: 'السنة', type: 'number', default: 1 },
+            { key: 'rate', label: 'نسبة الاستخدام', type: 'number', default: 0.50, placeholder: '50% = 0.50' },
+            { key: 'notes', label: 'ملاحظات', type: 'text' }
+        ],
+        showTotal: false
+    },
     consumables: {
         title: 'المواد المستهلكة (التشغيلية)',
         aiPrompt: 'suggest_consumables',
@@ -1053,6 +1065,16 @@ export const TABLE_SCHEMAS = {
         ],
         showTotal: true,
         totalColumn: 'annualCost'
+    },
+    advisoryBoard: {
+        title: 'المجلس الاستشاري',
+        columns: [
+            { key: 'name', label: 'الاسم', type: 'text' },
+            { key: 'role', label: 'الدور/التخصص', type: 'text' },
+            { key: 'qualifications', label: 'المؤهلات/الخبرة', type: 'text' },
+            { key: 'notes', label: 'ملاحظات', type: 'text' }
+        ],
+        showTotal: false
     },
     techResources: {
         title: 'الموارد التقنية',
@@ -1123,6 +1145,19 @@ export const TABLE_SCHEMAS = {
             { key: 'notes', label: 'ملاحظات', type: 'text' }
         ],
         showTotal: false
+    },
+    marketingPlan: {
+        title: 'الخطة التسويقية',
+        columns: [
+            { key: 'objective', label: 'الهدف', type: 'text' },
+            { key: 'channel', label: 'القناة', type: 'text', placeholder: 'محتوى، إعلانات، شراكات...' },
+            { key: 'budget', label: 'الميزانية', type: 'number' },
+            { key: 'timeline', label: 'الفترة', type: 'text' },
+            { key: 'kpi', label: 'مؤشر القياس', type: 'text' },
+            { key: 'notes', label: 'ملاحظات', type: 'text' }
+        ],
+        showTotal: true,
+        totalColumn: 'budget'
     },
     competitorBenchmarking: {
         title: 'مقارنة المشروع مع المنافسين (جدول معايير)',

@@ -87,4 +87,20 @@ describe('Sidebar — تهدئة حساب نتيجة الفكرة داخل rende
             vi.useRealTimers();
         }
     });
+
+    it('بطء الرسم الأول نفسه لا يجعل النداء التالي الفوري يعيد الحساب', async () => {
+        const nowSpy = vi.spyOn(Date, 'now');
+        let call = 0;
+        nowSpy.mockImplementation(() => (++call === 1 ? 1000 : 1500));
+        try {
+            const sidebar = new Sidebar('c', [], () => {}, fakeStore({ projectInfo: { name: 'مشروع' } }));
+
+            await sidebar.render();
+            await sidebar.render();
+
+            expect(calculateIdeaScoreMock).toHaveBeenCalledTimes(1);
+        } finally {
+            nowSpy.mockRestore();
+        }
+    });
 });

@@ -3,7 +3,7 @@
  * Re-exports shared utils and main exporters for simpler imports.
  */
 
-export { sanitizeSheetName, sanitizeFilename, loadXLSX, formatExportDateTime, exportDateISO, safeNum, safePct, SAFE, formatDscr, downloadBlob } from './utils.js';
+export { sanitizeSheetName, sanitizeFilename, loadXLSX, formatExportDateTime, getExportMetadata, exportDateISO, safeNum, safePct, SAFE, formatDscr, downloadBlob } from './utils.js';
 export { ExcelExporter, exportToExcel } from './excelExporter.js';
 export { exportToCSV } from './csvExporter.js';
 export { exportExcel } from './excel.js';

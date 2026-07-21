@@ -276,6 +276,7 @@ export class Sidebar {
         // فقط سقف تكرار زمني بسيط — لا حذف للحساب، فقط تحديد وتيرته الأقصى).
         // نعيد استخدام آخر نتيجة محسوبة إن مرّ أقل من 400ms منذ آخر حساب فعلي.
         let ideaScoreHTML = '';
+        let ideaWasCalculated = false;
         try {
             const storeInstance = this.store;
             const state = storeInstance?.getState?.() ?? storeInstance?.get?.() ?? {};
@@ -286,7 +287,7 @@ export class Sidebar {
             } else {
                 idea = calculateIdeaScore(state);
                 this._ideaCache = idea;
-                this._ideaCacheAt = now;
+                ideaWasCalculated = true;
             }
             const score = Math.min(100, Math.max(0, idea.score));
             const colorClass = idea.color === 'green' ? 'idea-score--green' : idea.color === 'yellow' ? 'idea-score--yellow' : 'idea-score--red';
@@ -428,6 +429,9 @@ export class Sidebar {
             ? `<div class="sidebar-status">${ideaScoreHTML}${completenessHTML}${progressHTML}</div>`
             : '';
         this.container.innerHTML = statusHTML + modeToggleHTML + studiesSectionHTML + renderedSections;
+        // ابدأ نافذة التهدئة بعد اكتمال الرسم لا قبله؛ بناء DOM قد يتجاوز 400ms تحت
+        // الحمل، وكان ذلك يجعل النداء الفوري التالي يعيد تشغيل المحرك بلا داعٍ.
+        if (ideaWasCalculated) this._ideaCacheAt = Date.now();
 
         // Ensure container is visible
         if (this.container) {
