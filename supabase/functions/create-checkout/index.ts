@@ -69,7 +69,7 @@ Deno.serve(async (req: Request) => {
   const pkg = getPackage(body.tier || '');
   if (!pkg) return jsonResponse({ error: 'invalid_tier' }, 400);
 
-  const provider = body.provider === 'stripe' ? 'stripe' : body.provider === 'moyasar' ? 'moyasar' : body.provider === 'tamara' ? 'tamara' : null;
+  const provider = body.provider === 'stripe' ? 'stripe' : body.provider === 'moyasar' ? 'moyasar' : body.provider === 'tamara' ? 'tamara' : body.provider === 'bank_transfer' ? 'bank_transfer' : null;
   if (!provider) return jsonResponse({ error: 'invalid_provider' }, 400);
 
   // عميل بصلاحية service_role — الوحيد المسموح له بالكتابة في orders (RLS لا يسمح
@@ -117,6 +117,14 @@ Deno.serve(async (req: Request) => {
   }
 
   const orderId = orderRow.id as string;
+
+  // تحويل بنكي: قناة يدوية — الطلب أُنشئ بحالة pending أعلاه، ولا مزوّد دفع خارجي.
+  // نُرجع رقم الطلب والمبلغ فقط ليعرض العميل بيانات الحساب ويحوّل، ثم يؤكّده الأدمن
+  // يدوياً (admin_confirm_bank_transfer) بعد وصول الحوالة فتصبح الحالة paid ويُفتح القفل.
+  if (provider === 'bank_transfer') {
+    return jsonResponse({ orderId, bankTransfer: true, amount: total });
+  }
+
   const returnUrl = `${APP_ORIGIN}/#/payment-return?order=${orderId}`;
 
   try {

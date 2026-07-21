@@ -55,6 +55,8 @@ export async function startCheckout({ tier, studyId, provider, addons = [], coup
             body,
         });
         if (error) return { ok: false, error: error.message || 'فشل إنشاء جلسة الدفع' };
+        // تحويل بنكي: لا رابط دفع خارجي — يُعاد رقم الطلب والمبلغ لعرض بيانات الحساب.
+        if (data?.bankTransfer) return { ok: true, bankTransfer: true, orderId: data.orderId, amount: data.amount };
         if (!data?.checkoutUrl) return { ok: false, error: 'لم يُعِد الخادم رابط دفع صالحاً' };
         return { ok: true, checkoutUrl: data.checkoutUrl, orderId: data.orderId };
     } catch (e) {

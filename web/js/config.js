@@ -143,6 +143,32 @@ export function buildWhatsAppLink(text) {
 }
 
 /**
+ * إعداد الدفع بالتحويل البنكي — يُقرأ من web/public/bank-transfer-config.js وقت التشغيل.
+ * يُعيد الكائن فقط إن كان مُفعَّلاً والآيبان بصيغة سعودية صحيحة (SA + 22 خانة) واسم
+ * المستفيد موجوداً — وإلا null، فيُخفي المستدعي (PaywallModal) خيار التحويل البنكي
+ * (تراجع رشيق: لا نعرض حساباً ناقصاً/غير محقّق أبداً).
+ * @returns {{beneficiaryName:string,bankName:string,iban:string,accountNumber?:string,swift?:string}|null}
+ */
+export function getBankTransferConfig() {
+    const cfg = (typeof window !== 'undefined' && window.BANK_TRANSFER) || null;
+    if (!cfg || cfg.enabled !== true) return null;
+    const iban = String(cfg.iban || '').replace(/\s+/g, '').toUpperCase();
+    const beneficiaryName = String(cfg.beneficiaryName || '').trim();
+    // آيبان سعودي: SA + رقمَي فحص + 20 خانة = 24 محرفاً إجمالاً.
+    if (!/^SA\d{22}$/.test(iban) || !beneficiaryName) {
+        console.warn('[قرار] التحويل البنكي مُفعَّل لكن الآيبان/اسم المستفيد غير صالح — عدّل web/public/bank-transfer-config.js.');
+        return null;
+    }
+    return {
+        beneficiaryName,
+        bankName: String(cfg.bankName || '').trim(),
+        iban,
+        accountNumber: String(cfg.accountNumber || '').trim(),
+        swift: String(cfg.swift || '').trim(),
+    };
+}
+
+/**
  * موارد وإرشاد — جهات مفيدة (غرف تجارية، تمويل، منشآت)
  * للربط بالمستخدم دون التعهد بخدمات طرف ثالث. نبرة مساعدة ومحايدة.
  */

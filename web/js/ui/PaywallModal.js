@@ -11,7 +11,7 @@
  * كاملة» يجريان بعد إتمام الدفع لا قبله.
  */
 import { PRICING_PACKAGES, formatPrice } from '../core/pricing.js';
-import { REFUND_POLICY } from '../config.js';
+import { REFUND_POLICY, getBankTransferConfig, buildWhatsAppLink } from '../config.js';
 import { startCheckout } from '../services/PaymentService.js';
 import { getExperimentVariant, trackEvent } from '../utils/analytics.js';
 import { trapFocus } from '../utils/focusTrap.js';
@@ -73,6 +73,8 @@ export class PaywallModal {
     render() {
         const state = this.store?.getState?.() || {};
         this.studyId = state.projectInfo?.id || state.id || null;
+        // إعداد التحويل البنكي (null إن كان معطّلاً أو الآيبان غير محقّق) — يُضاف زره فقط حينها.
+        this.bankCfg = getBankTransferConfig();
 
         // ملاحظة شفافية: لو زار العميل لوحة القرار قبل التصدير (النسق المعتاد) تكون
         // results.decision محفوظة بالفعل بمخزن الحالة (انظر DecisionDashboard.js) — لا
@@ -102,6 +104,10 @@ export class PaywallModal {
                     <button type="button" class="btn btn--outline btn-block btn-pay-now" data-package="${pkg.id}" data-provider="stripe">
                         ادفع ببطاقة دولية
                     </button>
+                    ${this.bankCfg ? `
+                    <button type="button" class="btn btn--outline btn-block btn-pay-now" data-package="${pkg.id}" data-provider="bank_transfer">
+                        تحويل بنكي على حساب الشركة
+                    </button>` : ''}
                 </div>`;
             return `
                 <div class="card paywall-package-card ${pkg.recommended ? 'paywall-package-card--recommended' : ''}" data-package-card="${pkg.id}" style="padding:16px;border-radius:12px;">
@@ -190,6 +196,10 @@ export class PaywallModal {
             return;
         }
 
+        if (provider === 'bank_transfer') {
+            return this._handleBankTransfer(btn, tier, showErr);
+        }
+
         const orig = btn.textContent;
         btn.disabled = true;
         btn.textContent = 'جاري تجهيز الدفع...';
@@ -206,5 +216,65 @@ export class PaywallModal {
         trackEvent('payment_error', { tier, provider, message: result.error || 'checkout_failed' });
         btn.disabled = false;
         btn.textContent = orig;
+    }
+
+    /**
+     * تحويل بنكي (قناة يدوية): يُنشئ طلباً pending عبر create-checkout (بلا رابط دفع
+     * خارجي)، ثم يعرض بيانات حساب الشركة + المبلغ + رقم مرجعي، وزر واتساب لإرسال إثبات
+     * الحوالة. يؤكّده الأدمن يدوياً بعد وصولها فيصبح status='paid' ويُفتح التصدير.
+     */
+    async _handleBankTransfer(btn, tier, showErr) {
+        const orig = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'جاري تجهيز الطلب...';
+        showErr('');
+
+        trackEvent('checkout_start', { tier, provider: 'bank_transfer' });
+        const result = await startCheckout({ tier, studyId: this.studyId, provider: 'bank_transfer' });
+        if (result.ok && result.bankTransfer) {
+            this._renderBankPanel(tier, result.orderId, result.amount);
+            return;
+        }
+        showErr(result.error || 'تعذّر إنشاء طلب التحويل البنكي. حاول لاحقاً.');
+        trackEvent('payment_error', { tier, provider: 'bank_transfer', message: result.error || 'bank_transfer_failed' });
+        btn.disabled = false;
+        btn.textContent = orig;
+    }
+
+    _renderBankPanel(tier, orderId, amount) {
+        const b = this.bankCfg || {};
+        const pkg = PRICING_PACKAGES.find(p => p.id === tier) || {};
+        const amountText = `${formatPrice(amount ?? pkg.price)} ريال`;
+        const ref = String(orderId || '').slice(0, 8);
+        const waText = `السلام عليكم، حوّلت مبلغ باقة «${pkg.name || ''}» (${amountText}) بنكياً.\nرقم الطلب المرجعي: ${ref}\nمرفق إثبات الحوالة.`;
+        const waLink = buildWhatsAppLink(waText);
+        const body = this.overlay.querySelector('.modal-body');
+        if (!body) return;
+        const row = (label, value, copyable) => `
+            <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--c-border,rgba(255,255,255,.08));">
+                <span class="text-xs text-muted">${escapeHtml(label)}</span>
+                <span style="font-weight:700;direction:ltr;text-align:left;" dir="ltr">${escapeHtml(value)}${copyable ? ` <button type="button" class="btn--text bank-copy" data-copy="${escapeHtml(value)}" title="نسخ" style="font-weight:400;">نسخ</button>` : ''}</span>
+            </div>`;
+        body.innerHTML = `
+            <button type="button" id="bankBack" class="btn--text text-sm text-muted mb-2">← رجوع للباقات</button>
+            <div class="alert alert--warning mb-3">حوّل المبلغ التالي إلى حساب الشركة، ثم أرسل إثبات الحوالة عبر واتساب. يُفعّل التصدير خلال ساعات العمل بعد التحقق من وصول المبلغ.</div>
+            <div class="card" style="padding:14px;border-radius:12px;">
+                ${row('المبلغ المطلوب', amountText)}
+                ${row('اسم المستفيد', b.beneficiaryName || '')}
+                ${row('البنك', b.bankName || '')}
+                ${row('الآيبان (IBAN)', b.iban || '', true)}
+                ${b.accountNumber ? row('رقم الحساب', b.accountNumber, true) : ''}
+                ${row('رقم الطلب المرجعي', ref, true)}
+            </div>
+            <p class="text-xs text-muted mt-2">اذكر رقم الطلب المرجعي (${escapeHtml(ref)}) في تفاصيل التحويل ليسهل مطابقته بسرعة.</p>
+            ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn btn--primary btn-block mt-3">أرسلت الحوالة — إرسال الإثبات عبر واتساب</a>` : '<p class="text-xs text-danger mt-3">رقم واتساب الدعم غير مضبوط — تواصل عبر قنوات الاتصال في الموقع لإرسال الإثبات.</p>'}
+        `;
+        body.querySelector('#bankBack')?.addEventListener('click', () => this.render());
+        body.querySelectorAll('.bank-copy').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                try { await navigator.clipboard.writeText(btn.dataset.copy || ''); btn.textContent = 'تم النسخ ✓'; setTimeout(() => { btn.textContent = 'نسخ'; }, 1500); } catch { /* تجاهل */ }
+            });
+        });
+        trackEvent('bank_transfer_shown', { tier, orderId: ref });
     }
 }
