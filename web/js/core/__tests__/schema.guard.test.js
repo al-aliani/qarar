@@ -17,9 +17,10 @@ const REQUIRED_TABLES = [
   'products', 'introServices', 'customerValues',
   'keyPeople', 'partnershipContracts',
   'competitors', 'competitorBenchmarking', 'historicalData',
+  'supplyDemandBalance', 'marketingPlan',
   'revenueStreams',
-  'establishmentCosts', 'equipment', 'buildings', 'furniture',
-  'positions', 'licenses',
+  'establishmentCosts', 'capacityModel', 'capacityUtilization', 'equipment', 'buildings', 'furniture',
+  'positions', 'advisoryBoard', 'licenses',
   'references', 'reviewers',
 ];
 

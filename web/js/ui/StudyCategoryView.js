@@ -264,6 +264,8 @@ export class StudyCategoryView {
 
         if (instance) this.instances.push(instance);
         trackEvent('wizard_step_view', { stepId: step.id });
+        if (index === 0) trackEvent('study_start', { stepId: step.id });
+        if (index === this.steps.length - 1) trackEvent('study_complete', { stepId: step.id });
         const content = document.getElementById(containerId);
         if (content) enhanceFieldHelp(content);
     }

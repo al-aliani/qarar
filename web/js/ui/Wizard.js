@@ -1301,7 +1301,7 @@ export class Wizard {
                     <label for="field-${fullKey}">${arabicLabel}${tooltipHtml}</label>
                     <div class="input-with-ai">
                         <textarea id="field-${fullKey}" data-key="${fullKey}" data-section="${section}" rows="3" class="input input--textarea" placeholder="اكتب أفكارك هنا، أو اطلب اقتراحاً جاهزاً مناسباً لمشروعك...">${escapeHtml(displayValue)}</textarea>
-                        <button type="button" class="btn-magic-wand" data-key="${fullKey}" title="اقتراح أو إعادة صياغة" aria-label="اقتراح نص"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4V2m0 20v-2m7-7h-2M4 13H2m18.5-6.5L19 8M6 21l9-9"/><path d="m19 8-3-3-2 2 3 3 2-2z"/></svg></button>
+                        <button type="button" class="btn-magic-wand" data-key="${fullKey}" title="اقتراح أو إعادة صياغة" aria-label="اقتراح نص" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-weight: 500; font-size: 13px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4V2m0 20v-2m7-7h-2M4 13H2m18.5-6.5L19 8M6 21l9-9"/><path d="m19 8-3-3-2 2 3 3 2-2z"/></svg> <span>اكتب لي</span></button>
                     </div>
                 </div>
             `;

@@ -53,5 +53,29 @@ describe('TemplateGallery — تقسيم المنتجات في معالج الت
         const list = productsCall[2];
         expect(list).toHaveLength(3);
         expect(list.map((p) => p.name)).toEqual(['قهوة', 'شاي', 'حلى مخبوزات']);
+        expect(list.every((p) => p.type === 'final')).toBe(true);
+    });
+
+    it('handles pasted literal newline markers and common separators', async () => {
+        const store = fakeStore();
+        const gallery = new TemplateGallery('templateGalleryOverlay', store);
+        gallery.open();
+
+        document.querySelector('#btnStartBlank').click();
+        document.querySelector('#btnBlankCreate').click();
+        await Promise.resolve();
+
+        document.querySelector('#fw_btnNext').click();
+        document.querySelector('#fw_products').value = '1. قهوة مختصة\\n2. مشروبات باردة، 3. حلويات';
+        document.querySelector('#fw_btnNext').click();
+        document.querySelector('#fw_btnNext').click();
+        await Promise.resolve();
+
+        const productsCall = store.updatePath.mock.calls.find(
+            ([section, path]) => section === 'projectInfo' && path === 'products'
+        );
+        const list = productsCall[2];
+        expect(list).toHaveLength(3);
+        expect(list.map((p) => p.name)).toEqual(['قهوة مختصة', 'مشروبات باردة', 'حلويات']);
     });
 });
