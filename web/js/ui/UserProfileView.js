@@ -6,6 +6,7 @@
 import { getSupabaseClient, getAuthUser, updateUserDisplayName, getUserProfile, updateUserProfile, signOut } from '../../supabaseClient.js';
 import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
 import { toast } from '../utils/toast.js';
+import { trackEvent } from '../utils/analytics.js';
 
 function getDisplayName(user) {
   return (user?.user_metadata?.full_name || '').trim() || user?.email || user?.phone || '—';
@@ -128,6 +129,10 @@ export class UserProfileView {
         `;
 
         document.getElementById('btnUserProfileBack')?.addEventListener('click', () => this.onBack());
+
+        this.container.querySelector('a[href^="mailto:"]')?.addEventListener('click', () => {
+            trackEvent('account_deletion_requested', { surface: 'user_profile' });
+        });
 
         document.getElementById('btnUserProfileBilling')?.addEventListener('click', () => {
             window.location.hash = '#/billing';

@@ -221,8 +221,8 @@ class AuthGuardClass {
      * عرض شاشة المصادقة
      */
     async showAuthPrompt(onSuccess = () => {}) {
-        const { PhoneAuthModal } = await import('../ui/PhoneAuthModal.js');
-        const modal = new PhoneAuthModal('authModalContainer', {
+        const { AuthModal } = await import('../ui/AuthModalStub.js');
+        const modal = new AuthModal('authModalContainer', {
             onSuccess: async () => {
                 try {
                     const { user } = await getAuthUser();

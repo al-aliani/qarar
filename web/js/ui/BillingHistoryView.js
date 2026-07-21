@@ -8,6 +8,7 @@ import { getAuthUser } from '../../supabaseClient.js';
 import { AuthGuard } from '../middleware/AuthGuard.js';
 import { listOrders } from '../services/PaymentService.js';
 import { openTaxInvoice } from '../utils/zatcaInvoice.js';
+import { trackEvent } from '../utils/analytics.js';
 
 const TIER_LABELS = {
     self: 'الباقة الذاتية',
@@ -102,7 +103,10 @@ export class BillingHistoryView {
         this.container.querySelectorAll('[data-invoice]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const o = orders[Number(btn.dataset.invoice)];
-                if (o) openTaxInvoice(o);
+                if (o) {
+                    trackEvent('invoice_view', { status: o.status, tier: o.tier || 'unknown' });
+                    openTaxInvoice(o);
+                }
             });
         });
     }

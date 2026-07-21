@@ -144,7 +144,10 @@ export class AuthModal {
         const errEl = this.overlay.querySelector('#authModalError');
         const notCfg = this.overlay.querySelector('#authModalNotConfigured');
 
-        const showErr = (msg) => { errEl.textContent = msg || ''; errEl.style.display = msg ? 'block' : 'none'; };
+        // نعيد لون النص للافتراضي (خطأ/أحمر عبر class) في كل استدعاء حتى لا تتسرّب
+        // رسالة نجاح خضراء (تأكيد التسجيل أدناه) إلى خطأ لاحق.
+        const showErr = (msg) => { errEl.textContent = msg || ''; errEl.style.color = ''; errEl.style.display = msg ? 'block' : 'none'; };
+        const showSuccessNote = (msg) => { errEl.textContent = msg; errEl.style.color = 'var(--c-success)'; errEl.style.display = 'block'; };
 
         // تدقيق 2026-07-17: كانت حقول الاسم/الجوال (غير مطلوبة إلا عند إنشاء حساب) ظاهرة
         // دائماً بجانب حقلَي البريد/كلمة المرور — نموذج واحد مزدحم بلا فصل واضح بين دخول
@@ -228,14 +231,16 @@ export class AuthModal {
                 const onSubmit = async (e) => {
                     e.preventDefault();
                     const code = (codeInput.value || '').trim();
-                    if (code.length < 6) { mfaErr.textContent = 'أدخل الرمز المكوّن من 6 أرقام'; mfaErr.style.display = 'block'; return; }
+                    if (code.length < 6) { trackEvent('mfa_failed', { reason: 'invalid_length' }); mfaErr.textContent = 'أدخل الرمز المكوّن من 6 أرقام'; mfaErr.style.display = 'block'; return; }
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'جاري التحقق...';
                     const { mfaChallengeAndVerify } = await import('../../supabaseClient.js');
                     const verifyRes = await mfaChallengeAndVerify(factorId, code);
                     if (verifyRes.ok) {
+                        trackEvent('mfa_success', {});
                         resolve({ ok: true });
                     } else {
+                        trackEvent('mfa_failed', { reason: 'invalid_code' });
                         mfaErr.textContent = verifyRes.error || 'رمز غير صحيح';
                         mfaErr.style.display = 'block';
                         submitBtn.disabled = false;
@@ -268,25 +273,42 @@ export class AuthModal {
             const orig = btn.textContent;
             btn.disabled = true;
             btn.textContent = 'جاري...';
+            const trackAuthFailure = (reason, provider = 'password') => {
+                trackEvent(isSignUp ? 'signup_error' : 'login_failed', {
+                    reason: String(reason || 'unknown').slice(0, 40),
+                    provider,
+                });
+            };
             try {
                 const { signIn, signUp, getSupabaseClient } = await import('../../supabaseClient.js');
                 const { ok } = await getSupabaseClient();
-                if (!ok) { showErr('Supabase غير مهيأ. لا يمكن الدخول أو إنشاء حساب.'); return; }
+                if (!ok) { trackAuthFailure('supabase_unavailable'); showErr('Supabase غير مهيأ. لا يمكن الدخول أو إنشاء حساب.'); return; }
                 // حلقة نمو (share_token → تسجيل): التقطها app.js من ?ref= عند الوصول من رابط
                 // مشاركة وحفظها بـsessionStorage — نقرأها هنا فقط عند إنشاء حساب فعلي.
                 let referredByToken = null;
                 if (isSignUp) {
                     try { referredByToken = sessionStorage.getItem('referred_by_token') || null; } catch (_) { /* تجاهل */ }
                 }
-                const { ok: authOk, error } = isSignUp ? await signUp(email, pass, phoneE164, fullName, referredByToken) : await signIn(email, pass);
+                const authResult = isSignUp ? await signUp(email, pass, phoneE164, fullName, referredByToken) : await signIn(email, pass);
+                const { ok: authOk, error } = authResult;
                 if (authOk) {
                     if (isSignUp) {
                         try { sessionStorage.removeItem('referred_by_token'); } catch (_) { /* تجاهل */ }
                         const { log: auditLog, ACTIONS } = await import('../utils/auditLogger.js');
                         auditLog(ACTIONS.SIGNUP, { email });
+                        // تأكيد البريد مفعّل في Supabase ⇒ signUp يُعيد user بلا session (لا جلسة
+                        // نشطة). كان الكود يعامل هذا كدخول ناجح (onSuccess يحدّث اللوحة كأن المستخدم
+                        // داخل، بينما كل حفظ سحابي سيفشل «not authenticated») — فنعرض بدلاً منه رسالة
+                        // تأكيد واضحة، ونحوّله لتبويب الدخول، دون إغلاق النافذة أو استدعاء onSuccess.
+                        if (!authResult.data?.session) {
+                            trackEvent('signup_awaiting_confirmation', {});
+                            setAuthTab(false);
+                            showSuccessNote('تم إنشاء الحساب. أرسلنا رابط تأكيد إلى بريدك — فعّله ثم سجّل الدخول من هنا.');
+                            return;
+                        }
                     } else {
                         const mfaResult = await challengeMfaIfNeeded();
-                        if (!mfaResult.ok) return;
+                        if (!mfaResult.ok) { trackEvent('mfa_failed', { reason: 'challenge_failed' }); return; }
                     }
                     this._succeeded = true;
                     trackEvent(isSignUp ? 'signup_complete' : 'login_complete', {});
@@ -294,11 +316,13 @@ export class AuthModal {
                     this.close();
                 } else {
                     const isEmailNotConfirmed = (error || '').toLowerCase().includes('email not confirmed');
+                    trackAuthFailure(isEmailNotConfirmed ? 'email_not_confirmed' : 'invalid_credentials');
                     showErr(translateAuthError(error));
                     const resendBlock = this.overlay.querySelector('#authModalResendBlock');
                     if (resendBlock) resendBlock.style.display = isEmailNotConfirmed ? 'block' : 'none';
                 }
             } catch (e) {
+                trackAuthFailure('unexpected_error');
                 showErr(e?.message || 'خطأ في الاتصال.');
             } finally {
                 if (passEl) passEl.value = '';
