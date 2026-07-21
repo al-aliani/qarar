@@ -106,19 +106,21 @@ export class ExcelExporter {
         XLSX.utils.move_last_sheet_to_front(workbook);
 
         const outFilename = `${baseName}_${exportDateISO()}.xlsx`;
-        await XLSX.writeFile(workbook, outFilename);
-
-        // نسخة Blob لمركز التنزيلات (2026-07-16) — workbook._wb هو كائن ExcelJS
-        // الحقيقي وراء xlsxShim.js (انظر تعليقه)؛ writeBuffer() دالة تسلسل خالصة
-        // آمنة الاستدعاء مرتين، فلا حاجة لتعديل الـshim نفسه (ملف حسّاس أمنياً —
-        // بديل قصديّ لثغرة CVSS 7.8 في مكتبة xlsx الأصلية، لا يُمَسّ إلا للضرورة).
+        let blob = null;
         try {
             const buffer = await workbook._wb.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            const { trackExport } = await import('./exportTracking.js');
-            trackExport(blob, { fileType: 'excel', fileName: outFilename, studyId: this.data?.projectInfo?.id, studyName: projectName });
+            blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+                const { trackExport } = await import('./exportTracking.js');
+                trackExport(blob, { fileType: 'excel', fileName: outFilename, studyId: this.data?.projectInfo?.id, studyName: projectName });
+            }
         } catch (_) { /* لا يمنع نجاح التصدير المحلي أعلاه */ }
 
+        if (typeof window === 'undefined' || typeof document === 'undefined') {
+            return { success: true, blob, fileName: outFilename };
+        }
+
+        await XLSX.writeFile(workbook, outFilename);
         return outFilename;
     }
 

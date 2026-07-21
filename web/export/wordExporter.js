@@ -15,7 +15,9 @@ import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Width
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { calculateProjectScore } from '../js/core/scoring.js';
 import { formatPayback } from '../js/utils/formatters.js';
+import { formatIrrPct } from '../js/utils/indicatorFormat.js';
 import { t } from '../js/i18n/reportStrings.js';
+import { getExportMetadata } from './utils.js';
 
 /** أقسام تقرير Word (معرّفات قابلة للربط مع reportSectionOrder). */
 const WORD_SECTION_IDS = ['executive_summary', 'market', 'revenue_breakdown', 'financial_kpis', 'income_statement', 'cash_flow', 'balance_sheet', 'competitors', 'asset_schedule', 'working_capital', 'payroll_growth', 'marketing_growth', 'recommendation'];
@@ -230,6 +232,7 @@ export class WordExporter {
     async export() {
         try {
             const project = this.state.projectInfo || {};
+            const meta = getExportMetadata(this.state);
 
             const headerBlocks = [
                 new Paragraph({
@@ -245,7 +248,7 @@ export class WordExporter {
                     spacing: { after: 400 }
                 }),
                 new Paragraph({
-                    children: [new TextRun({ text: `تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}` })],
+                    children: [new TextRun({ text: `رقم إصدار الدراسة: ${meta.studyVersion} • تاريخ التصدير: ${meta.exportedAt}` })],
                     alignment: AlignmentType.CENTER,
                     bidirectional: true,
                     spacing: { after: 800 }
@@ -256,6 +259,9 @@ export class WordExporter {
             const sectionBlocks = sectionOrder.flatMap(id => this.buildSectionBlocks(id));
 
             const doc = new Document({
+                creator: 'منصة قرار',
+                title: meta.projectName,
+                subject: 'تقرير دراسة الجدوى الاقتصادية',
                 // خط عربي افتراضي لكل الأنماط — بدونه يسقط المستند إلى Calibri
                 styles: {
                     default: {
@@ -362,7 +368,7 @@ export class WordExporter {
             rows: [
                 this.createTableRow([t('value_column', lang), t('indicator_column', lang)], true),
                 this.createTableRow([formatCurrency(ind.npv, lang), t('npv', lang)]),
-                this.createTableRow([`${((ind.irr ?? 0) * 100).toFixed(1)}%`, t('irr', lang)]),
+                this.createTableRow([formatIrrPct(ind.irr), t('irr', lang)]),
                 this.createTableRow([formatPayback(ind.paybackPeriod), t('payback_period', lang)]),
                 this.createTableRow([`${((ind.roi ?? 0) * 100).toFixed(1)}%`, t('roi', lang)])
             ]

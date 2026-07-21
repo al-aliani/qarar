@@ -8,7 +8,7 @@
 import pptxgen from 'pptxgenjs';
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { calculateProjectScore } from '../js/core/scoring.js';
-import { SAFE } from './utils.js';
+import { SAFE, getExportMetadata } from './utils.js';
 
 /** معرّفات شرائح المحتوى (بعد الغلاف) — قابلة للربط مع reportSectionOrder. */
 const PPT_SLIDE_IDS = [
@@ -56,6 +56,7 @@ export class PPTXExporter {
 
     async export() {
         try {
+            const meta = getExportMetadata(this.state);
             this.pptx.layout = 'LAYOUT_16x9';
             // عرض عربي: اتجاه RTL + خط الهوية (كانا غائبين فتنكسر علامات الترقيم العربية)
             this.pptx.rtlMode = true;
@@ -63,8 +64,10 @@ export class PPTXExporter {
             this.pptx.author = 'منصة دراسات الجدوى';
             this.pptx.title = safeText(this.state.projectInfo?.name) || 'دراسة جدوى';
             this.pptx.subject = 'تقرير دراسة الجدوى الاقتصادية';
+            this.pptx.company = 'منصة قرار';
+            this.pptx.lang = 'ar-SA';
 
-            this.addSlideCover();
+            this.addSlideCover(meta);
             const slideOrder = this.getSlideOrder();
             for (const id of slideOrder) {
                 this.addSlideById(id);
@@ -92,7 +95,7 @@ export class PPTXExporter {
         }
     }
 
-    addSlideCover() {
+    addSlideCover(meta = getExportMetadata(this.state)) {
         const slide = this.pptx.addSlide();
         slide.background = { color: this.colors.primary };
 
@@ -108,7 +111,7 @@ export class PPTXExporter {
             align: 'center', fontFace: 'IBM Plex Sans Arabic'
         });
 
-        slide.addText(new Date().toLocaleDateString('ar-SA'), {
+        slide.addText(`الإصدار ${meta.studyVersion} • ${meta.exportedAt}`, {
             x: 0.5, y: 5.2, w: '90%', h: 0.5,
             fontSize: 14, color: '9CA3AF',
             align: 'center', fontFace: 'IBM Plex Sans Arabic'
@@ -190,7 +193,7 @@ export class PPTXExporter {
         const rows = [
             [{ text: 'المؤشر', options: { bold: true, fill: this.colors.lightGray } }, { text: 'القيمة', options: { bold: true, fill: this.colors.lightGray } }],
             [{ text: 'صافي القيمة الحالية (NPV)' }, { text: formatCurrency(ind.npv) }],
-            [{ text: 'معدل العائد الداخلي (IRR)' }, { text: `${((ind.irr ?? 0) * 100).toFixed(1)}%` }],
+            [{ text: 'معدل العائد الداخلي (IRR)' }, { text: SAFE.pctText(ind.irr) }],
             [{ text: 'فترة الاسترداد' }, { text: SAFE.payback(ind.paybackPeriod ?? ind.payback) }],
             [{ text: 'العائد على الاستثمار (ROI)' }, { text: `${((ind.roi ?? 0) * 100).toFixed(1)}%` }],
             [{ text: 'الإيرادات (السنة 1)' }, { text: formatCurrency(inc.revenue) }],
@@ -213,7 +216,7 @@ export class PPTXExporter {
 
         const kpis = [
             { label: 'NPV', value: formatCurrency(ind.npv), color: (ind.npv ?? 0) >= 0 ? this.colors.success : this.colors.danger },
-            { label: 'IRR', value: `${((ind.irr ?? 0) * 100).toFixed(1)}%`, color: this.colors.primary },
+            { label: 'IRR', value: SAFE.pctText(ind.irr), color: this.colors.primary },
             { label: 'الاسترداد', value: SAFE.payback(ind.paybackPeriod ?? ind.payback), color: this.colors.secondary },
             { label: 'هامش الربح', value: `${(((inc.netIncome || 0) / (inc.revenue || 1)) * 100).toFixed(1)}%`, color: this.colors.warning }
         ];

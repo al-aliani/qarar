@@ -19,7 +19,7 @@ import { getSupabaseClient, getAuthUser } from '../supabaseClient.js';
  * @param {{fileType: 'word'|'excel'|'pptx', fileName: string, studyId?: string, studyName?: string}} meta
  */
 export function trackExport(blob, meta) {
-    if (!blob || !meta?.fileType || !meta?.fileName) return;
+    if (!meta?.fileType || !meta?.fileName) return;
     (async () => {
         try {
             const { supabase, ok } = await getSupabaseClient();
@@ -28,15 +28,19 @@ export function trackExport(blob, meta) {
             const { user } = await getAuthUser();
             if (!user) return;
 
-            const ext = meta.fileName.split('.').pop() || meta.fileType;
-            const storagePath = `${user.id}/${Date.now()}_${meta.fileName}`.replace(/[^\w./؀-ۿ-]/g, '_');
+            let storagePath = null;
+            
+            if (blob) {
+                const ext = meta.fileName.split('.').pop() || meta.fileType;
+                storagePath = `${user.id}/${Date.now()}_${meta.fileName}`.replace(/[^\w./؀-ۿ-]/g, '_');
 
-            const { error: uploadError } = await supabase.storage
-                .from('exports')
-                .upload(storagePath, blob, { contentType: blob.type || undefined });
-            if (uploadError) {
-                console.warn('[exportTracking] فشل رفع نسخة التصدير (التنزيل المحلي غير متأثر):', uploadError.message);
-                return;
+                const { error: uploadError } = await supabase.storage
+                    .from('exports')
+                    .upload(storagePath, blob, { contentType: blob.type || undefined });
+                if (uploadError) {
+                    console.warn('[exportTracking] فشل رفع نسخة التصدير (التنزيل المحلي غير متأثر):', uploadError.message);
+                    return;
+                }
             }
 
             await supabase.from('export_history').insert({

@@ -149,6 +149,26 @@ describe('تصدير Excel — اتساق الملف المُسلَّم للعم
         expect(Number(c.value)).toBeCloseTo(results.indicators.irr, 4);
     });
 
+    // تدقيق جاهزية 2026-07-21 (بلوكر B3): IRR غير محقق (null) كان يُكتب «0.0%» عبر
+    // frac(null)=0 فيناقض لوحة القرار («غير محقق») في المخرَج المدفوع. الآن يُكتب نصاً.
+    it('المؤشرات: IRR غير محقق (null) يُكتب «غير محقق» لا «0.0%»', async () => {
+        const study = makeCafeStudy();
+        const rNull = structuredClone(calculateStudy(study));
+        rNull.indicators.irr = null;
+        if (rNull.scenarios?.base) {
+            for (const k of ['pessimistic', 'base', 'optimistic']) {
+                if (rNull.scenarios[k]?.kpis) rNull.scenarios[k].kpis.irr = null;
+            }
+        }
+        await exportExcel(study, rNull);
+        const ExcelJS = (await import('exceljs')).default;
+        const wbNull = new ExcelJS.Workbook();
+        await wbNull.xlsx.load(await capturedBlob.arrayBuffer());
+        const c = wbNull.getWorksheet('مؤشرات_التقييم').getCell('B16');
+        expect(c.value).toBe('غير محقق');
+        expect(String(c.numFmt)).not.toContain('%');
+    });
+
     it('فائدة قائمة الدخل = فائدة جدول السداد المرفق (كانا يتناقضان)', () => {
         const wsIS = wb.getWorksheet('قائمة_الدخل');
         const wsLoan = wb.getWorksheet('جدول_سداد_القرض');

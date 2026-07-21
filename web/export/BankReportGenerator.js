@@ -13,18 +13,23 @@ import { validateStudy } from '../js/utils/validation.js';
 import { getLabelSDB } from '../js/core/regulatoryLabels.js';
 import { BANK_COMPLIANCE_SENTENCE } from '../js/config.js';
 import { getOptionLabel } from '../js/core/fieldOptions.js';
+import { buildFinancingDiagnostics } from '../js/utils/financingDiagnostics.js';
+import { buildIndicatorInsights } from '../js/utils/indicatorInsights.js';
 
 /** أقسام تقرير البنك (معرّفات قابلة للربط مع reportSectionOrder). */
 const BANK_SECTION_IDS = [
     'executive_summary',
+    'loan_request',
     'market_evidence',
     'financial_kpis',
+    'indicator_explanations',
     'financing_structure',
     'collateral',
     'income_statement',
     'loan_schedule',
     'legal_readiness',
     'risks',
+    'application_checklist',
     'recommendation'
 ];
 
@@ -57,43 +62,28 @@ export class BankReportGenerator {
     static calculateResults(state) {
         try {
             return runFullModel(state);
-        } catch (e) {
+        } catch {
             console.error('Bank report calc error', e);
             return {};
         }
     }
 
     static _getFinancingDiagnostics(state, results) {
-        const financing = state?.financing || {};
-        const loanAmount = Number(financing.sources?.bankLoan?.amount || results?.loanSchedule?.loanAmount || 0);
-        const targetDSCR = Number.isFinite(Number(financing.targetDSCR)) ? Number(financing.targetDSCR) : 1.5;
-        const fundingGap = Number(results?.financingCheck?.fundingGap ?? 0);
-        const dscr = results?.indicators?.dscr ?? null;
-        const y1Ebitda = Number(results?.incomeStatement?.[0]?.ebitda ?? NaN);
-        const concept = String(state?.projectInfo?.concept || state?.projectInfo?.sector || '');
-        const isSaas = /saas|منصة|تطبيق|برمجي|تقني|موقع دراسة جدوى/i.test(concept);
-        const dscrBlocked = loanAmount > 0 && (dscr == null || dscr < targetDSCR);
-        return {
-            fundingGap,
-            dscr,
-            y1Ebitda,
-            loanAmount,
-            targetDSCR,
-            isSaas,
-            dscrBlocked,
-            bankReady: fundingGap <= 1 && !dscrBlocked && !(isSaas && loanAmount > 0 && y1Ebitda <= 0)
-        };
+        return buildFinancingDiagnostics(state, results);
     }
 
     static _renderFinancingGate(state, results, _fmt) {
         const d = this._getFinancingDiagnostics(state, results);
-        if (d.bankReady && !d.loanAmount && Math.abs(d.fundingGap) <= 1) return '';
-        const gapText = d.fundingGap > 1
+        const gapThreshold = d.fundingGapThreshold ?? 1;
+        if (d.bankReady && !d.loanAmount && Math.abs(d.fundingGap) <= gapThreshold) return '';
+        const gapText = d.fundingGap > gapThreshold
             ? _fmt(d.fundingGap)
-            : d.fundingGap < -1
+            : d.fundingGap < -gapThreshold
                 ? 'فائض ' + _fmt(Math.abs(d.fundingGap))
                 : 'متوازن';
-        const dscrText = d.dscr == null ? 'غير قابل للحساب' : Number(d.dscr).toFixed(2) + 'x';
+        const dscrText = d.dscr == null
+            ? (d.dscrReason === 'no_debt_service' ? 'لا توجد خدمة دين في السنة الأولى' : 'CFADS صفر أو سالب')
+            : Number(d.dscr).toFixed(2) + 'x';
         const cls = d.bankReady ? 'bank-recommendation' : 'bank-recommendation revise';
         const bankText = d.bankReady
             ? 'جاهز بنكياً مبدئياً حسب التمويل وDSCR.'
@@ -105,7 +95,7 @@ export class BankReportGenerator {
             <p><strong>حاجز التمويل:</strong> ${bankText}</p>
             <table class="bank-table">
                 <tr><th>المؤشر</th><th>القيمة</th><th>القراءة البنكية</th></tr>
-                <tr><td>فجوة التمويل</td><td>${gapText}</td><td>${d.fundingGap > 1 ? 'يجب سدها' : 'مقبولة'}</td></tr>
+                <tr><td>فجوة التمويل</td><td>${gapText}</td><td>${Math.abs(d.fundingGap) > gapThreshold ? 'يجب مطابقتها مع الاستثمار' : 'مقبولة'}</td></tr>
                 <tr><td>DSCR السنة الأولى</td><td>${dscrText}</td><td>${d.dscrBlocked ? 'دون الحد المستهدف ' + d.targetDSCR.toFixed(2) + 'x' : 'مقبول مبدئياً'}</td></tr>
                 <tr><td>EBITDA السنة الأولى</td><td>${Number.isFinite(d.y1Ebitda) ? _fmt(d.y1Ebitda) : 'غير متاح'}</td><td>${d.y1Ebitda < 0 ? 'سالب؛ راجع فترة السماح أو التمويل الذاتي' : 'موجب'}</td></tr>
             </table>
@@ -135,7 +125,7 @@ export class BankReportGenerator {
             if (store && typeof store.update === 'function') {
                 store.update('results', results);
             }
-        } catch (e) {
+        } catch {
             results = state.results || {};
         }
 
@@ -213,6 +203,7 @@ export class BankReportGenerator {
             <p style="margin-top:8px;font-size:10pt;color:#4a5568;">نوع الدراسة: <strong>${studyTypeLabel || 'غير محدد'}</strong> | لمن تُعد: <strong>${studyRecipientLabel || 'غير محدد'}</strong></p>
             <p style="margin-top:12px;font-size:10pt;color:#718096;">أُعدّ باتباع الهيكل الاسترشادي لجهات التمويل المحلية (${bankLabel}، منشآت) | ${date}</p>
             <p style="margin-top:6px;font-size:9pt;color:#4a5568;">بنية التقرير مناسبة للإقراض: ملخص تنفيذي، استخدام التمويل، القوائم المالية، الضمانات.</p>
+            <p style="margin-top:4px;font-size:8.5pt;color:#718096;">مصدر الأرقام: محرك قرار المالي — نسخة الحساب الحالية — وبيانات المستخدم حتى لحظة إنشاء التقرير.</p>
         </div>
         ${validationNotice}
 
@@ -272,6 +263,24 @@ export class BankReportGenerator {
             <div class="bank-section-title">${n}. الملخص التنفيذي</div>
             <p>${state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText || `يهدف مشروع «${info.name || 'المشروع'}» إلى ${info.concept || 'تنفيذ نشاط تجاري'} في ${info.city || 'الموقع المحدد'}. تم إعداد هذه الدراسة وفق منهجيات احترافية لتقديم طلب التمويل.`}</p>
         </div>`;
+            case 'loan_request': {
+                const structure = cap?.capitalStructure || {};
+                const uses = [
+                    ['التأسيس والتراخيص وما قبل الافتتاح', structure.establishment?.total],
+                    ['الأصول والمعدات والتجهيزات', structure.investment?.total],
+                    ['رأس المال العامل والمخزون الافتتاحي', structure.operating?.total]
+                ].filter(([, value]) => Number(value) > 0);
+                return `<div class="bank-section">
+            <div class="bank-section-title">${n}. طلب التمويل واستخدام الأموال</div>
+            <p><strong>مبلغ القرض المطلوب:</strong> ${_fmt(Number(financing?.sources?.bankLoan?.amount || loan?.loanAmount || 0))}</p>
+            <p><strong>مساهمة المالك:</strong> ${_fmt(Number(financing?.sources?.equity?.amount || 0))}</p>
+            <table class="bank-table">
+                <tr><th>استخدام الاستثمار</th><th>المبلغ</th><th>مصدر الرقم</th></tr>
+                ${uses.map(([label, value]) => `<tr><td>${label}</td><td>${_fmt(value)}</td><td>محسوب من بنود الدراسة المدخلة</td></tr>`).join('') || '<tr><td colspan="3">لم تُدرج بنود استخدام الأموال بعد.</td></tr>'}
+                <tr class="total-row"><td>إجمالي الاستثمار المطلوب</td><td>${_fmt(cap?.total || 0)}</td><td>محرك الحساب المالي</td></tr>
+            </table>
+        </div>`;
+            }
             case 'market_evidence': {
                 const ms = state.marketSizing || {};
                 const ma = state.marketing?.marketAnalysis || {};
@@ -305,6 +314,7 @@ export class BankReportGenerator {
             case 'financial_kpis':
                 {
                 const financingGate = this._getFinancingDiagnostics(state, results);
+                const gapThreshold = financingGate.fundingGapThreshold ?? 1;
                 return `<div class="bank-section">
             <div class="bank-section-title">${n}. المؤشرات المالية الرئيسية</div>
             <div class="bank-kpi">
@@ -312,7 +322,7 @@ export class BankReportGenerator {
                 <div class="bank-kpi-card"><div class="label">${L('irr')}</div><div class="value">${formatIrrPct(ind.irr)}</div></div>
                 <div class="bank-kpi-card"><div class="label">${L('paybackPeriod')}</div><div class="value">${SAFE.payback(ind.paybackPeriod ?? ind.payback)}</div></div>
                 <div class="bank-kpi-card"><div class="label">${L('breakEvenPointValue')}</div><div class="value">${_fmt(ind.breakEvenPointValue || 0)}</div></div>
-                <div class="bank-kpi-card"><div class="label">فجوة التمويل</div><div class="value ${financingGate.fundingGap > 1 ? 'negative' : 'positive'}">${financingGate.fundingGap > 1 ? _fmt(financingGate.fundingGap) : financingGate.fundingGap < -1 ? 'فائض ' + _fmt(Math.abs(financingGate.fundingGap)) : 'متوازن'}</div></div>
+                <div class="bank-kpi-card"><div class="label">فجوة التمويل</div><div class="value ${Math.abs(financingGate.fundingGap) > gapThreshold ? 'negative' : 'positive'}">${financingGate.fundingGap > gapThreshold ? _fmt(financingGate.fundingGap) : financingGate.fundingGap < -gapThreshold ? 'فائض ' + _fmt(Math.abs(financingGate.fundingGap)) : 'متوازن'}</div></div>
                 <div class="bank-kpi-card"><div class="label">DSCR السنة الأولى</div><div class="value ${financingGate.dscrBlocked ? 'negative' : 'positive'}">${financingGate.dscr == null ? 'غير قابل للحساب' : Number(financingGate.dscr).toFixed(2) + 'x'}</div></div>
             </div>
             <table class="bank-table">
@@ -321,12 +331,22 @@ export class BankReportGenerator {
                 <tr><td>${L('irr')}</td><td>${formatIrrPct(ind.irr, 2)}</td><td>${(ind.irr || 0) >= 0.15 ? 'مقبول للتمويل' : 'تحت الحد المفضل'}</td></tr>
                 <tr><td>${L('paybackPeriod')}</td><td>${SAFE.payback(ind.paybackPeriod ?? ind.payback)}</td><td>${(() => { const p = ind.paybackPeriod ?? ind.payback; if (p == null || !Number.isFinite(p) || p <= 0) return 'غير محقق — يحتاج مراجعة'; return p < 5 ? 'مناسب' : 'طويل نسبياً'; })()}</td></tr>
                 <tr><td>${L('totalCapex')}</td><td>${_fmt(cap.total || financing.totalInvestment || 0)}</td><td>ريال</td></tr>
-                <tr><td>فجوة التمويل</td><td>${financingGate.fundingGap > 1 ? _fmt(financingGate.fundingGap) : financingGate.fundingGap < -1 ? 'فائض ' + _fmt(Math.abs(financingGate.fundingGap)) : 'متوازن'}</td><td>${financingGate.fundingGap > 1 ? 'يجب سدها قبل التقديم' : 'مقبولة'}</td></tr>
+                <tr><td>فجوة التمويل</td><td>${financingGate.fundingGap > gapThreshold ? _fmt(financingGate.fundingGap) : financingGate.fundingGap < -gapThreshold ? 'فائض ' + _fmt(Math.abs(financingGate.fundingGap)) : 'متوازن'}</td><td>${Math.abs(financingGate.fundingGap) > gapThreshold ? 'يجب مطابقتها مع الاستثمار قبل التقديم' : 'مقبولة'}</td></tr>
                 <tr><td>DSCR السنة الأولى</td><td>${financingGate.dscr == null ? 'غير قابل للحساب' : Number(financingGate.dscr).toFixed(2) + 'x'}</td><td>${financingGate.dscrBlocked ? 'دون الحد البنكي المستهدف' : 'مقبول مبدئياً'}</td></tr>
                 ${results?.saudization?.totalHeads > 0 ? `<tr><td>نسبة التوطين (سعودة)</td><td>${Math.round((results.saudization.rate || 0) * 100)}% (${results.saudization.saudiHeads} من ${results.saudization.totalHeads})</td><td>${(results.saudization.rate || 0) > 0 ? 'يدعم متطلبات نطاقات' : 'راجع متطلبات نطاقات'}</td></tr>` : ''}
             </table>
         </div>`;
                 }
+            case 'indicator_explanations': {
+                const insights = buildIndicatorInsights(results, state);
+                return `<div class="bank-section">
+            <div class="bank-section-title">${n}. كيف تُقرأ المؤشرات ومصدر كل رقم</div>
+            <table class="bank-table">
+                <tr><th>المؤشر</th><th>القراءة المبسطة</th><th>مصدر الرقم</th><th>الإجراء المقترح</th></tr>
+                ${insights.map(item => `<tr><td>${bankEsc(item.label)}</td><td>${bankEsc(item.meaning)}</td><td>${bankEsc(item.source)}</td><td>${bankEsc(item.action)}</td></tr>`).join('')}
+            </table>
+        </div>`;
+            }
             case 'financing_structure':
                 return `<div class="bank-section">
             <div class="bank-section-title">${n}. هيكل التمويل المطلوب</div>
@@ -417,6 +437,27 @@ export class BankReportGenerator {
                 `).join('')}
             </table>
         </div>`;
+            case 'application_checklist': {
+                const diagnostics = this._getFinancingDiagnostics(state, results);
+                const checks = [
+                    ['اسم المشروع والمدينة والنشاط', Boolean(info.name && (info.city || info.region) && (info.concept || info.sector))],
+                    ['تحليل السوق والمنافسين', Boolean((state.marketing?.competitors || []).length >= 2 && (state.marketing?.marketAnalysis?.summary || state.marketSizing?.som?.value))],
+                    ['مصادر ومراجع سوقية', Boolean((state.appendices?.references || []).length)],
+                    ['عروض أسعار للأصول', Boolean((state.appendices?.priceQuotes || []).length || Number(cap?.subtotal || 0) === 0)],
+                    ['التراخيص المطلوبة', Boolean((state.legal?.licenses || []).length)],
+                    ['خطة مخاطر وتخفيف', Boolean((state.riskAnalysis?.risks || []).filter(r => r?.mitigation).length >= 5)],
+                    ['تطابق التمويل مع الاستثمار', Math.abs(diagnostics.fundingGap) <= diagnostics.fundingGapThreshold],
+                    ['تغطية خدمة الدين', !diagnostics.dscrBlocked]
+                ];
+                const complete = checks.filter(([, ok]) => ok).length;
+                return `<div class="bank-section">
+            <div class="bank-section-title">${n}. قائمة جاهزية التقديم للممول</div>
+            <p><strong>الجاهزية الحالية:</strong> ${complete} من ${checks.length} بنود.</p>
+            <table class="bank-table"><tr><th>المتطلب</th><th>الحالة</th></tr>
+                ${checks.map(([label, ok]) => `<tr><td>${label}</td><td style="color:${ok ? 'var(--green)' : 'var(--red)'};font-weight:700;">${ok ? 'مكتمل' : 'ناقص'}</td></tr>`).join('')}
+            </table>
+        </div>`;
+            }
             case 'recommendation':
                 return `<div class="bank-section">
             <div class="bank-section-title">${n}. التوصية النهائية لطلب التمويل</div>

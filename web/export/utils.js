@@ -130,7 +130,36 @@ export function downloadBlob(blob, filename) {
     document.body.appendChild(a);
     a.click();
     a.remove();
+    try {
+        window.dispatchEvent(new CustomEvent('feasibility:download', {
+            detail: {
+                filename,
+                mimeType: blob?.type || '',
+                size: blob?.size || 0
+            }
+        }));
+    } catch (_) {
+        // Non-browser test runners may not expose CustomEvent/window fully.
+    }
     setTimeout(() => URL.revokeObjectURL(url), 200);
+}
+
+/** بيانات تعريف موحّدة لكل صيغ التصدير. */
+export function getExportMetadata(state, exportedAt = new Date()) {
+    const project = state?.projectInfo || {};
+    const dateText = (value) => {
+        if (!value) return 'غير محدد';
+        try { return new Date(value).toLocaleDateString('ar-SA'); } catch (_) { return 'غير محدد'; }
+    };
+    return {
+        projectName: String(project.name || project.projectName || 'دراسة جدوى').trim(),
+        studyId: state?.id || project.id || '',
+        studyVersion: String(state?.version || '4.0.0'),
+        exportVersion: '1.0',
+        createdAt: dateText(state?.createdAt),
+        updatedAt: dateText(state?.updatedAt),
+        exportedAt: exportedAt instanceof Date ? exportedAt.toLocaleString('ar-SA') : String(exportedAt || ''),
+    };
 }
 
 let _xlsxLoadPromise = null;
@@ -150,7 +179,7 @@ export function loadXLSX() {
     if (typeof globalThis.XLSX !== 'undefined') return Promise.resolve();
     if (_xlsxLoadPromise) return _xlsxLoadPromise;
     _xlsxLoadPromise = import('./xlsxShim.js')
-        .then(({ utils, writeFile }) => { window.XLSX = { utils, writeFile }; })
+        .then(({ utils, writeFile }) => { globalThis.XLSX = { utils, writeFile }; })
         .catch((e) => {
             _xlsxLoadPromise = null; // اسمح بإعادة المحاولة عند فشل التحميل
             throw new Error('تعذّر تحميل مكتبة Excel (XLSX): ' + (e?.message || e));

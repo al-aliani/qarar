@@ -24,6 +24,12 @@ import { renderReviewStatusBadge } from './components/ReviewStatusBadge.js';
 
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
 
+const EXPORT_PATHS = {
+    lending: new Set(['pdf', 'excel', 'word', 'pptx', 'lending_ready', 'monshaat', 'financier', 'review_copy', 'professional_review']),
+    investor: new Set(['pitch', 'pptx', 'accelerator_pitch', 'incubator_pitch', 'crowdfunding_pitch', 'grant', 'investor_one_pager', 'investor_dashboard', 'pitch_script']),
+    data: new Set(['json', 'csv', 'share_link', 'folder_json', 'gsheets'])
+};
+
 // تدقيق 2026-07-08 (ملاحظة عالية #39): صيغ التقرير النهائي الاحترافي (قرار المالك:
 // قفلها فعلياً، لا مجرد رسائل تسويقية) — الأدوات الخام/المشاركة (JSON/CSV/Sheets/
 // لوحة المستثمر) تبقى مجانية عمداً، وكذلك حجز الاستشارة (مسار منفصل أصلاً).
@@ -83,6 +89,7 @@ export class ExportMenu {
         let results = null;
         try { results = runFullModel(state); } catch (_) { }
         const qa = await runQAChecks(state, results);
+        this._lastQa = qa;
         const el = this.overlay?.querySelector('#export-qa-badge');
         if (el) this._renderQaSummary(el, qa);
 
@@ -95,32 +102,36 @@ export class ExportMenu {
         }
     }
 
-    /**
-     * يجمّع كل عناصر qaChecks.js (hardErrors/softWarnings/validationErrors/
-     * validationWarnings) في قائمة مفصّلة قابلة للنقر تحت الشارة الملخّصة، بدل عدد
-     * مجرّد بلا تفصيل («تحذيرات: 6»). تدقيق دفعة 3 (2026-07-12، اختبار عميل بقالة).
-     * @param {HTMLElement} el - حاوية `#export-qa-badge`
-     * @param {{hardErrors:Array, softWarnings:Array, validationErrors:Array, validationWarnings:Array}} qa
-     */
     _renderQaSummary(el, qa) {
-        const msg = (x) => (typeof x === 'string' ? x : (x && (x.message || x.code)) || '');
-        const items = [
-            ...(qa.hardErrors || []).map((x) => ({ text: msg(x), stepIndex: resolveQaStepIndex(x), hard: true })),
-            ...(qa.validationErrors || []).map((x) => ({ text: msg(x), stepIndex: resolveQaStepIndex(x), hard: true })),
-            ...(qa.softWarnings || []).map((x) => ({ text: msg(x), stepIndex: resolveQaStepIndex(x), hard: false })),
-            ...(qa.validationWarnings || []).map((x) => ({ text: msg(x), stepIndex: resolveQaStepIndex(x), hard: false })),
-        ].filter((it) => it.text);
+        const extract = (x, type) => {
+            if (typeof x === 'string') return { text: x, hard: type === 'hard' };
+            return {
+                text: x.message || x.code || '',
+                impact: x.impact || '',
+                suggestion: x.suggestion || '',
+                suggestionAction: x.suggestionAction || null,
+                stepIndex: resolveQaStepIndex(x),
+                hard: type === 'hard'
+            };
+        };
 
-        const hardCount = items.filter((it) => it.hard).length;
+        const items = [
+            ...(qa.hardErrors || []).map(x => extract(x, 'hard')),
+            ...(qa.validationErrors || []).map(x => extract(x, 'hard')),
+            ...(qa.softWarnings || []).map(x => extract(x, 'soft')),
+            ...(qa.validationWarnings || []).map(x => extract(x, 'soft')),
+        ].filter(it => it.text);
+
+        const hardCount = items.filter(it => it.hard).length;
         const softCount = items.length - hardCount;
 
-        let summaryHtml;
-        if (hardCount > 0) summaryHtml = `<span class="text-danger">${icon('i-x')} أخطاء حرجة: ${hardCount}${softCount ? ` — وتنبيهات: ${softCount}` : ''}</span>`;
-        else if (softCount > 0) summaryHtml = `<span class="text-warning">${icon('i-warning')} تحذيرات: ${softCount}</span>`;
-        else summaryHtml = `<span class="text-success">${icon('i-check')} اجتازت فحص الجودة (QA)</span>`;
+        let summaryHtml = '';
+        if (hardCount > 0) summaryHtml = `<span class="text-danger font-bold">${icon('i-x')} مركز الإصلاح: ${hardCount} عوائق حرجة${softCount ? ` و ${softCount} تحسين` : ''}</span>`;
+        else if (softCount > 0) summaryHtml = `<span class="text-warning font-bold">${icon('i-warning')} مركز الإصلاح: ${softCount} تحسين مقترح لجودة التقرير</span>`;
+        else summaryHtml = `<span class="text-success font-bold">${icon('i-check')} الدراسة مثالية واجتازت فحص الجودة 100%</span>`;
 
         if (items.length === 0) {
-            el.innerHTML = summaryHtml;
+            el.innerHTML = `<div class="p-3 bg-success/10 border border-success/20 rounded-lg text-center">${summaryHtml}</div>`;
             return;
         }
 
@@ -170,6 +181,19 @@ export class ExportMenu {
                 </div>
                 <div class="modal-body">
                     <div id="export-qa-badge" class="mb-4 text-sm text-muted">جاري فحص الجودة...</div>
+                    <div id="export-confidence-panel" class="mb-4 p-3 rounded-lg border border-white/10 bg-white/5">
+                        <strong>درجة موثوقية النتائج</strong>
+                        <span class="text-sm text-muted"> تعتمد على اكتمال المدخلات وفحص الجودة الحالي.</span>
+                    </div>
+                    <div class="flex gap-2 flex-wrap mb-4" id="export-path-selector" aria-label="مسار التصدير">
+                        <button type="button" class="export-path-card btn btn--sm btn--primary" data-export-path="lending">تمويل وبنوك</button>
+                        <button type="button" class="export-path-card btn btn--sm btn--ghost" data-export-path="investor">مستثمرون ومسرعات</button>
+                        <button type="button" class="export-path-card btn btn--sm btn--ghost" data-export-path="data">بيانات ومشاركة</button>
+                    </div>
+                    <div class="flex gap-2 flex-wrap mb-4">
+                        <button type="button" id="btnOpenQaFixCenter" class="btn btn--sm btn--ghost">فتح مركز إصلاح الجودة</button>
+                        <button type="button" id="btnOpenDownloadsCenter" class="btn btn--sm btn--ghost">سجل التنزيلات</button>
+                    </div>
                     <div id="export-review-status-badge" class="mb-4 text-sm"></div>
                     <div id="export-auto-text-bar" class="mb-4 p-3 rounded-lg border border-white/10 bg-white/5">
                         <p class="text-xs text-muted mb-2">عند حفظ أو قبل التصدير: المنصة يمكنها توليد نصوص الأقسام (الملخص، السوق، المخاطر) من المدخلات تلقائياً. يمكنك مراجعتها وتعديلها بعد التوليد.</p>
@@ -320,6 +344,24 @@ export class ExportMenu {
                             </div>
                         </button>
                     </div>
+                    <div class="export-grid" id="export-path-additional-options">
+                        <button type="button" class="export-card" data-type="accelerator_pitch" aria-label="عرض مسرعة الأعمال">
+                            <div class="icon">${icon('i-slides')}</div>
+                            <div class="info"><h4>عرض المسرعة</h4><p>نسخة مختصرة لطلبات المسرعات</p></div>
+                        </button>
+                        <button type="button" class="export-card" data-type="grant" aria-label="بطاقة المنحة">
+                            <div class="icon">${icon('i-doc')}</div>
+                            <div class="info"><h4>بطاقة المنحة</h4><p>ملخص قابل للتقديم للمنح</p></div>
+                        </button>
+                        <button type="button" class="export-card" data-type="folder_json" aria-label="تصدير مجلد الدراسات">
+                            <div class="icon">${icon('i-folder')}</div>
+                            <div class="info"><h4>بيانات المجلد</h4><p>حزمة JSON للدراسات المرتبطة</p></div>
+                        </button>
+                        <button type="button" class="export-card" data-type="gsheets" aria-label="تصدير إلى Google Sheets">
+                            <div class="icon">${icon('i-chart')}</div>
+                            <div class="info"><h4>Google Sheets</h4><p>إرسال البيانات إلى جدول خارجي</p></div>
+                        </button>
+                    </div>
                     <div class="export-next-step mt-4 p-3 rounded-lg border border-border bg-card" style="font-size: 0.9rem;">
                         <strong class="text-gold">الخطوة التالية / استشارة بعد الدراسة:</strong>
                         <p class="text-muted mt-1 mb-0">للمراجعة من قبل استشاري، صدّر <strong>نسخة للمراجعة</strong> وأرسلها لمكتبك. يمكنك أيضاً الرجوع إلى لوحة التحكم وفتح قسم «ما بعد الجدوى» لمراجعة استشاري أو حجز جلسة.</p>
@@ -404,6 +446,17 @@ export class ExportMenu {
             });
         }
 
+        this.overlay.querySelectorAll('.export-path-card').forEach((pathButton) => {
+            pathButton.addEventListener('click', () => this._applyExportPath(pathButton.dataset.exportPath));
+        });
+        this._applyExportPath('lending');
+
+        this.overlay.querySelector('#btnOpenQaFixCenter')?.addEventListener('click', () => this._openQaFixCenter());
+        this.overlay.querySelector('#btnOpenDownloadsCenter')?.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('feasibility:showDownloadsCenter'));
+            this.close();
+        });
+
         // Export actions
         this.overlay.querySelectorAll('.export-card').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -425,6 +478,94 @@ export class ExportMenu {
                 }
                 await this.handleExport(type, btn);
             });
+        });
+    }
+
+    _applyExportPath(path) {
+        const allowed = EXPORT_PATHS[path] || EXPORT_PATHS.lending;
+        this.overlay.querySelectorAll('.export-path-card').forEach((button) => {
+            const active = button.dataset.exportPath === path;
+            button.classList.toggle('btn--primary', active);
+            button.classList.toggle('btn--ghost', !active);
+            button.setAttribute('aria-pressed', String(active));
+        });
+        this.overlay.querySelectorAll('.export-card[data-type]').forEach((card) => {
+            card.hidden = !allowed.has(card.dataset.type);
+        });
+    }
+
+    async _suggestDraftTables(btn) {
+        const originalLabel = btn?.innerHTML || '';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'جاري تجهيز المسودات...';
+        }
+        try {
+            const state = this.store.getState();
+            const projectType = state.projectInfo?.projectType || state.projectInfo?.sector || 'general';
+            const suffix = String(projectType).slice(0, 24);
+            const draft = {
+                revenue: {
+                    id: `draft-revenue-${Date.now()}`,
+                    service: state.projectInfo?.concept || `منتج ${suffix}`,
+                    type: 'operating', customersPerMonth: 0, avgPrice: 0,
+                    variableCostRate: 0, growthRate: 0, suggestedDraft: true
+                },
+                hr: {
+                    id: `draft-position-${Date.now()}`,
+                    position: 'مدير تشغيل', title: 'مدير تشغيل', count: 1,
+                    salary: 0, months: 12, suggestedDraft: true
+                },
+                marketing: {
+                    id: `draft-campaign-${Date.now()}`,
+                    name: 'إطلاق أولي', channel: 'رقمي', budget: 0,
+                    durationMonths: 1, suggestedDraft: true
+                }
+            };
+            const sections = [
+                ['revenue', 'streams', draft.revenue],
+                ['hr', 'positions', draft.hr],
+                ['marketing', 'campaigns', draft.marketing]
+            ];
+            for (const [section, path, row] of sections) {
+                const existing = Array.isArray(state[section]?.[path]) ? state[section][path] : [];
+                if (existing.length === 0) this.store.updatePath(section, path, [row]);
+            }
+            this.store.notify?.();
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalLabel;
+            }
+        }
+    }
+
+    _openQaFixCenter() {
+        const state = this.store.getState();
+        const qa = this._lastQa || {};
+        const items = [
+            ...(qa.hardErrors || []), ...(qa.validationErrors || []),
+            ...(qa.softWarnings || []), ...(qa.validationWarnings || [])
+        ];
+        const overlay = document.createElement('div');
+        overlay.id = 'qaFixCenterOverlay';
+        overlay.className = 'modal-overlay is-open';
+        const projectNeedsName = !String(state.projectInfo?.name || '').trim() && String(state.projectInfo?.concept || '').trim();
+        const action = projectNeedsName
+            ? `<button type="button" class="btn btn--sm btn--primary qa-fix-action" data-action="project_name">استخدام اسم الفكرة</button>`
+            : '';
+        const details = items.slice(0, 12).map((item) => {
+            const message = typeof item === 'string' ? item : (item.message || item.code || 'مراجعة المدخل');
+            const impact = typeof item === 'object' ? (item.impact || 'قد تقل دقة التقرير أو قابليته للتقديم.') : 'قد تقل دقة التقرير أو قابليته للتقديم.';
+            return `<div class="qa-fix-item p-3 mb-2 border border-white/10 rounded"><strong>السبب:</strong> ${escapeHtml(message)}<br><strong>الأثر على التقرير:</strong> ${escapeHtml(impact)}</div>`;
+        }).join('');
+        overlay.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true"><div class="modal-header"><h3>مركز إصلاح الجودة</h3><button type="button" class="btn-close" aria-label="إغلاق">×</button></div><div class="modal-body">${details || '<p class="text-muted">لا توجد ملاحظات مسجلة.</p>'}${action ? `<div class="mt-3">${action}</div>` : ''}</div></div>`;
+        document.body.appendChild(overlay);
+        overlay.querySelector('.btn-close')?.addEventListener('click', () => overlay.remove());
+        overlay.querySelector('[data-action="project_name"]')?.addEventListener('click', () => {
+            const name = String(state.projectInfo?.concept || '').trim();
+            this.store.updatePath('projectInfo', 'name', name);
+            toast.success('تم اقتراح اسم المشروع من الفكرة.');
         });
     }
 
@@ -496,68 +637,38 @@ export class ExportMenu {
                     break;
                 }
 
-                case 'pptx': {
-                    const { PPTXExporter } = await import('../../export/pptxExporter.js');
-                    const pptx = new PPTXExporter(this.store);
-                    const pptxResult = await pptx.export();
-                    if (pptxResult.success) {
-                        toast.success(`تم تصدير PowerPoint: ${pptxResult.fileName}`);
-                    } else {
-                        toast.error('فشل تصدير PowerPoint: ' + (pptxResult.error || 'خطأ غير معروف'));
-                    }
-                    break;
-                }
-
-                case 'word': {
-                    const { WordExporter } = await import('../../export/wordExporter.js');
-                    const { downloadBlob } = await import('../../export/utils.js');
-                    const exporter = new WordExporter(this.store, { lang: exportLang });
-                    const result = await exporter.export();
-                    if (result.success) {
-                        downloadBlob(result.blob, result.fileName);
-                        toast.success(`تم تصدير Word: ${result.fileName}`);
-                        const { trackExport } = await import('../../export/exportTracking.js');
-                        trackExport(result.blob, { fileType: 'word', fileName: result.fileName, studyId: state.projectInfo?.id, studyName: state.projectInfo?.name });
-                    } else {
-                        toast.error('فشل تصدير Word: ' + (result.error || 'خطأ غير معروف'));
-                    }
-                    break;
-                }
-
+                case 'batch_zip':
+                case 'pptx':
+                case 'word':
                 case 'excel': {
-                    let excelName = null;
-                    // القالب المعياري (excel.js) عربي فقط فيزيائياً — عند اختيار الإنجليزية
-                    // نتحوّل مباشرة للمصدِّر الديناميكي (الوحيد ثنائي اللغة) بنفس منطق تجاوز
-                    // السعة أدناه، بدل تصدير قالب عربي رغم اختيار المستخدم الإنجليزية.
-                    const forceDynamicForLang = exportLang === 'en';
-                    // القالب المعياري مُقيَّد فيزيائياً (5 سنوات × 3 منتجات/خدمات كحد أقصى،
-                    // بمعادلات SUM/NPV/IRR ثابتة النطاق) — إن تجاوزته الدراسة نتحوّل مباشرة
-                    // للمصدِّر الديناميكي بدل محاولة القالب الذي سيقصّ البيانات صامتاً.
-                    const capacity = selectExcelExportPath(results, state);
-                    if (capacity.exceedsTemplateCapacity || forceDynamicForLang) {
-                        const { exportToExcel } = await import('../../export/excelExporter.js');
-                        const fn = state.projectInfo?.name || 'feasibility_study';
-                        excelName = await exportToExcel(state, results, fn, { lang: exportLang });
-                        toast.success(excelName
-                            ? `تم تصدير Excel: ${excelName} — الدراسة تتجاوز سعة القالب المعياري (5 سنوات / 3 منتجات كحد أقصى)، لذا استُخدم تصدير موسَّع يعرض كل السنوات والمنتجات دون أي فقد بيانات.`
-                            : 'تم تصدير Excel بنجاح — تم استخدام تصدير موسَّع لأن الدراسة تتجاوز سعة القالب المعياري (5 سنوات / 3 منتجات كحد أقصى)، ولا يوجد فقد بيانات.');
-                        break;
-                    }
-                    try {
-                        const { exportExcel } = await import('../../export/excel.js');
-                        if (results?.incomeStatement?.length) {
-                            excelName = await exportExcel(state, results);
-                            toast.success(excelName ? `تم تصدير Excel: ${excelName}` : 'تم تصدير Excel بالقالب المعياري بنجاح!');
-                        } else {
-                            throw new Error('لا توجد نتائج للتصدير.');
-                        }
-                    } catch (templateError) {
-                        console.warn('Standard template export failed, using simple export:', templateError);
-                        const { exportToExcel } = await import('../../export/excelExporter.js');
-                        const fn = state.projectInfo?.name || 'feasibility_study';
-                        excelName = await exportToExcel(state, results, fn, { lang: exportLang });
-                        toast.success(excelName ? `تم تصدير Excel: ${excelName}` : 'تم تصدير Excel بنجاح!');
-                    }
+                    // Start Background Worker to avoid blocking Main Thread
+                    const worker = new Worker(new URL('../../export/exportWorker.js', import.meta.url), { type: 'module' });
+                    
+                    const result = await new Promise((resolve, reject) => {
+                        worker.onmessage = (e) => {
+                            const { status, blob, fileName, error } = e.data;
+                            if (status === 'success') resolve({ blob, fileName });
+                            else reject(new Error(error));
+                            worker.terminate();
+                        };
+                        worker.onerror = (e) => {
+                            reject(e);
+                            worker.terminate();
+                        };
+                        worker.postMessage({
+                            type,
+                            state: this.store.getState(),
+                            options: { lang: exportLang }
+                        });
+                    });
+
+                    const { downloadBlob } = await import('../../export/utils.js');
+                    downloadBlob(result.blob, result.fileName);
+                    toast.success(`تم التصدير بنجاح: ${result.fileName}`);
+                    
+                    const { trackExport } = await import('../../export/exportTracking.js');
+                    trackExport(result.blob, { fileType: type, fileName: result.fileName, studyId: state.projectInfo?.id, studyName: state.projectInfo?.name });
+                    
                     break;
                 }
 
@@ -616,6 +727,10 @@ export class ExportMenu {
                     } else {
                         toast.error('تعذر فتح النافذة. يرجى السماح بالنوافذ المنبثقة.');
                     }
+                    const projName = sanitizeFilename(state.projectInfo?.name || 'إقراض');
+                    const lendingName = `جاهز_للإقراض_${projName}_${exportDateISO()}.pdf`;
+                    const { trackExport } = await import('../../export/exportTracking.js');
+                    trackExport(null, { fileType: 'lending_ready', fileName: lendingName, studyId: state.projectInfo?.id, studyName: state.projectInfo?.name });
                     break;
                 }
 
@@ -638,6 +753,8 @@ export class ExportMenu {
                     const reviewName = `نسخة_للمراجعة_${projName}_${exportDateISO()}.html`;
                     const reviewBlob = new Blob([reviewHtml], { type: 'text/html;charset=utf-8' });
                     downloadBlob(reviewBlob, reviewName);
+                    const { trackExport } = await import('../../export/exportTracking.js');
+                    trackExport(reviewBlob, { fileType: 'review_copy', fileName: reviewName, studyId: state.projectInfo?.id, studyName: state.projectInfo?.name });
                     break;
                 }
 
@@ -657,6 +774,8 @@ export class ExportMenu {
                     const projName = sanitizeFilename(state.projectInfo?.name || 'نسخة_مراجعة');
                     const proName = `نسخة_احترافية_للمراجعة_${projName}_${exportDateISO()}.html`;
                     downloadBlob(new Blob([proHtml], { type: 'text/html;charset=utf-8' }), proName);
+                    const { trackExport } = await import('../../export/exportTracking.js');
+                    trackExport(new Blob([proHtml], { type: 'text/html;charset=utf-8' }), { fileType: 'professional_review', fileName: proName, studyId: state.projectInfo?.id, studyName: state.projectInfo?.name });
                     break;
                 }
 
@@ -672,6 +791,10 @@ export class ExportMenu {
                     } else {
                         toast.error('تعذر فتح النافذة. يرجى السماح بالنوافذ المنبثقة.');
                     }
+                    const projName = sanitizeFilename(state.projectInfo?.name || 'منشآت');
+                    const monshaatName = `تقرير_منشآت_${projName}_${exportDateISO()}.pdf`;
+                    const { trackExport } = await import('../../export/exportTracking.js');
+                    trackExport(null, { fileType: 'monshaat', fileName: monshaatName, studyId: state.projectInfo?.id, studyName: state.projectInfo?.name });
                     break;
                 }
 
