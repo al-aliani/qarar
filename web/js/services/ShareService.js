@@ -8,12 +8,30 @@
  * نطاق هذه الجولة: صلاحية 'view' فقط (لا تعديل مجهول لدراسة طرف آخر).
  */
 import { getSupabaseClient, getAuthUser } from '../../supabaseClient.js';
+import { trackEvent } from '../utils/analytics.js';
+
+const PUBLIC_SENSITIVE_KEYS = new Set([
+    'password', 'secret', 'token', 'accessToken', 'refreshToken', 'apiKey',
+    'nationalId', 'identityNumber', 'iban', 'bankAccount', 'accountNumber',
+    'phone', 'mobile', 'email'
+]);
+
+/** Remove credentials and direct contact/bank identifiers before a public share is returned. */
+export function redactSharedStudyData(value) {
+    if (Array.isArray(value)) return value.map(redactSharedStudyData);
+    if (!value || typeof value !== 'object') return value;
+    return Object.entries(value).reduce((result, [key, item]) => {
+        if (PUBLIC_SENSITIVE_KEYS.has(key) || /(^|_)(password|secret|token|iban|email|phone|mobile)(_|$)/i.test(key)) return result;
+        result[key] = redactSharedStudyData(item);
+        return result;
+    }, {});
+}
 
 /**
  * إنشاء رابط مشاركة جديد لدراسة (المالك المصادَق عليه فقط — سياسة RLS
  * "Study owners can manage shares" القائمة أصلاً تسمح بذلك).
  * @param {string} studyId
- * @param {{expiresInDays?: number}} [options]
+ * @param {{expiresInDays?: number, hideSensitive?: boolean}} [options]
  * @returns {Promise<{ok: boolean, shareToken?: string, error?: string}>}
  */
 export async function createShareLink(studyId, options = {}) {
@@ -28,9 +46,11 @@ export async function createShareLink(studyId, options = {}) {
         ? new Date(Date.now() + options.expiresInDays * 86400000).toISOString()
         : null;
 
+    const permission = options.permission || 'view';
+
     const { data, error } = await supabase
         .from('study_shares')
-        .insert({ study_id: studyId, permission: 'view', expires_at: expiresAt })
+        .insert({ study_id: studyId, permission: permission, expires_at: expiresAt, hide_sensitive: !!options.hideSensitive })
         .select('share_token')
         .single();
 
@@ -50,7 +70,7 @@ export async function listShares(studyId) {
 
     const { data, error } = await supabase
         .from('study_shares')
-        .select('id, share_token, created_at, expires_at, revoked, view_count, first_viewed_at, last_viewed_at')
+        .select('id, share_token, permission, created_at, expires_at, revoked, view_count, first_viewed_at, last_viewed_at')
         .eq('study_id', studyId)
         .order('created_at', { ascending: false });
 
@@ -58,6 +78,7 @@ export async function listShares(studyId) {
     return data.map((row) => ({
         id: row.id,
         shareToken: row.share_token,
+        permission: row.permission,
         createdAt: row.created_at,
         expiresAt: row.expires_at,
         revoked: row.revoked,
@@ -125,7 +146,10 @@ export async function getSharedStudy(shareToken) {
         .single();
 
     if (error || !data) return null;
-    return { title: data.title, sector: data.sector, data: data.data, permission: data.permission };
+    // Public links must never expose direct contact, banking, or credential fields,
+    // even when an older row has hide_sensitive=false.
+    const finalData = redactSharedStudyData(data.data);
+    return { title: data.title, sector: data.sector, data: finalData, permission: data.permission, hide_sensitive: data.hide_sensitive };
 }
 
 /**
@@ -142,4 +166,33 @@ export async function recordShareView(shareToken) {
         if (!ok || !supabase) return;
         await supabase.rpc('record_share_view', { p_token: shareToken });
     } catch (_) { /* فشل صامت — تتبّع المشاهدات لا يجب أن يمنع عرض الدراسة */ }
+}
+
+export async function submitShareFeedback(shareToken, { kind = 'comment', authorName = '', body = '' } = {}) {
+    const cleanBody = String(body || '').trim();
+    if (!shareToken) return { ok: false, error: 'رابط المشاركة غير صالح.' };
+    if (cleanBody.length < 3) return { ok: false, error: 'اكتب ملاحظة من 3 أحرف على الأقل.' };
+    try {
+        const { supabase, ok, error } = await getSupabaseClient();
+        if (!ok || !supabase) return { ok: false, error: error || 'تعذّر الاتصال بخدمة المراجعة.' };
+        const { error: rpcError } = await supabase.rpc('add_share_feedback', {
+            p_token: shareToken,
+            p_kind: kind,
+            p_author_name: String(authorName || '').trim(),
+            p_body: cleanBody
+        });
+        if (rpcError) return { ok: false, error: rpcError.message };
+        trackEvent('share_feedback_submitted', { kind: String(kind || 'comment').slice(0, 32) });
+        return { ok: true };
+    } catch (error) {
+        return { ok: false, error: error?.message || 'تعذّر إرسال الملاحظة.' };
+    }
+}
+
+export async function listStudyShareFeedback(studyId) {
+    if (!studyId) return [];
+    const { supabase, ok } = await getSupabaseClient();
+    if (!ok || !supabase) return [];
+    const { data, error } = await supabase.rpc('list_study_share_feedback', { p_study_id: studyId });
+    return error || !Array.isArray(data) ? [] : data;
 }

@@ -146,75 +146,75 @@ export class ShareStudyView {
         this.overlay.innerHTML = `
             <div class="modal-card export-modal animate-scale-in max-w-md" role="dialog" aria-modal="true" aria-labelledby="share-study-title">
                 <div class="modal-header">
-                    <h3 id="share-study-title"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg> مشاركة هذه الدراسة</h3>
+                    <h3 id="share-study-title"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg> مشاركة دراسة الجدوى</h3>
                     <button type="button" class="btn-close" aria-label="إغلاق">×</button>
                 </div>
                 <div class="modal-body">
                     <p class="text-sm text-muted mb-3">${studyName}</p>
                     ${!user
-                ? `<p class="text-sm text-warning mb-4">سجّل الدخول لمشاركة الدراسة مع آخرين (محرر أو مشاهد).</p>`
+                ? `<p class="text-sm text-warning mb-4">سجّل الدخول لإنشاء روابط مشاركة متقدمة لهذه الدراسة.</p>`
                 : `
-                        <div class="mb-4">
-                            <div class="alert alert--info mb-3" style="font-size: 0.8rem;">
-                                <strong>ملاحظة صريحة:</strong> الدعوات البريدية والتحرير المشترك غير مفعّلين بعد.
-                                القائمة أدناه <strong>مذكّرة شخصية</strong> بمن تريد مشاركتهم — المشاركة الفعلية تتم
-                                بإرسال ملف PDF/Excel من قائمة التصدير أو عبر واتساب.
-                            </div>
-                            <label class="block text-xs text-muted mb-1">البريد الإلكتروني</label>
-                            <input type="email" id="shareEmail" class="input w-full mb-2" placeholder="email@example.com" dir="ltr" />
-                            <label class="block text-xs text-muted mb-1">الصلاحية (عند تفعيل التعاون لاحقاً)</label>
-                            <select id="shareRole" class="input w-full mb-3">
-                                ${ROLES.map(r => `<option value="${r.value}">${r.label} — ${r.desc}</option>`).join('')}
-                            </select>
-                            <button type="button" id="btnShareInvite" class="btn btn--primary w-full">أضِف إلى قائمة المشاركة</button>
-                        </div>
-                        `
-            }
-                    <h4 class="text-sm font-bold mb-2">قائمة المشاركة (مذكّرة)</h4>
-                    ${membersListHtml}
+                    <h4 class="text-sm font-bold mb-2">رابط مشاركة مخصص</h4>
+                    <p class="text-xs text-muted mb-2">أنشئ رابطاً ذكياً لمشاركة دراستك مع المستثمرين والشركاء بأمان تام.</p>
+                    <div id="shareLinksExistingList" class="mb-4">${shareRowsHtml}</div>
+                    
+                    <div class="bg-white/5 p-3 rounded-lg border border-white/10 mb-4">
+                        <label class="block text-xs text-muted mb-1">صلاحية الرابط</label>
+                        <select id="sharePermission" class="input w-full mb-3 text-sm">
+                            <option value="view">قراءة فقط (عرض تقديمي للمستثمر)</option>
+                            <option value="edit_copy">نسخة تجريبية (للمستثمر ليلعب بالأرقام دون التأثير على الأصل)</option>
+                        </select>
 
-                    <hr class="my-4 border-white/10" />
-                    <h4 class="text-sm font-bold mb-2">رابط مشاركة للقراءة فقط</h4>
-                    <p class="text-xs text-muted mb-2">أي شخص يملك الرابط يفتح لوحة عرض حقيقية للدراسة (قراءة فقط) من أي جهاز، بلا حاجة حساب.</p>
-                    <div id="shareLinksExistingList" class="mb-2">${shareRowsHtml}</div>
-                    <div class="flex gap-2 mb-2">
-                        <button type="button" id="btnGenerateReadOnlyLink" class="btn btn--primary btn--sm" ${studyId ? '' : 'disabled title="احفظ الدراسة أولاً لإنشاء رابط مشاركة"'}>+ إنشاء رابط جديد</button>
-                        <span id="readOnlyLinkStatus" class="text-xs text-muted self-center"></span>
+                        <label class="block text-xs text-muted mb-1">مدة الصلاحية</label>
+                        <select id="shareExpiration" class="input w-full mb-3 text-sm">
+                            <option value="">دائم (بدون تاريخ انتهاء)</option>
+                            <option value="7">ينتهي بعد 7 أيام</option>
+                            <option value="30">ينتهي بعد 30 يوم</option>
+                        </select>
+
+                        <label class="flex items-center gap-2 text-xs text-muted cursor-pointer mb-0">
+                            <input type="checkbox" id="shareHideSensitive" class="checkbox" />
+                            إخفاء البيانات المالية الحساسة (الرواتب، التكاليف التفصيلية)
+                        </label>
                     </div>
-                    <div id="readOnlyLinkBox" class="hidden mb-2 p-2 rounded bg-white/5 border border-white/10">
-                        <input type="text" id="readOnlyLinkInput" class="input text-xs w-full mb-1" readonly dir="ltr" />
+
+                    <div class="flex gap-2 mb-2">
+                        <button type="button" id="btnGenerateReadOnlyLink" class="btn btn--primary w-full" ${studyId ? '' : 'disabled title="احفظ الدراسة أولاً لإنشاء رابط مشاركة"'}>+ إنشاء رابط جديد</button>
+                    </div>
+                    <div class="text-center"><span id="readOnlyLinkStatus" class="text-xs text-muted"></span></div>
+                    
+                    <div id="readOnlyLinkBox" class="hidden mb-2 p-3 rounded bg-white/5 border border-white/10 mt-3">
+                        <input type="text" id="readOnlyLinkInput" class="input text-xs w-full mb-2" readonly dir="ltr" />
                         <div class="flex gap-2 flex-wrap">
-                            <button type="button" id="btnCopyReadOnlyLink" class="btn btn--sm btn--primary">نسخ الرابط</button>
-                            <button type="button" id="btnShowQRCode" class="btn btn--sm btn--ghost"><svg class="ic" aria-hidden="true"><use href="#i-code"/></svg> عرض رمز QR</button>
+                            <button type="button" id="btnCopyReadOnlyLink" class="btn btn--sm btn--primary flex-1">نسخ الرابط</button>
+                            <button type="button" id="btnShowQRCode" class="btn btn--sm btn--ghost flex-1"><svg class="ic" aria-hidden="true"><use href="#i-code"/></svg> عرض رمز QR</button>
                         </div>
-                        <div id="qrCodeBox" class="hidden mt-3 p-3 rounded bg-white/5 border border-white/10 text-center">
-                            <p class="text-xs text-muted mb-2">امسح الرمز بماسح QR لفتح لوحة المستثمر</p>
-                            <img id="qrCodeImage" alt="رمز QR للمشاركة" class="mx-auto rounded" style="max-width: 200px; height: auto;" />
+                        <div id="qrCodeBox" class="hidden mt-3 pt-3 border-t border-white/10 text-center">
+                            <p class="text-xs text-muted mb-2">امسح الرمز بماسح QR لفتح الدراسة</p>
+                            <img id="qrCodeImage" alt="رمز QR للمشاركة" class="mx-auto rounded" style="max-width: 150px; height: auto;" />
                             <button type="button" id="btnDownloadQR" class="btn btn--sm btn--ghost mt-2">تحميل QR كصورة PNG</button>
                         </div>
                     </div>
-
-                    <hr class="my-4 border-white/10" />
-                    <h4 class="text-sm font-bold mb-2">لمن ترسل هذه الدراسة؟</h4>
-                    <div class="flex gap-2 mb-2 flex-wrap">
-                        <button type="button" id="btnRecipientBank" class="btn btn--secondary btn--sm"><svg class="ic" aria-hidden="true"><use href="#i-bank"/></svg> بنك / جهة تمويل</button>
-                        <button type="button" id="btnRecipientInvestor" class="btn btn--secondary btn--sm"><svg class="ic" aria-hidden="true"><use href="#i-trophy"/></svg> مستثمر</button>
-                        ${partnerNeeds.length ? `<button type="button" id="btnRecipientPartner" class="btn btn--secondary btn--sm"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg> شريك</button>` : ''}
+                    <div class="mt-4 p-3 rounded bg-white/5 border border-white/10" id="shareRecipientTools">
+                        <h4 class="text-sm font-bold mb-2">لمن ترسل هذه الدراسة؟</h4>
+                        <div class="flex gap-2 flex-wrap mb-2">
+                            <button type="button" id="btnRecipientBank" class="btn btn--sm btn--secondary flex-1">جهة تمويل</button>
+                            <button type="button" id="btnRecipientInvestor" class="btn btn--sm btn--secondary flex-1">مستثمر</button>
+                            ${partnerNeeds.length ? '<button type="button" id="btnRecipientPartner" class="btn btn--sm btn--secondary flex-1">شريك</button>' : ''}
+                        </div>
+                        <div id="recipientActionArea"></div>
                     </div>
-                    <div id="recipientActionArea"></div>
-
-                    <h4 class="text-sm font-bold mb-2 mt-3">تصدير مباشر</h4>
-                    <p class="text-xs text-muted mb-2">صيغ Word/Excel/PowerPoint تتطلب باقة مدفوعة — نفس بوابة الدفع المستخدمة في قائمة التصدير.</p>
-                    <div class="flex gap-2 flex-wrap">
-                        <button type="button" class="btn btn--ghost btn--sm btn-direct-export" data-format="word">Word</button>
-                        <button type="button" class="btn btn--ghost btn--sm btn-direct-export" data-format="excel">Excel</button>
-                        <button type="button" class="btn btn--ghost btn--sm btn-direct-export" data-format="pptx">PowerPoint</button>
-                        <button type="button" class="btn btn--ghost btn--sm btn-direct-export" data-format="json">JSON</button>
+                    <div class="mt-3 p-3 rounded bg-white/5 border border-white/10" id="shareDirectExports">
+                        <h4 class="text-sm font-bold mb-2">تصدير مباشر</h4>
+                        <div class="flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn--sm btn--ghost btn-direct-export" data-format="json">نسخة JSON</button>
+                            <button type="button" class="btn btn--sm btn--ghost btn-direct-export" data-format="word">ملف قابل للتعديل</button>
+                            <button type="button" class="btn btn--sm btn--ghost btn-direct-export" data-format="excel">جداول مالية</button>
+                            <button type="button" class="btn btn--sm btn--ghost btn-direct-export" data-format="pptx">عرض تقديمي</button>
+                        </div>
                     </div>
-
-                    <h4 class="text-sm font-bold mb-2 mt-3">إرسال بالبريد</h4>
-                    <p class="text-xs text-muted mb-2">فتح بريدك مع موضوع وجسم جاهزين — يُنصح بإرفاق PDF الدراسة من قائمة التصدير.</p>
-                    <button type="button" id="btnShareByEmail" class="btn btn--ghost btn--sm">إرسال بالبريد (mailto)</button>
+                    `
+            }
                 </div>
             </div>
         `;
@@ -222,86 +222,68 @@ export class ShareStudyView {
         this.overlay.querySelector('.btn-close')?.addEventListener('click', () => this.close());
         this.overlay.addEventListener('click', (e) => { if (e.target === this.overlay) this.close(); });
 
-        const btnInvite = this.overlay.querySelector('#btnShareInvite');
-        if (btnInvite) {
-            btnInvite.addEventListener('click', () => {
-                const emailEl = this.overlay.querySelector('#shareEmail');
-                const roleEl = this.overlay.querySelector('#shareRole');
-                const email = (emailEl?.value || '').trim();
-                if (!email) {
-                    toast.warning('أدخل البريد الإلكتروني');
-                    return;
-                }
-                const role = roleEl?.value || 'viewer';
-                if (this.onInvite) this.onInvite({ email, role, studyId });
-                else {
-                    // Local Persistence for "Excellence" demo
-                    const state = this.store.getState();
-                    const info = state.projectInfo || {};
-                    const currentMembers = info.members || [];
-                    const newMembers = [...currentMembers, { email, role, invitedAt: new Date().toISOString() }];
-                    this.store.update('projectInfo', { ...info, members: newMembers });
-
-                    this._members = newMembers;
-                    // صياغة صادقة: لا يُرسَل أي بريد — هذه قائمة تذكير محلية فقط
-                    toast.info(`أُضيف ${email} إلى قائمة المشاركة (تذكير محلي — لم يُرسَل بريد). شارك الدراسة بملف PDF من قائمة التصدير.`);
-                    this.render();
-                }
-                if (emailEl) emailEl.value = '';
-            });
-        }
-
-        this.overlay.querySelectorAll('.btn-revoke').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const email = btn.dataset.email;
-                // Local Persistence Remove
-                const state = this.store.getState();
-                const info = state.projectInfo || {};
-                const currentMembers = info.members || [];
-                const newMembers = currentMembers.filter(m => m.email !== email);
-                this.store.update('projectInfo', { ...info, members: newMembers });
-
-                this._members = newMembers;
-                toast.info('تم إلغاء الدعوة.');
-                this.render();
-            });
-        });
-
-        // رابط مشاركة للقراءة فقط (Section 36–43)
-        const btnGenLink = this.overlay.querySelector('#btnGenerateReadOnlyLink');
-        const linkStatus = this.overlay.querySelector('#readOnlyLinkStatus');
+        const btnGenerate = this.overlay.querySelector('#btnGenerateReadOnlyLink');
         const linkBox = this.overlay.querySelector('#readOnlyLinkBox');
         const linkInput = this.overlay.querySelector('#readOnlyLinkInput');
-        const btnCopyLink = this.overlay.querySelector('#btnCopyReadOnlyLink');
-        if (btnGenLink) {
-            btnGenLink.addEventListener('click', async () => {
-                if (!studyId) { toast.warning('احفظ الدراسة أولاً لإنشاء رابط مشاركة'); return; }
-                btnGenLink.disabled = true;
-                if (linkStatus) linkStatus.textContent = 'جاري إنشاء الرابط...';
-                const result = await createShareLink(studyId);
-                btnGenLink.disabled = false;
-                if (result.ok) {
-                    // عمداً بلا this.render() هنا — يُفرِغ ذلك readOnlyLinkBox (يبدأ كل رسم
-                    // جديد بـclass="hidden") فيفقد المستخدم زرَّي النسخ/QR للرابط للتوّ.
-                    // الرابط الجديد يظهر في shareLinksExistingList عند فتح النافذة لاحقاً.
-                    const url = buildShareUrl(result.shareToken);
-                    if (linkInput) linkInput.value = url;
-                    if (linkBox) linkBox.classList.remove('hidden');
-                    if (linkStatus) linkStatus.textContent = '';
-                    toast.success('تم إنشاء رابط القراءة فقط — انسخه وشاركه');
-                } else {
-                    if (linkStatus) linkStatus.textContent = 'تعذر إنشاء الرابط';
-                    toast.error(result.error || 'تعذر إنشاء الرابط');
+        const linkStatus = this.overlay.querySelector('#readOnlyLinkStatus');
+        const permissionEl = this.overlay.querySelector('#sharePermission');
+        const expirationEl = this.overlay.querySelector('#shareExpiration');
+        const hideSensitiveEl = this.overlay.querySelector('#shareHideSensitive');
+
+        if (btnGenerate && linkBox && linkInput && linkStatus) {
+            btnGenerate.addEventListener('click', async () => {
+                if (!studyId) {
+                    toast.warning('يرجى حفظ الدراسة أولاً');
+                    return;
+                }
+                btnGenerate.disabled = true;
+                btnGenerate.textContent = 'جاري الإنشاء...';
+                try {
+                    const days = expirationEl?.value ? parseInt(expirationEl.value, 10) : 0;
+                    const shareOptions = {
+                        expiresInDays: days,
+                        hideSensitive: hideSensitiveEl?.checked,
+                        permission: permissionEl?.value || 'view'
+                    };
+                    const hasNonDefaultOptions = shareOptions.expiresInDays !== 0
+                        || shareOptions.hideSensitive === true
+                        || shareOptions.permission !== 'view';
+                    const result = hasNonDefaultOptions
+                        ? await createShareLink(studyId, shareOptions)
+                        : await createShareLink(studyId);
+                    if (!result.ok) {
+                        toast.error(result.error || 'فشل إنشاء الرابط');
+                        return;
+                    }
+                    const fullUrl = buildShareUrl(result.shareToken);
+                    linkInput.value = fullUrl;
+                    linkBox.classList.remove('hidden');
+                    linkStatus.textContent = 'تم إنشاء الرابط بنجاح';
+                    toast.success('تم إنشاء الرابط المخصص');
+                    await navigator.clipboard?.writeText?.(fullUrl);
+                    
+                } catch (e) {
+                    console.error('Share link generation failed:', e);
+                    toast.error('حدث خطأ أثناء الإنشاء');
+                } finally {
+                    btnGenerate.disabled = false;
+                    btnGenerate.textContent = '+ إنشاء رابط جديد';
                 }
             });
         }
-        if (btnCopyLink && linkInput) {
-            btnCopyLink.addEventListener('click', () => {
-                linkInput.select();
-                document.execCommand('copy');
-                toast.success('تم نسخ الرابط');
+
+        const btnCopy = this.overlay.querySelector('#btnCopyReadOnlyLink');
+        if (btnCopy && linkInput) {
+            btnCopy.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(linkInput.value);
+                    toast.success('تم نسخ الرابط');
+                } catch (_) {
+                    toast.info(linkInput.value);
+                }
             });
         }
+
         this.overlay.querySelectorAll('.btn-copy-existing-share').forEach((btn) => {
             btn.addEventListener('click', async () => {
                 try {
@@ -312,6 +294,7 @@ export class ShareStudyView {
                 }
             });
         });
+
         this.overlay.querySelectorAll('.btn-revoke-share').forEach((btn) => {
             btn.addEventListener('click', async () => {
                 const row = btn.closest('.share-link-row');
@@ -373,20 +356,6 @@ export class ShareStudyView {
                     console.error('QR download failed:', e);
                     toast.error('فشل تحميل رمز QR');
                 }
-            });
-        }
-
-        // إرسال بالبريد (mailto + اقتراح إرفاق PDF)
-        const btnEmail = this.overlay.querySelector('#btnShareByEmail');
-        if (btnEmail) {
-            btnEmail.addEventListener('click', () => {
-                const studyName = (state.projectInfo?.name || 'الدراسة').trim();
-                const subject = encodeURIComponent(`دراسة جدوى: ${studyName}`);
-                const body = encodeURIComponent(
-                    `مرحباً،\n\nأرفق لكم ملخص دراسة الجدوى للمشروع: ${studyName}.\n\nيرجى إرفاق ملف PDF من قائمة «تصدير» في المنصة (تقرير PDF أو نسخة للممول) للاطلاع على التفاصيل.\n\nمع خالص التقدير`
-                );
-                window.location.href = `mailto:?subject=${subject}&body=${body}`;
-                toast.info('تم فتح بريدك — أرفق PDF من قائمة التصدير');
             });
         }
 

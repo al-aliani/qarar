@@ -12,11 +12,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const createShareLinkMock = vi.fn();
 const listSharesMock = vi.fn();
 const revokeShareMock = vi.fn();
+const listStudyShareFeedbackMock = vi.fn();
 
 vi.mock('../../services/ShareService.js', () => ({
     createShareLink: (...a) => createShareLinkMock(...a),
     listShares: (...a) => listSharesMock(...a),
     revokeShare: (...a) => revokeShareMock(...a),
+    listStudyShareFeedback: (...a) => listStudyShareFeedbackMock(...a),
 }));
 
 vi.mock('../ShareModal.js', () => ({
@@ -36,6 +38,7 @@ describe('ShareStudyView — رابط مشاركة حقيقي (لا localStorage
         document.body.innerHTML = '';
         createShareLinkMock.mockReset();
         listSharesMock.mockReset().mockResolvedValue([]);
+        listStudyShareFeedbackMock.mockReset().mockResolvedValue([]);
         revokeShareMock.mockReset();
     });
 

@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const createShareLinkMock = vi.fn();
 const listSharesMock = vi.fn();
+const listStudyShareFeedbackMock = vi.fn();
 const revokeShareMock = vi.fn();
 const runFullModelMock = vi.fn(() => ({}));
 const calculateProjectScoreMock = vi.fn(() => ({ recommendation: 'go' }));
@@ -28,6 +29,7 @@ const exportToExcelMock = vi.fn(async () => 'study.xlsx');
 vi.mock('../../services/ShareService.js', () => ({
     createShareLink: (...a) => createShareLinkMock(...a),
     listShares: (...a) => listSharesMock(...a),
+    listStudyShareFeedback: (...a) => listStudyShareFeedbackMock(...a),
     revokeShare: (...a) => revokeShareMock(...a),
 }));
 
@@ -93,6 +95,7 @@ async function flush() {
 
 describe('ShareStudyView — قسم "لمن ترسل؟" (توجيه المتلقي)', () => {
     beforeEach(() => {
+        listStudyShareFeedbackMock.mockResolvedValue([]);
         document.body.innerHTML = '';
         createShareLinkMock.mockReset();
         listSharesMock.mockReset().mockResolvedValue([]);
