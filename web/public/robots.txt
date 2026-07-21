@@ -11,4 +11,4 @@ Disallow: /report/
 Disallow: /export/
 Disallow: /dashboard.html
 
-Sitemap: https://qarar.sa/sitemap.xml
+Sitemap: https://sahib.sa/sitemap.xml
