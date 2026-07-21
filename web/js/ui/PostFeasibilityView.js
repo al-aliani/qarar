@@ -32,7 +32,7 @@ export class PostFeasibilityView {
                     <section class="card card-hover p-4">
                         <h2 class="font-bold text-gold mb-2">مراجعة استشاري</h2>
                         <p class="text-sm text-muted mb-3">${consultationText}</p>
-                        ${consultationUrl ? `<a href="${consultationUrl}" target="_blank" rel="noopener" class="btn btn--primary btn--sm">حجز جلسة مراجعة</a>` : '<p class="text-xs text-muted">رابط الحجز يُضاف من إعدادات المنصة.</p>'}
+                        ${consultationUrl ? `<a href="${consultationUrl}" target="_blank" rel="noopener" class="btn btn--primary btn--sm">حجز جلسة مراجعة</a>` : '<a href="./contact.html" class="btn btn--primary btn--sm">تواصل لطلب المراجعة</a>'}
                     </section>
 
                     <section class="card card-hover p-4">

@@ -9,15 +9,29 @@ const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></s
  */
 export class BalanceSheetView {
     constructor(containerId, store, onNavigate) {
+        this.containerId = containerId;
         this.container = document.getElementById(containerId);
         this.store = store;
         this.onNavigate = onNavigate;
         this.selectedYear = 1;
     }
 
+    resolveContainer() {
+        if (!this.container || !this.container.isConnected) {
+            this.container = document.getElementById(this.containerId);
+        }
+        return this.container;
+    }
+
     render(balanceSheets) {
+        const container = this.resolveContainer();
+        if (!container) {
+            console.warn(`BalanceSheetView: container not found (${this.containerId})`);
+            return;
+        }
+
         if (!balanceSheets || balanceSheets.length === 0) {
-            this.container.innerHTML = `
+            container.innerHTML = `
                 <div class="card glass-card">
                     <h2 class="card-title">الميزانية العمومية التقديرية</h2>
                     <div class="empty-state">
@@ -30,7 +44,7 @@ export class BalanceSheetView {
 
         const sheet = balanceSheets[this.selectedYear - 1] || balanceSheets[0];
 
-        this.container.innerHTML = `
+        container.innerHTML = `
             <div class="card glass-card">
                 <div class="card-header flex justify-between items-center">
                     <h2 class="card-title">الميزانية العمومية التقديرية</h2>
@@ -277,7 +291,7 @@ export class BalanceSheetView {
         `;
 
         // Bind year selector
-        this.container.querySelectorAll('.year-selector button').forEach(btn => {
+        container.querySelectorAll('.year-selector button').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.selectedYear = parseInt(btn.dataset.year);
                 this.render(balanceSheets);
@@ -288,7 +302,7 @@ export class BalanceSheetView {
         // أن تغيّر إجمالي الاستثمار (تدقيق ٢٠٢٦-٠٧-١٠) — الفجوة هنا مُعاد حسابها حياً من
         // نفس محرك التمويل الوحيد (engine.js)، وليست قيمة مخزَّنة وقت الموازنة السابقة؛
         // الانحراف حقيقي بسبب تعديل بند تكلفة لاحق، فالحل توجيه المستخدم لا "تصحيح" الحساب.
-        this.container.querySelector('.btn-go-financing')?.addEventListener('click', () => {
+        container.querySelector('.btn-go-financing')?.addEventListener('click', () => {
             if (!this.onNavigate) return;
             const idx = stepIndexById('financing');
             if (idx >= 0) this.onNavigate(idx);

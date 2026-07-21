@@ -24,6 +24,8 @@ import { getOfficialIndicators } from '../core/resultContract.js';
 import { generateExecutiveSummary } from '../services/InternalAIGenerator.js';
 import { calculateStudyCompleteness } from '../utils/studyCompleteness.js';
 import { escapeHtml } from '../utils/escape.js';
+import { runQAChecks } from '../utils/qaChecks.js';
+import { buildDecisionQualityGate } from '../utils/decisionQuality.js';
 
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
 
@@ -113,24 +115,42 @@ export class ProjectOverviewView {
 
         const indicators = getOfficialIndicators(results || {});
         const completeness = calculateStudyCompleteness(data);
+        let qualityGate = buildDecisionQualityGate();
+        try {
+            qualityGate = buildDecisionQualityGate(await runQAChecks(data, results || {}));
+        } catch (e) {
+            console.warn('[ProjectOverviewView] فحص الجودة لم يكتمل:', e);
+        }
         // القرار يُعرض فقط حين يكون للنموذج مخرَج فعلي — لا لمجرّد أن المحرك أعاد قيمة.
         // نفس `decision` يبوِّب الخلاصة التنفيذية أدناه (السطر 124): generateExecutiveSummary
         // تقرأ results.decision الخام (='NO-GO' لدراسة صفرية) فتُصدر «القرار يشير إلى عدم
         // الجدوى» — عرضها تحت شارة «لا يوجد قرار بعد» على نفس الشاشة تناقض. فنُخفي الملخّص
         // كاملاً ما لم يوجد قرار حقيقي (تدقيق 2026-07-20: تسرّب سردي كان يظهر رغم أن
         // الشارة والمؤشرات مُبوَّبتان صحيحاً — الثغرة كانت في الملخّص وحده).
-        const decision = hasRealModel(indicators) ? (results?.decision || null) : null;
+        const decision = hasRealModel(indicators) && !qualityGate.locked ? (results?.decision || null) : null;
 
         this.container.innerHTML = `
             <div class="dv po animate-entry">
                 ${this._renderHeader(data, completeness, headerName)}
-                ${decision ? this._renderDecision(decision, results) : this._renderInsufficient(completeness)}
+                ${qualityGate.locked ? this._renderQualityBlocked(qualityGate) : (decision ? this._renderDecision(decision, results) : this._renderInsufficient(completeness))}
                 ${this._renderIndicators(indicators)}
                 ${decision ? this._renderSummary(data, results) : ''}
                 ${this._renderActions()}
             </div>
         `;
         this._bind();
+    }
+
+    _renderQualityBlocked(gate) {
+        const blockers = (gate?.hardItems || []).slice(0, 4);
+        return `
+            <section class="po__block po__quality-blocked" role="region" aria-label="بوابة جودة القرار">
+                <div class="decision-banner is-revise">القرار محجوب مؤقتاً</div>
+                <p class="po__block-desc">لن نعرض توصية نهائية قبل إصلاح الأخطاء الحرجة في البيانات (عددها ${Number(gate?.hardCount) || blockers.length}).</p>
+                ${blockers.length ? `<div class="po__reasons"><h3 class="po__reasons-title">ابدأ بهذه الإصلاحات</h3><ul class="po__reasons-list">${blockers.map(item => `<li>${escapeHtml(item.message)}</li>`).join('')}</ul></div>` : ''}
+                <p class="po__block-note">افتح الدراسة لإصلاح البنود؛ ستظهر التوصية تلقائياً بعد اجتياز بوابة الجودة.</p>
+            </section>
+        `;
     }
 
     _renderHeader(data, completeness, headerName = '') {
@@ -249,6 +269,6 @@ export class ProjectOverviewView {
 
     _bind() {
         this.container.querySelectorAll('.po__back').forEach(b => b.addEventListener('click', () => this.onBack()));
-        this.container.querySelector('.po__edit')?.addEventListener('click', () => this.onEdit(this.projectId));
+        this.container.querySelectorAll('.po__edit').forEach(b => b.addEventListener('click', () => this.onEdit(this.projectId)));
     }
 }

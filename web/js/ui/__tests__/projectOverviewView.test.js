@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const loadProjectMock = vi.fn();
 const calculateStudyMock = vi.fn();
 const getActiveProjectsMock = vi.fn(async () => []);
+const runQAChecksMock = vi.fn(async () => ({ hardErrors: [], softWarnings: [], validationErrors: [], validationWarnings: [] }));
 
 vi.mock('../../services/ProjectManager.js', () => ({
     ProjectManager: {
@@ -22,6 +23,9 @@ vi.mock('../../services/ProjectManager.js', () => ({
 }));
 vi.mock('../../core/engine.js', () => ({
     calculateStudy: (...a) => calculateStudyMock(...a)
+}));
+vi.mock('../../utils/qaChecks.js', () => ({
+    runQAChecks: (...a) => runQAChecksMock(...a)
 }));
 
 const FULL_STUDY = { projectInfo: { name: 'مقهى الرياض', concept: 'مقهى مختص', city: 'الرياض' } };
@@ -101,6 +105,22 @@ describe('ProjectOverviewView — بوابة «لا قرار على بيانات
         expect(html).toContain('is-nogo');
         expect(html).toContain('لماذا هذا القرار');
         expect(html).toContain('صافي القيمة الحالية يجب أن يكون &gt; 0');
+    });
+
+    it('يحجب القرار الحقيقي أيضاً عند وجود أخطاء جودة حرجة', async () => {
+        runQAChecksMock.mockResolvedValueOnce({
+            hardErrors: [{ message: 'الميزانية العمومية غير متوازنة', path: 'financials.balanceSheet' }],
+            softWarnings: [], validationErrors: [], validationWarnings: []
+        });
+        const { html } = await renderWith({
+            results: { decision: 'NO-GO', decisionReasons: ['صافي القيمة الحالية سالب'], indicators: { npv: -50000 } }
+        });
+
+        expect(html).toContain('القرار محجوب مؤقتاً');
+        expect(html).toContain('الميزانية العمومية غير متوازنة');
+        expect(html).not.toContain('لا تمضِ');
+        expect(html).not.toContain('لماذا هذا القرار');
+        expect(html).not.toContain('الخلاصة التنفيذية');
     });
 
     it('REVISE يستخدم صنف التحذير لا الرفض (دستور components.css:382)', async () => {

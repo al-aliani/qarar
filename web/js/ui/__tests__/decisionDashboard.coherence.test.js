@@ -48,4 +48,47 @@ describe('تماسك توصية الجاهزية مع قرار المحرك', ()
         // درجة منخفضة ⇒ nogo عبر المسار الاحتياطي
         expect(['nogo', 'review', 'conditional', 'go']).toContain(r.recommendation.status);
     });
+
+    it('فائض التمويل الجوهري لا يُصنّف «جاهزاً بنكياً» ولا «متوازناً»', () => {
+        const state = {
+            ...baseState,
+            financing: { sources: { equity: { amount: 500000 }, bankLoan: { amount: 0 } } }
+        };
+        const results = {
+            ...weakResults('REVISE'),
+            indicators: { ...weakResults('REVISE').indicators, dscrReason: 'no_debt_service' },
+            financingCheck: {
+                fundingGap: -435920,
+                fundingGapMaterialityThreshold: 1000,
+                totalInvestment: 64080
+            }
+        };
+
+        const diagnostics = dd.getFinancingDiagnostics(state, results);
+        expect(diagnostics.bankReady).toBe(false);
+        expect(diagnostics.alerts.some((a) => a.type === 'funding-surplus')).toBe(true);
+
+        const html = dd.renderFinancingGate(diagnostics);
+        expect(html).toContain('تمويل فائض يحتاج ضبطاً');
+        expect(html).toContain('غير جاهز بنكياً بعد');
+        expect(html).not.toContain('التمويل متوازن مبدئياً');
+    });
+
+    it('تعذّر DSCR بسبب CFADS لا يُنسب زوراً إلى EBITDA سالبة', () => {
+        const state = {
+            ...baseState,
+            financing: { sources: { bankLoan: { amount: 100000 } } }
+        };
+        const results = {
+            ...weakResults('REVISE'),
+            indicators: { ...weakResults('REVISE').indicators, dscr: null, dscrReason: 'no_cfads' },
+            incomeStatement: [{ ebitda: 598080 }],
+            financingCheck: { fundingGap: 0, fundingGapMaterialityThreshold: 1000 }
+        };
+
+        const diagnostics = dd.getFinancingDiagnostics(state, results);
+        const alert = diagnostics.alerts.find((a) => a.type === 'dscr');
+        expect(alert?.text).toContain('CFADS');
+        expect(alert?.text).not.toContain('EBITDA سالبة');
+    });
 });
