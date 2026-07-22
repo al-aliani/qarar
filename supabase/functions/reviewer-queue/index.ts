@@ -12,16 +12,19 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { verifyReviewer } from '../_shared/reviewerAuth.ts';
+import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...corsHeaders(req) },
   });
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405);
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'method_not_allowed' }, 405);
 
   const authHeader = req.headers.get('Authorization') || '';
   const jwt = authHeader.replace(/^Bearer\s+/i, '');
@@ -36,7 +39,7 @@ Deno.serve(async (req: Request) => {
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
   const auth = await verifyReviewer(userClient, adminClient, jwt);
-  if (!auth.ok) return jsonResponse(auth.errorBody, auth.errorStatus);
+  if (!auth.ok) return jsonResponse(req, auth.errorBody, auth.errorStatus);
 
   const { data: orders, error } = await adminClient
     .from('orders')
@@ -48,7 +51,7 @@ Deno.serve(async (req: Request) => {
 
   if (error) {
     console.error('[reviewer-queue] orders select failed:', error);
-    return jsonResponse({ error: 'query_failed' }, 500);
+    return jsonResponse(req, { error: 'query_failed' }, 500);
   }
 
   const studyUuids = (orders || [])
@@ -80,7 +83,7 @@ Deno.serve(async (req: Request) => {
     paidAt: o.paid_at,
   }));
 
-  return jsonResponse({
+  return jsonResponse(req, {
     queue: items.filter((i) => i.reviewStatus === 'queued'),
     myClaims: items.filter((i) => i.claimedByMe),
   });

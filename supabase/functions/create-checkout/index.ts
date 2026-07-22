@@ -20,16 +20,19 @@ import { createMoyasarCheckout } from '../_shared/providers/moyasar.ts';
 import { createStripeCheckout } from '../_shared/providers/stripe.ts';
 import { createTamaraCheckout } from '../_shared/providers/tamara.ts';
 import { selectedAddons } from '../_shared/catalog.ts';
+import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...corsHeaders(req) },
   });
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405);
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'method_not_allowed' }, 405);
 
   // أمني/تشغيلي: منه تُبنى روابط العودة بعد الدفع لدى Moyasar/Stripe/Tamara. الافتراضي
   // الصامت 'http://localhost:5173' كان بلوكر إطلاق: إن نُسي سرّ APP_ORIGIN في بيئة
@@ -45,7 +48,7 @@ Deno.serve(async (req: Request) => {
 
   const authHeader = req.headers.get('Authorization') || '';
   const jwt = authHeader.replace(/^Bearer\s+/i, '');
-  if (!jwt) return jsonResponse({ error: 'missing_auth' }, 401);
+  if (!jwt) return jsonResponse(req, { error: 'missing_auth' }, 401);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -56,25 +59,40 @@ Deno.serve(async (req: Request) => {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: userData, error: userError } = await userClient.auth.getUser(jwt);
-  if (userError || !userData?.user) return jsonResponse({ error: 'invalid_session' }, 401);
+  if (userError || !userData?.user) return jsonResponse(req, { error: 'invalid_session' }, 401);
   const userId = userData.user.id;
 
   let body: { tier?: string; studyId?: string; provider?: string; addons?: string[]; coupon?: string };
   try {
     body = await req.json();
   } catch {
-    return jsonResponse({ error: 'invalid_json_body' }, 400);
+    return jsonResponse(req, { error: 'invalid_json_body' }, 400);
   }
 
   const pkg = getPackage(body.tier || '');
-  if (!pkg) return jsonResponse({ error: 'invalid_tier' }, 400);
+  if (!pkg) return jsonResponse(req, { error: 'invalid_tier' }, 400);
 
   const provider = body.provider === 'stripe' ? 'stripe' : body.provider === 'moyasar' ? 'moyasar' : body.provider === 'tamara' ? 'tamara' : body.provider === 'bank_transfer' ? 'bank_transfer' : null;
-  if (!provider) return jsonResponse({ error: 'invalid_provider' }, 400);
+  if (!provider) return jsonResponse(req, { error: 'invalid_provider' }, 400);
 
   // عميل بصلاحية service_role — الوحيد المسموح له بالكتابة في orders (RLS لا يسمح
   // لأي دور آخر بذلك إطلاقاً، انظر migration الخاص بهذا الجدول).
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+  // أمني: studyId يصل من جسم الطلب بلا أي تحقق ملكية — دون هذا الفحص يستطيع أي
+  // مستخدم دفع (بماله الخاص) لباقة 'reviewed' مستهدفاً دراسة شخص آخر، فيمنح ذلك
+  // أي مراجع يدّعي الطلب قراءة كاملة لبياناتها المالية عبر studies_select_reviewer
+  // (migration 20260713000000_reviewer_portal.sql) — الدراسة لم توافق عليه أصلاً.
+  if (body.studyId) {
+    const { data: study, error: studyError } = await adminClient
+      .from('studies')
+      .select('user_id')
+      .eq('id', body.studyId)
+      .maybeSingle();
+    if (studyError || !study || study.user_id !== userId) {
+      return jsonResponse(req, { error: 'study_not_owned' }, 403);
+    }
+  }
   const addons = selectedAddons(body.addons);
   const subtotal = pkg.price + addons.reduce((sum, item) => sum + item.price, 0);
   const couponCode = String(body.coupon || '').trim().toUpperCase();
@@ -113,7 +131,7 @@ Deno.serve(async (req: Request) => {
 
   if (insertError || !orderRow) {
     console.error('[create-checkout] insert order failed:', insertError);
-    return jsonResponse({ error: 'order_creation_failed' }, 500);
+    return jsonResponse(req, { error: 'order_creation_failed' }, 500);
   }
 
   const orderId = orderRow.id as string;
@@ -122,7 +140,7 @@ Deno.serve(async (req: Request) => {
   // نُرجع رقم الطلب والمبلغ فقط ليعرض العميل بيانات الحساب ويحوّل، ثم يؤكّده الأدمن
   // يدوياً (admin_confirm_bank_transfer) بعد وصول الحوالة فتصبح الحالة paid ويُفتح القفل.
   if (provider === 'bank_transfer') {
-    return jsonResponse({ orderId, bankTransfer: true, amount: total });
+    return jsonResponse(req, { orderId, bankTransfer: true, amount: total });
   }
 
   // كوبون خصم 100%: total=0 — مزوّدو الدفع (Moyasar/Stripe/Tamara) يرفضون مبلغاً
@@ -130,7 +148,7 @@ Deno.serve(async (req: Request) => {
   // شيء فعلياً للتحصيل هنا، فنؤكّد الطلب مباشرة كما لو دُفع بالكامل بالكوبون.
   if (total === 0) {
     await adminClient.from('orders').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', orderId);
-    return jsonResponse({ orderId, freeViaCoupon: true, amount: 0 });
+    return jsonResponse(req, { orderId, freeViaCoupon: true, amount: 0 });
   }
 
   const returnUrl = `${APP_ORIGIN}/#/payment-return?order=${orderId}`;
@@ -178,10 +196,10 @@ Deno.serve(async (req: Request) => {
 
     await adminClient.from('orders').update({ provider_ref: providerRef }).eq('id', orderId);
 
-    return jsonResponse({ checkoutUrl, orderId });
+    return jsonResponse(req, { checkoutUrl, orderId });
   } catch (e) {
     console.error('[create-checkout] provider checkout creation failed:', e);
     await adminClient.from('orders').update({ status: 'failed' }).eq('id', orderId);
-    return jsonResponse({ error: 'checkout_creation_failed' }, 502);
+    return jsonResponse(req, { error: 'checkout_creation_failed' }, 502);
   }
 });

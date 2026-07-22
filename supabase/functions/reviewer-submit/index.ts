@@ -7,16 +7,19 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { verifyReviewer } from '../_shared/reviewerAuth.ts';
+import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...corsHeaders(req) },
   });
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405);
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'method_not_allowed' }, 405);
 
   const authHeader = req.headers.get('Authorization') || '';
   const jwt = authHeader.replace(/^Bearer\s+/i, '');
@@ -31,17 +34,17 @@ Deno.serve(async (req: Request) => {
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
   const auth = await verifyReviewer(userClient, adminClient, jwt);
-  if (!auth.ok) return jsonResponse(auth.errorBody, auth.errorStatus);
+  if (!auth.ok) return jsonResponse(req, auth.errorBody, auth.errorStatus);
 
   let body: { orderId?: string; decision?: string; notes?: string };
   try {
     body = await req.json();
   } catch {
-    return jsonResponse({ error: 'invalid_json_body' }, 400);
+    return jsonResponse(req, { error: 'invalid_json_body' }, 400);
   }
-  if (!body.orderId) return jsonResponse({ error: 'missing_order_id' }, 400);
+  if (!body.orderId) return jsonResponse(req, { error: 'missing_order_id' }, 400);
   if (body.decision !== 'certified' && body.decision !== 'rejected') {
-    return jsonResponse({ error: 'invalid_decision' }, 400);
+    return jsonResponse(req, { error: 'invalid_decision' }, 400);
   }
 
   let certificateId: string | null = null;
@@ -49,7 +52,7 @@ Deno.serve(async (req: Request) => {
     const { data: certData, error: certError } = await adminClient.rpc('generate_certificate_id');
     if (certError || !certData) {
       console.error('[reviewer-submit] certificate id generation failed:', certError);
-      return jsonResponse({ error: 'certificate_generation_failed' }, 500);
+      return jsonResponse(req, { error: 'certificate_generation_failed' }, 500);
     }
     certificateId = certData as string;
   }
@@ -69,11 +72,11 @@ Deno.serve(async (req: Request) => {
 
   if (error) {
     console.error('[reviewer-submit] update failed:', error);
-    return jsonResponse({ error: 'submit_failed' }, 500);
+    return jsonResponse(req, { error: 'submit_failed' }, 500);
   }
   if (!data || data.length === 0) {
-    return jsonResponse({ error: 'not_your_claim_or_not_in_review' }, 409);
+    return jsonResponse(req, { error: 'not_your_claim_or_not_in_review' }, 409);
   }
 
-  return jsonResponse({ orderId: body.orderId, reviewStatus: body.decision, certificateId });
+  return jsonResponse(req, { orderId: body.orderId, reviewStatus: body.decision, certificateId });
 });

@@ -6,20 +6,23 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { checkOneCandidate } from '../_shared/nameAvailability.ts';
+import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(req: Request, body: unknown, status = 200): Response {
     return new Response(JSON.stringify(body), {
         status,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', ...corsHeaders(req) }
     });
 }
 
 Deno.serve(async (req: Request) => {
-    if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405);
+    const preflight = handlePreflight(req);
+    if (preflight) return preflight;
+    if (req.method !== 'POST') return jsonResponse(req, { error: 'method_not_allowed' }, 405);
 
     const authHeader = req.headers.get('Authorization') || '';
     const jwt = authHeader.replace(/^Bearer\s+/i, '');
-    if (!jwt) return jsonResponse({ error: 'missing_auth' }, 401);
+    if (!jwt) return jsonResponse(req, { error: 'missing_auth' }, 401);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -27,20 +30,20 @@ Deno.serve(async (req: Request) => {
         global: { headers: { Authorization: authHeader } }
     });
     const { data: userData, error: userError } = await userClient.auth.getUser(jwt);
-    if (userError || !userData?.user) return jsonResponse({ error: 'invalid_session' }, 401);
+    if (userError || !userData?.user) return jsonResponse(req, { error: 'invalid_session' }, 401);
 
     let body: { candidates?: unknown };
     try {
         body = await req.json();
     } catch {
-        return jsonResponse({ error: 'invalid_body' }, 400);
+        return jsonResponse(req, { error: 'invalid_body' }, 400);
     }
 
     const candidates = Array.isArray(body?.candidates) ? body.candidates.slice(0, 5) : [];
-    if (!candidates.length) return jsonResponse({ error: 'no_candidates' }, 400);
+    if (!candidates.length) return jsonResponse(req, { error: 'no_candidates' }, 400);
 
     const results = await Promise.all(
         candidates.map((n: unknown) => checkOneCandidate(String(n || '').trim()))
     );
-    return jsonResponse({ results });
+    return jsonResponse(req, { results });
 });

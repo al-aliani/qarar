@@ -8,22 +8,25 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { hashOtpCode } from '../_shared/otp.ts';
 import { timingSafeEqual } from '../_shared/webhookVerify.ts';
+import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
 
 const MAX_ATTEMPTS = 5;
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...corsHeaders(req) },
   });
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405);
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'method_not_allowed' }, 405);
 
   const authHeader = req.headers.get('Authorization') || '';
   const jwt = authHeader.replace(/^Bearer\s+/i, '');
-  if (!jwt) return jsonResponse({ error: 'missing_auth' }, 401);
+  if (!jwt) return jsonResponse(req, { error: 'missing_auth' }, 401);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -33,17 +36,17 @@ Deno.serve(async (req: Request) => {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: userData, error: userError } = await userClient.auth.getUser(jwt);
-  if (userError || !userData?.user) return jsonResponse({ error: 'invalid_session' }, 401);
+  if (userError || !userData?.user) return jsonResponse(req, { error: 'invalid_session' }, 401);
   const userId = userData.user.id;
 
   let body: { code?: string };
   try {
     body = await req.json();
   } catch {
-    return jsonResponse({ error: 'invalid_json_body' }, 400);
+    return jsonResponse(req, { error: 'invalid_json_body' }, 400);
   }
   const submittedCode = String(body.code || '').trim();
-  if (!submittedCode) return jsonResponse({ error: 'missing_code' }, 400);
+  if (!submittedCode) return jsonResponse(req, { error: 'missing_code' }, 400);
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
@@ -60,12 +63,12 @@ Deno.serve(async (req: Request) => {
 
   if (challengeError) {
     console.error('[whatsapp-otp-verify] challenge query failed:', challengeError);
-    return jsonResponse({ error: 'query_failed' }, 500);
+    return jsonResponse(req, { error: 'query_failed' }, 500);
   }
-  if (!challenge) return jsonResponse({ error: 'no_active_challenge' }, 400);
+  if (!challenge) return jsonResponse(req, { error: 'no_active_challenge' }, 400);
 
   if (challenge.attempts >= MAX_ATTEMPTS) {
-    return jsonResponse({ error: 'too_many_attempts' }, 429);
+    return jsonResponse(req, { error: 'too_many_attempts' }, 429);
   }
 
   const otpSecret = Deno.env.get('OTP_HASH_SECRET')!;
@@ -77,7 +80,7 @@ Deno.serve(async (req: Request) => {
       .from('phone_otp_challenges')
       .update({ attempts: challenge.attempts + 1 })
       .eq('id', challenge.id);
-    return jsonResponse({ error: 'code_mismatch' }, 400);
+    return jsonResponse(req, { error: 'code_mismatch' }, 400);
   }
 
   const { error: verifyError } = await adminClient
@@ -87,7 +90,7 @@ Deno.serve(async (req: Request) => {
 
   if (verifyError) {
     console.error('[whatsapp-otp-verify] marking challenge verified failed:', verifyError);
-    return jsonResponse({ error: 'verify_update_failed' }, 500);
+    return jsonResponse(req, { error: 'verify_update_failed' }, 500);
   }
 
   const { error: profileError } = await adminClient
@@ -97,8 +100,8 @@ Deno.serve(async (req: Request) => {
 
   if (profileError) {
     console.error('[whatsapp-otp-verify] profiles update failed:', profileError);
-    return jsonResponse({ error: 'profile_update_failed' }, 500);
+    return jsonResponse(req, { error: 'profile_update_failed' }, 500);
   }
 
-  return jsonResponse({ ok: true });
+  return jsonResponse(req, { ok: true });
 });

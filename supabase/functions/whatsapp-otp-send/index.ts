@@ -8,24 +8,27 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { generateOtpCode, hashOtpCode } from '../_shared/otp.ts';
 import { sendWhatsAppOtpTemplate } from '../_shared/providers/whatsapp.ts';
+import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 const DAILY_SEND_LIMIT = 5;
 const CODE_EXPIRY_MINUTES = 5;
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...corsHeaders(req) },
   });
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405);
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'method_not_allowed' }, 405);
 
   const authHeader = req.headers.get('Authorization') || '';
   const jwt = authHeader.replace(/^Bearer\s+/i, '');
-  if (!jwt) return jsonResponse({ error: 'missing_auth' }, 401);
+  if (!jwt) return jsonResponse(req, { error: 'missing_auth' }, 401);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -35,7 +38,7 @@ Deno.serve(async (req: Request) => {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: userData, error: userError } = await userClient.auth.getUser(jwt);
-  if (userError || !userData?.user) return jsonResponse({ error: 'invalid_session' }, 401);
+  if (userError || !userData?.user) return jsonResponse(req, { error: 'invalid_session' }, 401);
   const userId = userData.user.id;
 
   // عميل بصلاحية service_role — الوحيد المسموح له بلمس phone_otp_challenges
@@ -49,7 +52,7 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (profileError || !profile?.phone) {
-    return jsonResponse({ error: 'no_phone_on_file' }, 400);
+    return jsonResponse(req, { error: 'no_phone_on_file' }, 400);
   }
 
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -62,12 +65,12 @@ Deno.serve(async (req: Request) => {
 
   if (recentError) {
     console.error('[whatsapp-otp-send] recent challenges query failed:', recentError);
-    return jsonResponse({ error: 'query_failed' }, 500);
+    return jsonResponse(req, { error: 'query_failed' }, 500);
   }
 
   const recent = recentChallenges || [];
   if (recent.length >= DAILY_SEND_LIMIT) {
-    return jsonResponse({ error: 'daily_limit_reached' }, 429);
+    return jsonResponse(req, { error: 'daily_limit_reached' }, 429);
   }
 
   if (recent.length > 0) {
@@ -75,6 +78,7 @@ Deno.serve(async (req: Request) => {
     const cooldownEndsAt = lastSentAt + RESEND_COOLDOWN_SECONDS * 1000;
     if (Date.now() < cooldownEndsAt) {
       return jsonResponse(
+        req,
         { error: 'cooldown_active', resendAvailableAt: new Date(cooldownEndsAt).toISOString() },
         429
       );
@@ -95,7 +99,7 @@ Deno.serve(async (req: Request) => {
 
   if (insertError) {
     console.error('[whatsapp-otp-send] insert challenge failed:', insertError);
-    return jsonResponse({ error: 'challenge_creation_failed' }, 500);
+    return jsonResponse(req, { error: 'challenge_creation_failed' }, 500);
   }
 
   try {
@@ -112,10 +116,10 @@ Deno.serve(async (req: Request) => {
     });
   } catch (e) {
     console.error('[whatsapp-otp-send] WhatsApp API call failed:', e);
-    return jsonResponse({ error: 'send_failed' }, 502);
+    return jsonResponse(req, { error: 'send_failed' }, 502);
   }
 
-  return jsonResponse({
+  return jsonResponse(req, {
     ok: true,
     expiresAt,
     resendAvailableAt: new Date(Date.now() + RESEND_COOLDOWN_SECONDS * 1000).toISOString(),
