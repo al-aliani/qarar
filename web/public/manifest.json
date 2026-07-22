@@ -1,8 +1,8 @@
 {
-  "name": "محاكي الجدوى | دراسة الجدوى الذكية",
-  "short_name": "محاكي الجدوى",
+  "name": "قرار | منصة دراسة الجدوى الذكية",
+  "short_name": "قرار",
   "description": "منصة دراسة الجدوى الذكية: أنشئ دراسات جدوى احترافية مع النماذج المالية والتحليل الاستراتيجي",
-  "start_url": "/",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#0e5b44",
   "theme_color": "#0e5b44",

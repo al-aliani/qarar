@@ -398,8 +398,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnToggleSidebar')?.setAttribute('aria-expanded', 'false');
   };
 
-  const showLandingDashboard = async () => {
-    syncHash('home');
+  // تدقيق حي 2026-07-22: هذه اللوحات موجودة فعلياً داخل الرئيسية (أزرار data-dv-panel-button)
+  // لكن بلا مسار hash خاص بها — أي رابط خارجي/مرجعية لـ#/tools أو #/ready-studies أو #/data
+  // كان يسقط في NotFoundView رغم أن المحتوى موجود وقابل للفتح من داخل التطبيق.
+  const HOME_PANEL_ROUTES = { tools: 'engines', 'ready-studies': 'additional', data: 'databases' };
+
+  const showLandingDashboard = async (route) => {
+    syncHash(route || 'home');
     document.querySelector('.app-shell')?.classList.add('dashboard-mode');
     
     const macroStepper = document.getElementById('macroJourneyStepper');
@@ -469,7 +474,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       onShowPostLaunch: () => goToStudyStep(s => s.isPostLaunch, 37),
       onOpenExport: () => {
         if (typeof openExportMenu === 'function') openExportMenu();
-      }
+      },
+      activeHomePanel: HOME_PANEL_ROUTES[route] || 'studies'
     });
     projectsDashboard.render();
   };
@@ -2097,6 +2103,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       if (route === '' || route === 'home') {
         await showLandingDashboard();
+      } else if (HOME_PANEL_ROUTES[route]) {
+        await showLandingDashboard(route);
       } else if (route.startsWith('category/')) {
         const categoryIndex = parseInt(route.slice(9), 10);
         if (Number.isInteger(categoryIndex) && categoryIndex >= 0 && categoryIndex < SIDEBAR_SECTIONS.length) {

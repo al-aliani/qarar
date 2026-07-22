@@ -58,7 +58,8 @@ export default defineConfig({
                 // كأنها تفتح التطبيق بدل الصفحة). أضيفت 2026-07-19 ضمن إصلاحات الجاهزية.
                 pricing: resolve(__dirname, 'web/pricing.html'),
                 why: resolve(__dirname, 'web/why.html'),
-                faq: resolve(__dirname, 'web/faq.html'),
+                // faq.html أُزيل من البناء 2026-07-22: يُحوَّل الآن 301 إلى help.html (المحتوى
+                // كان مكرَّراً حرفياً هناك) — انظر vercel.json لقاعدة التحويل.
                 deliverables: resolve(__dirname, 'web/deliverables.html'),
                 terms: resolve(__dirname, 'web/terms.html'),
                 privacy: resolve(__dirname, 'web/privacy.html'),

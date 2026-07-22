@@ -4,9 +4,17 @@
   "outputDirectory": "web/dist",
   "framework": null,
   "redirects": [
-    { "source": "/", "destination": "/landing.html", "permanent": false }
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.sahib.sa" }],
+      "destination": "https://sahib.sa/$1",
+      "permanent": true
+    },
+    { "source": "/landing.html", "destination": "/", "permanent": true },
+    { "source": "/faq.html", "destination": "/help.html", "permanent": true }
   ],
   "rewrites": [
+    { "source": "/", "destination": "/landing.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
