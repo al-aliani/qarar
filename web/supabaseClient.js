@@ -287,13 +287,18 @@ export async function signInWithOAuth(provider) {
  * إكمال إعادة التعيين نهائياً بعد إرسال البريد. الجذر (origin) هو نفسه SPA الرئيسي؛
  * detectSessionInUrl:true (مُفعَّل أعلاه) يلتقط رمز الاستعادة من الرابط تلقائياً ويُطلق
  * حدث PASSWORD_RECOVERY (معالجته في AuthGuard.js → NewPasswordModal.js).
+ *
+ * تدقيق حي 2026-07-22: الجذر لم يعد يصل للـSPA — vercel.json يحوّل "/" إلى
+ * "/landing.html" (صفحة تسويقية لا تُحمّل app.js ولا AuthGuard)، فرابط الاستعادة
+ * كان يهبط على صفحة بلا أي معالج فيتعذّر إكمال إعادة التعيين. index.html هو
+ * الصفحة الوحيدة التي تُحمّل AuthGuard، فيُوجَّه إليها صراحةً.
  */
 export async function resetPassword(email) {
   const { supabase, ok, error } = await getSupabaseClient();
   if (!ok) return { ok: false, error };
 
   const { error: e } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin
+    redirectTo: `${window.location.origin}/index.html`
   });
 
   if (e) return { ok: false, error: e.message };
@@ -394,7 +399,8 @@ export async function resendConfirmationEmail(email) {
     type: 'signup',
     email,
     options: {
-      emailRedirectTo: window.location.origin
+      // نفس سبب resetPassword أعلاه: "/" يُحوَّل إلى landing.html التي لا تُحمّل AuthGuard.
+      emailRedirectTo: `${window.location.origin}/index.html`
     }
   });
 
