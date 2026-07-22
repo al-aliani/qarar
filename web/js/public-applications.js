@@ -4,6 +4,8 @@ import { monitoring } from './utils/monitoring.js';
 
 trackEvent('public_page_view', { page: window.location.pathname.split('/').pop() || 'index.html' });
 
+const SUBMIT_LABEL = 'إرسال طلب مبدئي للمراجعة';
+
 const form = document.querySelector('[data-public-application]');
 if (form) {
     const status = form.querySelector('[data-form-status]');
@@ -18,7 +20,7 @@ if (form) {
         const { supabase, ok } = await getSupabaseClient();
         if (!ok || !supabase) {
             status.textContent = 'تعذر الاتصال حاليًا. حاول مرة أخرى لاحقًا.';
-            submit.disabled = false; submit.textContent = 'إرسال الطلب'; return;
+            submit.disabled = false; submit.textContent = SUBMIT_LABEL; return;
         }
         const { error } = await supabase.from('public_applications').insert({
             application_type: form.dataset.publicApplication,
@@ -40,6 +42,6 @@ if (form) {
             status.textContent = 'تم استلام طلبك بنجاح، وسنتواصل معك بعد مراجعته.';
             form.reset();
         }
-        submit.disabled = false; submit.textContent = 'إرسال الطلب';
+        submit.disabled = false; submit.textContent = SUBMIT_LABEL;
     });
 }

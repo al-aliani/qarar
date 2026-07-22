@@ -32,7 +32,7 @@ function mountForm() {
             <input name="sector" value="تسويق">
             <textarea name="summary">نبذة كافية هنا</textarea>
             <div data-form-status></div>
-            <button type="submit">إرسال الطلب</button>
+            <button type="submit">إرسال طلب مبدئي للمراجعة</button>
         </form>
     `;
 }
@@ -75,5 +75,16 @@ describe('public-applications.js — تسجيل الخطأ الفعلي عند �
 
         expect(captureExceptionMock).not.toHaveBeenCalled();
         expect(document.querySelector('[data-form-status]').textContent).toContain('تم استلام طلبك');
+    });
+
+    it('تدقيق حي 2026-07-22: زر الإرسال يعود لنص "طلب مبدئي" (لا التزام تعاقدي) بعد النجاح والفشل', async () => {
+        insertMock.mockResolvedValue({ error: null });
+        await import('../public-applications.js');
+        await submitAndSettle();
+        expect(document.querySelector('button[type="submit"]').textContent).toBe('إرسال طلب مبدئي للمراجعة');
+
+        insertMock.mockResolvedValue({ error: { message: 'فشل' } });
+        await submitAndSettle();
+        expect(document.querySelector('button[type="submit"]').textContent).toBe('إرسال طلب مبدئي للمراجعة');
     });
 });
