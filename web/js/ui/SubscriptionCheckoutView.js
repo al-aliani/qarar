@@ -2,6 +2,9 @@ import { PRICING_PACKAGES, formatPrice } from '../core/pricing.js';
 import { startCheckout } from '../services/PaymentService.js';
 import { store } from '../core/store.js';
 import { ProjectManager } from '../services/ProjectManager.js';
+import { getBankTransferConfig } from '../config.js';
+import { trackEvent } from '../utils/analytics.js';
+import { renderBankTransferPanel } from './components/BankTransferPanel.js';
 
 const ADDONS = [
     { id: 'priority_support', name: 'دعم أولوية', price: 99 },
@@ -54,14 +57,46 @@ export class SubscriptionCheckoutView {
     _renderCheckout() {
         const selected = sessionStorage.getItem('selected_package') || 'self';
         const pkg = PRICING_PACKAGES.find(p => p.id === selected && p.price > 0) || PRICING_PACKAGES.find(p => p.id === 'self');
-        this.container.innerHTML = `<div class="p-6 max-w-3xl mx-auto"><button id="checkoutBack" class="btn btn--ghost mb-4">← رجوع</button><h1 class="text-2xl font-bold mb-2">إكمال الطلب</h1><p class="text-muted mb-5">راجع الباقة والخدمات الإضافية قبل الانتقال إلى بوابة الدفع.</p><div class="card p-6"><div class="flex justify-between mb-4"><strong>${pkg.name}</strong><strong>${formatPrice(pkg.price)} ريال</strong></div><h2 class="text-sm font-bold mb-2">خدمات إضافية</h2>${ADDONS.map(a => `<label class="flex justify-between items-center py-2"><span><input type="checkbox" data-addon="${a.id}" data-price="${a.price}"> ${a.name}</span><span>${a.price} ريال</span></label>`).join('')}<div class="form-group mt-4"><label class="text-sm">كوبون الخصم</label><input id="checkoutCoupon" class="form-input w-full" dir="ltr" placeholder="WELCOME10"></div><div class="mt-5" style="border-top:1px solid var(--c-border)"><div class="flex justify-between py-2"><span>الإجمالي (شامل الضريبة)</span><span id="checkoutSubtotal"></span></div><div class="flex justify-between py-2"><span>الخصم المتوقع</span><span id="checkoutDiscount">يُتحقق منه عند الدفع</span></div><div class="flex justify-between py-2 text-muted" style="font-size:.9rem"><span>منها ضريبة القيمة المضافة (15%)</span><span id="checkoutVat"></span></div><div class="flex justify-between py-2 font-bold text-lg"><span>المطلوب دفعه</span><span id="checkoutTotal"></span></div></div><div id="checkoutError" class="text-danger text-sm mt-2" style="display:none"></div><div class="grid grid-cols-3 gap-2 mt-4"><button class="btn btn--primary" data-provider="moyasar">مدى / Apple Pay</button><button class="btn btn--secondary" data-provider="tamara">تمارا</button><button class="btn btn--secondary" data-provider="stripe">بطاقة دولية</button></div></div></div>`;
+        this._pkg = pkg;
+        // الدفع الوحيد المتاح تحويل بنكي (قرار مالك 2026-07-22 — بلا بوابات إلكترونية).
+        const bankReady = !!getBankTransferConfig();
+        const payAction = bankReady
+            ? `<button class="btn btn--primary btn-block mt-4" id="checkoutPayBank">الدفع بتحويل بنكي</button>`
+            : `<p class="text-danger text-sm mt-4">الدفع بتحويل بنكي غير متاح مؤقتاً — تواصل معنا لإتمام الطلب.</p>`;
+        this.container.innerHTML = `<div class="p-6 max-w-3xl mx-auto"><button id="checkoutBack" class="btn btn--ghost mb-4">← رجوع</button><h1 class="text-2xl font-bold mb-2">إكمال الطلب</h1><p class="text-muted mb-5">راجع الباقة والخدمات الإضافية، ثم أرسل طلب الدفع بتحويل بنكي.</p><div class="card p-6" id="checkoutCard"><div class="flex justify-between mb-4"><strong>${pkg.name}</strong><strong>${formatPrice(pkg.price)} ريال</strong></div><h2 class="text-sm font-bold mb-2">خدمات إضافية</h2>${ADDONS.map(a => `<label class="flex justify-between items-center py-2"><span><input type="checkbox" data-addon="${a.id}" data-price="${a.price}"> ${a.name}</span><span>${a.price} ريال</span></label>`).join('')}<div class="form-group mt-4"><label class="text-sm">كوبون الخصم</label><input id="checkoutCoupon" class="form-input w-full" dir="ltr" placeholder="WELCOME10"></div><div class="mt-5" style="border-top:1px solid var(--c-border)"><div class="flex justify-between py-2"><span>الإجمالي (شامل الضريبة)</span><span id="checkoutSubtotal"></span></div><div class="flex justify-between py-2"><span>الخصم المتوقع</span><span id="checkoutDiscount">يُتحقق منه عند الدفع</span></div><div class="flex justify-between py-2 text-muted" style="font-size:.9rem"><span>منها ضريبة القيمة المضافة (15%)</span><span id="checkoutVat"></span></div><div class="flex justify-between py-2 font-bold text-lg"><span>المطلوب دفعه</span><span id="checkoutTotal"></span></div></div><div id="checkoutError" class="text-danger text-sm mt-2" style="display:none"></div>${payAction}</div></div>`;
         this.container.querySelector('#checkoutBack')?.addEventListener('click', () => this.onBack());
         this.container.querySelectorAll('[data-addon]').forEach(el => el.addEventListener('change', () => this.update(pkg)));
-        this.container.querySelectorAll('[data-provider]').forEach(btn => btn.addEventListener('click', () => this.pay(pkg, btn)));
+        this.container.querySelector('#checkoutPayBank')?.addEventListener('click', (e) => this.payBankTransfer(pkg, e.currentTarget));
         this.update(pkg);
     }
 
     selectedAddons(){ return [...this.container.querySelectorAll('[data-addon]:checked')].map(el => el.dataset.addon); }
     update(pkg){ const subtotal=pkg.price+[...this.container.querySelectorAll('[data-addon]:checked')].reduce((s,e)=>s+Number(e.dataset.price),0); const vat=subtotal - subtotal/1.15; this.container.querySelector('#checkoutSubtotal').textContent=formatPrice(subtotal)+' ريال'; this.container.querySelector('#checkoutVat').textContent=formatPrice(Math.round(vat))+' ريال'; this.container.querySelector('#checkoutTotal').textContent=formatPrice(subtotal)+' ريال'; }
-    async pay(pkg, button){ const errorEl=this.container.querySelector('#checkoutError'); errorEl.style.display='none'; if(!this.studyId){ errorEl.textContent='ابدأ دراستك أولاً ثم ادفع لفتحها.'; errorEl.style.display='block'; return; } button.disabled=true; const old=button.textContent; button.textContent='جاري التجهيز...'; const result=await startCheckout({tier:pkg.id,studyId:this.studyId,provider:button.dataset.provider,addons:this.selectedAddons(),coupon:this.container.querySelector('#checkoutCoupon').value}); if(result.ok){window.location.href=result.checkoutUrl;return;} errorEl.textContent=result.error||'تعذر بدء الدفع';errorEl.style.display='block';button.disabled=false;button.textContent=old;}
+
+    /**
+     * تحويل بنكي (قناة يدوية وحيدة — قرار مالك 2026-07-22): يُنشئ طلباً pending عبر
+     * create-checkout بلا رابط دفع خارجي، ثم يعرض بيانات حساب الشركة عبر اللوحة
+     * المشتركة BankTransferPanel (نفس منطق PaywallModal.js المُثبَت). يؤكّده الأدمن
+     * يدوياً بعد وصول الحوالة فيصبح status='paid' ويُفتح التصدير.
+     */
+    async payBankTransfer(pkg, button) {
+        const errorEl = this.container.querySelector('#checkoutError');
+        errorEl.style.display = 'none';
+        if (!this.studyId) { errorEl.textContent = 'ابدأ دراستك أولاً ثم ادفع لفتحها.'; errorEl.style.display = 'block'; return; }
+        button.disabled = true;
+        const old = button.textContent;
+        button.textContent = 'جاري تجهيز الطلب...';
+        trackEvent('checkout_start', { tier: pkg.id, provider: 'bank_transfer' });
+        const result = await startCheckout({ tier: pkg.id, studyId: this.studyId, provider: 'bank_transfer', addons: this.selectedAddons(), coupon: this.container.querySelector('#checkoutCoupon').value });
+        if (result.ok && result.bankTransfer) {
+            const card = this.container.querySelector('#checkoutCard');
+            renderBankTransferPanel(card, { tier: pkg.id, orderId: result.orderId, amount: result.amount, onBack: () => this._renderCheckout() });
+            return;
+        }
+        trackEvent('payment_error', { tier: pkg.id, provider: 'bank_transfer', message: result.error || 'bank_transfer_failed' });
+        errorEl.textContent = result.error || 'تعذّر إنشاء طلب التحويل البنكي. حاول لاحقاً.';
+        errorEl.style.display = 'block';
+        button.disabled = false;
+        button.textContent = old;
+    }
 }
