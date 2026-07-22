@@ -6,19 +6,28 @@
  * ثقة مباشرة. هذا يثبّت أن PaywallModal يعرض الباقات المدفوعة بأسعارها الحقيقية
  * (من pricing.js، مصدر الحقيقة الوحيد) والدفع داخل المنصة بلا طلب عبر واتساب.
  *
- * تدقيق 2026-07-09 (أتمتة الدفع): القرار السابق ("لا بوابة دفع، تواصل يدوي فقط")
- * حُدِّث صراحة — أُضيف دفع فعلي (Moyasar/Stripe) لكل الباقات الثلاث، وكلها
- * channel:'app' في pricing.js تُعرض بالدفع المباشر داخل المنصة بلا أي زر واتساب.
- * هذا الملف يثبّت أن الباقات الثلاث (ذاتي/مراجَع بخبير/خدمة كاملة) تعرض الدفع
- * داخل المنصة بلا زر واتساب.
+ * قرار مالك 2026-07-22 (بلا بوابات إلكترونية): كانت هذه النافذة (تدقيق حي)
+ * لا تزال تعرض Moyasar/تمارا/Stripe فعلياً رغم أن القرار طُبِّق فعلاً في
+ * SubscriptionCheckoutView.js — هذا يثبّت التوحيد: زر تحويل بنكي وحيد فقط.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PaywallModal } from '../PaywallModal.js';
 import { PRICING_PACKAGES, formatPrice } from '../../core/pricing.js';
 
-const startCheckoutMock = vi.fn(async () => ({ ok: true, checkoutUrl: 'https://pay.example.com/xyz' }));
+const startCheckoutMock = vi.fn(async () => ({ ok: true, bankTransfer: true, orderId: 'order-1', amount: 299 }));
 vi.mock('../../services/PaymentService.js', () => ({
     startCheckout: (...a) => startCheckoutMock(...a),
+}));
+
+const getBankTransferConfigMock = vi.fn(() => ({ beneficiaryName: 'شركة شفق الأعمال التجارية', bankName: 'بنك البلاد', iban: 'SA5815000900142467710006' }));
+vi.mock('../../config.js', async (importOriginal) => {
+    const actual = await importOriginal();
+    return { ...actual, getBankTransferConfig: (...a) => getBankTransferConfigMock(...a) };
+});
+
+const renderBankTransferPanelMock = vi.fn();
+vi.mock('../components/BankTransferPanel.js', () => ({
+    renderBankTransferPanel: (...a) => renderBankTransferPanelMock(...a),
 }));
 
 function fakeStore(state = {}) {
@@ -29,6 +38,8 @@ describe('PaywallModal — عرض الباقات المدفوعة بأسعار p
     beforeEach(() => {
         document.body.innerHTML = '';
         startCheckoutMock.mockClear();
+        renderBankTransferPanelMock.mockClear();
+        getBankTransferConfigMock.mockReset().mockReturnValue({ beneficiaryName: 'شركة شفق الأعمال التجارية', bankName: 'بنك البلاد', iban: 'SA5815000900142467710006' });
         delete window.location;
         window.location = { href: '' };
     });
@@ -52,15 +63,15 @@ describe('PaywallModal — عرض الباقات المدفوعة بأسعار p
         expect(document.querySelector('.btn-whatsapp-upgrade')).toBeNull();
     });
 
-    it('كل باقة تعرض زرَّي دفع فعليين (Moyasar وStripe)', () => {
+    it('كل باقة تعرض زر تحويل بنكي وحيداً، بلا أي مزوّد إلكتروني (moyasar/tamara/stripe)', () => {
         const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
         modal.open('تقرير PDF شامل');
 
-        const moyasarButtons = document.querySelectorAll('.btn-pay-now[data-provider="moyasar"]');
-        const stripeButtons = document.querySelectorAll('.btn-pay-now[data-provider="stripe"]');
         const paidCount = PRICING_PACKAGES.filter(pkg => pkg.price > 0).length;
-        expect(moyasarButtons).toHaveLength(paidCount);
-        expect(stripeButtons).toHaveLength(paidCount);
+        expect(document.querySelectorAll('.btn-pay-now[data-provider="bank_transfer"]')).toHaveLength(paidCount);
+        expect(document.querySelector('[data-provider="moyasar"]')).toBeNull();
+        expect(document.querySelector('[data-provider="tamara"]')).toBeNull();
+        expect(document.querySelector('[data-provider="stripe"]')).toBeNull();
     });
 
     it('باقة "ذاتي" تعرض الدفع داخل المنصة فقط', () => {
@@ -87,23 +98,32 @@ describe('PaywallModal — عرض الباقات المدفوعة بأسعار p
         });
     });
 
-    it('النقر على زر الدفع المباشر يستدعي startCheckout بالمعطيات الصحيحة ويوجّه المتصفح لرابط الدفع', async () => {
+    it('إعداد بنكي غير صالح (null) ⇒ رسالة "غير متاح" بدل زر مكسور', () => {
+        getBankTransferConfigMock.mockReturnValue(null);
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
+        modal.open('تقرير PDF شامل');
+
+        expect(document.querySelector('.btn-pay-now')).toBeNull();
+        expect(document.querySelector('.paywall-modal').textContent).toContain('غير متاح');
+    });
+
+    it('النقر على زر التحويل البنكي ينشئ طلباً بـprovider=bank_transfer ويعرض لوحة الحساب البنكي', async () => {
         const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-42' } }));
         modal.open('تقرير PDF شامل');
 
-        const btn = document.querySelector('.btn-pay-now[data-package="self"][data-provider="moyasar"]');
+        const btn = document.querySelector('.btn-pay-now[data-package="self"][data-provider="bank_transfer"]');
         btn.click();
         await new Promise(r => setTimeout(r, 0));
 
-        expect(startCheckoutMock).toHaveBeenCalledWith({ tier: 'self', studyId: 'study-42', provider: 'moyasar' });
-        expect(window.location.href).toBe('https://pay.example.com/xyz');
+        expect(startCheckoutMock).toHaveBeenCalledWith({ tier: 'self', studyId: 'study-42', provider: 'bank_transfer' });
+        expect(renderBankTransferPanelMock).toHaveBeenCalledTimes(1);
     });
 
     it('بلا معرّف دراسة صالح: يعرض خطأً واضحاً ولا يستدعي startCheckout', async () => {
         const modal = new PaywallModal('paywallOverlay', fakeStore({}));
         modal.open('تقرير PDF شامل');
 
-        const btn = document.querySelector('.btn-pay-now[data-package="self"][data-provider="moyasar"]');
+        const btn = document.querySelector('.btn-pay-now[data-package="self"][data-provider="bank_transfer"]');
         btn.click();
         await new Promise(r => setTimeout(r, 0));
 
@@ -118,7 +138,7 @@ describe('PaywallModal — عرض الباقات المدفوعة بأسعار p
         const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
         modal.open('تقرير PDF شامل');
 
-        const btn = document.querySelector('.btn-pay-now[data-package="self"][data-provider="moyasar"]');
+        const btn = document.querySelector('.btn-pay-now[data-package="self"][data-provider="bank_transfer"]');
         btn.click();
         await new Promise(r => setTimeout(r, 0));
 
@@ -164,6 +184,7 @@ describe('PaywallModal — عرض الباقات المدفوعة بأسعار p
 describe('PaywallModal — ملاحظة شفافية عند توصية NO-GO/REVISE', () => {
     beforeEach(() => {
         document.body.innerHTML = '';
+        getBankTransferConfigMock.mockReset().mockReturnValue({ beneficiaryName: 'شركة شفق الأعمال التجارية', bankName: 'بنك البلاد', iban: 'SA5815000900142467710006' });
     });
 
     it('results.decision = NO-GO: تظهر ملاحظة تحذيرية ولا تمنع عرض الباقات', () => {

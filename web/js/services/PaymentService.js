@@ -83,7 +83,13 @@ export async function getOrderStatus(orderId) {
         .eq('id', orderId)
         .single();
 
-    if (error || !data) return null;
+    // تدقيق حي 2026-07-22: كان أي خطأ (بما فيه 500 من حلقة RLS بين orders/reviewers،
+    // انظر supabase/migrations/20260722092000_*) يُبتلَع بصمت ويُعاد null — فلا يفرّق
+    // PaymentReturnView.js بين "لا رد بعد" و"خطأ خادم حقيقي"، ويستمر بالاستطلاع 20 ثانية
+    // كاملة حتى لمعرّف غير موجود إطلاقاً أو عطل خادمي. نرمي الخطأ الآن ليوقف الاستطلاع
+    // فوراً ويعرض المستدعي فشلاً واضحاً بدل انتظار عبثي.
+    if (error) throw new Error(error.message || 'تعذّر التحقق من حالة الطلب');
+    if (!data) return null;
     return data.status;
 }
 

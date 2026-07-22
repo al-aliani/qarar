@@ -37,7 +37,15 @@ export class PaymentReturnView {
 
     async _pollUntilResolved() {
         for (let attempt = 0; attempt < MAX_ATTEMPTS && !this._stopped; attempt++) {
-            const status = await getOrderStatus(this.orderId);
+            let status;
+            try {
+                status = await getOrderStatus(this.orderId);
+            } catch (e) {
+                // خطأ خادم حقيقي (أو معرّف طلب غير موجود إطلاقاً) — لا فائدة من الاستمرار
+                // بالاستطلاع 20 ثانية كاملة؛ نعرض فشلاً واضحاً فوراً بدل "قيد المعالجة" مضلِّلة.
+                monitoring.captureException(e, { orderId: this.orderId });
+                return this._renderState('error', 'تعذّر التحقق من حالة هذا الطلب. تأكد من الرابط، أو تواصل مع الدعم الفني.');
+            }
             if (status === 'paid') return this._renderState('paid');
             if (status === 'failed') return this._renderState('failed');
             if (status === 'refunded') return this._renderState('refunded');

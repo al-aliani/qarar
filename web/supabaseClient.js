@@ -14,6 +14,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { toE164SaudiPhone } from "./js/utils/phoneUtils.js";
+import { storageManager } from "./js/utils/storageManager.js";
 
 /** قراءة متغيّر بيئة Vite بأمان (import.meta.env قد لا يوجد في بيئة اختبار Node) */
 function envVar(name) {
@@ -229,11 +230,25 @@ export async function signOut() {
   }
   _client = null;
   _clientPromise = null;
+  // تدقيق حي 2026-07-22: كان يُمسح فقط feas_project_*/sb-* من localStorage — يترك على
+  // جهاز مشترك: آخر خطوة/تصنيف وصل إليها المستخدم السابق، تنظيم مجلداته، تفضيل وضع
+  // الدراسة، مفتاح OpenAI الذي أدخله في «أدوات مساندة» (بيانات اعتماد بنص صريح)، ونسخ
+  // IndexedDB الاحتياطية للمشاريع الكبيرة (storageManager.js يُرآة feas_project_* الكبيرة
+  // هناك أيضاً — localStorage.removeItem وحدها لا تمسّها). storageManager.removeItem
+  // يمسح الاثنين معاً لكل مفتاح.
   if (typeof localStorage !== "undefined") {
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith("sb-") || k.startsWith("feas_project_"))
-      .forEach((k) => localStorage.removeItem(k));
+    const keysToWipe = Object.keys(localStorage).filter((k) =>
+      k.startsWith("sb-") ||
+      k.startsWith("feas_project_") ||
+      k === "feas_last_step_index" ||
+      k === "feas_last_category_index" ||
+      k === "feas_folders" ||
+      k === "study_mode_preference" ||
+      k === "qarar_integration_openai_key"
+    );
+    await Promise.all(keysToWipe.map((k) => storageManager.removeItem(k)));
   }
+  try { sessionStorage.removeItem("selected_package"); } catch (_) { /* تجاهل بيئات بلا sessionStorage */ }
   location.reload();
 }
 

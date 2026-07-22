@@ -9,8 +9,9 @@ vi.mock('../../services/PaymentService.js', () => ({
 }));
 
 const captureMessageMock = vi.fn();
+const captureExceptionMock = vi.fn();
 vi.mock('../../utils/monitoring.js', () => ({
-    monitoring: { captureMessage: captureMessageMock },
+    monitoring: { captureMessage: captureMessageMock, captureException: captureExceptionMock },
 }));
 
 // تدقيق 2026-07-10: buildWhatsAppLink صار يُعيد null بلا رقم مضبوط (تراجع رشيق) بدل
@@ -153,6 +154,18 @@ describe('PaymentReturnView', () => {
         expect(waLink.getAttribute('target')).toBe('_blank');
         const decoded = decodeURIComponent(waLink.getAttribute('href').split('text=')[1]);
         expect(decoded).toContain('order-xyz');
+    });
+
+    it('خطأ خادم حقيقي (مثال: 500 من حلقة RLS) أو معرّف غير موجود: يعرض فشلاً فورياً بلا انتظار', async () => {
+        // تدقيق حي 2026-07-22: كان getOrderStatus يبتلع الخطأ ويُعيد null، فيُعامَل كـ"لا رد
+        // بعد" ويستمر الاستطلاع لعشرين ثانية كاملة قبل "لا يزال قيد المعالجة" — مضلِّل لمعرّف
+        // مزوَّر أو عطل خادمي حقيقي. الآن getOrderStatus يرمي، ويجب أن نتوقف من أول محاولة.
+        getOrderStatusMock.mockRejectedValue(new Error('infinite recursion detected in policy for relation "orders"'));
+        const { PaymentReturnView } = await import('../PaymentReturnView.js');
+        const view = new PaymentReturnView('root', { orderId: 'fake-order' });
+        await view.render();
+        expect(getOrderStatusMock).toHaveBeenCalledTimes(1);
+        expect(document.getElementById('root').textContent).toContain('تعذّر التحقق من حالة هذا الطلب');
     });
 
     it('حالة still_pending: يعرض رابط واتساب أيضاً (انتظار طويل قد يحتاج دعماً)', async () => {

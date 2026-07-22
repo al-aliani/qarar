@@ -122,10 +122,12 @@ describe('getOrderStatus', () => {
         expect(await getOrderStatus('order-1')).toBe('paid');
     });
 
-    it('خطأ أو غياب الصف ⇒ null', async () => {
+    it('خطأ من القاعدة (بما فيه معرّف غير موجود) ⇒ يُرمى بدل إعادة null بصمت', async () => {
+        // تدقيق حي 2026-07-22: كان يُبتلَع بصمت ويُعاد null، فيعامله PaymentReturnView
+        // كـ"لا رد بعد" ويستمر بالاستطلاع 20 ثانية بدل عرض فشل واضح فوراً.
         selectChain.single.mockResolvedValue({ data: null, error: { message: 'not found' } });
         const { getOrderStatus } = await import('../PaymentService.js');
-        expect(await getOrderStatus('missing')).toBeNull();
+        await expect(getOrderStatus('missing')).rejects.toThrow('not found');
     });
 });
 

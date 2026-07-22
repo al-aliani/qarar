@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize Auth Guard
   const authResult = await AuthGuard.init({
     requireAuth: false, // تم إيقاف فرض الدخول مؤقتاً للتجربة
-    onAuthChange: ({ event, user, isAuthenticated }) => {
+    onAuthChange: async ({ event, user, isAuthenticated }) => {
       console.log('[App] Auth state changed:', event, isAuthenticated);
 
       // Show notification on login/logout
@@ -206,6 +206,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (event === 'SIGNED_IN' && user) {
         const displayName = user.user_metadata?.full_name || user.email || '';
         toast.success(displayName ? `مرحباً ${displayName}!` : 'أهلاً بك — تم تسجيل الدخول');
+
+        // تدقيق حي 2026-07-22: العائد من Google OAuth ينفّذ إعادة توجيه صفحة كاملة
+        // (AuthModalStub.js → window.location.href = google_url)، فأي منطق داخل النافذة
+        // لا يعمل — يُعاد بناء التطبيق من الصفر هنا. نطبّق نفس فحص الباقة المختارة
+        // (المطبَّق أصلاً بمسار الجوال/البريد داخل نافذة الدخول) ليعمل أيضاً بعد Google.
+        try {
+          const selectedPackage = sessionStorage.getItem('selected_package');
+          if (['free', 'self', 'reviewed', 'full'].includes(selectedPackage)) {
+            const { updateUserProfile } = await import('./supabaseClient.js');
+            await updateUserProfile({ preferred_tier: selectedPackage });
+          }
+          if (selectedPackage && selectedPackage !== 'free') window.location.hash = '#/checkout';
+          else if (selectedPackage) sessionStorage.removeItem('selected_package');
+        } catch (_) { /* لا نمنع نجاح الدخول بسبب فشل حفظ/تطبيق الباقة المفضّلة */ }
       } else if (event === 'SIGNED_OUT') {
         toast.info('تم تسجيل الخروج');
       }
@@ -243,6 +257,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cleanPackageUrl = new URL(window.location.href);
     cleanPackageUrl.searchParams.delete('pkg');
     window.history.replaceState({}, '', cleanPackageUrl);
+  }
+
+  // تنفيذ ?auth=1 الفعلي: كان يُقرأ ويُنظَّف من الرابط بلا فتح شاشة الدخول (تدقيق حي
+  // 2026-07-22) — زائر صفحة الأسعار يصل للوحة عامة بلا أي دعوة لتسجيل الدخول وتضيع
+  // نية الشراء. لا نعرضها لمن هو مسجّل دخوله بالفعل.
+  if (wantsAuth && !authResult.authenticated) {
+    import('./js/ui/AuthModalStub.js').then(({ AuthModal }) => {
+      new AuthModal('authModalContainer', {}).open();
+    });
   }
 
   // حلقة نمو: زائر وصل عبر رابط مشاركة دراسة (index.html?ref=<share_token>) ثم ضغط

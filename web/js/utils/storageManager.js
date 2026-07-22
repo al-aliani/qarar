@@ -16,8 +16,10 @@ class StorageManager {
     }
 
     async _init() {
-        // Check if IndexedDB is available
-        if ('indexedDB' in window) {
+        // Check if IndexedDB is available (typeof-guarded: supabaseClient.js now imports
+        // this module statically, so it must not crash when loaded in a non-browser test
+        // environment where `window` itself is undefined, not just `indexedDB`).
+        if (typeof window !== 'undefined' && 'indexedDB' in window) {
             try {
                 this.db = await this._openDB();
                 this.useIndexedDB = true;

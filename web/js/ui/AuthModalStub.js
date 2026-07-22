@@ -280,7 +280,7 @@ export class AuthModal {
                 });
             };
             try {
-                const { signIn, signUp, getSupabaseClient } = await import('../../supabaseClient.js');
+                const { signIn, signUp, getSupabaseClient, updateUserProfile } = await import('../../supabaseClient.js');
                 const { ok } = await getSupabaseClient();
                 if (!ok) { trackAuthFailure('supabase_unavailable'); showErr('Supabase غير مهيأ. لا يمكن الدخول أو إنشاء حساب.'); return; }
                 // حلقة نمو (share_token → تسجيل): التقطها app.js من ?ref= عند الوصول من رابط
@@ -310,10 +310,24 @@ export class AuthModal {
                         const mfaResult = await challengeMfaIfNeeded();
                         if (!mfaResult.ok) { trackEvent('mfa_failed', { reason: 'challenge_failed' }); return; }
                     }
+                    // تدقيق حي 2026-07-22: الدخول هنا لم يكن يوجّه أبداً لـ#/checkout ولا يطبّق
+                    // الباقة المختارة من صفحة الأسعار — نفس المنطق المطبَّق فعلياً في مسار
+                    // الجوال/OTP (PhoneAuthModal.js:144-157)، هنا لبريد/كلمة المرور.
+                    try {
+                        const selectedPackage = sessionStorage.getItem('selected_package');
+                        if (['free', 'self', 'reviewed', 'full'].includes(selectedPackage)) {
+                            await updateUserProfile({ preferred_tier: selectedPackage });
+                        }
+                    } catch (_) { /* لا نمنع نجاح الدخول بسبب فشل حفظ الباقة المفضّلة */ }
                     this._succeeded = true;
                     trackEvent(isSignUp ? 'signup_complete' : 'login_complete', {});
                     if (this.onSuccess) this.onSuccess({ success: true });
                     this.close();
+                    try {
+                        const selectedPackage = sessionStorage.getItem('selected_package');
+                        if (selectedPackage && selectedPackage !== 'free') window.location.hash = '#/checkout';
+                        else sessionStorage.removeItem('selected_package');
+                    } catch (_) { /* تجاهل بيئات بلا sessionStorage/hash */ }
                 } else {
                     const isEmailNotConfirmed = (error || '').toLowerCase().includes('email not confirmed');
                     trackAuthFailure(isEmailNotConfirmed ? 'email_not_confirmed' : 'invalid_credentials');

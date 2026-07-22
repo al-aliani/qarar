@@ -3,12 +3,11 @@
  * المالك): كان الموقع يسوّق ثلاث باقات مدفوعة (299/1999/4999 ريال) بلا أي حاجز
  * فعلي يمنع الوصول المجاني للتقرير النهائي — فجوة ثقة مباشرة بين التسويق والمنتج.
  *
- * تدقيق 2026-07-09 (أتمتة الدفع): أُضيف دفع فعلي (Moyasar/Stripe عبر
- * PaymentService.js → Edge Functions) لكل الباقات المدفوعة. القرار الحالي:
- * الباقات المدفوعة الثلاث (ذاتي/مراجَع بخبير/خدمة كاملة) كلها channel:'app'
- * في pricing.js، وتُعرض بنفس أزرار الدفع المباشر داخل المنصة (مدى/تمارا/Stripe)
- * بلا أي مسار واتساب. المراجعة/الإعداد اليدوي في باقتَي «مراجَع بخبير»/«خدمة
- * كاملة» يجريان بعد إتمام الدفع لا قبله.
+ * قرار مالك 2026-07-22 (بلا بوابات إلكترونية): الدفع بالمنصة أصبح تحويلاً بنكياً
+ * فقط — SubscriptionCheckoutView.js طُبِّق فيه هذا القرار، لكن هذه النافذة (بوابة
+ * الدفع الأخرى، تُفتح من ExportMenu.js/ShareStudyView.js) بقيت تعرض Moyasar/
+ * تمارا/Stripe فعلياً (تدقيق حي 2026-07-22) رغم القرار — إصلاح هنا يوحّد
+ * المسارين على زر تحويل بنكي وحيد، بنفس منطق BankTransferPanel المشترك.
  */
 import { PRICING_PACKAGES, formatPrice } from '../core/pricing.js';
 import { REFUND_POLICY, getBankTransferConfig } from '../config.js';
@@ -96,19 +95,9 @@ export class PaywallModal {
             const features = pkg.features || [];
             const payButtons = `
                 <div class="paywall-pay-buttons" style="display:flex;flex-direction:column;gap:6px;">
-                    <button type="button" class="btn btn--primary btn-block btn-pay-now" data-package="${pkg.id}" data-provider="moyasar">
-                        ادفع الآن (مدى / Apple Pay / STC Pay)
-                    </button>
-                    <button type="button" class="btn btn--outline btn-block btn-pay-now" data-package="${pkg.id}" data-provider="tamara">
-                        قسّطها مع تمارا
-                    </button>
-                    <button type="button" class="btn btn--outline btn-block btn-pay-now" data-package="${pkg.id}" data-provider="stripe">
-                        ادفع ببطاقة دولية
-                    </button>
-                    ${this.bankCfg ? `
-                    <button type="button" class="btn btn--outline btn-block btn-pay-now" data-package="${pkg.id}" data-provider="bank_transfer">
-                        تحويل بنكي على حساب الشركة
-                    </button>` : ''}
+                    ${this.bankCfg
+                        ? `<button type="button" class="btn btn--primary btn-block btn-pay-now" data-package="${pkg.id}" data-provider="bank_transfer">تحويل بنكي على حساب الشركة</button>`
+                        : `<p class="text-danger text-xs" style="margin:4px 0;">الدفع بتحويل بنكي غير متاح مؤقتاً — تواصل معنا لإتمام الطلب.</p>`}
                 </div>`;
             return `
                 <div class="card paywall-package-card ${pkg.recommended ? 'paywall-package-card--recommended' : ''}" data-package-card="${pkg.id}" style="padding:16px;border-radius:12px;">
@@ -188,7 +177,6 @@ export class PaywallModal {
 
     async _handlePayNow(btn) {
         const tier = btn.dataset.package;
-        const provider = btn.dataset.provider;
         const errEl = this.overlay.querySelector('#paywallPayError');
         const showErr = (msg) => { if (errEl) { errEl.textContent = msg || ''; errEl.style.display = msg ? 'block' : 'none'; } };
 
@@ -197,33 +185,8 @@ export class PaywallModal {
             return;
         }
 
-        if (provider === 'bank_transfer') {
-            return this._handleBankTransfer(btn, tier, showErr);
-        }
-
-        const orig = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = 'جاري تجهيز الدفع...';
-        showErr('');
-
-        trackEvent('checkout_start', { tier, provider });
-        const result = await startCheckout({ tier, studyId: this.studyId, provider });
-        if (result.ok && result.checkoutUrl) {
-            window.location.href = result.checkoutUrl;
-            return;
-        }
-        // كوبون خصم 100%: الخادم أكّد الطلب paid مباشرة بلا مزوّد دفع — نوجّه لنفس
-        // صفحة نتيجة الدفع التي يعود لها العميل بعد أي مزوّد حقيقي، لإعادة استخدام
-        // منطقها الموجود (فتح التصدير + رسالة النجاح) بدل بناء مسار جديد.
-        if (result.ok && result.freeViaCoupon) {
-            window.location.hash = `#/payment-return?order=${result.orderId}`;
-            return;
-        }
-
-        showErr(result.error || 'تعذّر بدء عملية الدفع. حاول مرة أخرى لاحقاً.');
-        trackEvent('payment_error', { tier, provider, message: result.error || 'checkout_failed' });
-        btn.disabled = false;
-        btn.textContent = orig;
+        // التحويل البنكي هو مسار الدفع الوحيد المتاح الآن (قرار مالك 2026-07-22).
+        return this._handleBankTransfer(btn, tier, showErr);
     }
 
     /**

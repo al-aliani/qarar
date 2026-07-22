@@ -1,5 +1,6 @@
 import { getSupabaseClient } from '../supabaseClient.js';
 import { trackEvent } from './utils/analytics.js';
+import { monitoring } from './utils/monitoring.js';
 
 trackEvent('public_page_view', { page: window.location.pathname.split('/').pop() || 'index.html' });
 
@@ -27,7 +28,13 @@ if (form) {
             sector: String(values.sector || '').trim(),
             summary: String(values.summary || '').trim()
         });
-        if (error) status.textContent = 'لم يتم إرسال الطلب. تحقق من البيانات وحاول مجددًا.';
+        if (error) {
+            // تدقيق حي 2026-07-22: كان الخطأ الفعلي (مثال: قيد phone بطول 9-20 حرفاً في
+            // public_applications.sql) يُبتلَع بصمت — رسالة عامة واحدة لكل سبب فشل ممكن،
+            // بلا أي أثر يساعد على التشخيص لاحقاً.
+            monitoring.captureException(error, { applicationType: form.dataset.publicApplication });
+            status.textContent = 'لم يتم إرسال الطلب. تحقق من البيانات وحاول مجددًا.';
+        }
         else {
             trackEvent('public_application_submitted', { application_type: form.dataset.publicApplication || 'unknown' });
             status.textContent = 'تم استلام طلبك بنجاح، وسنتواصل معك بعد مراجعته.';
