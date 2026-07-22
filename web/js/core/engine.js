@@ -9,7 +9,7 @@ import { explainDecisionBreakers } from './DecisionExplainer.js';
 import { analyzePartnerNeeds } from './partnerNeeds.js';
 import { calculateZakatAndTax } from './financial/tax.js';
 import { calculateNPV, calculateIRR, calculateMIRR, calculateTerminalValue } from './financial/cashflow.js';
-import { buildDepreciationModel } from './financial/depreciation.js';
+import { buildDepreciationModel, itemDepAtYear } from './financial/depreciation.js';
 import { buildFinancialRatios } from './financial/ratios.js';
 import { buildRevenueModel } from './financial/revenue.js';
 import { computeStressSurvival } from './financial/stressTestMath.js';
@@ -453,7 +453,7 @@ export function calculateStudy(study, overrides) {
         capexBreakdown.envMitigation;
     const {
         annualDepreciation,
-        permanentAnnualDep,
+        permanentDepAtYear,
         replaceableDepAtYear,
         getReplacementCostAtYear,
         replaceableItems
@@ -476,7 +476,7 @@ export function calculateStudy(study, overrides) {
         category: it.category,
         annualDepreciation: it.dep,
         usefulLifeYears: it.life || null,
-        byYear: Array.from({ length: years }, (_, idx) => (it.life > 0 && (idx + 1) <= it.life) ? it.dep : 0)
+        byYear: Array.from({ length: years }, (_, idx) => itemDepAtYear(it, idx + 1))
     }));
 
     let totalCapex = Object.values(capexBreakdown).reduce((a, b) => a + b, 0);
@@ -773,9 +773,11 @@ export function calculateStudy(study, overrides) {
         replacementCost += checkReplacement(techResources.techResources, 0.25);
 
         // Bug B: الإهلاك الدفتري لا يبقى ثابتاً للأبد — الأصناف القابلة للإحلال
-        // تتوقف عن الإهلاك الدفتري بعد استنفاد عمرها الأصلي (صُرِفت نقداً كإحلال)،
-        // بينما يستمر الجزء الدائم (مبانٍ/تأسيس/خدمات). هذا يزيل ازدواج الصرف.
-        const depreciation = permanentAnnualDep + replaceableDepAtYear(i) + establishmentAmortAtYear(i);
+        // تتوقف عن الإهلاك الدفتري بعد استنفاد عمرها الأصلي (صُرِفت نقداً كإحلال).
+        // تصحيح إضافي (تدقيق حي 2026-07-22): الجزء «الدائم» (مبانٍ/مركبات/خدمات) كان
+        // يُفترَض خطأً أنه يستمر للأبد بلا سقف، فيتجاوز تراكمه تكلفة الأصل ويكسر توازن
+        // الميزانية بعد انتهاء عمره الافتراضي — الآن يتوقف عند life كل عنصر أيضاً.
+        const depreciation = permanentDepAtYear(i) + replaceableDepAtYear(i) + establishmentAmortAtYear(i);
         const ebit = ebitdaFinal - depreciation;
 
         // فائدة وأصل القرض من جدول السداد الفعلي (PMT + فترة سماح)

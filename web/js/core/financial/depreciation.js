@@ -9,6 +9,18 @@ function rateOrDefault(v, dflt) {
     return Number.isFinite(n) ? n : dflt;
 }
 
+/**
+ * إهلاك عنصر في سنة مُعيَّنة — يُوقِف الإهلاك بعد life (كما كان)، ويُقيِّد أيضاً
+ * السنة الأخيرة كي لا يتجاوز تراكم الإهلاك base (تكلفة العنصر القابلة للإهلاك).
+ * ضروري لأن life = Math.round(1/rate) تقريب صحيح لأقرب سنة — فمعدل مثل 15%
+ * (life=7) يُراكم 7×dep = 105% من base بلا هذا القيد، لا 100% بالضبط.
+ */
+export function itemDepAtYear(it, yr) {
+    if (!(it.life > 0) || yr > it.life) return 0;
+    const accruedBefore = it.dep * (yr - 1);
+    return Math.max(0, Math.min(it.dep, it.base - accruedBefore));
+}
+
 export function buildDepreciationModel(ctx) {
     const {
         technical,
@@ -38,33 +50,65 @@ export function buildDepreciationModel(ctx) {
         (capexBreakdown.servicesCapex * 0.15);
 
     const equipmentScale = (launchStrategy === 'Outsourcing' ? 0.3 : (launchStrategy === 'Pilot_Phase' ? 0.5 : 1.0)) * 1.10;
-    
-    const buildReplaceable = (arr, defaultRate, category, scale, flatRate) => toArray(arr).map(item => {
+
+    // تدقيق حي 2026-07-22: buildReplaceable كان يقبل flatRate لإجبار مبلغ الإهلاك على
+    // defaultRate (15%) بصرف النظر عن نسبة الاستهلاك التي يُدخلها العميل لكل قطعة معدات —
+    // بينما نفس النسبة المُدخلة تُستخدم فعلاً لحساب عمر الأصل (life) وتوقيت إعادة الشراء.
+    // النتيجة: عميل يُدخل نسبة استهلاك أسرع (مثلاً 30%) يرى عمراً أقصر صحيحاً، لكن مبلغ
+    // الإهلاك السنوي المعروض يبقى محسوباً وكأنه 15% دائماً — تناقض داخلي، وخلافاً تماماً
+    // لفئتي الأثاث والموارد التقنية أدناه اللتين تستخدمان نسبة العميل للمبلغ والعمر معاً.
+    // لا مبرر موثَّق لهذا الاستثناء، فأُزيل ليتسق مع بقية الفئات.
+    const buildReplaceable = (arr, defaultRate, category, scale) => toArray(arr).map(item => {
         const cost = Number(item.price || item.cost || 0);
         const qty = Number(item.quantity || item.count || 1);
         const itemRate = rateOrDefault(item.depreciationRate, defaultRate);
         const saving = getSaving(category);
-        const depRate = flatRate ? defaultRate : itemRate;
+        const base = cost * qty * (1 - saving) * scale;
         return {
             // اسم/فئة العنصر — لبناء جدول إهلاك مسمّى لكل أصل (assetSchedule) بدل تجميعه
             // في رقم فئة واحد فقط؛ لا يغيّر أي مستهلك حالي (يستخدم فقط .dep/.life).
             name: item.name || item.label || category,
             category,
-            dep: cost * qty * (1 - saving) * scale * depRate, life: itemRate > 0 ? Math.round(1 / itemRate) : 0
+            base, dep: base * itemRate, life: itemRate > 0 ? Math.round(1 / itemRate) : 0
         };
     });
 
     const replaceableItems = [
-        ...buildReplaceable(technical.equipment, 0.15, 'Equipment', equipmentScale, true),
-        ...buildReplaceable(technical.furniture, 0.20, 'Furniture', 1, false),
-        ...buildReplaceable(techResources.techResources, 0.25, 'TechResources', 1, false)
+        ...buildReplaceable(technical.equipment, 0.15, 'Equipment', equipmentScale),
+        ...buildReplaceable(technical.furniture, 0.20, 'Furniture', 1),
+        ...buildReplaceable(techResources.techResources, 0.25, 'TechResources', 1)
     ];
 
     const replaceableDepAtYear = (yr) => replaceableItems.reduce(
-        (d, it) => d + (it.life > 0 && yr <= it.life ? it.dep : 0), 0);
+        (d, it) => d + itemDepAtYear(it, yr), 0);
 
-    const replaceableDepYear1 = replaceableItems.reduce((d, it) => d + (it.life > 0 ? it.dep : 0), 0);
-    const permanentAnnualDep = annualDepreciation - replaceableDepYear1 - establishmentAmortization;
+    // تدقيق حي 2026-07-22: buildings/vehicles/servicesCapex («الفئات الدائمة») كانت تُهلَك
+    // بمبلغ ثابت (permanentAnnualDep المُشتقّ سابقاً) كل سنة إلى الأبد بلا سقف — فبعد انتهاء
+    // عمرها الافتراضي (buildings 5%=20 سنة، vehicles 20%=5 سنوات، servicesCapex 15%≈6.7
+    // سنوات) يستمر القيد فيتجاوز تراكم الإهلاك تكلفة الأصل نفسها، فتختل هوية الميزانية
+    // (isBalanced=false) بمجرد تجاوز أفق الدراسة عمر أحد هذه الأصول. الإصلاح: نفس مبدأ
+    // replaceableItems أعلاه تماماً — كل عنصر يتوقف إهلاكه عند نهاية عمره الافتراضي (life).
+    const permanentItems = [
+        ...toArray(technical.buildings).map(item => {
+            const cost = Number(item.price || item.cost || 0);
+            const qty = Number(item.quantity || item.count || 1);
+            const rate = rateOrDefault(item.depreciationRate, 0.05);
+            const saving = getSaving('Buildings');
+            const base = cost * qty * (1 - saving);
+            return { base, dep: base * rate, life: rate > 0 ? Math.round(1 / rate) : 0 };
+        }),
+        ...toArray(technical.vehicles).map(item => {
+            const cost = Number(item.price || item.cost || 0);
+            const qty = Number(item.quantity || item.count || 1);
+            const rate = rateOrDefault(item.depreciationRate, 0.20);
+            const saving = getSaving('Vehicles');
+            const base = cost * qty * (1 - saving);
+            return { base, dep: base * rate, life: rate > 0 ? Math.round(1 / rate) : 0 };
+        }),
+        ...(capexBreakdown.servicesCapex > 0 ? [{ base: capexBreakdown.servicesCapex, dep: capexBreakdown.servicesCapex * 0.15, life: Math.round(1 / 0.15) }] : [])
+    ];
+    const permanentDepAtYear = (yr) => permanentItems.reduce(
+        (d, it) => d + itemDepAtYear(it, yr), 0);
 
     const checkReplacement = (arr, defaultRate, yr) => toArray(arr).reduce((acc, item) => {
         const rate = rateOrDefault(item.depreciationRate, defaultRate);
@@ -88,7 +132,7 @@ export function buildDepreciationModel(ctx) {
 
     return {
         annualDepreciation,
-        permanentAnnualDep,
+        permanentDepAtYear,
         replaceableDepAtYear,
         getReplacementCostAtYear,
         // مُصدَّرة لأول مرة — تُستهلك في engine.js لبناء result.assetSchedule (جدول
