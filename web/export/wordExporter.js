@@ -379,12 +379,19 @@ export class WordExporter {
         const rows = this.results?.incomeStatement || [];
         const lang = this.lang;
         const header = [t('item_column', lang), ...rows.map(r => `${t('year_prefix', lang)} ${r.year}`)];
+        // رسوم الامتياز/نجاح الحاضنة صفّان صريحان فقط حين ذات قيمة فعلية — بدونهما
+        // "مجمل الربح − المصاريف الثابتة" لا يساوي EBITDA المعروض (الخصم يقع صمتاً
+        // داخل احتساب EBITDA نفسه في engine.js).
+        const hasFranchiseFees = rows.some((r) => (r.franchiseFees || 0) > 0);
+        const hasBuilderFee = rows.some((r) => (r.builderSuccessFee || 0) > 0);
         const lineItems = [
             [t('revenue', lang), 'revenue'],
             [t('variable_costs', lang), 'variableCosts'],
             [t('gross_profit', lang), 'grossProfit'],
             [t('fixed_costs', lang), 'fixedCosts'],
+            ...(hasFranchiseFees ? [[t('franchise_fees', lang), 'franchiseFees']] : []),
             ['EBITDA', 'ebitda'],
+            ...(hasBuilderFee ? [[t('builder_success_fee', lang), 'builderSuccessFee']] : []),
             [t('depreciation', lang), 'depreciation'],
             [t('interest', lang), 'interest'],
             [t('zakat', lang), 'zakat'],

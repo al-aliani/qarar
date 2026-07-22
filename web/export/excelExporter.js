@@ -351,6 +351,12 @@ export class ExcelExporter {
         const lang = this.lang;
         const headers = [t('item_column', lang), ...statements.map((s) => yearColumnLabel(s.year, lang))];
 
+        // رسوم الامتياز/نجاح الحاضنة صفّان صريحان فقط حين ذات قيمة فعلية — بدونهما كان
+        // "مجمل الربح − المصاريف الثابتة" لا يساوي EBITDA المعروض لأن الخصم يقع صمتاً
+        // داخل احتساب EBITDA نفسه (انظر engine.js) بلا أي بند ظاهر يفسّر الفرق للقارئ.
+        const hasFranchiseFees = statements.some((s) => (s.franchiseFees || 0) > 0);
+        const hasBuilderFee = statements.some((s) => (s.builderSuccessFee || 0) > 0);
+
         const data = [
             [t('income_statement_title', lang)],
             headers,
@@ -358,7 +364,9 @@ export class ExcelExporter {
             [`(-) ${t('variable_costs', lang)}`, ...statements.map((s) => -SAFE.num(s.variableCosts))],
             [t('gross_profit', lang), ...statements.map((s) => SAFE.num(s.grossProfit))],
             [`(-) ${t('fixed_costs', lang)}`, ...statements.map((s) => -SAFE.num(s.fixedCosts))],
+            ...(hasFranchiseFees ? [[`(-) ${t('franchise_fees', lang)}`, ...statements.map((s) => -SAFE.num(s.franchiseFees || 0))]] : []),
             [t('ebitda', lang), ...statements.map((s) => SAFE.num(s.ebitda))],
+            ...(hasBuilderFee ? [[`(-) ${t('builder_success_fee', lang)}`, ...statements.map((s) => -SAFE.num(s.builderSuccessFee || 0))]] : []),
             [`(-) ${t('depreciation', lang)}`, ...statements.map((s) => -SAFE.num(s.depreciation))],
             ['EBIT', ...statements.map((s) => SAFE.num(s.ebit))],
             [`(-) ${t('interest', lang)}`, ...statements.map((s) => -SAFE.num(s.interestExpense ?? s.interest))],

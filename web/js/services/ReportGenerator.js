@@ -902,7 +902,9 @@ export class ReportGenerator {
                                 ${bdRow('تسويق', 'marketing', { sub: true })}
                                 ${hasServicesFixed ? bdRow('تكاليف ثابتة لكل خدمة', 'servicesFixed', { sub: true }) : ''}
                                 ${hasHiddenOverheads ? bdRow('طوارئ تشغيلية مخفية', 'hiddenOverheads', { sub: true }) : ''}
+                                ${isYears.some(y => (y.franchiseFees || 0) > 0) ? isRow(`(-) ${t('franchise_fees', lang)}`, 'franchiseFees') : ''}
                                 ${isRow(`(=) ${this._lbl(lang, 'ebitda', 'الأرباح قبل الفوائد والضرائب والإهلاك والإطفاء (EBITDA)')}`, 'ebitda')}
+                                ${isYears.some(y => (y.builderSuccessFee || 0) > 0) ? isRow(`(-) ${t('builder_success_fee', lang)}`, 'builderSuccessFee') : ''}
                                 ${isRow(`(-) ${this._lbl(lang, 'depreciation', 'الإهلاك والإطفاء')}${lang === 'en' ? ' & Amortization' : ''}`, 'depreciation')}
                                 ${isRow(`(-) ${t('interest', lang)}`, 'interest')}
                                 ${isRow(`(-) ${t('zakat', lang)}`, 'zakat')}
