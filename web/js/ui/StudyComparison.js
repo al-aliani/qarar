@@ -5,6 +5,7 @@
 import { DataService } from '../services/DataService.js';
 import { createTooltip } from '../utils/glossary.js';
 import { stepIndexById } from '../core/wizardSteps.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class StudyComparison {
     constructor(containerId, store, onNavigate) {
@@ -41,7 +42,7 @@ export class StudyComparison {
                             <option value="">-- اختر مشروعاً محفوظاً --</option>
                             ${availableStudies.map(s => `
                                 <option value="${s.id}" ${this.selectedStudyId === s.id ? 'selected' : ''}>
-                                    ${s.name} (${new Date(s.date).toLocaleDateString('ar-SA-u-nu-latn')})
+                                    ${escapeHtml(s.name)} (${new Date(s.date).toLocaleDateString('ar-SA-u-nu-latn')})
                                 </option>
                             `).join('')}
                         </select>
@@ -73,8 +74,8 @@ export class StudyComparison {
                 <div class="comparison-grid">
                     <div class="comp-header-card">
                         <div>المؤشر</div>
-                        <div class="text-primary font-bold">${meta.savedName} (المرجع)</div>
-                        <div class="text-gold font-bold">${meta.currentName} (الحالي)</div>
+                        <div class="text-primary font-bold">${escapeHtml(meta.savedName)} (المرجع)</div>
+                        <div class="text-gold font-bold">${escapeHtml(meta.currentName)} (الحالي)</div>
                         <div>الفارق</div>
                     </div>
                     ${this.renderRow('صافي القيمة الحالية', 'NPV', comparison.npv)}

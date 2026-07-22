@@ -5,6 +5,7 @@
  */
 import { APP_CONFIG, RESOURCES_GUIDANCE_LINKS } from '../config.js';
 import { calculateStudy } from '../core/engine.js';
+import { escapeHtml } from '../utils/escape.js';
 
 /** قائمة تحقق جاهزية التقديم — بنود عامة (بنك التنمية وغيره). تُحمّل من الـ store إن وُجدت. */
 const DEFAULT_READINESS_ITEMS = [
@@ -53,10 +54,10 @@ export class FinancingGuideView {
 
         const listHtml = this.checklist.map((item, idx) => `
             <tr class="border-b border-white/10">
-                <td class="p-3">${item.label}</td>
+                <td class="p-3">${escapeHtml(item.label)}</td>
                 <td class="p-3 text-center">
                     <label class="inline-flex items-center gap-1">
-                        <input type="checkbox" data-idx="${idx}" class="check-readiness" ${item.done ? 'checked' : ''} aria-label="${item.label}">
+                        <input type="checkbox" data-idx="${idx}" class="check-readiness" ${item.done ? 'checked' : ''} aria-label="${escapeHtml(item.label)}">
                         <span class="text-xs">تم</span>
                     </label>
                 </td>
@@ -177,7 +178,7 @@ export class FinancingGuideView {
                     <tbody>
                         ${this.checklist.map(i => `
                             <tr>
-                                <td>${i.label}</td>
+                                <td>${escapeHtml(i.label)}</td>
                                 <td>${i.done ? '✓' : ''}</td>
                             </tr>
                         `).join('')}

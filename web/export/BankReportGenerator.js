@@ -160,7 +160,7 @@ export class BankReportGenerator {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>طلب تمويل — ${info.name || 'مشروع مقترح'} — دراسة جدوى</title>
+    <title>طلب تمويل — ${bankEsc(info.name || 'مشروع مقترح')} — دراسة جدوى</title>
     <link href="/fonts/fonts.css" rel="stylesheet">
     <style>
         /* ألوان وخطوط معتمدة — بنك التنمية الاجتماعية / منشآت */
@@ -197,7 +197,7 @@ export class BankReportGenerator {
         <!-- غلاف التقرير -->
         <div class="bank-header">
             <h1>طلب تمويل — دراسة جدوى اقتصادية</h1>
-            <h2>${info.name || 'مشروع مقترح'}</h2>
+            <h2>${bankEsc(info.name || 'مشروع مقترح')}</h2>
             ${(info.clientName || '').trim() ? `<p style="margin-top:8px;font-size:12pt;">أُعدت هذه الدراسة لصالح: <strong>${String(info.clientName).replace(/</g, '&lt;')}</strong></p>` : ''}
             ${(info.preparedBy || '').trim() ? `<p style="margin-top:2px;font-size:10pt;color:#718096;">إعداد: ${String(info.preparedBy).replace(/</g, '&lt;')}</p>` : ''}
             <p style="margin-top:8px;font-size:10pt;color:#4a5568;">نوع الدراسة: <strong>${studyTypeLabel || 'غير محدد'}</strong> | لمن تُعد: <strong>${studyRecipientLabel || 'غير محدد'}</strong></p>
@@ -261,7 +261,7 @@ export class BankReportGenerator {
             case 'executive_summary':
                 return `<div class="bank-section">
             <div class="bank-section-title">${n}. الملخص التنفيذي</div>
-            <p>${state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText || `يهدف مشروع «${info.name || 'المشروع'}» إلى ${info.concept || 'تنفيذ نشاط تجاري'} في ${info.city || 'الموقع المحدد'}. تم إعداد هذه الدراسة وفق منهجيات احترافية لتقديم طلب التمويل.`}</p>
+            <p>${state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText || `يهدف مشروع «${bankEsc(info.name || 'المشروع')}» إلى ${bankEsc(info.concept || 'تنفيذ نشاط تجاري')} في ${bankEsc(info.city || 'الموقع المحدد')}. تم إعداد هذه الدراسة وفق منهجيات احترافية لتقديم طلب التمويل.`}</p>
         </div>`;
             case 'loan_request': {
                 const structure = cap?.capitalStructure || {};

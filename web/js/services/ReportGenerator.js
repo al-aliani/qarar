@@ -136,7 +136,7 @@ export class ReportGenerator {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>دراسة جدوى - ${info.name || 'مشروع جديد'}</title>
+                <title>دراسة جدوى - ${escapeHtml(info.name || 'مشروع جديد')}</title>
                 <link href="/fonts/fonts.css" rel="stylesheet">
                 <style>
                     /* ═══════════════════════════════════════════════════════════════
@@ -500,7 +500,7 @@ export class ReportGenerator {
                     <!-- HEADER -->
                     <div class="report-header">
                         <h1>📊 دراسة جدوى اقتصادية شاملة</h1>
-                        <h2>${info.name || 'مشروع مقترح'}</h2>
+                        <h2>${escapeHtml(info.name || 'مشروع مقترح')}</h2>
                         ${(info.clientName || '').trim() ? `<p style="font-size: 12pt; margin: 6px 0 0;">أُعدت هذه الدراسة لصالح: <strong>${String(info.clientName).replace(/</g, '&lt;')}</strong></p>` : ''}
                         ${(info.preparedBy || '').trim() ? `<p style="font-size: 10pt; margin: 2px 0 0; color: #718096;">إعداد: ${String(info.preparedBy).replace(/</g, '&lt;')}</p>` : ''}
                         <div class="report-meta">
