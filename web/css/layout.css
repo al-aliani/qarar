@@ -7,13 +7,21 @@
 
 html {
     height: 100%;
-    /* تدقيق 2026-07-17: كان بلا overflow (يرث visible) بينما body يفرض overflow:hidden
-       ويحصر التمرير الحقيقي داخل main-stage/wizardContainer — عناصر leader-line (خطوط
-       التلميحات) شاردة الموضع كانت أحياناً تتموضع خارج حدود الفيوبورت فتضيف تمريراً
-       خارجياً زائفاً على مستوى الصفحة كلها، فيتحرك شريط تنقل الأقسام الثابت (sticky)
-       معه بدل البقاء مثبتاً — لأن ثباته مرتبط بحاوية التمرير الداخلية لا الصفحة كلها. */
-    overflow: hidden;
     -webkit-text-size-adjust: 100%;
+}
+
+/* تدقيق 2026-07-17: overflow:hidden كان على قاعدة html العامة (يرث body ثم كل صفحة
+   تستورد layout.css) بينما body يفرضه أيضاً ليحصر التمرير الحقيقي داخل
+   main-stage/wizardContainer — عناصر leader-line (خطوط التلميحات) شاردة الموضع كانت
+   أحياناً تتموضع خارج حدود الفيوبورت فتضيف تمريراً خارجياً زائفاً على مستوى الصفحة
+   كلها، فيتحرك شريط تنقل الأقسام الثابت (sticky) معه بدل البقاء مثبتاً.
+   تدقيق حي 2026-07-22: هذا يقع في layout.css الذي تستورده أيضاً 18 صفحة تسويقية عامة
+   (pricing/terms/faq/...) عبر main.css مباشرة، لا فقط index.html/admin.html (قشرة
+   التطبيق SPA عبر bundle.css) — فحُجب التمرير عن معظم محتوى تلك الصفحات بالكامل.
+   الإصلاح: قصر overflow:hidden على قشرة التطبيق فقط عبر صنف body.is-app-shell-page
+   (يُضبط في index.html وadmin.html حصراً)، لا على html/body عموماً. */
+html.is-app-shell-page {
+    overflow: hidden;
 }
 
 body {
@@ -24,10 +32,13 @@ body {
     color: var(--c-text-main);
     min-height: 100%;
     height: 100%;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
     direction: rtl;
+}
+
+body.is-app-shell-page {
+    overflow: hidden;
 }
 
 img,
