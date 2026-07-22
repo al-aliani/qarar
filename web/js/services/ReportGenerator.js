@@ -636,7 +636,7 @@ export class ReportGenerator {
                         <div class="section-content">
                             ${exHighlights}
                             ${exFootnotesHtml}
-                            <p>${state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText || `يعرض هذا التقرير دراسة جدوى مشروع «${info.name || 'المشروع'}»${info.city ? ' في ' + info.city : ''}، شاملةً الجوانب الفنية والتسويقية والمالية، مع تحليل حساسية وسيناريوهات وقرار استثماري مبني على مؤشرات مالية محسوبة من مدخلات الدراسة.`}</p>
+                            <p>${state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText || `يعرض هذا التقرير دراسة جدوى مشروع «${escapeHtml(info.name || 'المشروع')}»${info.city ? ' في ' + escapeHtml(info.city) : ''}، شاملةً الجوانب الفنية والتسويقية والمالية، مع تحليل حساسية وسيناريوهات وقرار استثماري مبني على مؤشرات مالية محسوبة من مدخلات الدراسة.`}</p>
                         </div>
                     </div>`;
                 break;
@@ -675,7 +675,7 @@ export class ReportGenerator {
                         <h3 class="section-title"><span class="section-number">${num}</span>معلومات المشروع الأساسية</h3>
                         <div class="section-content">
                             <ul>
-                                <li><strong>اسم المشروع:</strong> ${info.name || '-'}</li>
+                                <li><strong>اسم المشروع:</strong> ${escapeHtml(info.name || '-')}</li>
                                 <li><strong>النشاط التجاري:</strong> ${info.concept || info.activity || '-'}</li>
                                 <li><strong>الموقع:</strong> ${info.city || info.location || '-'} ${info.district ? '، ' + info.district : ''}</li>
                                 <li><strong>الهوية:</strong> ${(info.identityStatement || '-').toString().slice(0, 200)}${(info.identityStatement || '').length > 200 ? '...' : ''}</li>
