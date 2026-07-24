@@ -51,6 +51,19 @@ const TABS = [
     { key: 'tickets', label: 'الدعم الفني' },
 ];
 
+// تجميع الـ27 تبويباً في 7 فئات — كانت تُعرض كصف أفقي مسطّح واحد (flex-wrap)
+// يتطلب تمرير أفقي طويلاً للوصول لتبويب معيّن؛ التجميع هنا تنظيم بصري فقط
+// (نفس أزرار TABS وأزرار data-tab وربط الأحداث في _renderShell دون تغيير).
+const TAB_GROUPS = [
+    { title: 'الرئيسية', keys: ['overview'] },
+    { title: 'المبيعات والنمو', keys: ['revenue', 'subscriptions', 'bank_transfers', 'growth', 'strategy', 'investor'] },
+    { title: 'المستخدمون والسوق', keys: ['users', 'platform', 'industry', 'behavior', 'sharing'] },
+    { title: 'المنتج والجودة', keys: ['studies', 'quality', 'ai', 'coverage', 'innovation', 'experiments'] },
+    { title: 'التشغيل والموثوقية', keys: ['reliability', 'security', 'reports'] },
+    { title: 'الدعم والرضا', keys: ['tickets', 'satisfaction', 'reviews', 'reviewers', 'team'] },
+    { title: 'المحتوى', keys: ['content'] },
+];
+
 export class AdminDashboardView {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -99,16 +112,24 @@ export class AdminDashboardView {
     }
 
     _renderShell() {
+        const labelByKey = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
+        const groupsHtml = TAB_GROUPS.map((group) => `
+            <div class="admin-nav-group">
+                <div class="admin-nav-group__title">${this._esc(group.title)}</div>
+                ${group.keys.map((key) => `<button class="btn btn--sm admin-nav__btn ${key === this.activeTab ? 'btn--primary' : 'btn--ghost'}" data-tab="${key}">${this._esc(labelByKey[key] || key)}</button>`).join('')}
+            </div>
+        `).join('');
+
         this.container.innerHTML = `
             <div class="admin-dashboard">
                 <div class="admin-dashboard__header">
                     <h1 class="admin-dashboard__title">لوحة تحكم الأدمن</h1>
                     <button id="btnExitAdmin" class="btn btn--sm btn--ghost">خروج</button>
                 </div>
-                <div class="admin-tabs" id="adminTabs">
-                    ${TABS.map((t) => `<button class="btn btn--sm ${t.key === this.activeTab ? 'btn--primary' : 'btn--ghost'}" data-tab="${t.key}">${this._esc(t.label)}</button>`).join('')}
+                <div class="admin-shell">
+                    <nav class="admin-tabs" id="adminTabs">${groupsHtml}</nav>
+                    <div id="adminTabContent"><p class="admin-loading">جارٍ التحميل…</p></div>
                 </div>
-                <div id="adminTabContent"><p class="admin-loading">جارٍ التحميل…</p></div>
             </div>
         `;
 

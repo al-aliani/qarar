@@ -27,11 +27,73 @@
   margin: 0;
 }
 
-.admin-tabs {
+/* شريط التبويبات الـ27 مجمّعة بفئات (بديل الصف الأفقي المسطّح السابق) */
+.admin-shell {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-  margin-bottom: var(--s-4);
+  align-items: flex-start;
+  gap: var(--s-4);
+}
+
+.admin-tabs {
+  flex: none;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  position: sticky;
+  top: var(--s-4);
+  max-height: calc(100vh - var(--s-6));
+  overflow-y: auto;
+}
+
+#adminTabContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-nav-group__title {
+  padding: 0 var(--s-2) 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--c-text-muted);
+}
+
+.admin-nav__btn {
+  width: 100%;
+  text-align: start;
+  justify-content: flex-start;
+}
+
+@media (max-width: 900px) {
+  .admin-shell {
+    flex-direction: column;
+  }
+
+  .admin-tabs {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    position: static;
+    max-height: none;
+  }
+
+  .admin-nav-group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .admin-nav-group__title {
+    padding: 0;
+    flex: 0 0 100%;
+  }
 }
 
 .admin-tile-grid {
