@@ -8,7 +8,8 @@
   --lp-primary-light: #167e60;
   --lp-primary-dark: #062e23;
   --lp-accent: #b78324;
-  --lp-bg: #f8fafc;
+  --lp-accent-gradient: linear-gradient(180deg, #d7aa4a, #8a6623);
+  --lp-bg: #f5faf7;
   --lp-surface: #ffffff;
   --lp-text-main: #1e293b;
   --lp-text-muted: #64748b;
@@ -73,6 +74,28 @@ body {
   z-index: 1;
   max-width: 800px;
   margin: 0 auto;
+}
+
+.lp-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffeec2;
+  font-size: 12.5px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.lp-hero-eyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .lp-hero-title {
@@ -225,10 +248,10 @@ body {
 .lp-card h2::before {
   content: '';
   display: block;
-  width: 4px;
-  height: 24px;
-  background: var(--lp-accent);
-  border-radius: 4px;
+  width: 5px;
+  height: 20px;
+  background: var(--lp-accent-gradient);
+  border-radius: 3px;
 }
 
 .lp-card h3 {
