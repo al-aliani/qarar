@@ -38,40 +38,46 @@ export class AuthModal {
         this.overlay.id = 'authModalOverlay';
         this.overlay.className = 'modal-overlay is-open';
         this.overlay.innerHTML = `
-            <div class="modal-card" style="max-width: 400px;" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
-                <div class="modal-header">
-                    <h3 id="authModalTitle">دخول / تسجيل</h3>
-                    <button type="button" class="btn-close" aria-label="إغلاق">×</button>
+            <div class="modal-card auth-modal-card" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+                <div class="auth-modal-header">
+                    <span class="auth-modal-logo">ق</span>
+                    <div class="auth-modal-heading">
+                        <strong id="authModalTitle">أهلاً بعودتك</strong>
+                        <span id="authModalSubtitle">احفظ دراستك وزامنها بين أجهزتك</span>
+                    </div>
+                    <button type="button" class="btn-close" aria-label="إغلاق" style="margin-inline-start:auto"><svg class="ic" style="width:17px;height:17px"><use href="#i-x"/></svg></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted text-sm mb-3">تسجيل الدخول يمكّنك من حفظ الدراسة في السحابة ومزامنتها بين الأجهزة.</p>
                     <div id="authModalError" class="text-danger text-sm mb-2" style="display:none;"></div>
                     <div id="authModalResendBlock" class="mb-2 p-2 rounded text-sm" style="display:none;background:var(--c-danger-subtle);border:1px solid var(--c-danger);">
                         <p class="text-danger mb-1">البريد غير مفعّل. تحقق من صندوق الوارد أو البريد المزعج.</p>
                         <button type="button" id="authBtnResendConfirm" class="btn btn--ghost text-sm">إعادة إرسال رابط التأكيد</button>
                     </div>
                     <div id="authModalNotConfigured" class="p-3 bg-warning/10 border border-warning/30 rounded text-sm" style="display:none;"></div>
-                    <div id="authTabRow" class="flex gap-2 mb-3" role="tablist" aria-label="دخول أو إنشاء حساب">
-                        <button type="button" id="authTabSignIn" class="btn btn--primary flex-1" role="tab" aria-selected="true" aria-controls="authModalForm">دخول</button>
-                        <button type="button" id="authTabSignUp" class="btn btn--ghost flex-1" role="tab" aria-selected="false" aria-controls="authModalForm">إنشاء حساب</button>
+                    <div id="authTabRow" class="auth-tabs" role="tablist" aria-label="دخول أو إنشاء حساب">
+                        <button type="button" id="authTabSignIn" class="btn btn--primary" role="tab" aria-selected="true" aria-controls="authModalForm">دخول</button>
+                        <button type="button" id="authTabSignUp" class="btn btn--ghost" role="tab" aria-selected="false" aria-controls="authModalForm">إنشاء حساب</button>
                     </div>
                     <form id="authModalForm" style="display:block;">
                         <div class="mb-3">
                             <label class="block text-sm mb-1" for="authEmail">البريد الإلكتروني</label>
-                            <input type="email" id="authEmail" class="input w-full" placeholder="you@example.com" required autocomplete="username" dir="ltr">
+                            <div class="auth-field"><svg class="ic"><use href="#i-mail"/></svg><input type="email" id="authEmail" placeholder="you@example.com" required autocomplete="username" dir="ltr"></div>
                         </div>
                         <div class="mb-3">
                             <label class="block text-sm mb-1" for="authPassword">كلمة المرور</label>
-                            <input type="password" id="authPassword" class="input w-full" placeholder="••••••••" required minlength="8" title="8+ أحرف، رقم واحد على الأقل، رمز واحد على الأقل" autocomplete="current-password">
-                            <div id="authPasswordStrength" class="text-xs mt-1" style="display:none;"></div>
+                            <div class="auth-field"><svg class="ic"><use href="#i-lock"/></svg><input type="password" id="authPassword" placeholder="••••••••" required minlength="8" title="8+ أحرف، رقم واحد على الأقل، رمز واحد على الأقل" autocomplete="current-password"></div>
+                            <div id="authPasswordStrength" class="auth-strength" style="display:none;">
+                                <div class="auth-strength-track"><div id="authPasswordStrengthFill" class="auth-strength-fill"></div></div>
+                                <span id="authPasswordStrengthLabel" class="auth-strength-label"></span>
+                            </div>
                         </div>
                         <div class="mb-3" id="authNameGroup" style="display:none;">
                             <label class="block text-sm mb-1" for="authName">الاسم</label>
-                            <input type="text" id="authName" class="input w-full" placeholder="اسمك الكامل" autocomplete="name">
+                            <div class="auth-field"><svg class="ic"><use href="#i-user"/></svg><input type="text" id="authName" placeholder="اسمك الكامل" autocomplete="name"></div>
                         </div>
                         <div class="mb-3" id="authPhoneGroup" style="display:none;">
                             <label class="block text-sm mb-1" for="authPhone">رقم الجوال (واتساب)</label>
-                            <input type="tel" id="authPhone" class="input w-full" placeholder="05xxxxxxxx" autocomplete="tel" dir="ltr" inputmode="numeric">
+                            <div class="auth-field"><svg class="ic"><use href="#i-phone"/></svg><input type="tel" id="authPhone" placeholder="05xxxxxxxx" autocomplete="tel" dir="ltr" inputmode="numeric"></div>
                             <p class="text-xs text-muted mt-1">نستخدمه للتواصل معك بخصوص طلباتك عبر واتساب.</p>
                         </div>
                         <div class="flex gap-2 mb-2">
@@ -95,8 +101,10 @@ export class AuthModal {
                         </div>
                     </form>
                     <div id="authModalForgotPanel" class="mb-3" style="display:none;">
+                        <span class="auth-panel-icon"><svg><use href="#i-key"/></svg></span>
+                        <p class="text-sm mb-1" style="font-weight:700">إعادة تعيين كلمة المرور</p>
                         <label class="block text-sm mb-1" for="authForgotEmail">أدخل بريدك لإرسال رابط إعادة التعيين</label>
-                        <input type="email" id="authForgotEmail" class="input w-full mb-2" placeholder="you@example.com" autocomplete="email" dir="ltr">
+                        <div class="auth-field mb-2"><svg class="ic"><use href="#i-mail"/></svg><input type="email" id="authForgotEmail" placeholder="you@example.com" autocomplete="email" dir="ltr"></div>
                         <div class="flex gap-2">
                             <button type="button" id="authBtnSendReset" class="btn btn--primary flex-1">إرسال الرابط</button>
                             <button type="button" id="authBtnBackToLogin" class="btn btn--secondary">رجوع</button>
@@ -104,6 +112,8 @@ export class AuthModal {
                         <p id="authForgotMessage" class="text-sm mt-2" style="display:none;"></p>
                     </div>
                     <div id="authModalMfaPanel" class="mb-3" style="display:none;">
+                        <span class="auth-panel-icon"><svg><use href="#i-shield"/></svg></span>
+                        <p class="text-sm mb-1" style="font-weight:700">التحقق بخطوتين</p>
                         <p class="text-muted text-sm mb-3">حسابك محمي بمصادقة ثنائية. أدخل رمز تطبيق المصادقة (6 أرقام).</p>
                         <div id="authMfaError" class="text-danger text-sm mb-2" style="display:none;"></div>
                         <form id="authMfaForm">
@@ -161,6 +171,8 @@ export class AuthModal {
         const phoneGroup = this.overlay.querySelector('#authPhoneGroup');
         const btnSignInEl = this.overlay.querySelector('#authBtnSignIn');
         const btnSignUpEl = this.overlay.querySelector('#authBtnSignUp');
+        const titleEl = this.overlay.querySelector('#authModalTitle');
+        const subtitleEl = this.overlay.querySelector('#authModalSubtitle');
         const setAuthTab = (signUp) => {
             isSignUpTab = signUp;
             tabSignIn.classList.toggle('btn--primary', !signUp);
@@ -173,6 +185,8 @@ export class AuthModal {
             phoneGroup.style.display = signUp ? 'block' : 'none';
             btnSignInEl.style.display = signUp ? 'none' : 'block';
             btnSignUpEl.style.display = signUp ? 'block' : 'none';
+            if (titleEl) titleEl.textContent = signUp ? 'إنشاء حساب جديد' : 'أهلاً بعودتك';
+            if (subtitleEl) subtitleEl.textContent = 'احفظ دراستك وزامنها بين أجهزتك';
             showErr('');
         };
         tabSignIn?.addEventListener('click', () => setAuthTab(false));
@@ -186,19 +200,22 @@ export class AuthModal {
         };
         const passInput = this.overlay.querySelector('#authPassword');
         const strengthEl = this.overlay.querySelector('#authPasswordStrength');
+        const strengthFillEl = this.overlay.querySelector('#authPasswordStrengthFill');
+        const strengthLabelEl = this.overlay.querySelector('#authPasswordStrengthLabel');
         if (passInput && strengthEl) {
             passInput.addEventListener('input', () => {
                 const p = passInput.value;
                 if (p.length === 0) { strengthEl.style.display = 'none'; return; }
-                strengthEl.style.display = 'block';
+                strengthEl.style.display = 'flex';
                 let s = 0;
                 if (p.length >= 8) s++;
                 if (p.length >= 12) s++;
                 if (/[0-9]/.test(p)) s++;
                 if (/[^A-Za-z0-9]/.test(p)) s++;
                 const label = s <= 1 ? 'ضعيفة' : s <= 2 ? 'متوسطة' : s <= 3 ? 'جيدة' : 'قوية';
-                strengthEl.textContent = 'قوة كلمة المرور: ' + label;
-                strengthEl.style.color = s <= 1 ? 'var(--c-danger)' : s <= 2 ? 'var(--c-warning)' : 'var(--c-success)';
+                const color = s <= 1 ? 'var(--c-danger)' : s <= 2 ? 'var(--c-warning)' : 'var(--c-success)';
+                if (strengthFillEl) { strengthFillEl.style.width = Math.min(100, (s / 4) * 100) + '%'; strengthFillEl.style.background = color; }
+                if (strengthLabelEl) { strengthLabelEl.textContent = label; strengthLabelEl.style.color = color; }
             });
         }
 
@@ -222,6 +239,8 @@ export class AuthModal {
             return new Promise((resolve) => {
                 form.style.display = 'none';
                 if (tabRow) tabRow.style.display = 'none';
+                if (titleEl) titleEl.textContent = 'خطوة أمان';
+                if (subtitleEl) subtitleEl.textContent = 'تحقق بخطوتين';
                 const mfaPanel = this.overlay.querySelector('#authModalMfaPanel');
                 mfaPanel.style.display = 'block';
                 const codeInput = mfaPanel.querySelector('#authMfaCode');
@@ -393,6 +412,8 @@ export class AuthModal {
         this.overlay.querySelector('#authBtnForgotPassword')?.addEventListener('click', () => {
             form.style.display = 'none';
             if (tabRow) tabRow.style.display = 'none';
+            if (titleEl) titleEl.textContent = 'استعادة الحساب';
+            if (subtitleEl) subtitleEl.textContent = 'أدخل بريدك ونرسل لك رابط إعادة التعيين';
             if (forgotPanel) forgotPanel.style.display = 'block';
         });
         this.overlay.querySelector('#authBtnBackToLogin')?.addEventListener('click', () => {
@@ -400,6 +421,7 @@ export class AuthModal {
             if (forgotMessage) { forgotMessage.style.display = 'none'; forgotMessage.textContent = ''; }
             form.style.display = 'block';
             if (tabRow) tabRow.style.display = 'flex';
+            setAuthTab(isSignUpTab);
         });
         this.overlay.querySelector('#authBtnSendReset')?.addEventListener('click', async () => {
             const emailInput = this.overlay.querySelector('#authForgotEmail');
