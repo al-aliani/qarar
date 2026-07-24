@@ -56,18 +56,44 @@ export class SubscriptionCheckoutView {
 
     _renderCheckout() {
         const selected = sessionStorage.getItem('selected_package') || 'self';
-        const pkg = PRICING_PACKAGES.find(p => p.id === selected && p.price > 0) || PRICING_PACKAGES.find(p => p.id === 'self');
+        const paidPackages = PRICING_PACKAGES.filter(p => p.price > 0);
+        const pkg = paidPackages.find(p => p.id === selected) || paidPackages.find(p => p.id === 'self');
         this._pkg = pkg;
         // الدفع الوحيد المتاح تحويل بنكي (قرار مالك 2026-07-22 — بلا بوابات إلكترونية).
         const bankReady = !!getBankTransferConfig();
         const payAction = bankReady
             ? `<button class="btn btn--primary btn-block mt-4" id="checkoutPayBank">الدفع بتحويل بنكي</button>`
             : `<p class="text-danger text-sm mt-4">الدفع بتحويل بنكي غير متاح مؤقتاً — تواصل معنا لإتمام الطلب.</p>`;
-        this.container.innerHTML = `<div class="p-6 max-w-3xl mx-auto"><button id="checkoutBack" class="btn btn--ghost mb-4">← رجوع</button><h1 class="text-2xl font-bold mb-2">إكمال الطلب</h1><p class="text-muted mb-5">راجع الباقة والخدمات الإضافية، ثم أرسل طلب الدفع بتحويل بنكي.</p><div class="card p-6" id="checkoutCard"><div class="flex justify-between mb-4"><strong>${pkg.name}</strong><strong>${formatPrice(pkg.price)} ريال</strong></div><h2 class="text-sm font-bold mb-2">خدمات إضافية</h2>${ADDONS.map(a => `<label class="flex justify-between items-center py-2"><span><input type="checkbox" data-addon="${a.id}" data-price="${a.price}"> ${a.name}</span><span>${a.price} ريال</span></label>`).join('')}<div class="form-group mt-4"><label class="text-sm">كوبون الخصم</label><input id="checkoutCoupon" class="form-input w-full" dir="ltr" placeholder="WELCOME10"></div><div class="mt-5" style="border-top:1px solid var(--c-border)"><div class="flex justify-between py-2"><span>الإجمالي (شامل الضريبة)</span><span id="checkoutSubtotal"></span></div><div class="flex justify-between py-2"><span>الخصم المتوقع</span><span id="checkoutDiscount">يُتحقق منه عند الدفع</span></div><div class="flex justify-between py-2 text-muted" style="font-size:.9rem"><span>منها ضريبة القيمة المضافة (15%)</span><span id="checkoutVat"></span></div><div class="flex justify-between py-2 font-bold text-lg"><span>المطلوب دفعه</span><span id="checkoutTotal"></span></div></div><div id="checkoutError" class="text-danger text-sm mt-2" style="display:none"></div>${payAction}</div></div>`;
+        // مفتاح تبديل الباقة (self/reviewed/full) — إضافة سلوكية عن التصميم المُسلَّم،
+        // بموافقة صريحة: الكود الحي سابقاً كان يثق فقط بالباقة المُختارة مسبقاً
+        // (sessionStorage.selected_package) بلا فرصة لتغييرها من هذه الشاشة نفسها.
+        const tiersHtml = paidPackages.map(p => `
+            <button type="button" class="checkout-tier ${p.id === pkg.id ? 'is-active' : ''}" data-tier="${p.id}">
+                <span class="checkout-tier__name">${p.name}</span>
+                <span class="checkout-tier__price">${formatPrice(p.price)}</span>
+                <span class="checkout-tier__unit">${p.unit}</span>
+            </button>`).join('');
+        this.container.innerHTML = `<div class="p-6 max-w-3xl mx-auto"><button id="checkoutBack" class="btn btn--ghost mb-4">← رجوع</button><h1 class="text-2xl font-bold mb-2">إكمال الطلب</h1><p class="text-muted mb-5">راجع الباقة والخدمات الإضافية، ثم أرسل طلب الدفع بتحويل بنكي.</p><div class="card p-6" id="checkoutCard"><h2 class="text-sm font-bold mb-2">الباقة</h2><div class="checkout-tiers mb-2">${tiersHtml}</div><p class="text-xs text-muted mb-4">${pkg.audience} · التسليم: ${pkg.delivery}</p><h2 class="text-sm font-bold mb-2">خدمات إضافية</h2>${ADDONS.map(a => `<label class="flex justify-between items-center py-2"><span><input type="checkbox" data-addon="${a.id}" data-price="${a.price}"> ${a.name}</span><span>${a.price} ريال</span></label>`).join('')}<div class="form-group mt-4"><label class="text-sm">كوبون الخصم</label><input id="checkoutCoupon" class="form-input w-full" dir="ltr" placeholder="WELCOME10"></div><div class="mt-5" style="border-top:1px solid var(--c-border)"><div class="flex justify-between py-2"><span>${pkg.name}</span><span>${formatPrice(pkg.price)} ريال</span></div><div class="flex justify-between py-2"><span>الإجمالي (شامل الضريبة)</span><span id="checkoutSubtotal"></span></div><div class="flex justify-between py-2"><span>الخصم المتوقع</span><span id="checkoutDiscount">يُتحقق منه عند الدفع</span></div><div class="flex justify-between py-2 text-muted" style="font-size:.9rem"><span>منها ضريبة القيمة المضافة (15%)</span><span id="checkoutVat"></span></div><div class="flex justify-between py-2 font-bold text-lg"><span>المطلوب دفعه</span><span id="checkoutTotal"></span></div></div><div id="checkoutError" class="text-danger text-sm mt-2" style="display:none"></div>${payAction}</div></div>`;
         this.container.querySelector('#checkoutBack')?.addEventListener('click', () => this.onBack());
-        this.container.querySelectorAll('[data-addon]').forEach(el => el.addEventListener('change', () => this.update(pkg)));
-        this.container.querySelector('#checkoutPayBank')?.addEventListener('click', (e) => this.payBankTransfer(pkg, e.currentTarget));
+        this.container.querySelectorAll('[data-addon]').forEach(el => el.addEventListener('change', () => this.update(this._pkg)));
+        this.container.querySelector('#checkoutPayBank')?.addEventListener('click', (e) => this.payBankTransfer(this._pkg, e.currentTarget));
+        this.container.querySelectorAll('[data-tier]').forEach(btn => btn.addEventListener('click', () => this._selectTier(btn.dataset.tier)));
         this.update(pkg);
+    }
+
+    /** يبقي الخدمات الإضافية المُحدَّدة عبر إعادة الرسم — التبديل بين الباقات لا يمس الإضافات. */
+    _selectTier(tierId) {
+        const pkg = PRICING_PACKAGES.find(p => p.id === tierId && p.price > 0);
+        if (!pkg || pkg.id === this._pkg?.id) return;
+        const previousAddons = this.selectedAddons();
+        try { sessionStorage.setItem('selected_package', tierId); } catch (_) { /* تجاهل بيئات بلا sessionStorage */ }
+        trackEvent('checkout_tier_change', { tier: tierId });
+        this._renderCheckout();
+        previousAddons.forEach((id) => {
+            const el = this.container.querySelector(`[data-addon="${id}"]`);
+            if (el) el.checked = true;
+        });
+        this.update(this._pkg);
     }
 
     selectedAddons(){ return [...this.container.querySelectorAll('[data-addon]:checked')].map(el => el.dataset.addon); }

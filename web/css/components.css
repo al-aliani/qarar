@@ -3722,6 +3722,54 @@ button.qa-detail-item:hover {
     height: 24px;
 }
 
+/* SubscriptionCheckoutView.js — مفتاح تبديل الباقة (segmented control) */
+.checkout-tiers {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--s-2);
+}
+
+.checkout-tier {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--s-3) var(--s-2);
+    border-radius: var(--r-md);
+    border: 1px solid var(--c-border);
+    background: var(--c-bg-app);
+    cursor: pointer;
+    font: inherit;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.checkout-tier:hover {
+    border-color: var(--c-p-500);
+}
+
+.checkout-tier.is-active {
+    border: 1.5px solid var(--c-p-500);
+    background: var(--c-p-subtle);
+    box-shadow: 0 0 0 4px rgba(14, 91, 68, .08);
+}
+
+.checkout-tier__name {
+    font-weight: 700;
+    font-size: .875rem;
+}
+
+.checkout-tier__price {
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    margin-top: 4px;
+}
+
+.checkout-tier__unit {
+    font-size: .7rem;
+    color: var(--c-text-muted);
+    margin-top: 2px;
+}
+
 .btn-close:hover {
     background: var(--c-bg-card);
     color: var(--c-text-main);
