@@ -228,6 +228,48 @@ body {
   box-shadow: var(--lp-shadow-lg);
 }
 
+/* Pricing cards — featured/recommended package */
+.lp-card--featured {
+  position: relative;
+  border: 1.5px solid var(--lp-primary);
+  box-shadow: 0 0 0 4px rgba(14, 91, 68, 0.08), var(--lp-shadow-lg);
+}
+
+.lp-card--featured::before {
+  content: '';
+  position: absolute;
+  top: -1.5px;
+  left: -1.5px;
+  right: -1.5px;
+  height: 4px;
+  border-radius: var(--lp-radius) var(--lp-radius) 0 0;
+  background: var(--lp-accent-gradient);
+}
+
+.lp-featured-badge {
+  position: absolute;
+  top: -14px;
+  inset-inline: 0;
+  margin-inline: auto;
+  width: max-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--lp-primary-light), var(--lp-primary));
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lp-featured-badge::before {
+  content: '★';
+  font-size: 11px;
+  color: #d7aa4a;
+}
+
 @media (max-width: 600px) {
   .lp-card {
     padding: 24px;
