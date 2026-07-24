@@ -150,7 +150,7 @@ export class DecisionDashboard {
             <div class="decision-dashboard animate-entry">
                 ${investmentDataWarningHtml(investmentDataWarning(state, results))}
                 ${this.renderFinancingGate(financingDiagnostics)}
-                <div class="dd-verdict">
+                <div class="dd-verdict${evaluation.recommendation === 'revise' ? ' dd-verdict--revise' : evaluation.recommendation === 'nogo' ? ' dd-verdict--nogo' : ''}">
 
                     <!-- Score Gauge Container -->
                     <div class="dd-gauge">
