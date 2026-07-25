@@ -8,7 +8,8 @@
   --lp-primary-light: #167e60;
   --lp-primary-dark: #062e23;
   --lp-accent: #b78324;
-  --lp-bg: #f8fafc;
+  --lp-accent-gradient: linear-gradient(180deg, #d7aa4a, #8a6623);
+  --lp-bg: #f5faf7;
   --lp-surface: #ffffff;
   --lp-text-main: #1e293b;
   --lp-text-muted: #64748b;
@@ -73,6 +74,28 @@ body {
   z-index: 1;
   max-width: 800px;
   margin: 0 auto;
+}
+
+.lp-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffeec2;
+  font-size: 12.5px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.lp-hero-eyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .lp-hero-title {
@@ -205,6 +228,48 @@ body {
   box-shadow: var(--lp-shadow-lg);
 }
 
+/* Pricing cards — featured/recommended package */
+.lp-card--featured {
+  position: relative;
+  border: 1.5px solid var(--lp-primary);
+  box-shadow: 0 0 0 4px rgba(14, 91, 68, 0.08), var(--lp-shadow-lg);
+}
+
+.lp-card--featured::before {
+  content: '';
+  position: absolute;
+  top: -1.5px;
+  left: -1.5px;
+  right: -1.5px;
+  height: 4px;
+  border-radius: var(--lp-radius) var(--lp-radius) 0 0;
+  background: var(--lp-accent-gradient);
+}
+
+.lp-featured-badge {
+  position: absolute;
+  top: -14px;
+  inset-inline: 0;
+  margin-inline: auto;
+  width: max-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--lp-primary-light), var(--lp-primary));
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lp-featured-badge::before {
+  content: '★';
+  font-size: 11px;
+  color: #d7aa4a;
+}
+
 @media (max-width: 600px) {
   .lp-card {
     padding: 24px;
@@ -225,10 +290,10 @@ body {
 .lp-card h2::before {
   content: '';
   display: block;
-  width: 4px;
-  height: 24px;
-  background: var(--lp-accent);
-  border-radius: 4px;
+  width: 5px;
+  height: 20px;
+  background: var(--lp-accent-gradient);
+  border-radius: 3px;
 }
 
 .lp-card h3 {

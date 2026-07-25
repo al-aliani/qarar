@@ -48,6 +48,7 @@
 
   --grad-gold: linear-gradient(135deg, #b07d2c, #d9a84e);
   --grad-emerald: linear-gradient(135deg, #0a4634, #0e5b44);
+  --grad-danger: linear-gradient(135deg, #7a241d, #b8332b);
   --grad-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
 
   /* نص فحمي دافئ متناسق مع الأرضية الورقية */
