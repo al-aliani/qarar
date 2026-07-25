@@ -14,8 +14,8 @@
     { "source": "/faq.html", "destination": "/help.html", "permanent": true }
   ],
   "rewrites": [
-    { "source": "/", "destination": "/landing.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.+)", "destination": "/index.html" },
+    { "source": "/", "destination": "/landing.html" }
   ],
   "headers": [
     {
