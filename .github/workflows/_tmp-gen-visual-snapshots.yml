@@ -1,0 +1,37 @@
+# ملف مؤقّت — يُحذَف فور تنزيل لقطات Linux المرجعية لـe2e/visual.spec.js. لا يُشغَّل
+# تلقائياً (workflow_dispatch فقط)، ولا يمسّ e2e.yml الحقيقي.
+name: (temp) Generate Linux visual snapshots
+
+on:
+  workflow_dispatch:
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Generate snapshots (all browsers)
+        run: npx playwright test e2e/visual.spec.js --project=chromium --project=firefox --project=webkit --update-snapshots
+        env:
+          CI: true
+
+      - name: Upload generated snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-snapshots-linux
+          path: e2e/visual.spec.js-snapshots/
+          retention-days: 3

@@ -102,6 +102,9 @@ test.describe('Critical Path: Full User Journey', () => {
     await expect(page.locator('.export-modal [data-type="lending_ready"]')).toBeVisible();
     await expect(page.locator('.export-modal [data-type="pptx"]')).toBeVisible();
     await expect(page.locator('.export-modal [data-type="word"]')).toBeVisible();
+    // investor_dashboard ينتمي لمسار فلترة "مستثمر" لا "تمويل" (الافتراضي) — بطاقات
+    // المسار الآخر مخفية (hidden) حتى يُنقر تبويبها (ExportMenu.js: _applyExportPath).
+    await page.locator('.export-path-card[data-export-path="investor"]').click();
     await expect(page.locator('.export-modal [data-type="investor_dashboard"]')).toBeVisible();
   });
 

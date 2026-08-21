@@ -682,14 +682,9 @@ export class ExportMenu {
                     const { trackExport } = await import('../../export/exportTracking.js');
                     trackExport(result.blob, { fileType: type, fileName: result.fileName, studyId: state.projectInfo?.id, studyName: state.projectInfo?.name });
 
-                    // سجل محلي (يعمل حتى للزائر غير المسجّل، بخلاف trackExport السحابي) — كان
-                    // قسم «السجل المحلي» في مركز التنزيلات فارغاً دائماً لأن recordLocalExport لم يُستدعَ.
-                    const { recordLocalExport } = await import('../services/LocalExportHistory.js');
-                    recordLocalExport(
-                        { filename: result.fileName, mimeType: result.blob?.type, size: result.blob?.size },
-                        { studyId: state.projectInfo?.id, studyName: state.projectInfo?.name }
-                    );
-
+                    // السجل المحلي (يعمل حتى للزائر غير المسجّل) يُسجَّل الآن مركزياً عبر مستمع
+                    // لحدث feasibility:download في LocalExportHistory.js (يغطي كل الصيغ، لا هذا
+                    // الفرع فقط) — استدعاء يدوي هنا يُكرِّر القيد مرتين لهذه الصيغة تحديداً.
                     break;
                 }
 

@@ -1,5 +1,10 @@
 import Swal from 'sweetalert2';
 import { store } from './js/core/store.js';
+// استيراد بلا استخدام مباشر عمداً: LocalExportHistory.js تُسجِّل مستمعاً لحدث
+// feasibility:download عند أول تحميل لها (انظر تعليقها) — يجب ضمان تحميلها هنا
+// عند إقلاع التطبيق، لا الاعتماد على استيراد كسول (dynamic import) من نقطة تصدير
+// واحدة فقط، لأن downloadBlob() تُستدعى من عدة ملفات (ExportMenu.js وغيرها).
+import './js/services/LocalExportHistory.js';
 import { TEMPLATES } from './js/core/templates.js';
 import { TABLE_SCHEMAS, createEmptyStudy } from './js/core/schema.js';
 import { STEPS, SECTIONS, SIDEBAR_SECTIONS, stepIndexById, STEPS_ABSORBED_IN_CATEGORY_VIEW, isStepVisibleInStudyMode } from './js/core/wizardSteps.js';
@@ -2718,10 +2723,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     );
   }
 
-  // زر «الرسوم البيانية التفاعلية» — كان onclick مضمّناً يمنعه CSP الصارم في الإنتاج
+  // زر «الرسوم البيانية التفاعلية» — كان onclick مضمّناً يمنعه CSP الصارم في الإنتاج.
+  // تدقيق 2026-08-21: كان يوجّه لـ/financial_charts.html (صفحة عرض عامة بأرقام تجريبية
+  // ثابتة، منفصلة تماماً عن الدراسة الحالية) بدل خطوة «لوحة المؤشرات المالية» الحقيقية
+  // داخل المعالج (FinancialDashboard.js، id: 'dashboard') التي تعرض أرقام دراسة المستخدم
+  // الفعلية — يقفز الآن لنفس الخطوة عبر navigateTo() (نفس نمط feasibility:navigateToStep).
   const btnGoCharts = document.getElementById('btnGoCharts');
   if (btnGoCharts) {
-    btnGoCharts.addEventListener('click', () => { window.location.href = '/financial_charts.html'; });
+    btnGoCharts.addEventListener('click', () => { navigateTo(stepIndexById('dashboard')); });
   }
   // تنظيف: إزالة أي مفتاح OpenAI مخزَّن سابقاً (لم يعد يُستخدم)
   try { localStorage.removeItem('openai_api_key'); } catch (_) {}

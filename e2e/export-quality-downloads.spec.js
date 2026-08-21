@@ -11,7 +11,8 @@ test('export menu exposes QA fix center and local downloads history', async ({ p
   await expect(page.locator('#btnOpenQaFixCenter')).toBeVisible();
   await page.locator('#btnOpenQaFixCenter').click();
 
-  await expect(page.getByRole('heading', { name: /مركز إصلاح فحص الجودة/ })).toBeVisible();
+  // العنوان الفعلي في ExportMenu.js._openQaFixCenter() هو "مركز إصلاح الجودة" (بلا "فحص").
+  await expect(page.getByRole('heading', { name: /مركز إصلاح الجودة/ })).toBeVisible();
   await expect(page.getByText('الأثر على التقرير:').first()).toBeVisible();
 
   await page.evaluate(() => {
