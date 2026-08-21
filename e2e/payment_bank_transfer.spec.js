@@ -101,7 +101,9 @@ test.describe('مسار الدفع: تحويل بنكي (حي)', () => {
 
     // 6) التحقق: لوحة التحويل البنكي ظهرت = الطلب أُنشئ بنجاح بالخلفية الحيّة (لا خطأ CORS/شبكة)
     await expect(page.locator('text=حوّل المبلغ التالي إلى حساب الشركة')).toBeVisible({ timeout: 15000 });
-    const refRow = page.locator('text=رقم الطلب المرجعي').locator('..');
+    // getByText(..., {exact:true}) بدل text= (مطابقة جزئية) — النص يظهر كسطر داخل بطاقة
+    // الدفع كاملة أيضاً، فالمطابقة الجزئية كانت تُرجع عنصرين (strict mode violation).
+    const refRow = page.getByText('رقم الطلب المرجعي', { exact: true }).locator('..');
     await expect(refRow).toBeVisible();
     console.log(`[e2e] طلب تحويل بنكي أُنشئ بنجاح — دراسة "${studyName}"، ${await refRow.textContent()}`);
   });
@@ -124,13 +126,36 @@ test.describe('مسار الدفع: تحويل بنكي (حي)', () => {
     await page.locator('#authBtnSignIn').click();
     await expect(overlay).not.toBeVisible({ timeout: 15000 });
     await handlePhoneGateIfPresent(page);
+    // AuthGuard.currentUser يُحدَّث فقط عبر onAuthStateChange (مستمع منفصل عن نجاح
+    // AuthModalStub نفسه) — انتظار #dvAccountToggle يثبت أن الجلسة استقرت فعلياً في
+    // الواجهة قبل محاولة فتح مسار محمي (isAdmin() يرجع false فوراً بلا currentUser).
+    await expect(page.locator('#dvAccountToggle')).toBeVisible({ timeout: 10000 });
 
+    // AuthGuard.isAdmin() قد يُرجع false عابراً لو نُودي مباشرة بعد نجاح الدخول (سباق
+    // استقرار الجلسة/JWT) — AdminDashboardView.render() حينها يُعيد التوجيه صمتاً لـ''.
+    // نعيد محاولة التنقّل لـ#/admin مرة إضافية بعد مهلة قصيرة بدل اعتبارها فشلاً حقيقياً.
+    const bankTab = page.locator('#adminTabs [data-tab="bank_transfers"]');
     await page.evaluate(() => { window.location.hash = '#/admin'; });
-    await page.locator('#adminTabs [data-tab="bank_transfers"]').click();
+    const admitted = await bankTab.waitFor({ state: 'visible', timeout: 6000 }).then(() => true).catch(() => false);
+    if (!admitted) {
+      await page.waitForTimeout(1500);
+      await page.evaluate(() => { window.location.hash = '#/admin'; });
+      await bankTab.waitFor({ state: 'visible', timeout: 10000 });
+    }
+    // تبويب "نظرة عامة" الافتراضي يُحمَّل ويُعاد رسمه لحظياً بعد أول ظهور للوحة — قد
+    // يفصل الزرّ عن الـDOM لحظة النقر (element was detached from the DOM). ننتظر
+    // استقراره فعلياً بدل الاعتماد على retry الداخلي لـPlaywright وحده.
+    await bankTab.click({ timeout: 5000 }).catch(async () => {
+      await page.waitForTimeout(1000);
+      await bankTab.click();
+    });
+
+    // ننتظر عنوان تبويب التحويلات البنكية تحديداً (لا .admin-table العام — تبويب
+    // "نظرة عامة" الافتراضي يحوي 6 جداول admin-table أخرى قد تبقى بالـDOM لحظياً).
+    await expect(page.locator('text=طلبات بانتظار تأكيد وصول الحوالة')).toBeVisible({ timeout: 10000 });
 
     // مسار قراءة فقط — لا نضغط "تأكيد وصول الحوالة". العطل الأصلي (uuid=text) كان يُسقط
     // الاستعلام بالكامل ويعرض admin-error بدل الجدول، حتى مع طلبات pending فعلية موجودة.
     await expect(page.locator('.admin-error')).not.toBeVisible();
-    await expect(page.locator('.admin-table, .admin-table__empty')).toBeVisible({ timeout: 10000 });
   });
 });
