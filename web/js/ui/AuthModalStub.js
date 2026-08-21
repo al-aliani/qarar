@@ -237,6 +237,10 @@ export class AuthModal {
             if (!factorId) return { ok: true };
 
             return new Promise((resolve) => {
+                // تدقيق أمني 2026-08-21: signIn() بالأعلى أنشأ جلسة صالحة فعلياً (aal1) قبل
+                // هذا التحدي — إغلاق النافذة من هنا بلا إكمال الرمز يجب أن يُبطل هذه الجلسة
+                // (close() أدناه)، لا يتركها صالحة صامتة تُستخدَم لاحقاً بلا الرمز إطلاقاً.
+                this._mfaChallengeActive = true;
                 form.style.display = 'none';
                 if (tabRow) tabRow.style.display = 'none';
                 if (titleEl) titleEl.textContent = 'خطوة أمان';
@@ -257,6 +261,11 @@ export class AuthModal {
                     const verifyRes = await mfaChallengeAndVerify(factorId, code);
                     if (verifyRes.ok) {
                         trackEvent('mfa_success', {});
+                        this._mfaChallengeActive = false;
+                        // AuthGuard.isAuthenticated ضُبطت false عند SIGNED_IN بانتظار هذا
+                        // التحدي (راجع AuthGuard.js) — نُحدّثها الآن فعلياً بعد نجاح الرمز.
+                        const { AuthGuard } = await import('../middleware/AuthGuard.js');
+                        await AuthGuard.refreshAuthState();
                         resolve({ ok: true });
                     } else {
                         trackEvent('mfa_failed', { reason: 'invalid_code' });
@@ -472,6 +481,13 @@ export class AuthModal {
         document.body.style.overflow = '';
         // أعِد التركيز للعنصر الذي فتح النافذة (a11y)
         try { this._prevFocus?.focus?.(); } catch (_) {}
+        // تدقيق أمني 2026-08-21: جلسة aal1 صالحة فعلياً بهذي اللحظة (كلمة المرور تحققت)
+        // لكن تحدي 2FA لم يكتمل — إغلاق النافذة هنا (Escape/×/نقر خارجي، كلها تصل لـclose())
+        // يجب أن يُنهي هذه الجلسة فعلياً، لا يتركها صالحة صامتة تُستخدَم لاحقاً بلا الرمز.
+        if (this._mfaChallengeActive && !this._succeeded) {
+            this._mfaChallengeActive = false;
+            import('../../supabaseClient.js').then(({ signOut }) => signOut());
+        }
         // إن أُغلقت بلا نجاح، أبلغ المستدعي مرّة واحدة (يعامله الحارس كتخطٍّ)
         if (!this._succeeded && this.onClose) {
             const cb = this.onClose;

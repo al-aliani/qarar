@@ -13,7 +13,13 @@ export class NewPasswordModal {
     constructor(options = {}) {
         this.overlay = null;
         this._prevFocus = null;
+        this._succeeded = false;
         this.description = options.description || 'وصلت هنا عبر رابط استعادة كلمة المرور. أدخل كلمة مرور جديدة لإكمال الدخول.';
+        // onSuccess/onClose (تدقيق أمني 2026-08-21): جلسة PASSWORD_RECOVERY مقيَّدة حتى
+        // تُستكمَل بتغيير فعلي لكلمة المرور — AuthGuard يمرّرهما لتحديث isAuthenticated
+        // عند النجاح، أو تسجيل خروج فعلي إن أُغلقت النافذة بلا إكمالها (راجع AuthGuard.js).
+        this.onSuccess = options.onSuccess || null;
+        this.onClose = options.onClose || null;
     }
 
     open() {
@@ -113,6 +119,7 @@ export class NewPasswordModal {
                     const { toast } = await import('../utils/toast.js');
                     toast.success('تم تحديث كلمة المرور بنجاح.');
                     this._succeeded = true;
+                    if (this.onSuccess) this.onSuccess();
                     this.close();
                 } else {
                     showErr(error || 'فشل تحديث كلمة المرور');
@@ -139,5 +146,12 @@ export class NewPasswordModal {
         }
         document.body.style.overflow = '';
         try { this._prevFocus?.focus?.(); } catch (_) {}
+        // إن أُغلقت بلا إكمال تغيير كلمة المرور فعلياً، أبلغ المستدعي مرّة واحدة —
+        // AuthGuard يسجّل خروجاً فعلياً هنا (يُبطل جلسة الاستعادة المقيَّدة بدل تركها صالحة).
+        if (!this._succeeded && this.onClose) {
+            const cb = this.onClose;
+            this.onClose = null;
+            cb();
+        }
     }
 }

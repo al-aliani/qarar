@@ -47,14 +47,16 @@ describe('AuthGuard.subscribeToAuthChanges — auditLog مركزي + معالج�
         await AuthGuard.subscribeToAuthChanges(() => {});
         expect(authStateCallback).toBeTypeOf('function');
 
-        authStateCallback('SIGNED_IN', { user: { email: 'a@b.com' } });
+        // تدقيق أمني 2026-08-21: الاستدعاء صار async (فحص AAL/2FA قبل تسجيل الدخول
+        // فعلياً كمكتمل) — راجع authGuard.mfaAndPasswordRecovery.test.js لتغطية مخصَّصة.
+        await authStateCallback('SIGNED_IN', { user: { email: 'a@b.com' } });
         expect(auditLogMock).toHaveBeenCalledWith('login', expect.objectContaining({ email: 'a@b.com' }));
     });
 
     it('SIGNED_OUT يسجّل ACTIONS.LOGOUT فعلياً', async () => {
         const { AuthGuard } = await import('../AuthGuard.js');
         await AuthGuard.subscribeToAuthChanges(() => {});
-        authStateCallback('SIGNED_OUT', { user: null });
+        await authStateCallback('SIGNED_OUT', { user: null });
         expect(auditLogMock).toHaveBeenCalledWith('logout', expect.any(Object));
     });
 

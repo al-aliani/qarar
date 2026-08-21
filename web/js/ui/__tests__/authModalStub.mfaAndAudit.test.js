@@ -23,6 +23,8 @@ const signInWithOAuthSdkMock = vi.fn(async () => ({ data: { url: 'https://oauth.
 const getAALMock = vi.fn(async () => ({ data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null }));
 const listFactorsMock = vi.fn(async () => ({ data: { totp: [] }, error: null }));
 const challengeAndVerifyMock = vi.fn(async () => ({ data: {}, error: null }));
+const signOutSdkMock = vi.fn(async () => ({ error: null }));
+const getUserSdkMock = vi.fn(async () => ({ data: { user: { id: 'u1', email: 'a@b.com' } }, error: null }));
 
 vi.mock('@supabase/supabase-js', () => ({
     createClient: vi.fn(() => ({
@@ -30,6 +32,8 @@ vi.mock('@supabase/supabase-js', () => ({
             signInWithPassword: signInWithPasswordMock,
             signUp: signUpSdkMock,
             signInWithOAuth: signInWithOAuthSdkMock,
+            signOut: signOutSdkMock,
+            getUser: getUserSdkMock,
             mfa: {
                 getAuthenticatorAssuranceLevel: getAALMock,
                 listFactors: listFactorsMock,
@@ -73,6 +77,8 @@ describe('AuthModalStub — تحدي 2FA (AAL) + auditLog للتسجيل/OAuth',
         getAALMock.mockClear();
         listFactorsMock.mockClear();
         challengeAndVerifyMock.mockClear();
+        signOutSdkMock.mockClear();
+        getUserSdkMock.mockClear();
         getAALMock.mockResolvedValue({ data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null });
         document.body.innerHTML = '';
         clearAuditLog();
@@ -133,6 +139,36 @@ describe('AuthModalStub — تحدي 2FA (AAL) + auditLog للتسجيل/OAuth',
 
         expect(onSuccess).not.toHaveBeenCalled();
         expect(modal.overlay.querySelector('#authMfaError').textContent).toContain('Invalid TOTP code');
+    });
+
+    /**
+     * تدقيق أمني 2026-08-21: signInWithPassword أنشأت جلسة صالحة (aal1) فعلياً قبل هذه
+     * النقطة — إغلاق لوحة الرمز (Escape/×/نقر خارجي، كلها تصل لـclose()) بدل إدخاله كان
+     * يترك تلك الجلسة صالحة صامتة، فيدخل المهاجم (يملك كلمة المرور فقط، بلا جهاز 2FA)
+     * الحساب كاملاً بمجرد إعادة تحميل الصفحة. close() يجب أن تُنهي الجلسة فعلياً هنا.
+     */
+    it('إغلاق لوحة رمز 2FA بلا إدخاله (محاكاة Escape/×): يسجّل الخروج فعلياً (signOut حقيقي)', async () => {
+        getAALMock.mockResolvedValue({ data: { currentLevel: 'aal1', nextLevel: 'aal2' }, error: null });
+        listFactorsMock.mockResolvedValue({ data: { totp: [{ id: 'factor-1' }] }, error: null });
+
+        const { AuthModal } = await import('../AuthModalStub.js');
+        const onSuccess = vi.fn();
+        const onClose = vi.fn();
+        const modal = new AuthModal('c', { onSuccess, onClose });
+        modal.open();
+        await fillAndSubmit(modal.overlay);
+
+        const mfaPanel = modal.overlay.querySelector('#authModalMfaPanel');
+        expect(mfaPanel.style.display).toBe('block');
+        expect(signOutSdkMock).not.toHaveBeenCalled(); // لا خروج قبل الإغلاق
+
+        // محاكاة إغلاق النافذة (زر × يستدعي close() مباشرة — نفس مسار Escape/النقر الخارجي)
+        modal.close();
+        await waitUntil(() => signOutSdkMock.mock.calls.length > 0);
+
+        expect(signOutSdkMock).toHaveBeenCalledTimes(1);
+        expect(onSuccess).not.toHaveBeenCalled();
+        expect(onClose).toHaveBeenCalledTimes(1); // يُعامَل كتخطٍّ من ناحية الحارس أيضاً
     });
 
     it('تسجيل حساب جديد (signUp) ناجح: يسجّل ACTIONS.SIGNUP في auditLog الحقيقي ويمرّر الجوال بصيغة E.164', async () => {

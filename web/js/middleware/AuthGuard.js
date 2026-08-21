@@ -47,7 +47,10 @@ class AuthGuardClass {
         const { user, ok: authOk } = await getAuthUser();
 
         this.currentUser = user;
-        this.isAuthenticated = authOk && !!user;
+        // تدقيق أمني 2026-08-21: جلسة صالحة (aal1) لا تعني دخولاً مكتملاً لحساب مفعَّل
+        // عليه 2FA — بلا هذا الفحص، إعادة تحميل الصفحة أو فتح تبويب جديد بعد تجاوز
+        // تحدي الرمز (بإغلاق النافذة بدل إدخاله) كان يمنح وصولاً كاملاً بلا الرمز إطلاقاً.
+        this.isAuthenticated = (authOk && !!user) ? !(await this._needsMfaChallenge()) : false;
         this.initialized = true;
 
         // Subscribe to auth changes
@@ -63,6 +66,32 @@ class AuthGuardClass {
             user: this.currentUser,
             configured: this.isConfigured
         };
+    }
+
+    /**
+     * هل الحساب الحالي مفعَّل عليه 2FA وجلسته الحالية عند aal1 فقط (لم يُكمَل تحدي الرمز بعد)؟
+     * تدقيق أمني 2026-08-21 — راجع init()/subscribeToAuthChanges لسياق الاستخدام.
+     */
+    async _needsMfaChallenge() {
+        try {
+            const { mfaGetAAL } = await import('../../supabaseClient.js');
+            const aal = await mfaGetAAL();
+            return !!(aal.ok && aal.data && aal.data.nextLevel === 'aal2' && aal.data.nextLevel !== aal.data.currentLevel);
+        } catch (_) {
+            return false;
+        }
+    }
+
+    /**
+     * يُعيد حساب isAuthenticated فعلياً (بما فيه فحص AAL) — يُستدعى يدوياً من
+     * AuthModalStub بعد نجاح تحدي 2FA، لأن نجاح mfa.verify() لا يُطلق بالضرورة حدث
+     * SIGNED_IN جديداً عبر onAuthStateChange.
+     */
+    async refreshAuthState() {
+        const { user, ok: authOk } = await getAuthUser();
+        this.currentUser = user;
+        this.isAuthenticated = (authOk && !!user) ? !(await this._needsMfaChallenge()) : false;
+        return this.isAuthenticated;
     }
 
     /**
@@ -82,26 +111,54 @@ class AuthGuardClass {
         const { supabase } = await getSupabaseClient();
         if (!supabase) return;
 
-        supabase.auth.onAuthStateChange((event, session) => {
+        supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('[AuthGuard] Auth state changed:', event);
 
             const previousUser = this.currentUser;
             this.currentUser = session?.user || null;
-            this.isAuthenticated = !!this.currentUser;
             this._reviewerCache = null; // هوية مختلفة (أو خروج) = ذاكرة isReviewer() القديمة غير صالحة
             this._adminCache = null; // نفس السبب — ذاكرة isAdmin() القديمة غير صالحة
             this._deferredGatesTriggered = false; // نفس السبب — تسجيل دخول جديد يستحق إعادة فحص السلسلة المؤجَّلة
 
             if (event === 'SIGNED_IN') {
-                auditLog(ACTIONS.LOGIN, { email: this.currentUser?.email });
-                this._notifyIfJustConfirmedEmail();
-                this._runOnboardingGates();
+                // تدقيق أمني 2026-08-21: راجع تعليق مطابق في init() — جلسة aal1 وحدها لا
+                // تكفي لحساب مفعَّل عليه 2FA.
+                const needsMfa = await this._needsMfaChallenge();
+                this.isAuthenticated = !needsMfa;
+                if (!needsMfa) {
+                    auditLog(ACTIONS.LOGIN, { email: this.currentUser?.email });
+                    this._notifyIfJustConfirmedEmail();
+                    this._runOnboardingGates();
+                }
+                // needsMfa=true: AuthModalStub.challengeMfaIfNeeded يعرض التحدي ضمن نفس
+                // تدفّق الدخول ويستدعي refreshAuthState() بعد نجاحه؛ إن أُغلقت النافذة بلا
+                // إكماله فهي تسجّل الخروج فعلياً (تُبطل هذه الجلسة)، فتبقى isAuthenticated=false هنا بأمان.
             } else if (event === 'SIGNED_OUT') {
+                this.isAuthenticated = false;
                 auditLog(ACTIONS.LOGOUT, {});
             } else if (event === 'PASSWORD_RECOVERY') {
+                // تدقيق أمني 2026-08-21: جلسة الاستعادة مخصَّصة الغرض فقط (تعيين كلمة مرور
+                // جديدة) — لا تُعامَل كدخول كامل. فتح رابط الاستعادة وحده (بلا معرفة كلمة
+                // المرور الأصلية ولا رمز 2FA) كان يمنح وصولاً كاملاً للحساب إن أُغلقت نافذة
+                // التعيين بلا إكمالها فعلياً.
+                this.isAuthenticated = false;
                 import('../ui/NewPasswordModal.js').then(({ NewPasswordModal }) => {
-                    new NewPasswordModal().open();
+                    new NewPasswordModal({
+                        onSuccess: () => {
+                            this.isAuthenticated = true;
+                            auditLog(ACTIONS.LOGIN, { email: this.currentUser?.email });
+                            this._runOnboardingGates();
+                        },
+                        onClose: async () => {
+                            const { signOut } = await import('../../supabaseClient.js');
+                            await signOut();
+                            this.isAuthenticated = false;
+                            this.currentUser = null;
+                        },
+                    }).open();
                 });
+            } else {
+                this.isAuthenticated = !!this.currentUser;
             }
 
             // Notify listeners
