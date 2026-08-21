@@ -104,6 +104,19 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase functions deploy places-nearby
 
+      # تدقيق 2026-08-21: الثلاث كانت مبنيّة بالكود منذ 2026-07-13 (migration
+      # 20260713000000_reviewer_portal.sql مُطبَّقة فعلاً على القاعدة الحيّة) لكن بلا
+      # خطوة نشر هنا إطلاقاً — 404 حيّ لباقة «مراجَع بخبير» (1,999 ﷼) رغم بيعها فعلياً.
+      # JWT مستخدم حقيقي (نفس نمط create-checkout)، بلا أسرار إضافية.
+      - name: "Deploy reviewer-queue / reviewer-claim / reviewer-submit (بوابة مراجعة الخبراء)"
+        if: steps.check_link_secrets.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          npx supabase functions deploy reviewer-queue
+          npx supabase functions deploy reviewer-claim
+          npx supabase functions deploy reviewer-submit
+
       - name: Push payment provider secrets to Supabase (skips any missing one safely)
         if: steps.check_link_secrets.outputs.configured == 'true'
         env:
