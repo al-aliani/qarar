@@ -10,6 +10,13 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { buildNearbySearchUrl, parsePlacesCount } from '../_shared/placesNearby.ts';
 import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
+import { checkRateLimit } from '../_shared/rateLimit.ts';
+
+// تدقيق أمني 2026-08-21: بلا حد سابقاً — كل استدعاء ينفّذ نداءً حقيقياً مدفوعاً
+// لـGoogle Places بمفتاح المالك، بلا أي سقف يومي/لكل مستخدم. 30 كل ساعة يكفي بسخاء
+// لاستخدام دراسة واحدة (فحص عدة مواقع مرشَّحة) دون فتح الباب لاستنزاف الميزانية.
+const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_WINDOW_SECONDS = 3600;
 
 function jsonResponse(req: Request, body: unknown, status = 200): Response {
     return new Response(JSON.stringify(body), {
@@ -34,6 +41,14 @@ Deno.serve(async (req: Request) => {
     });
     const { data: userData, error: userError } = await userClient.auth.getUser(jwt);
     if (userError || !userData?.user) return jsonResponse(req, { error: 'invalid_session' }, 401);
+    const userId = userData.user.id;
+
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    const rateLimit = await checkRateLimit(adminClient, userId, 'places-nearby', RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SECONDS);
+    if (!rateLimit.ok) {
+        return jsonResponse(req, { error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds }, 429);
+    }
 
     let body: { lat?: unknown; lng?: unknown; radiusMeters?: unknown };
     try {

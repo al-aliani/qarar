@@ -7,6 +7,13 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { checkOneCandidate } from '../_shared/nameAvailability.ts';
 import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
+import { checkRateLimit } from '../_shared/rateLimit.ts';
+
+// تدقيق أمني 2026-08-21: بلا حد سابقاً — كل استدعاء ينفّذ حتى ~30 نداء HTTP خارجي
+// فعلي (5 مرشّحين × 3 نطاقات لكل منهم مع إعادة محاولة). 20 كل 10 دقائق يكفي بسخاء
+// لعصف ذهني بأسماء بديلة، ويمنع استخدام الدالة كوسيط زحف آلي على instagram.com/x.com.
+const RATE_LIMIT_MAX = 20;
+const RATE_LIMIT_WINDOW_SECONDS = 600;
 
 function jsonResponse(req: Request, body: unknown, status = 200): Response {
     return new Response(JSON.stringify(body), {
@@ -31,6 +38,14 @@ Deno.serve(async (req: Request) => {
     });
     const { data: userData, error: userError } = await userClient.auth.getUser(jwt);
     if (userError || !userData?.user) return jsonResponse(req, { error: 'invalid_session' }, 401);
+    const userId = userData.user.id;
+
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    const rateLimit = await checkRateLimit(adminClient, userId, 'check-name-availability', RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SECONDS);
+    if (!rateLimit.ok) {
+        return jsonResponse(req, { error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds }, 429);
+    }
 
     let body: { candidates?: unknown };
     try {

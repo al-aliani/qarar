@@ -21,6 +21,13 @@ import { createStripeCheckout } from '../_shared/providers/stripe.ts';
 import { createTamaraCheckout } from '../_shared/providers/tamara.ts';
 import { selectedAddons } from '../_shared/catalog.ts';
 import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
+import { checkRateLimit } from '../_shared/rateLimit.ts';
+
+// تدقيق أمني 2026-08-21: بلا حد سابقاً — أي جلسة عادية تقدر تستنزف حصة Moyasar/
+// Stripe/Tamara الحيّة بحلقة استدعاءات (كل نداء ناجح ينشئ فاتورة/جلسة حقيقية على
+// حساب المالك التجاري). 10 طلبات كل 10 دقائق يكفي بسخاء لأي استخدام مشروع حقيقي.
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_SECONDS = 600;
 
 function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -78,6 +85,11 @@ Deno.serve(async (req: Request) => {
   // عميل بصلاحية service_role — الوحيد المسموح له بالكتابة في orders (RLS لا يسمح
   // لأي دور آخر بذلك إطلاقاً، انظر migration الخاص بهذا الجدول).
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+  const rateLimit = await checkRateLimit(adminClient, userId, 'create-checkout', RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SECONDS);
+  if (!rateLimit.ok) {
+    return jsonResponse(req, { error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds }, 429);
+  }
 
   // أمني: studyId يصل من جسم الطلب بلا أي تحقق ملكية — دون هذا الفحص يستطيع أي
   // مستخدم دفع (بماله الخاص) لباقة 'reviewed' مستهدفاً دراسة شخص آخر، فيمنح ذلك
