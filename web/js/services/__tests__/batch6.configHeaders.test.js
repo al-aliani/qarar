@@ -20,16 +20,29 @@ import { load as loadYaml } from 'js-yaml';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '../../../../');
 
+// تدقيق 2026-08-21: vercel.json تحوّل من صيغة "headers" الحديثة إلى صيغة "routes"
+// الكلاسيكية (Vercel لا يسمح بخلط routes مع headers/redirects/rewrites بنفس الملف —
+// لازم عند إضافة إعادة توجيه www→apex ضمن نفس التهيئة). الرؤوس الفعلية لم تتغيّر
+// جوهرياً، فقط مكانها بالملف — الآن كائن headers داخل عنصر routes بمسار '^/(.*)$'
+// (وليس المسار الوحيد بهذا src؛ يُميَّز بوجود مفتاح headers فعلاً، لا بمجرد المطابقة).
+function readHeadersBlock() {
+    const configPath = resolve(REPO_ROOT, 'vercel.json');
+    const config = JSON.parse(readFileSync(configPath, 'utf8'));
+    // أكثر من عنصر routes بنفس src="^/(.*)$" (إعادة توجيه www + كتلة الرؤوس الأمنية) —
+    // نميّز كتلة الرؤوس بوجود Content-Security-Policy تحديداً، لا مجرد وجود headers.
+    const route = config.routes.find(r => r.headers && r.headers['Content-Security-Policy']);
+    return { config, headers: route?.headers };
+}
+
 describe('FIX B — vercel.json: تضييق img-src + إضافة HSTS', () => {
-    it('img-src لم يعد مفتوحاً على https:‎ العام (يقتصر على self وdata:)', () => {
+    it('img-src لم يعد مفتوحاً على https:‎ العام (يقتصر على self وdata: ونطاقات محدَّدة صراحة)', () => {
         const configPath = resolve(REPO_ROOT, 'vercel.json');
         expect(existsSync(configPath)).toBe(true);
-        const config = JSON.parse(readFileSync(configPath, 'utf8'));
-        const headersBlock = config.headers.find(h => h.source === '/(.*)');
-        expect(headersBlock).toBeTruthy();
-        const csp = headersBlock.headers.find(h => h.key === 'Content-Security-Policy');
+        const { headers } = readHeadersBlock();
+        expect(headers).toBeTruthy();
+        const csp = headers['Content-Security-Policy'];
         expect(csp).toBeTruthy();
-        const imgSrcMatch = csp.value.match(/img-src\s+([^;]+);?/);
+        const imgSrcMatch = csp.match(/img-src\s+([^;]+);?/);
         expect(imgSrcMatch).toBeTruthy();
         const imgSrcValue = imgSrcMatch[1].trim();
         // لا يوجد "https:" مفتوح (فحص عبر أجزاء الكلمات كي لا يطابق https:// كجزء من نطاق مذكور صراحة)
@@ -40,20 +53,16 @@ describe('FIX B — vercel.json: تضييق img-src + إضافة HSTS', () => {
     });
 
     it('يتضمن Strict-Transport-Security (HSTS) في نفس كتلة الرؤوس', () => {
-        const configPath = resolve(REPO_ROOT, 'vercel.json');
-        const config = JSON.parse(readFileSync(configPath, 'utf8'));
-        const headersBlock = config.headers.find(h => h.source === '/(.*)');
-        const hsts = headersBlock.headers.find(h => h.key === 'Strict-Transport-Security');
+        const { headers } = readHeadersBlock();
+        const hsts = headers['Strict-Transport-Security'];
         expect(hsts).toBeTruthy();
-        expect(hsts.value).toMatch(/max-age=\d+/);
-        expect(hsts.value).toMatch(/includeSubDomains/);
+        expect(hsts).toMatch(/max-age=\d+/);
+        expect(hsts).toMatch(/includeSubDomains/);
     });
 
     it('باقي رؤوس الأمان الأساسية ما زالت موجودة (لا انحدار جانبي)', () => {
-        const configPath = resolve(REPO_ROOT, 'vercel.json');
-        const config = JSON.parse(readFileSync(configPath, 'utf8'));
-        const headersBlock = config.headers.find(h => h.source === '/(.*)');
-        const keys = headersBlock.headers.map(h => h.key);
+        const { headers } = readHeadersBlock();
+        const keys = Object.keys(headers);
         expect(keys).toContain('X-Frame-Options');
         expect(keys).toContain('X-Content-Type-Options');
         expect(keys).toContain('Referrer-Policy');
