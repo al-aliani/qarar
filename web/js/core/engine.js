@@ -884,10 +884,21 @@ export function calculateStudy(study, overrides) {
     // لأن التدفقات السنوية بعد خدمة الدين أصلاً — انظر تعليق equityOutlay أعلاه.
     const cashFlows = [-equityOutlay, ...incomeStatement.map(y => y.cashFlow)];
 
+    // تصحيح (تدقيق حي 2026-07-22، مُطبَّق 2026-08-21): إن كانت مدة القرض أطول من أفق
+    // الدراسة، يبقى رصيد قرض غير مسدَّد عند نهاية السنة الأخيرة — التزام حقيقي على
+    // المالك حتى لو توقفت التدفقات المُحتسَبة عند تلك السنة (لا استمرارية مُفترَضة في
+    // npv/irr الأساسيين، خلافاً لـnpvWithTerminal أدناه). قبل هذا التصحيح كان تمديد مدة
+    // القرض وحده — بلا أي تغيير تشغيلي فعلي — يُخفي هذا الالتزام فيرفع NPV/IRR وهماً،
+    // ويمرّ نفس الرقم غير المصحَّح لبوابة القرار GO/REVISE/NO-GO ولكل التقارير المصدَّرة.
+    const remainingDebtAtHorizon = loanScheduleData?.annualSummary?.find(s => s.year === years)?.endingBalance ?? 0;
+    const cashFlowsForDecision = remainingDebtAtHorizon > 0
+        ? [...cashFlows.slice(0, -1), cashFlows[cashFlows.length - 1] - remainingDebtAtHorizon]
+        : cashFlows;
+
     // ═══ القيمة النهائية (Terminal Value — نمو Gordon) ═══
     const tvCfg = study.assumptions?.terminalValue || {};
     const lastYearIncomeStatement = incomeStatement[incomeStatement.length - 1] || {};
-    
+
     const { tvEquity, terminalValueDiscounted } = calculateTerminalValue({
         tvCfg,
         lastYearIncomeStatement,
@@ -896,17 +907,22 @@ export function calculateStudy(study, overrides) {
         loanScheduleData
     });
 
-    // القيمة النهائية استرشادية، لا تُخلط مع سلسلة التدفقات النقدية الأساسية
-    const npv = calculateNPV(discountRate, cashFlows);
-    const npvWithTerminal = npv + terminalValueDiscounted;
-    
-    let irr = calculateIRR(cashFlows);
+    // القيمة النهائية استرشادية، لا تُخلط مع سلسلة التدفقات النقدية الأساسية.
+    // npvOperating (بلا خصم الدين المتبقي) هو أساس npvWithTerminal — لأن terminalValueDiscounted
+    // نفسها تخصم remainingDebtAtHorizon من قيمة المنشأة بالفعل (calculateTerminalValue)؛
+    // لو استُخدم npv المُصحَّح هنا لتكرر خصم الدين مرتين. npv (المستخدم في بوابة القرار
+    // وكل المخرَجات) هو المصحَّح — من cashFlowsForDecision.
+    const npvOperating = calculateNPV(discountRate, cashFlows);
+    const npv = remainingDebtAtHorizon > 0 ? calculateNPV(discountRate, cashFlowsForDecision) : npvOperating;
+    const npvWithTerminal = npvOperating + terminalValueDiscounted;
+
+    let irr = calculateIRR(cashFlowsForDecision);
     if (irr != null) {
         const tol = 1e-6;
         if (npv < -tol && irr > discountRate) irr = null;
         else if (npv > tol && irr < discountRate) irr = null;
     }
-    const mirr = calculateMIRR(cashFlows, discountRate, discountRate);
+    const mirr = calculateMIRR(cashFlowsForDecision, discountRate, discountRate);
 
     // ═══ ضريبة القيمة المضافة (15%) — توقيت نقدي، لا ربحية ═══
     // الأسعار تُفترض غير شاملة للضريبة؛ تُحصَّل على المبيعات وتُخصم على المشتريات

@@ -1129,6 +1129,8 @@ export class ReportGenerator {
                 <tbody>
                     <tr><td colspan="${ys.length + 1}" style="background:#f3f4f0;font-weight:700;">الأصول</td></tr>
                     ${row(this._lbl(lang, 'cash', 'النقدية وما في حكمها'), b => b.assets.current.cash)}
+                    ${row(this._lbl(lang, 'accounts_receivable', 'ذمم العملاء'), b => b.assets.current.accountsReceivable)}
+                    ${row(this._lbl(lang, 'inventory', 'المخزون'), b => b.assets.current.inventory)}
                     ${row(t('net_fixed_assets', lang), b => b.assets.fixed.net)}
                     ${row(t('total_assets', lang), b => b.assets.total, { highlight: true })}
                     <tr><td colspan="${ys.length + 1}" style="background:#f3f4f0;font-weight:700;">الخصوم</td></tr>
@@ -1139,6 +1141,7 @@ export class ReportGenerator {
                     ${row(this._lbl(lang, 'share_capital', 'رأس المال المدفوع'), b => b.equity.paidInCapital)}
                     ${row(this._lbl(lang, 'retained_earnings', 'الأرباح المحتجزة'), b => b.equity.retainedEarnings)}
                     ${row(t('total_equity', lang), b => b.equity.total)}
+                    ${row('فجوة تمويل غير مغطاة', b => b.fundingGap)}
                     ${row(lang === 'en' ? `${t('total_liabilities', 'en')} and ${t('total_equity', 'en')}` : 'إجمالي الخصوم وحقوق الملكية', b => b.totalLiabilitiesAndEquity, { highlight: true })}
                 </tbody>
             </table>

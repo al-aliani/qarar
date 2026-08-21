@@ -25,13 +25,16 @@ const WORD_SECTION_IDS = ['executive_summary', 'market', 'revenue_breakdown', 'f
 /** الخط العربي الموحد للمستند — نفس هوية المنصة */
 const AR_FONT = 'IBM Plex Sans Arabic';
 
+// تصحيح (تدقيق 2026-07-22، مُتحقَّق منه 2026-08-21): كان أي مبلغ ≥ مليون يُختصر إلى
+// "1.6 مليون ريال" في كل جداول القوائم المالية (قائمة الدخل/التدفقات/الميزانية/جدول
+// الإهلاك) — لا مجرد بطاقة KPI واحدة. الاختصار يفقد حتى ±50,000 ﷼ فتتوقف صفوف الجدول
+// (مثل الأصول = الخصوم + حقوق الملكية) عن التوازن ظاهرياً في المستند المُسلَّم رغم أن
+// الأرقام الأساسية صحيحة. Excel لا يختصر إطلاقاً (SAFE.num يكتب الرقم الخام) — نطابقه هنا.
 function formatCurrency(n, lang = 'ar') {
     if (!n && n !== 0) return '0';
     if (lang === 'en') {
-        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M SAR';
         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
     }
-    if (n >= 1000000) return (n / 1000000).toFixed(1) + ' مليون ريال';
     return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
 }
 
@@ -449,7 +452,13 @@ export class WordExporter {
             [t('total_liabilities', lang), r => r.liabilities?.total],
             [t('share_capital', lang), r => r.equity?.paidInCapital],
             [t('retained_earnings', lang), r => r.equity?.retainedEarnings],
-            [t('total_equity', lang), r => r.equity?.total]
+            [t('total_equity', lang), r => r.equity?.total],
+            // تصحيح (تدقيق 2026-08-21): لم يكن للجدول صفّ لا لفجوة التمويل ولا للإجمالي
+            // النهائي — totalLiabilitiesAndEquity يضمّ fundingGap صمتاً (balanceSheet.js)،
+            // فمجموع الخصوم + حقوق الملكية الظاهرين وحدهما لا يطابق أي إجمالي معروض في
+            // المستند كلما وُجدت فجوة تمويل، ولا يوجد إجمالي معروض أصلاً ليُقارَن به.
+            ['  فجوة تمويل غير مغطاة', r => r.fundingGap],
+            ['الخصوم + حقوق الملكية', r => r.totalLiabilitiesAndEquity]
         ];
         const tableRows = [this.createTableRow(header, true)];
         lineItems.forEach(([label, getter]) => {

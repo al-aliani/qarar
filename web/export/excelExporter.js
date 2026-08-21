@@ -448,6 +448,10 @@ export class ExcelExporter {
             [t('total_liabilities', lang), ...sheets.map((s) => SAFE.num(s.liabilities?.total))],
             ['', ...sheets.map(() => '')],
             [t('total_equity', lang), ...sheets.map((s) => SAFE.num(s.equity?.total))],
+            // تصحيح (تدقيق 2026-08-21): totalLiabilitiesAndEquity يضمّ fundingGap صمتاً
+            // (lib/calc/balanceSheet.js) بلا أي صفّ ظاهر هنا — فمجموع الخصوم + حقوق الملكية
+            // الظاهرين لا يطابق الإجمالي المعروض كلما وُجدت فجوة تمويل. نُظهرها صراحةً.
+            ['  فجوة تمويل غير مغطاة', ...sheets.map((s) => SAFE.num(s.fundingGap))],
             ['', ...sheets.map(() => '')],
             ['الخصوم + حقوق الملكية', ...sheets.map((s) => SAFE.num(s.totalLiabilitiesAndEquity))],
         ];
@@ -781,11 +785,20 @@ export class ExcelExporter {
     }
 
     addScenariosSheet(workbook) {
+        // تصحيح (تدقيق 2026-08-21): كانت تقرأ NPV/IRR من this.data.scenarios (مدخلات
+        // الإيراد/التكلفة الخام فقط، بلا نتائج) بمسار غير موجود أصلاً (.results.indicators)
+        // فتُقرأ undefined ⟶ SAFE.num تُحوّلها 0 لكل سيناريو بما فيه الأساسي. النتائج
+        // الفعلية المحسوبة (npv/irr/payback) موجودة في this.results.scenarios[key].kpis
+        // (انظر engine.js buildScenarios/runCase) — مصدر منفصل عن مدخلات السيناريو الخام.
         const sc = this.data?.scenarios || {};
+        const scRes = this.results?.scenarios || {};
         const p = sc.pessimistic || { revenueChange: 0, costChange: 0, description: '—' };
         const b = sc.base || { revenueChange: 0, costChange: 0, description: '—' };
         const o = sc.optimistic || { revenueChange: 0, costChange: 0, description: '—' };
-        const payback = (entry) => SAFE.payback(entry?.results?.indicators?.paybackPeriod ?? entry?.results?.indicators?.payback);
+        const pRes = scRes.pessimistic?.kpis || {};
+        const bRes = scRes.base?.kpis || {};
+        const oRes = scRes.optimistic?.kpis || {};
+        const payback = (kpis) => SAFE.payback(kpis?.payback);
 
         const data = [
             ['السيناريوهات'],
@@ -796,27 +809,27 @@ export class ExcelExporter {
                 (SAFE.num(p.revenueChange) * 100).toFixed(0) + '%',
                 (SAFE.num(p.costChange) * 100).toFixed(0) + '%',
                 (p.description || '—').toString(),
-                SAFE.num(p.results?.indicators?.npv),
-                SAFE.pctText(p.results?.indicators?.irr),
-                payback(p),
+                SAFE.num(pRes.npv),
+                SAFE.pctText(pRes.irr),
+                payback(pRes),
             ],
             [
                 'أساسي',
                 (SAFE.num(b.revenueChange) * 100).toFixed(0) + '%',
                 (SAFE.num(b.costChange) * 100).toFixed(0) + '%',
                 (b.description || '—').toString(),
-                SAFE.num(b.results?.indicators?.npv),
-                SAFE.pctText(b.results?.indicators?.irr),
-                payback(b),
+                SAFE.num(bRes.npv),
+                SAFE.pctText(bRes.irr),
+                payback(bRes),
             ],
             [
                 'متفائل',
                 (SAFE.num(o.revenueChange) * 100).toFixed(0) + '%',
                 (SAFE.num(o.costChange) * 100).toFixed(0) + '%',
                 (o.description || '—').toString(),
-                SAFE.num(o.results?.indicators?.npv),
-                SAFE.pctText(o.results?.indicators?.irr),
-                payback(o),
+                SAFE.num(oRes.npv),
+                SAFE.pctText(oRes.irr),
+                payback(oRes),
             ],
         ];
 
