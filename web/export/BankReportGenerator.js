@@ -258,11 +258,19 @@ export class BankReportGenerator {
     static _renderBankSection(id, state, results, info, financing, ind, cap, loan, incomeY1, num, _fmt, L) {
         const n = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'][num] || String(num);
         switch (id) {
-            case 'executive_summary':
+            case 'executive_summary': {
+                // تدقيق أمني 2026-08-21: نص حر يكتبه مالك الدراسة (ExecutiveSummary.js) يُحقن
+                // هنا بلا bankEsc خلافاً لبقية الدالة — XSS مخزَّن ينفَّذ بمتصفح المراجع عبر
+                // document.write عند معاينة الدراسة من ReviewerDashboardView.
+                const summaryText = state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText;
+                const body = summaryText
+                    ? bankEsc(summaryText)
+                    : `يهدف مشروع «${bankEsc(info.name || 'المشروع')}» إلى ${bankEsc(info.concept || 'تنفيذ نشاط تجاري')} في ${bankEsc(info.city || 'الموقع المحدد')}. تم إعداد هذه الدراسة وفق منهجيات احترافية لتقديم طلب التمويل.`;
                 return `<div class="bank-section">
             <div class="bank-section-title">${n}. الملخص التنفيذي</div>
-            <p>${state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText || `يهدف مشروع «${bankEsc(info.name || 'المشروع')}» إلى ${bankEsc(info.concept || 'تنفيذ نشاط تجاري')} في ${bankEsc(info.city || 'الموقع المحدد')}. تم إعداد هذه الدراسة وفق منهجيات احترافية لتقديم طلب التمويل.`}</p>
+            <p>${body}</p>
         </div>`;
+            }
             case 'loan_request': {
                 const structure = cap?.capitalStructure || {};
                 const uses = [
@@ -429,10 +437,10 @@ export class BankReportGenerator {
                 <tr><th>المخاطر</th><th>الاحتمالية</th><th>التأثير</th><th>خطة المواجهة</th></tr>
                 ${(state.riskAnalysis.risks || []).slice(0, 5).map(r => `
                 <tr>
-                    <td>${(r.name || r.risk || r.description || '-')}</td>
-                    <td>${r.probability || '-'}</td>
-                    <td>${r.impact || '-'}</td>
-                    <td>${(r.mitigation || '-').toString().slice(0, 80)}${(r.mitigation || '').length > 80 ? '...' : ''}</td>
+                    <td>${bankEsc(r.name || r.risk || r.description || '-')}</td>
+                    <td>${bankEsc(r.probability || '-')}</td>
+                    <td>${bankEsc(r.impact || '-')}</td>
+                    <td>${bankEsc((r.mitigation || '-').toString().slice(0, 80))}${(r.mitigation || '').length > 80 ? '...' : ''}</td>
                 </tr>
                 `).join('')}
             </table>
