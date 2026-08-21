@@ -2,6 +2,7 @@
  * اختبار E2E أساسي — تحميل التطبيق وعناصر الواجهة
  */
 import { test, expect } from '@playwright/test';
+import { loginTestUser, hasE2ECredentials } from './helpers/auth.js';
 
 test.describe('محاكي الجدوى — E2E', () => {
     test('تحميل الصفحة الرئيسية وعرض العنوان', async ({ page }) => {
@@ -17,9 +18,12 @@ test.describe('محاكي الجدوى — E2E', () => {
         // التطبيق يقلع إلى لوحة التحكم (DashboardView) لا إلى دراسة مباشرة، فشريط
         // التصنيفات (#categoryStepper) وزر التصدير لا يظهران إلا بعد فتح دراسة فعلية.
         // ننشئ دراسة فارغة (نفس تدفّق critical_path) ثم نتحقق من عناصر مساحة الدراسة.
+        // تدقيق 2026-08-21: #/home تتطلب تسجيل دخول إلزامياً الآن.
+        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
         await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
         await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
+        await loginTestUser(page);
         // waitFor صريح (لا isVisible لحظي) — لوحة التحكم تُرسم بعد فحص async لحالة
         // المستخدم، ففحص لحظي مبكر يتخطّى الإنشاء فلا يظهر #field-name (نفس نمط full-project-cycle الناجح).
         const btnNew = page.locator('#btnNewProjectEmpty, #cardFullStudy').first();
@@ -56,8 +60,11 @@ test.describe('محاكي الجدوى — E2E', () => {
         // #btnThemeToggle الأصلي داخل .sidebar المخفي دائماً؛ #headerThemeToggle
         // ظاهر فقط داخل وضع الدراسة (workspace)، و#dvThemeToggle ظاهر في لوحة
         // التحكم الرئيسية — على المستخدم أن يجد واحداً منهما ظاهراً في أي الحالتين.
+        // تدقيق 2026-08-21: كلا العنصرين جزء من لوحة التحكم/مساحة الدراسة، تتطلبان تسجيل دخول الآن.
+        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
         await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
+        await loginTestUser(page);
         // :visible يفلتر عند المطابقة قبل first() — دون هذا، عنصر hidden أسبق في DOM
         // (headerThemeToggle) قد يُختار بدل dvThemeToggle الظاهر فعلياً، فيفشل التوكيد رغم توفّر الزر.
         const themeBtn = page.locator('#headerThemeToggle:visible, #dvThemeToggle:visible').first();

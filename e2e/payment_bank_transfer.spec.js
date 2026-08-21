@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { loginTestUser } from './helpers/auth.js';
 
 /**
  * اختبار مسار الدفع الحقيقي (تحويل بنكي) من متصفح حقيقي — عبر Supabase الحيّة فعلاً
@@ -20,19 +21,9 @@ import { test, expect } from '@playwright/test';
  * ("اختبار دفع e2e <timestamp>") لتسهيل حذفه يدوياً لاحقاً. لا نضغط زر "تأكيد وصول
  * الحوالة" — الاختبار مسار قراءة فقط في جانب الأدمن، لا يُكمِل أي عملية دفع فعلية.
  *
- * ملاحظة: مستخدم يُنشأ يدوياً من لوحة Supabase (Authentication → Add user) بلا رقم
- * جوال يُواجَه بـCompletePhoneModal («أكمل حسابك») فور أول دخول (AuthGuard._continuePhoneGate)
- * — الدالة handlePhoneGateIfPresent أدناه تعبّيه برقم وهمي وتتجاوزه تلقائياً.
+ * تسجيل الدخول (بما فيه CompletePhoneModal لحساب بلا رقم جوال) عبر e2e/helpers/auth.js
+ * المشترك — #/home صارت تتطلب تسجيل دخول إلزامياً فتُفتح نافذة الدخول تلقائياً.
  */
-
-async function handlePhoneGateIfPresent(page) {
-  const overlay = page.locator('#completePhoneModalOverlay');
-  if (await overlay.isVisible({ timeout: 4000 }).catch(() => false)) {
-    await page.locator('#completePhoneInput').fill('0500000000');
-    await page.locator('#completePhoneSubmit').click();
-    await expect(overlay).not.toBeVisible({ timeout: 10000 });
-  }
-}
 
 test.describe('مسار الدفع: تحويل بنكي (حي)', () => {
   test('عميل مسجَّل يُنشئ طلب تحويل بنكي بنجاح من دراسة فعلية', async ({ page }) => {
@@ -44,18 +35,8 @@ test.describe('مسار الدفع: تحويل بنكي (حي)', () => {
     await page.goto('/index.html');
     await page.waitForLoadState('domcontentloaded');
 
-    // 1) تسجيل الدخول
-    const loginBtn = page.locator('#dashboardLogin');
-    await loginBtn.waitFor({ state: 'visible', timeout: 15000 });
-    await loginBtn.click();
-    const overlay = page.locator('#authModalOverlay');
-    await expect(overlay).toBeVisible();
-    await page.locator('#authEmail').fill(email);
-    await page.locator('#authPassword').fill(password);
-    await page.locator('#authBtnSignIn').click();
-    await expect(overlay).not.toBeVisible({ timeout: 15000 });
-    await handlePhoneGateIfPresent(page);
-    await expect(page.locator('#dvAccountToggle')).toBeVisible({ timeout: 10000 });
+    // 1) تسجيل الدخول (نافذة الدخول تُفتح تلقائياً — #/home تتطلب مصادقة إلزامياً الآن)
+    await loginTestUser(page);
 
     // 2) إنشاء دراسة جديدة فارغة (نفس تدفّق full_study.spec.js)
     const btnNew = page.locator('#btnNewProjectEmpty, #cardFullStudy').first();
@@ -116,20 +97,10 @@ test.describe('مسار الدفع: تحويل بنكي (حي)', () => {
     await page.goto('/index.html');
     await page.waitForLoadState('domcontentloaded');
 
-    const loginBtn = page.locator('#dashboardLogin');
-    await loginBtn.waitFor({ state: 'visible', timeout: 15000 });
-    await loginBtn.click();
-    const overlay = page.locator('#authModalOverlay');
-    await expect(overlay).toBeVisible();
-    await page.locator('#authEmail').fill(email);
-    await page.locator('#authPassword').fill(password);
-    await page.locator('#authBtnSignIn').click();
-    await expect(overlay).not.toBeVisible({ timeout: 15000 });
-    await handlePhoneGateIfPresent(page);
-    // AuthGuard.currentUser يُحدَّث فقط عبر onAuthStateChange (مستمع منفصل عن نجاح
-    // AuthModalStub نفسه) — انتظار #dvAccountToggle يثبت أن الجلسة استقرت فعلياً في
-    // الواجهة قبل محاولة فتح مسار محمي (isAdmin() يرجع false فوراً بلا currentUser).
-    await expect(page.locator('#dvAccountToggle')).toBeVisible({ timeout: 10000 });
+    // نافذة الدخول تُفتح تلقائياً؛ loginTestUser تنتظر #dvAccountToggle أيضاً — إثبات
+    // استقرار الجلسة فعلياً قبل أي محاولة فتح مسار محمي (isAdmin() يرجع false فوراً
+    // بلا currentUser لو نودي قبل ذلك).
+    await loginTestUser(page);
 
     // AuthGuard.isAdmin() قد يُرجع false عابراً لو نُودي مباشرة بعد نجاح الدخول (سباق
     // استقرار الجلسة/JWT) — AdminDashboardView.render() حينها يُعيد التوجيه صمتاً لـ''.

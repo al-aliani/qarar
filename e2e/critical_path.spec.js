@@ -1,8 +1,14 @@
 import { test, expect } from '@playwright/test';
+import { loginTestUser, hasE2ECredentials } from './helpers/auth.js';
 
 test.describe('Critical Path: Full User Journey', () => {
 
   test('User can create a project, add revenue, and see calculations', async ({ page }) => {
+    // تدقيق 2026-08-21: #/home تتطلب تسجيل دخول إلزامياً الآن (قرار مالك) — لوحة
+    // التحكم (DashboardView) لا تُرسَم لزائر غير مسجَّل، فهذا الاختبار (ينشئ دراسة
+    // من زر داخل اللوحة) يحتاج حساباً تجريبياً مؤكَّداً.
+    test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
+
     const pageErrors = [];
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
@@ -15,6 +21,7 @@ test.describe('Critical Path: Full User Journey', () => {
     await page.goto('/index.html');
     await expect(page).toHaveTitle(/محاكي دراسة الجدوى/);
     await page.waitForLoadState('domcontentloaded');
+    await loginTestUser(page);
 
     // حارس أساسي ضد بلا-محتوى-صامت: #wizardContainer له ارتفاع CSS ثابت حتى فارغاً،
     // فـ toBeVisible() وحده لا يكشف صفحة فارغة فعلياً (اكتُشف 2026-07-15: استيراد
@@ -80,9 +87,12 @@ test.describe('Critical Path: Full User Journey', () => {
   });
 
   test('Export Menu triggers download options', async ({ page }) => {
-    await page.goto('/index.html');
-    await page.waitForLoadState('domcontentloaded');
+    // تدقيق 2026-08-21: goto أول لـ/index.html (بلا هاش) كان يفتح نافذة تسجيل الدخول
+    // (تُفتح تلقائياً الآن على #/home)، وتبقى عالقة فوق الصفحة بعد goto ثانٍ لهاش
+    // مختلف بنفس الوثيقة (لا يُعيد تحميل الصفحة فعلياً) فتحجب #headerExportMenu.
+    // #/step/N نفسها لا تتطلب تسجيل دخول (مسار منفصل غير محمي)، فالتنقّل المباشر إليها كافٍ.
     await page.goto('/index.html#/step/0');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('#headerExportMenu')).toBeVisible({ timeout: 10000 });
     await page.click('#headerExportMenu');
     // Modal uses data-type (ExportMenu.js)

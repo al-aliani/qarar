@@ -1,11 +1,15 @@
 import { test } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { loginTestUser, hasE2ECredentials } from './helpers/auth.js';
 
 test.describe('Capture Screenshots for Figma', () => {
     test.setTimeout(120000); // 2 minutes just in case
 
     test('Capture all pages', async ({ page }) => {
+        // تدقيق 2026-08-21: #/home تتطلب تسجيل دخول إلزامياً الآن — بلا حساب تجريبي
+        // تلتقط هذه الأداة نافذة تسجيل الدخول بدل خطوات المعالج الفعلية.
+        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
         // Set a standard viewport for Figma designs
         await page.setViewportSize({ width: 1440, height: 1024 });
 
@@ -26,12 +30,18 @@ test.describe('Capture Screenshots for Figma', () => {
         for (const p of pagesToCapture) {
             console.log(`Capturing ${p.name}...`);
             await page.goto(p.url);
-            
+
             // Wait for network to be idle so images/fonts are loaded
             await page.waitForLoadState('networkidle');
-            
+
+            // #/home (index.html) تتطلب تسجيل دخول إلزامياً الآن — نسجّل الدخول هنا
+            // فور وصولنا لها كي تُلتقط لقطة المعالج الفعلية لا نافذة تسجيل الدخول.
+            if (p.url === '/index.html') {
+                await loginTestUser(page);
+            }
+
             // Hide potential floating elements that might overlap incorrectly or wait for animations
-            await page.waitForTimeout(1500); 
+            await page.waitForTimeout(1500);
 
             await page.screenshot({
                 path: path.join(outDir, `${p.name}.png`),

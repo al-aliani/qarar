@@ -1,5 +1,6 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
+import { loginTestUser, hasE2ECredentials } from './helpers/auth.js';
 
 test.describe('دورة حياة المشروع الكاملة', () => {
     test.beforeEach(async ({ page }) => {
@@ -11,6 +12,11 @@ test.describe('دورة حياة المشروع الكاملة', () => {
     });
 
     test('يجب أن يكون المستخدم قادراً على إنشاء مشروع والوصول إلى لوحة القرار بنجاح', async ({ page }) => {
+        // تدقيق 2026-08-21: #/home تتطلب تسجيل دخول إلزامياً الآن — لوحة التحكم لا
+        // تُرسَم لزائر غير مسجَّل، فزر إنشاء المشروع أدناه يحتاج حساباً تجريبياً.
+        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
+        await loginTestUser(page);
+
         // تدقيق 2026-07-15: كان يعتمد على معالج تسلسلي قديم بحقول #projectName/
         // #projectSector ومودال منفصل لإضافة الإيرادات — استُبدل بنظام تصنيفات
         // (StudyCategoryView) وجداول DynamicTable مضمّنة مباشرة في الصفحة.

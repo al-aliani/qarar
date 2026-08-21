@@ -1,6 +1,7 @@
 import { test } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { loginTestUser, hasE2ECredentials } from './helpers/auth.js';
 
 /**
  * التقاط شامل لواجهة الموقع كاملة + رحلة المستخدم من البداية للنهاية.
@@ -39,6 +40,9 @@ test.describe('التقاط رحلة المستخدم الكاملة', () => {
     test.setTimeout(300000);
 
     test('capture full site + journey', async ({ page }) => {
+        // تدقيق 2026-08-21: #/home تتطلب تسجيل دخول إلزامياً الآن — بلا حساب تجريبي
+        // تلتقط أقسام لوحة التحكم/الدراسة نافذة تسجيل الدخول بدل المحتوى الفعلي.
+        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
         fs.mkdirSync(ROOT, { recursive: true });
 
         // ================================================================
@@ -79,6 +83,7 @@ test.describe('التقاط رحلة المستخدم الكاملة', () => {
         await page.setViewportSize({ width: 1440, height: 1024 });
         await page.goto('/index.html');
         await page.waitForLoadState('networkidle').catch(() => {});
+        await loginTestUser(page);
         await page.waitForTimeout(1500);
         await shoot(page, homeDir, 'desktop_01_لوحة_التحكم');
 

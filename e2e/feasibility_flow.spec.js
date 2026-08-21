@@ -1,10 +1,14 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Feasibility Simulator Main Flow', () => {
-  
+
   test('should load the main page and display the primary inputs', async ({ page }) => {
+    // ملاحظة: الجذر '/' يخدم landing.html (صفحة تسويقية، خارج توجيه app.js) منذ
+    // إصلاح توجيه سابق — هذا الاختبار لا يصل لتطبيق الويزارد أصلاً، بلا علاقة
+    // ببوابة تسجيل الدخول على #/home. لم يُعدَّل هنا (فجوة تسمية اختبار قديمة سابقة).
+
     // Navigate to the local server (assuming Vite runs on 5173 or the python backend)
-    await page.goto('http://localhost:5173/'); 
+    await page.goto('http://localhost:5173/');
 
     // Check that the title exists
     await expect(page).toHaveTitle(/دراسة الجدوى|Feasibility|Simulator/i);

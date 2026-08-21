@@ -3,6 +3,7 @@
  * 20 اختبار تغطي: التصدير، المظهر، التنقل، الإعدادات، النماذج.
  */
 import { test, expect } from '@playwright/test';
+import { loginTestUser, hasE2ECredentials } from './helpers/auth.js';
 
 test.describe('التصدير والقوائم', () => {
     // #btnExportMenu داخل .sidebar المخفي دائماً — ندخل سياق دراسة فعلية (workspace)
@@ -55,8 +56,11 @@ test.describe('المظهر والثيم', () => {
     test('تبديل الثيم يغيّر data-theme', async ({ page }) => {
         // #btnThemeToggle (.sidebar) مخفي دائماً؛ #dvThemeToggle هو مكافئه الظاهر
         // في لوحة التحكم الرئيسية (انظر تعليق DashboardView.js عن هذا الاستبدال).
+        // تدقيق 2026-08-21: #dvThemeToggle جزء من لوحة التحكم التي تتطلب تسجيل دخول الآن.
+        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
         await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
+        await loginTestUser(page);
         const themeBtn = page.locator('#dvThemeToggle');
         await themeBtn.waitFor({ state: 'visible', timeout: 8000 });
         const root = page.locator('html');
@@ -77,8 +81,11 @@ test.describe('المظهر والثيم', () => {
     test('الترويسة تحتوي العلامة التجارية', async ({ page }) => {
         // .sidebar مخفي دائماً — العلامة التجارية الظاهرة فعلياً هي في لوحة التحكم
         // الرئيسية (.brand-name) أو ترويسة سياق الدراسة (.app-header__brand).
+        // تدقيق 2026-08-21: .dv-brand__name جزء من لوحة التحكم التي تتطلب تسجيل دخول الآن.
+        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
         await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
+        await loginTestUser(page);
         await expect(page.locator('.app-shell')).toBeVisible({ timeout: 8000 });
         // .brand-name الأصلي داخل .sidebar المخفي دائماً؛ .dv-brand__name هو
         // العلامة التجارية الظاهرة فعلياً في لوحة التحكم الرئيسية، و.app-header__brand

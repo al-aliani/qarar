@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { loginTestUser, hasE2ECredentials } from './helpers/auth.js';
 
 test.describe('دورة دراسة الجدوى الكاملة', () => {
   test('يجب أن يكمل المستخدم دراسة كاملة بنجاح مع ظهور لوحة القرار', async ({ page }) => {
@@ -6,12 +7,17 @@ test.describe('دورة دراسة الجدوى الكاملة', () => {
     // يتقدّم خطوة-خطوة عبر 45 خطوة) — استُبدل بنظام تنقّل بالتصنيفات (8 تصنيفات،
     // كل تصنيف يعرض كل خطواته دفعة واحدة). النص الحرفي "NPV"/"IRR" أيضاً لم يعد
     // يظهر لأن حارس التعريب في app.js يستبدله بمصطلحات عربية.
+    //
+    // تدقيق 2026-08-21: #/home تتطلب تسجيل دخول إلزامياً الآن — لوحة التحكم لا
+    // تُرسَم لزائر غير مسجَّل.
+    test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
     await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
 
     // 1. الدخول للمنصة
     await page.goto('/index.html');
     await expect(page).toHaveTitle(/قرار|جدوى/);
     await page.waitForLoadState('domcontentloaded');
+    await loginTestUser(page);
     await expect(page.locator('#wizardContainer')).not.toBeEmpty();
 
     // 2. إنشاء دراسة جديدة (فارغة، مستوى مفصّل)

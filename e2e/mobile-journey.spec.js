@@ -1,4 +1,5 @@
 import { test, expect, devices } from '@playwright/test';
+import { loginTestUser, hasE2ECredentials } from './helpers/auth.js';
 
 test.use({ ...devices['Pixel 5'] });
 
@@ -45,8 +46,12 @@ async function fillTableCell(row, colKey, value, attempts = 4) {
 
 test('mobile journey keeps wizard and wide tables usable', async ({ page }) => {
     test.setTimeout(240000);
+    // تدقيق 2026-08-21: #/home تتطلب تسجيل دخول إلزامياً الآن — لوحة التحكم لا تُرسَم
+    // لزائر غير مسجَّل، فزر «دراسة جديدة» أدناه يحتاج حساباً تجريبياً.
+    test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
 
     await page.goto('/index.html');
+    await loginTestUser(page);
     await expect(page.locator('.dashboard-view, .dashboard-empty, #wizardContainer, .app-shell').first()).toBeVisible({ timeout: 15000 });
 
     // فحص تجاوز أفقي على مستوى الصفحة — الفحص الأصلي، يبقى كما هو كفحص إضافي لا بديل.
@@ -66,7 +71,10 @@ test('mobile journey keeps wizard and wide tables usable', async ({ page }) => {
     // معرض القوالب. اختيار «مشروع فارغ» صار خطوتين (TemplateGallery.renderBlankAttributionForm):
     // يعرض أولاً بطاقات اختيار مستوى التفصيل (مصغّر/بسيط/مفصّل) قبل إنشاء الدراسة فعلياً —
     // النقر القديم على بطاقة القالب فقط لم يعد يُغلق المعرض.
-    const btnNew = page.locator('#btnNewProject, #btnNewProjectEmpty').filter({ hasText: 'دراسة جديدة' }).first();
+    // تدقيق 2026-08-21: #btnNewProjectEmpty يظهر فقط للوحة فارغة (لا دراسات محفوظة
+    // بعد)؛ #cardFullStudy هو المكافئ حين توجد دراسات سابقة على الحساب — نفس نمط
+    // critical_path.spec.js/full_study.spec.js/full-project-cycle.spec.js.
+    const btnNew = page.locator('#btnNewProjectEmpty, #cardFullStudy').first();
     await expect(btnNew).toBeVisible({ timeout: 8000 });
     await btnNew.click();
     const galleryOverlay = page.locator('#templateGalleryOverlay');
