@@ -106,8 +106,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- e2e/visual.spec.js-snapshots/; then
-            git add e2e/visual.spec.js-snapshots/
+          git add e2e/visual.spec.js-snapshots/
+          if ! git diff --cached --quiet; then
             git commit -m "chore(e2e): توليد لقطات Linux المرجعية لـvisual.spec.js [skip ci]"
             git push origin HEAD:${{ github.head_ref }}
           else
