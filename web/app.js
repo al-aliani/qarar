@@ -2101,10 +2101,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const previousRoute = _currentRoute;
     _currentRoute = route;
     try {
-      if (route === '' || route === 'home') {
-        await showLandingDashboard();
-      } else if (HOME_PANEL_ROUTES[route]) {
-        await showLandingDashboard(route);
+      if (route === '' || route === 'home' || HOME_PANEL_ROUTES[route]) {
+        // تدقيق 2026-08-21 (قرار مالك): #/home كانت تفتح للزوّار بلا تسجيل دخول (وضع
+        // ضيف عمدي سابقاً — راجع تعليق AuthGuard.init:requireAuth). الآن تسجيل الدخول
+        // إلزامي للوصول للوحة الرئيسية — الزائر غير المسجَّل يُوجَّه لصفحة التسويق بدل
+        // رؤية أي محتوى من اللوحة.
+        const homeRoute = route === '' || route === 'home' ? undefined : route;
+        await AuthGuard.protect(() => showLandingDashboard(homeRoute), {
+          message: 'سجّل الدخول أو أنشئ حساباً للمتابعة'
+        }).then((result) => {
+          if (result === null && !AuthGuard.isLoggedIn()) {
+            window.location.href = './landing.html';
+          }
+        });
       } else if (route.startsWith('category/')) {
         const categoryIndex = parseInt(route.slice(9), 10);
         if (Number.isInteger(categoryIndex) && categoryIndex >= 0 && categoryIndex < SIDEBAR_SECTIONS.length) {
@@ -2195,13 +2204,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // أول رسم — نحترم الرابط: رابط مباشر لصفحة يفتحها، وإلا الصفحة الرئيسية
+  // أول رسم — نحترم الرابط: رابط مباشر لصفحة يفتحها، وإلا الصفحة الرئيسية.
+  // تدقيق 2026-08-21: كانت الحالة الفارغة/'home' تستدعي showLandingDashboard() مباشرة،
+  // متجاوزةً بوابة تسجيل الدخول المضافة داخل routeToView — أول تحميل مباشر لـ#/home
+  // (أو بلا هاش إطلاقاً) كان يفتح اللوحة فعلياً بلا أي تحقق. الآن يمر كل شي عبر
+  // routeToView نفسها، مسار واحد فقط للتحقق من المصادقة.
   const initialRoute = parseHash();
-  if (initialRoute && initialRoute !== 'home') {
-    routeToView(initialRoute);
-  } else {
-    showLandingDashboard();
-  }
+  routeToView(initialRoute && initialRoute !== 'home' ? initialRoute : 'home');
 
   // 4. Initialize Auto-save
   const autoSave = new AutoSave(store);
