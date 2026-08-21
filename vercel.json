@@ -3,54 +3,48 @@
   "buildCommand": "npm run build",
   "outputDirectory": "web/dist",
   "framework": null,
-  "redirects": [
+  "routes": [
     {
-      "source": "/(.*)",
+      "src": "^/(.*)$",
       "has": [{ "type": "host", "value": "www.sahib.sa" }],
-      "destination": "https://sahib.sa/$1",
-      "permanent": true
+      "status": 308,
+      "headers": { "Location": "https://sahib.sa/$1" }
     },
-    { "source": "/landing.html", "destination": "/", "permanent": true },
-    { "source": "/faq.html", "destination": "/help.html", "permanent": true }
-  ],
-  "rewrites": [
-    { "source": "/", "destination": "/landing.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "headers": [
+    { "src": "^/landing\\.html$", "status": 308, "headers": { "Location": "/" } },
+    { "src": "^/faq\\.html$", "status": 308, "headers": { "Location": "/help.html" } },
     {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.tile.openstreetmap.org; frame-src https://www.openstreetmap.org https://www.google.com https://www.recaptcha.net; connect-src 'self' https://*.supabase.co https://www.google.com https://www.recaptcha.net https://overpass-api.de https://api.worldbank.org https://*.sentry.io; base-uri 'self'; form-action 'self'" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
-      ]
+      "src": "^/(.*)$",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.tile.openstreetmap.org; frame-src https://www.openstreetmap.org https://www.google.com https://www.recaptcha.net; connect-src 'self' https://*.supabase.co https://www.google.com https://www.recaptcha.net https://overpass-api.de https://api.worldbank.org https://*.sentry.io; base-uri 'self'; form-action 'self'",
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload"
+      },
+      "continue": true
     },
     {
-      "source": "/assets/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
+      "src": "^/assets/(.*)$",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
+      "continue": true
     },
     {
-      "source": "/(.*)\\.(js|css)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
+      "src": "^/(.*)\\.(js|css)$",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
+      "continue": true
     },
     {
-      "source": "/sw.js",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
-      ]
+      "src": "^/sw\\.js$",
+      "headers": { "Cache-Control": "public, max-age=0, must-revalidate" },
+      "continue": true
     },
     {
-      "source": "/manifest.json",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
-      ]
-    }
+      "src": "^/manifest\\.json$",
+      "headers": { "Cache-Control": "public, max-age=0, must-revalidate" },
+      "continue": true
+    },
+    { "src": "^/$", "dest": "/landing.html" },
+    { "handle": "filesystem" },
+    { "src": "^/(.*)$", "dest": "/index.html" }
   ]
 }

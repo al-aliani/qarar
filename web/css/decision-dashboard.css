@@ -39,6 +39,19 @@
         var(--grad-emerald);
 }
 
+/* توصية غير GO — الخلفية تعكس ثقل التوصية بدل الأخضر الواثق نفسه في كل الحالات */
+.dd-verdict--revise {
+    background:
+        radial-gradient(circle at 15% 0%, rgba(217, 168, 78, 0.22), transparent 46%),
+        var(--grad-gold);
+}
+
+.dd-verdict--nogo {
+    background:
+        radial-gradient(circle at 15% 0%, rgba(217, 168, 78, 0.14), transparent 46%),
+        var(--grad-danger);
+}
+
 @media (min-width: 768px) {
     .dd-verdict {
         flex-direction: row;
