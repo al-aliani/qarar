@@ -9,6 +9,9 @@ test.describe('التصدير والقوائم', () => {
     // #btnExportMenu داخل .sidebar المخفي دائماً — ندخل سياق دراسة فعلية (workspace)
     // حيث #headerExportMenu هو الزر الظاهر فعلياً، بنفس نمط critical_path.spec.js.
     test('قائمة التصدير تحتوي خيار التقرير البنكي', async ({ page }) => {
+        // جولة driver.js التعريفية تظهر بعد ثانية عبر setTimeout وتحجب النقر بطبقتها
+        // الشفافة (driver-overlay) تحت بطء CI — نفس فخ critical_path.spec.js.
+        await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
         await page.goto('/index.html#/step/0');
         await page.waitForLoadState('domcontentloaded');
         await page.locator('#headerExportMenu').click();
@@ -17,6 +20,9 @@ test.describe('التصدير والقوائم', () => {
     });
 
     test('قائمة التصدير تحتوي خيار Excel', async ({ page }) => {
+        // جولة driver.js التعريفية تظهر بعد ثانية عبر setTimeout وتحجب النقر بطبقتها
+        // الشفافة (driver-overlay) تحت بطء CI — نفس فخ critical_path.spec.js.
+        await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
         await page.goto('/index.html#/step/0');
         await page.waitForLoadState('domcontentloaded');
         await page.locator('#headerExportMenu').click();
@@ -25,6 +31,9 @@ test.describe('التصدير والقوائم', () => {
     });
 
     test('قائمة التصدير تحتوي خيار PDF', async ({ page }) => {
+        // جولة driver.js التعريفية تظهر بعد ثانية عبر setTimeout وتحجب النقر بطبقتها
+        // الشفافة (driver-overlay) تحت بطء CI — نفس فخ critical_path.spec.js.
+        await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
         await page.goto('/index.html#/step/0');
         await page.waitForLoadState('domcontentloaded');
         await page.locator('#headerExportMenu').click();

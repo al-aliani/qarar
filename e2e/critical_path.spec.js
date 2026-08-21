@@ -91,6 +91,9 @@ test.describe('Critical Path: Full User Journey', () => {
     // (تُفتح تلقائياً الآن على #/home)، وتبقى عالقة فوق الصفحة بعد goto ثانٍ لهاش
     // مختلف بنفس الوثيقة (لا يُعيد تحميل الصفحة فعلياً) فتحجب #headerExportMenu.
     // #/step/N نفسها لا تتطلب تسجيل دخول (مسار منفصل غير محمي)، فالتنقّل المباشر إليها كافٍ.
+    // جولة driver.js التعريفية تظهر بعد ثانية عبر setTimeout وتحجب النقر بطبقتها
+    // الشفافة (driver-overlay) — ظاهر فقط تحت بطء CI/محاولات إعادة المحاولة، نادراً محلياً.
+    await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
     await page.goto('/index.html#/step/0');
     await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('#headerExportMenu')).toBeVisible({ timeout: 10000 });

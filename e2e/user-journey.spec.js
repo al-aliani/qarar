@@ -20,6 +20,9 @@ test('يمكن فتح المنصة وعرض الصفحة الرئيسية وفت
   await expect(page.locator('.dv-brand__name')).toContainText('قرار');
 
   // فتح قائمة التصدير (modal وليس dropdown) — داخل سياق دراسة فعلية
+  // جولة driver.js التعريفية تظهر بعد ثانية وتحجب النقر بطبقتها الشفافة (driver-overlay)
+  // تحت بطء CI — نفس فخ critical_path.spec.js.
+  await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
   await page.goto('/index.html#/step/0');
   const exportBtn = page.locator('#headerExportMenu');
   await exportBtn.waitFor({ state: 'visible', timeout: 10000 });
