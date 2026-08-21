@@ -46,6 +46,13 @@ Deno.serve(async (req: Request) => {
   if (body.decision !== 'certified' && body.decision !== 'rejected') {
     return jsonResponse(req, { error: 'invalid_decision' }, 400);
   }
+  // تدقيق أمني 2026-08-21: notes بلا تحقق نوع/طول سابقاً — يسمح بتخزين سلاسل ضخمة
+  // (إساءة تخزين)، وأي واجهة تعرض هذا الحقل مستقبلاً بلا تهريب مخرجات تصبح عرضة لـXSS.
+  if (body.notes !== undefined && body.notes !== null) {
+    if (typeof body.notes !== 'string' || body.notes.length > 2000) {
+      return jsonResponse(req, { error: 'invalid_notes' }, 400);
+    }
+  }
 
   let certificateId: string | null = null;
   if (body.decision === 'certified') {

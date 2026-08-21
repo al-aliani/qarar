@@ -15,7 +15,7 @@
     {
       "src": "^/(.*)$",
       "headers": {
-        "Content-Security-Policy": "default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.tile.openstreetmap.org; frame-src https://www.openstreetmap.org https://www.google.com https://www.recaptcha.net; connect-src 'self' https://*.supabase.co https://www.google.com https://www.recaptcha.net https://overpass-api.de https://api.worldbank.org https://*.sentry.io; base-uri 'self'; form-action 'self'",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.tile.openstreetmap.org; frame-src https://www.openstreetmap.org https://www.google.com https://www.recaptcha.net; connect-src 'self' https://kyvtfmmbohmxqjlnjoys.supabase.co https://www.google.com https://www.recaptcha.net https://overpass-api.de https://api.worldbank.org https://o4511949202063360.ingest.us.sentry.io; base-uri 'self'; form-action 'self'",
         "X-Frame-Options": "DENY",
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "strict-origin-when-cross-origin",

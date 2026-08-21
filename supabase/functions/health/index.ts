@@ -22,8 +22,12 @@ Deno.serve(async () => {
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     );
   } catch (e) {
+    // تدقيق أمني 2026-08-21: نقطة عامة بلا JWT — رسالة Postgres الخام قد تكشف تفاصيل
+    // بنيوية داخلية (اسم جدول/عمود، نص hint) لأي طالب مجهول وقت عطل حقيقي. رسالة عامة
+    // بالاستجابة، والتفصيل الكامل بالسجلات الداخلية فقط.
+    console.error('[health] db check failed:', e);
     return new Response(
-      JSON.stringify({ status: 'error', db: 'unreachable', message: String(e instanceof Error ? e.message : e), timestamp: new Date().toISOString() }),
+      JSON.stringify({ status: 'error', db: 'unreachable', message: 'db_unreachable', timestamp: new Date().toISOString() }),
       { status: 503, headers: { 'Content-Type': 'application/json' } },
     );
   }

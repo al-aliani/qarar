@@ -4,8 +4,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- CSP: لا inline scripts (theme + SW في ملفات خارجية). style-src unsafe-inline للسماح بسمات style في HTML. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.tile.openstreetmap.org; frame-src https://www.openstreetmap.org https://www.google.com https://www.recaptcha.net; connect-src 'self' https://*.supabase.co https://www.google.com https://www.recaptcha.net https://overpass-api.de https://api.worldbank.org; base-uri 'self'; form-action 'self';">
+  <!-- تدقيق أمني 2026-08-21: وسم CSP هنا حُذف عمداً — عندما يصل أكثر من سياسة CSP لنفس
+  الصفحة (رأس HTTP بـvercel.json + meta هنا)، يفرضهما المتصفح كتقاطع (AND) لا اتحاد،
+  فأي مصدر جديد يُضاف لأحدهما (مثل browser.sentry-cdn.com) يبقى محجوباً فعلياً ما لم
+  يُضَف يدوياً للآخر أيضاً — وهذا بالضبط ما حدث (Sentry كان محجوباً بصمت على هذه
+  الصفحة تحديداً رغم تفعيله بـvercel.json). باقي نقاط الدخول (landing.html، إلخ) لا
+  تحتوي وسم meta أصلاً وتعمل بحرية تحت رأس Vercel وحده — نفس المبدأ هنا الآن. -->
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-XSS-Protection" content="1; mode=block">
   <meta name="referrer" content="strict-origin-when-cross-origin">
