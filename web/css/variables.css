@@ -113,8 +113,7 @@
   /* توافق --color-*: بعض المكوّنات (wizard-forms.css، خريطة أقسام الدراسة في
      Wizard.js، DynamicTable.js) كُتبت بمساحة أسماء --color-* غير موجودة أصلاً
      بهذا الملف، فكانت تُرسم بلا تنسيق (حدود/خلفيات مفقودة، تدرّج مربَّك) —
-     ألياس هنا بدل تصحيح كل قاعدة CSS على حدة، ويتبع الثيم تلقائياً لأنه
-     يشير لمتغيرات --c-* نفسها التي تتبدّل مع [data-theme="dark"].
+     ألياس هنا بدل تصحيح كل قاعدة CSS على حدة.
   */
   --color-surface: var(--c-bg-card);
   --color-surface-hover: var(--c-surface-2);
@@ -130,49 +129,4 @@
      TemplateGallery.js، SensitivityWidget.js — لم يكن معرَّفاً أصلاً فيسقط لشفافية كاملة. */
   --c-primary: var(--c-p-500);
   --color-success: var(--c-success);
-}
-
-/* الوضع الداكن: أخضر غابي عميق — الحدود محايدة (كانت ذهبية في كل مكان = ضجيج بصري) */
-[data-theme="dark"] {
-  --c-bg-app: #12221d;
-  --c-bg-panel: #182d26;
-  --c-bg-card: #1d362e;
-  --c-surface-1: var(--c-bg-card);
-  /* نسخة RGB من --c-bg-app لاستخدامها داخل rgba() (زجاجية dashboard-v2/dashboard-home) —
-     كانت اللوحتان تستخدمان rgba(17,24,39,x) ثابتة (رمادي مزرقّ) فوق خلفية خضراء داكنة فعلياً. */
-  --c-bg-app-rgb: 18, 34, 29;
-
-  --c-p-500: #3ecf9a;
-  --c-p-600: #2bb384;
-  --c-p-subtle: rgba(62, 207, 154, 0.16);
-  /* الأساسي فاتح في الداكن → النص فوقه داكن */
-  --c-p-contrast: #06231a;
-
-  /* على الداكن الذهبي الفاتح مقروء وجميل */
-  --c-gold-500: #d9a84e;
-  --c-gold-subtle: rgba(217, 168, 78, 0.14);
-  --c-gold-deco: #d9a84e;
-
-  --c-text-main: #eef5f0;
-  --c-text-muted: #93a39a;
-  --c-border: rgba(238, 245, 240, 0.12);
-  --c-border-strong: rgba(238, 245, 240, 0.4);
-
-  --c-success: #34d399;
-  --c-danger: #f87171;
-  --c-danger-subtle: rgba(248, 113, 113, 0.12);
-  --c-warning: #fbbf24;
-  --c-warning-subtle: rgba(251, 191, 36, 0.14);
-  /* الداكن يجتاز التباين بالفعل بلون --c-warning نفسه، فلا حاجة لدرجة نصية منفصلة */
-  --c-warning-text: var(--c-warning);
-
-  --c-surface-2: rgba(238, 245, 240, 0.05);
-  --c-surface-3: rgba(238, 245, 240, 0.09);
-  --c-gold-border: rgba(217, 168, 78, 0.35);
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 10px -2px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 20px -6px rgba(0, 0, 0, 0.45), 0 24px 48px -16px rgba(0, 0, 0, 0.5);
-  --shadow-btn: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 24px -14px rgba(0, 0, 0, 0.6);
-  --focus-ring: 0 0 0 3px rgba(62, 207, 154, 0.35);
-  --card-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 40%);
 }

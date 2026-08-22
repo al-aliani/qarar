@@ -243,12 +243,6 @@
     background: transparent;
 }
 
-[data-theme="dark"] .category-page {
-    --v2-glass-bg: rgba(17, 24, 39, 0.7);
-    --v2-glass-border: rgba(255, 255, 255, 0.1);
-    --v2-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-}
-
 /* Category Header Hero */
 .category-page__header {
     background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
@@ -413,14 +407,6 @@
     background: transparent;
 }
 
-[data-theme="dark"] .advisory-view, 
-[data-theme="dark"] .billing-history-page, 
-[data-theme="dark"] .support-tickets-page {
-    --v2-glass-bg: rgba(17, 24, 39, 0.7);
-    --v2-glass-border: rgba(255, 255, 255, 0.1);
-    --v2-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-}
-
 /* Page Titles */
 .advisory-view h1,
 .advisory-view h2,
@@ -484,13 +470,6 @@
     border-radius: 12px !important;
     padding: 12px 16px !important;
     transition: all 0.3s ease !important;
-}
-
-[data-theme="dark"] .advisory-view .form-input,
-[data-theme="dark"] .support-tickets-page .form-input {
-    background: rgba(0, 0, 0, 0.2) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
-    color: white !important;
 }
 
 .advisory-view .form-input:focus,
@@ -564,12 +543,6 @@
     --v2-glass-shadow: 0 8px 32px 0 rgba(14, 91, 68, 0.05);
     --v2-primary: var(--c-p-500, #0e5b44);
     background: transparent;
-}
-
-[data-theme="dark"] .knowledge-center-view {
-    --v2-glass-bg: rgba(17, 24, 39, 0.7);
-    --v2-glass-border: rgba(255, 255, 255, 0.1);
-    --v2-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
 .knowledge-center-view h1 {
@@ -655,35 +628,10 @@
     border-radius: 20px !important;
 }
 
-/* تدقيق تباين 2026-07-18: كانت القاعدة أعلاه تفرض خلفية كحلية داكنة + حد/ظل/نص أبيض
-   بلا أي شرط وضع، فتصطدم بمحتوى مصمَّم لخلفية فاتحة (onboarding-polish.css/ExportMenu/
-   ShareStudyView تستخدم var(--c-text-main)/var(--c-text-muted)/var(--c-warning)/
-   var(--c-gold-500) بلا !important) — نصوص شبه غير مرئية في الوضع النهاري (تباين
-   <3.3:1). نفس علة القاعدة المحصورة أعلاه (~السطر 868) — الحصر هنا بالوضع الليلي
-   فقط؛ الوضع النهاري يستخدم خلفية .modal-card الفاتحة العادية (var(--c-bg-panel))
-   وحدود/ظل الثيم العادية التي صُمم النص الحالي من أجلها أصلاً. */
-[data-theme="dark"] .template-modal,
-[data-theme="dark"] .export-modal {
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4) !important;
-    color: #fff !important;
-}
-
-[data-theme="dark"] .template-modal .modal-header,
-[data-theme="dark"] .export-modal .modal-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
 .template-modal .modal-header h3,
 .export-modal .modal-header h3 {
     font-weight: 700 !important;
     letter-spacing: -0.5px !important;
-}
-
-[data-theme="dark"] .template-modal .modal-header h3,
-[data-theme="dark"] .export-modal .modal-header h3 {
-    color: #fff !important;
 }
 
 .tg-row {
@@ -735,26 +683,6 @@
 #stepperNav .bg-gray-50 {
     background: rgba(255, 255, 255, 0.02) !important;
     border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-/* تدقيق تباين 2026-07-17: هذه القاعدة سبقت دعم الوضع النهاري وتفترض خلفية معتمة دائماً
-   للمودال — لكن .modal-card تستخدم var(--c-bg-panel) المتكيّفة مع الوضعين، فتصبح
-   خلفية المودال فاتحة في النهار بينما يبقى النص أبيض 70% شفافية فوقها (تباين 1.18:1 —
-   شبه غير مرئي). النطاق الآن محصور بالوضع الليلي فقط حيث كانت هذه الألوان صحيحة أصلاً. */
-[data-theme="dark"] .modal-body .text-gray-600,
-[data-theme="dark"] .modal-body .text-muted,
-[data-theme="dark"] .modal-body .text-gray-500 {
-    color: rgba(255, 255, 255, 0.7) !important;
-}
-
-/* Enhance form inputs in modals (dark mode only — نفس سبب القصر أعلاه) */
-[data-theme="dark"] .modal-body .form-control,
-[data-theme="dark"] .modal-body .input,
-[data-theme="dark"] .modal-body select {
-    background: rgba(0, 0, 0, 0.2) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    color: #fff !important;
-    border-radius: 8px !important;
 }
 
 .modal-body .form-control:focus,

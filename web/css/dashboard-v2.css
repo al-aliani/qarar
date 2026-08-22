@@ -26,16 +26,6 @@
   transition: all 0.3s ease;
 }
 
-[data-theme="dark"] .dv2-workspace {
-  --v2-bg: var(--c-bg-app);
-  --v2-glass-bg: rgba(var(--c-bg-app-rgb), 0.4);
-  --v2-glass-border: rgba(255, 255, 255, 0.08);
-  --v2-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-  --v2-text-main: #f9fafb;
-  --v2-text-muted: #9ca3af;
-  background: linear-gradient(135deg, var(--c-bg-app) 0%, var(--c-bg-panel) 100%);
-}
-
 /* Glassmorphic Panel */
 .dv2-glass-panel {
   background: var(--v2-glass-bg);
@@ -358,11 +348,6 @@
   background: white;
   color: var(--v2-primary);
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-[data-theme="dark"] .dv2-view-toggle button.active {
-  background: #374151;
-  color: white;
 }
 
 /* Responsive */

@@ -138,8 +138,6 @@
     background-color: var(--c-success);
     filter: brightness(1.08);
 }
-[data-theme="dark"] .btn--success { color: #06231a; }
-
 .btn-sm {
     padding: 0.35rem 0.75rem;
     font-size: 0.85rem;

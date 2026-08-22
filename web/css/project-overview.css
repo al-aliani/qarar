@@ -5,8 +5,7 @@
  * والمستخدمة أصلاً في ExecutiveSummary.js وFinancialDashboard.js. لا تُضِف هنا لوناً
  * للقرار: تعليق components.css:382 ينصّ على أن REVISE تحذير لا رفض.
  *
- * كل لون أدناه من توكنات --c-* التي تتبدّل تلقائياً مع [data-theme="dark"]
- * (variables.css:118) — لا قيم hex صلبة، فالوضع الليلي يعمل بلا قاعدة منفصلة.
+ * كل لون أدناه من توكنات --c-* (variables.css) — لا قيم hex صلبة.
  */
 
 .po {

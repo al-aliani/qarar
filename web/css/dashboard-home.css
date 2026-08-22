@@ -137,13 +137,6 @@
     gap: 24px;
 }
 
-[data-theme="dark"] .dashboard-view.dv {
-    --v2-glass-bg: rgba(var(--c-bg-app-rgb), 0.4);
-    --v2-glass-border: rgba(255, 255, 255, 0.08);
-    --v2-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-    background: linear-gradient(135deg, var(--c-bg-app) 0%, var(--c-bg-panel) 100%) !important;
-}
-
 /* TOPBAR */
 .dv-topbar {
     background: var(--v2-glass-bg) !important;
