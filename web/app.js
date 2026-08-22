@@ -30,6 +30,7 @@ import { initShellController } from './js/app-controller.js';
 import { ModeSelector } from './js/ui/ModeSelector.js';
 import { trackEvent } from './js/utils/analytics.js';
 import { enhanceFieldHelp, observeFieldHelp } from './js/ui/components/FieldHelpEnhancer.js';
+import { initHeaderIndicators } from './js/ui/HeaderIndicators.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
  try {
@@ -233,6 +234,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   console.log('[App] Auth initialized:', authResult);
 
+  // تدقيق حي 2026-08-22: يُخفي #bootCover (انظر index.html) فور معرفة القرار. لمسجّلي
+  // الدخول (أو أي مسار أول غير الرئيسية، له منطق عرضه الخاص) نخفيه فوراً. لغير المسجَّل
+  // على المسار الرئيسي تحديداً — نفس السيناريو الذي كان يُظهر هيكل التطبيق فارغاً قبل
+  // نافذة الدخول — ننتظر ظهور النافذة فعلياً (حدث authModalShown من AuthModalStub.js)
+  // بدل إخفائه فوراً، وسقف زمني احتياطي يمنعه من البقاء عالقاً لو تعثّر أي مسار.
+  const bootCover = document.getElementById('bootCover');
+  if (bootCover) {
+    const hideBootCover = () => bootCover.classList.add('is-hidden');
+    const initialHashRoute = (window.location.hash || '').replace(/^#\/?/, '').trim();
+    const isHomeBoot = !initialHashRoute || initialHashRoute === 'home';
+    if (authResult.authenticated || !isHomeBoot) {
+      hideBootCover();
+    } else {
+      window.addEventListener('feasibility:authModalShown', hideBootCover, { once: true });
+      setTimeout(hideBootCover, 5000);
+    }
+  }
+
   // وصول من الصفحة الرئيسية عبر زر «دخول/تسجيل» (index.html?auth=1):
   // نفتح شاشة المصادقة فوراً. بعد نجاح الدخول تُغلق الشاشة ويكمل المستخدم إلى الدراسة.
   // إن كان مسجّلاً مسبقاً لا نعرضها. وننظّف المعامل من الرابط حتى لا تتكرر عند التحديث.
@@ -264,14 +283,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.history.replaceState({}, '', cleanPackageUrl);
   }
 
-  // تنفيذ ?auth=1 الفعلي: كان يُقرأ ويُنظَّف من الرابط بلا فتح شاشة الدخول (تدقيق حي
-  // 2026-07-22) — زائر صفحة الأسعار يصل للوحة عامة بلا أي دعوة لتسجيل الدخول وتضيع
-  // نية الشراء. لا نعرضها لمن هو مسجّل دخوله بالفعل.
-  if (wantsAuth && !authResult.authenticated) {
-    import('./js/ui/AuthModalStub.js').then(({ AuthModal }) => {
-      new AuthModal('authModalContainer', {}).open();
-    });
-  }
+  // تدقيق حي 2026-08-22: ?auth=1 كان يفتح نافذة دخول مستقلة هنا (تدقيق 2026-07-22)
+  // بالتوازي مع بوابة routeToView/runProtectedRoute أدناه (تدقيق 2026-08-21) — كلتاهما
+  // تستوردان AuthModalStub.js وتفتحان نسخة منفصلة، فيظهر عنصرا #authModalOverlay معاً في
+  // DOM (نفس المعرّف مكرَّراً)، والنافذة الفعلية المرتبطة بحلقة تسجيل الدخول (التي تتابع
+  // showLandingDashboard بعد النجاح) قد لا تكون هي الظاهرة فوق الأخرى. المسار الوحيد
+  // اللازم الآن هو بوابة routeToView: كل رابط ?auth=1 حالياً بلا هاش، فيهبط على المسار
+  // 'home' المحمي أصلاً بنفس الشرط (غير مسجَّل دخول). حُذف هذا الفتح المكرَّر بدل تركه
+  // يتسابق مع البوابة الأحدث.
 
   // حلقة نمو: زائر وصل عبر رابط مشاركة دراسة (index.html?ref=<share_token>) ثم ضغط
   // "جرّب مجاناً" في ShareView.js — نحفظ التوكن ليُرفق لاحقاً بأول تسجيل حساب فعلي
@@ -293,6 +312,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     sidebarOverlay,
     btnToggleSidebar
   });
+
+  // تدقيق 2026-08-22: initHeaderIndicators() موجودة منذ فترة لكن لم تُستدعَ من أي
+  // مكان — فشارة حالة الحفظ #cloudSyncIndicator في الهيدر كانت عالقة دائماً على
+  // "غير محفوظ" بلا أي علاقة بحالة الحفظ الفعلية، حتى بعد نجاح الحفظ السحابي.
+  initHeaderIndicators();
 
   // Component Instance Cache
   const components = {};

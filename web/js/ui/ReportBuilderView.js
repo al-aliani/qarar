@@ -101,7 +101,7 @@ export class ReportBuilderView {
 
     renderCard(id) {
         const label = REPORT_SECTION_LABELS[id] || id;
-        return `<div class="report-builder-card" data-id="${id}" draggable="true" role="button" tabindex="0" aria-label="قسم: ${label}. اسحب لإعادة الترتيب">
+        return `<div class="report-builder-card" data-id="${id}" draggable="true" role="button" tabindex="0" aria-label="قسم: ${label}. اسحب لإعادة الترتيب، أو استخدم مفتاحي الأسهم لأعلى/أسفل">
                 <span class="report-builder-card-grip" aria-hidden="true">⋮⋮</span>
                 <span class="report-builder-card-label">${label}</span>
             </div>`;
@@ -166,6 +166,24 @@ export class ReportBuilderView {
                 order.splice(toIdx, 0, this.draggedId);
                 this.saveOrder(order);
                 this.render();
+            });
+            // تدقيق a11y 2026-08-22: role="button"/tabindex="0" وعْد بإمكانية التشغيل
+            // بلوحة المفاتيح، لكن السحب والإفلات وحده (فأرة فقط) كان يُطبّق فعلياً —
+            // Enter/Space على البطاقة كانت بلا أي أثر. ↑/↓ ينقلان البطاقة مركزاً واحداً.
+            card.addEventListener('keydown', (e) => {
+                if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+                e.preventDefault();
+                const order = this.getOrder();
+                const fromIdx = order.indexOf(card.dataset.id);
+                if (fromIdx === -1) return;
+                const toIdx = e.key === 'ArrowUp' ? fromIdx - 1 : fromIdx + 1;
+                if (toIdx < 0 || toIdx >= order.length) return;
+                const movedId = card.dataset.id;
+                order.splice(fromIdx, 1);
+                order.splice(toIdx, 0, movedId);
+                this.saveOrder(order);
+                this.render();
+                this.container.querySelector(`.report-builder-card[data-id="${movedId}"]`)?.focus();
             });
         });
     }
