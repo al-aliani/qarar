@@ -44,8 +44,8 @@ export class SupplyChainSandboxView {
                                     <span class="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded">14 يوم متبقي</span>
                                 </div>
                                 <p class="text-[10px] text-white/60 mb-3">بناءً على وتيرة المبيعات الحالية (أعلى بـ 15% من المعتاد)، سينفد المخزون قريباً.</p>
-                                <button class="w-full btn btn--secondary !py-1.5 text-xs border-red-500/50 text-red-300 hover:bg-red-500/20 hover:text-white transition-colors">
-                                    طلب عاجل من المورد الأساسي
+                                <button class="w-full btn btn--secondary !py-1.5 text-xs border-red-500/50 text-red-300/60 cursor-not-allowed" disabled title="بيانات تجريبية — لا يوجد اتصال فعلي بأي مورد">
+                                    طلب عاجل من المورد الأساسي (غير متاح)
                                 </button>
                             </div>
                             
@@ -57,8 +57,8 @@ export class SupplyChainSandboxView {
                                     <span class="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">شحنة #889</span>
                                 </div>
                                 <p class="text-[10px] text-white/60 mb-3">السفينة متأخرة 3 أيام عن الموعد المتوقع بسبب ظروف مناخية.</p>
-                                <button class="w-full btn btn--secondary !py-1.5 text-xs border-yellow-500/50 text-yellow-300 hover:bg-yellow-500/20 hover:text-white transition-colors">
-                                    تفعيل خطة المورد البديل (محلي)
+                                <button class="w-full btn btn--secondary !py-1.5 text-xs border-yellow-500/50 text-yellow-300/60 cursor-not-allowed" disabled title="بيانات تجريبية — لا يوجد نظام موردين فعلي متصل">
+                                    تفعيل خطة المورد البديل (محلي) (غير متاح)
                                 </button>
                             </div>
                         </div>

@@ -92,20 +92,20 @@ export class FranchiseHubView {
                             <p class="text-xs text-white/50 mb-6">سر نجاح أي فرنشايز هو "نقل المعرفة". قم بتوليد مسودات أدلة التشغيل القياسية بناءً على قطاع مشروعك.</p>
                             
                             <div class="space-y-3">
-                                <button class="w-full text-right p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/20 flex justify-between items-center group">
+                                <button class="w-full text-right p-3 rounded-xl bg-white/5 border border-transparent flex justify-between items-center cursor-not-allowed opacity-70" disabled title="بيانات تجريبية — توليد الأدلة غير متاح حالياً">
                                     <div>
                                         <div class="text-sm text-white font-bold mb-1">دليل العمليات اليومي</div>
                                         <div class="text-[10px] text-white/40">Opening & Closing Procedures</div>
                                     </div>
-                                    <svg class="ic w-5 h-5 text-white/30 group-hover:text-orange-400 transition-colors" aria-hidden="true"><use href="#i-file-text"/></svg>
+                                    <svg class="ic w-5 h-5 text-white/30" aria-hidden="true"><use href="#i-file-text"/></svg>
                                 </button>
-                                
-                                <button class="w-full text-right p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/20 flex justify-between items-center group">
+
+                                <button class="w-full text-right p-3 rounded-xl bg-white/5 border border-transparent flex justify-between items-center cursor-not-allowed opacity-70" disabled title="بيانات تجريبية — توليد الأدلة غير متاح حالياً">
                                     <div>
                                         <div class="text-sm text-white font-bold mb-1">دليل الموارد البشرية والتدريب</div>
                                         <div class="text-[10px] text-white/40">Employee Handbook</div>
                                     </div>
-                                    <svg class="ic w-5 h-5 text-white/30 group-hover:text-orange-400 transition-colors" aria-hidden="true"><use href="#i-users"/></svg>
+                                    <svg class="ic w-5 h-5 text-white/30" aria-hidden="true"><use href="#i-users"/></svg>
                                 </button>
                             </div>
                         </div>

@@ -84,10 +84,10 @@ export class TeamManagementView {
                                     </td>
                                     <td class="py-4 px-6 text-left">
                                         ${member.role !== 'owner' ? `
-                                            <button class="p-2 rounded hover:bg-white/10 text-white/60 hover:text-white transition-colors" aria-label="تعديل الصلاحية" title="تعديل الصلاحية">
+                                            <button class="p-2 rounded text-white/30 cursor-not-allowed" aria-label="تعديل الصلاحية" title="بيانات تجريبية — تعديل الصلاحية غير متاح حالياً" disabled>
                                                 <svg class="ic w-4 h-4" aria-hidden="true"><use href="#i-pen"/></svg>
                                             </button>
-                                            <button class="p-2 rounded hover:bg-red-500/20 text-white/60 hover:text-red-400 transition-colors" aria-label="حذف العضو" title="حذف العضو">
+                                            <button class="p-2 rounded text-white/30 cursor-not-allowed" aria-label="حذف العضو" title="بيانات تجريبية — حذف العضو غير متاح حالياً" disabled>
                                                 <svg class="ic w-4 h-4" aria-hidden="true"><use href="#i-trash"/></svg>
                                             </button>
                                         ` : `

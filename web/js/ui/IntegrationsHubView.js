@@ -12,10 +12,10 @@ export class IntegrationsHubView {
         
         // Mock Data
         const integrations = [
-            { id: 'openai', name: 'OpenAI (ChatGPT)', category: 'الذكاء الاصطناعي', desc: 'توليد أجزاء دراسة الجدوى وتلخيص المشاريع آلياً.', icon: 'i-sparkles', active: true, color: '#10a37f' },
+            { id: 'openai', name: 'OpenAI (ChatGPT)', category: 'الذكاء الاصطناعي', desc: 'توليد أجزاء دراسة الجدوى وتلخيص المشاريع آلياً.', icon: 'i-sparkles', active: false, color: '#10a37f' },
             { id: 'xero', name: 'Xero Accounting', category: 'المحاسبة', desc: 'مزامنة القوائم المالية وربط المصروفات مباشرة.', icon: 'i-credit-card', active: false, color: '#13b5ea' },
             { id: 'qoyod', name: 'قيود', category: 'المحاسبة', desc: 'نظام محاسبي متكامل يدعم الفوترة الإلكترونية السعودية.', icon: 'i-file-text', active: false, color: '#0f766e' },
-            { id: 'google_sheets', name: 'Google Sheets', category: 'الإنتاجية', desc: 'تصدير الجداول الحساسة والسيناريوهات للتعديل الحي.', icon: 'i-grid', active: true, color: '#0f9d58' },
+            { id: 'google_sheets', name: 'Google Sheets', category: 'الإنتاجية', desc: 'تصدير الجداول الحساسة والسيناريوهات للتعديل الحي.', icon: 'i-grid', active: false, color: '#0f9d58' },
             { id: 'slack', name: 'Slack Alerts', category: 'التواصل', desc: 'تلقي إشعارات عند انضمام عضو أو تصدير دراسة.', icon: 'i-chat', active: false, color: '#e01e5a' },
             { id: 'stripe', name: 'Stripe Billing', category: 'المدفوعات', desc: 'استقبال الدفعات الاستشارية والتمويلية.', icon: 'i-globe', active: false, color: '#635bff' }
         ];
@@ -67,8 +67,8 @@ export class IntegrationsHubView {
                                     </button>
                                 ` : `<span></span>`}
                                 
-                                <button class="btn ${app.active ? 'btn--ghost text-red-400 hover:bg-red-500/10' : 'btn--secondary hover:bg-white/10 text-white'} text-xs px-4 py-2 rounded-lg transition-colors btn-toggle-app" data-id="${app.id}">
-                                    ${app.active ? 'إلغاء الربط' : 'تفعيل الربط'}
+                                <button class="btn btn--secondary text-xs px-4 py-2 rounded-lg cursor-not-allowed opacity-60" disabled title="الربط الفعلي غير متاح بعد لهذا التطبيق">
+                                    تفعيل الربط (قريباً)
                                 </button>
                             </div>
                         </div>

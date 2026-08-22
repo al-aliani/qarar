@@ -39,19 +39,19 @@ export class CommunityForumView {
                     <!-- Sidebar Topics -->
                     <div class="lg:col-span-1 space-y-2">
                         <h3 class="text-white font-bold text-sm mb-4">التصنيفات</h3>
-                        <div class="p-3 rounded-lg bg-white/10 border border-white/20 text-white flex items-center justify-between cursor-pointer">
+                        <div class="p-3 rounded-lg bg-white/10 border border-white/20 text-white flex items-center justify-between" title="تصنيف توضيحي — التصفية غير مفعّلة">
                             <span class="text-sm font-medium">النقاش العام</span>
                             <span class="bg-white/20 text-xs px-2 py-0.5 rounded-full">120</span>
                         </div>
-                        <div class="p-3 rounded-lg hover:bg-white/5 border border-transparent text-white/70 flex items-center justify-between cursor-pointer transition-colors">
+                        <div class="p-3 rounded-lg border border-transparent text-white/70 flex items-center justify-between" title="تصنيف توضيحي — التصفية غير مفعّلة">
                             <span class="text-sm font-medium">تأسيس وتراخيص</span>
                             <span class="bg-white/10 text-xs px-2 py-0.5 rounded-full">45</span>
                         </div>
-                        <div class="p-3 rounded-lg hover:bg-white/5 border border-transparent text-white/70 flex items-center justify-between cursor-pointer transition-colors">
+                        <div class="p-3 rounded-lg border border-transparent text-white/70 flex items-center justify-between" title="تصنيف توضيحي — التصفية غير مفعّلة">
                             <span class="text-sm font-medium">تمويل واستثمار</span>
                             <span class="bg-white/10 text-xs px-2 py-0.5 rounded-full">89</span>
                         </div>
-                        <div class="p-3 rounded-lg hover:bg-white/5 border border-transparent text-white/70 flex items-center justify-between cursor-pointer transition-colors">
+                        <div class="p-3 rounded-lg border border-transparent text-white/70 flex items-center justify-between" title="تصنيف توضيحي — التصفية غير مفعّلة">
                             <span class="text-sm font-medium">تسويق ومبيعات</span>
                             <span class="bg-white/10 text-xs px-2 py-0.5 rounded-full">32</span>
                         </div>
@@ -72,13 +72,13 @@ export class CommunityForumView {
                                 </div>
                                 <p class="text-white/80 text-sm mb-4 leading-relaxed">${post.text}</p>
                                 <div class="flex items-center gap-4 text-white/50 text-xs">
-                                    <button class="flex items-center gap-1 hover:text-pink-400 transition-colors">
+                                    <button class="flex items-center gap-1 cursor-not-allowed" disabled title="بيانات تجريبية — التفاعل غير مفعّل">
                                         <svg class="ic w-4 h-4" aria-hidden="true"><use href="#i-heart"/></svg> ${post.likes} إعجاب
                                     </button>
-                                    <button class="flex items-center gap-1 hover:text-white transition-colors">
+                                    <button class="flex items-center gap-1 cursor-not-allowed" disabled title="بيانات تجريبية — التفاعل غير مفعّل">
                                         <svg class="ic w-4 h-4" aria-hidden="true"><use href="#i-message-square"/></svg> ${post.replies} ردود
                                     </button>
-                                    <button class="flex items-center gap-1 hover:text-white transition-colors mr-auto">
+                                    <button class="flex items-center gap-1 cursor-not-allowed mr-auto" disabled title="بيانات تجريبية — التفاعل غير مفعّل">
                                         <svg class="ic w-4 h-4" aria-hidden="true"><use href="#i-share-2"/></svg> مشاركة
                                     </button>
                                 </div>

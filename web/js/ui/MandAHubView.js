@@ -53,8 +53,8 @@ export class MandAHubView {
                             </div>
                         </div>
                         
-                        <button class="w-full mt-6 py-2 border border-purple-500/50 rounded-xl text-purple-300 hover:bg-purple-500/20 transition-colors text-xs">
-                            تحديث نموذج التقييم
+                        <button class="w-full mt-6 py-2 border border-purple-500/50 rounded-xl text-purple-300/60 cursor-not-allowed text-xs" disabled title="بيانات تجريبية — التحديث غير متاح حالياً">
+                            تحديث نموذج التقييم (غير متاح)
                         </button>
                     </div>
 
@@ -111,7 +111,7 @@ export class MandAHubView {
                                     </div>
                                     <div class="text-right">
                                         <div class="text-sm font-bold text-green-400">4.0M ريال</div>
-                                        <button class="text-[10px] text-purple-400 hover:text-white transition-colors">عرض التفاصيل</button>
+                                        <button class="text-[10px] text-purple-400/50 cursor-not-allowed" disabled title="بيانات تجريبية — لا يوجد عرض حقيقي لعرض تفاصيله">عرض التفاصيل</button>
                                     </div>
                                 </div>
                                 
@@ -127,7 +127,7 @@ export class MandAHubView {
                                     </div>
                                     <div class="text-right">
                                         <div class="text-sm font-bold text-white">1.8M ريال</div>
-                                        <button class="text-[10px] text-purple-400 hover:text-white transition-colors">عرض التفاصيل</button>
+                                        <button class="text-[10px] text-purple-400/50 cursor-not-allowed" disabled title="بيانات تجريبية — لا يوجد عرض حقيقي لعرض تفاصيله">عرض التفاصيل</button>
                                     </div>
                                 </div>
                             </div>

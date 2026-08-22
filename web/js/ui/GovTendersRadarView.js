@@ -36,16 +36,16 @@ export class GovTendersRadarView {
                 <!-- Stats & Sync -->
                 <div class="flex justify-between items-center mb-6">
                     <div class="flex gap-4">
-                        <select class="form-control text-xs bg-black/20 text-white border-white/10 w-40">
+                        <select class="form-control text-xs bg-black/20 text-white border-white/10 w-40" disabled title="بيانات تجريبية — التصفية غير مفعّلة">
                             <option>تطابق عالي (>80%)</option>
                             <option>الكل</option>
                         </select>
-                        <select class="form-control text-xs bg-black/20 text-white border-white/10 w-40">
+                        <select class="form-control text-xs bg-black/20 text-white border-white/10 w-40" disabled title="بيانات تجريبية — التصفية غير مفعّلة">
                             <option>تنتهي قريباً</option>
                             <option>الأحدث</option>
                         </select>
                     </div>
-                    <button class="text-emerald-400 hover:text-white text-xs flex items-center gap-1 transition-colors">
+                    <button class="text-emerald-400/50 text-xs flex items-center gap-1 cursor-not-allowed" disabled title="بيانات تجريبية — الربط الفعلي بمنصة اعتماد غير متاح حالياً">
                         <svg class="ic w-4 h-4" aria-hidden="true"><use href="#i-refresh-cw"/></svg> تحديث الرادار
                     </button>
                 </div>
@@ -80,7 +80,7 @@ export class GovTendersRadarView {
                                             ${t.match}%
                                         </div>
                                     </div>
-                                    <button class="btn btn--secondary w-full text-xs hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-colors flex items-center justify-center gap-2">
+                                    <button class="btn btn--secondary w-full text-xs cursor-not-allowed opacity-60 flex items-center justify-center gap-2" disabled title="بيانات تجريبية — التوليد الآلي غير متاح حالياً">
                                         <svg class="ic w-4 h-4" aria-hidden="true"><use href="#i-file-text"/></svg>
                                         توليد عرض سعر آلي
                                     </button>
