@@ -22,7 +22,12 @@ Deno.serve(async (req: Request) => {
   const configuredToken = Deno.env.get('TAMARA_NOTIFICATION_TOKEN')!;
   const verification = verifyTamaraNotificationToken(req.headers.get('Authorization'), configuredToken);
   if (!verification.ok) {
-    console.warn('[webhook-tamara] token rejected:', verification.reason);
+    // TODO(مراقبة): رفض توكن حقيقي هنا قد يعني هجوم انتحال أو تغيّر التوكن لدى Tamara
+    // دون تحديث TAMARA_NOTIFICATION_TOKEN — هذا حالياً فشل صامت (سجلّ فقط، بلا أي
+    // تنبيه يصل لأحد). يحتاج ربطاً بقناة تنبيه فعلية لاحقاً؛ لا يوجد حالياً أي مساعد
+    // تنبيه جاهز من جهة الخادم في supabase/functions/_shared يمكن إعادة استخدامه.
+    const refForLog = String(payload?.order_id || payload?.data?.order_id || 'unknown');
+    console.warn(`[webhook-tamara] token rejected (provider_ref=${refForLog}, reason=${verification.reason})`);
     return new Response('invalid_signature', { status: 401 });
   }
 
@@ -51,7 +56,10 @@ Deno.serve(async (req: Request) => {
     .select('id');
 
   if (error) {
-    console.error('[webhook-tamara] update failed:', error);
+    // TODO(مراقبة): يعني عميلاً دفع فعلياً (Tamara أكّدت الحدث) لكن سجلّ الطلب لم
+    // يُحدَّث — طلب مدفوع بلا وصول ممنوح، وهذا حالياً فشل صامت (سجلّ فقط). يحتاج
+    // ربطاً بقناة تنبيه فعلية تصل لأحد فوراً لاحقاً؛ لا يوجد مساعد تنبيه جاهز حالياً.
+    console.error(`[webhook-tamara] order update failed (provider_ref=${providerRef}, status=${status}):`, error);
     return new Response('db_error', { status: 500 });
   }
   if (!data || data.length === 0) {

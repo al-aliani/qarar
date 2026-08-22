@@ -117,6 +117,17 @@ jobs:
           npx supabase functions deploy reviewer-claim
           npx supabase functions deploy reviewer-submit
 
+      # تدقيق 2026-08-22: مبنيّة بالكود (تعليقها الداخلي يوثّق --no-verify-jwt
+      # صراحةً) لكن غائبة عن هذه الورشة كلياً — 404 حيّ لأي مراقبة خارجية
+      # (UptimeRobot/Sentry Cron) تستدعي /functions/v1/health. بلا JWT (فحص صحّي
+      # عام)، بلا أسرار إضافية غير SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY الموجودين
+      # أصلاً في خطوة دفع الأسرار أدناه.
+      - name: "Deploy health (فحص صحّي عام بلا JWT — لمراقبة خارجية)"
+        if: steps.check_link_secrets.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: npx supabase functions deploy health --no-verify-jwt
+
       - name: Push payment provider secrets to Supabase (skips any missing one safely)
         if: steps.check_link_secrets.outputs.configured == 'true'
         env:

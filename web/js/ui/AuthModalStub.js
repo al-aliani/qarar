@@ -3,6 +3,7 @@
  * يحافظ على توافق (containerId, options) مع الاستدعاء في Sidebar و DashboardView.
  */
 import { trackEvent } from '../utils/analytics.js';
+import { monitoring } from '../utils/monitoring.js';
 
 // تدقيق 2026-07-17: supabaseClient.js:signIn() يُعيد e.message الخام من Supabase GoTrue
 // بلا أي ترجمة — قبل هذا كان أي خطأ غير "email not confirmed" يظهر كنص إنجليزي حرفي
@@ -310,7 +311,13 @@ export class AuthModal {
             try {
                 const { signIn, signUp, getSupabaseClient, updateUserProfile } = await import('../../supabaseClient.js');
                 const { ok } = await getSupabaseClient();
-                if (!ok) { trackAuthFailure('supabase_unavailable'); showErr('Supabase غير مهيأ. لا يمكن الدخول أو إنشاء حساب.'); return; }
+                if (!ok) {
+                    trackAuthFailure('supabase_unavailable');
+                    // فشل تقني حقيقي (تعذّر تهيئة/الاتصال بعميل Supabase) لا خطأ إدخال مستخدم — يستحق مراقبة.
+                    monitoring.captureMessage('Auth: تعذّر تهيئة عميل Supabase عند الدخول/إنشاء الحساب', 'error', { source: 'AuthModalStub.runAuth', isSignUp });
+                    showErr('Supabase غير مهيأ. لا يمكن الدخول أو إنشاء حساب.');
+                    return;
+                }
                 // حلقة نمو (share_token → تسجيل): التقطها app.js من ?ref= عند الوصول من رابط
                 // مشاركة وحفظها بـsessionStorage — نقرأها هنا فقط عند إنشاء حساب فعلي.
                 let referredByToken = null;
@@ -336,7 +343,12 @@ export class AuthModal {
                         }
                     } else {
                         const mfaResult = await challengeMfaIfNeeded();
-                        if (!mfaResult.ok) { trackEvent('mfa_failed', { reason: 'challenge_failed' }); return; }
+                        if (!mfaResult.ok) {
+                            trackEvent('mfa_failed', { reason: 'challenge_failed' });
+                            // فشل تقني في تدفق تحدي MFA نفسه (لا رمز خاطئ من المستخدم — ذاك مُعالَج بلوحة الخطأ أعلاه).
+                            monitoring.captureMessage('Auth: فشل تحدي التحقق بخطوتين بعد نجاح كلمة المرور', 'error', { source: 'AuthModalStub.runAuth' });
+                            return;
+                        }
                     }
                     // تدقيق حي 2026-07-22: الدخول هنا لم يكن يوجّه أبداً لـ#/checkout ولا يطبّق
                     // الباقة المختارة من صفحة الأسعار — نفس المنطق المطبَّق فعلياً في مسار
@@ -365,6 +377,8 @@ export class AuthModal {
                 }
             } catch (e) {
                 trackAuthFailure('unexpected_error');
+                // استثناء JS غير متوقَّع (لا فشل بيانات دخول عادي) — يستحق مراقبة.
+                monitoring.captureException(e, { source: 'AuthModalStub.runAuth', isSignUp });
                 showErr(e?.message || 'خطأ في الاتصال.');
             } finally {
                 if (passEl) passEl.value = '';

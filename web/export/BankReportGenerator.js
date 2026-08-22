@@ -188,6 +188,7 @@ export class BankReportGenerator {
         .bank-recommendation { padding: 16px; background: #f0fff4; border: 1px solid #9ae6b4; border-radius: 6px; margin: 16px 0; }
         .bank-recommendation.no-go { background: #fff5f5; border-color: #feb2b2; }
         .bank-recommendation.revise { background: #fffbeb; border-color: #fbd38d; }
+        .bank-disclaimer { background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 6px; padding: 12px 16px; margin: 20px 0; font-size: 9pt; color: #4a5568; }
         @media print { .bank-section { page-break-inside: avoid; } }
         @media (max-width: 600px) { .bank-kpi { grid-template-columns: 1fr 1fr; } }
     </style>
@@ -210,6 +211,10 @@ export class BankReportGenerator {
         ${sectionsHtml}
 
         ${this._renderCertificationBlock(certification)}
+
+        <div class="bank-disclaimer">
+            <strong>إخلاء مسؤولية:</strong> تصميم هذا التقرير مستوحى شكلياً من نماذج التمويل البنكي الشائعة في السوق السعودي لتسهيل تقديم الطلب، ولا يمثل اعتماداً أو إصداراً رسمياً من أي بنك أو جهة تمويل (بما في ذلك بنك التنمية الاجتماعية أو منشآت) إلا بموجب اتفاق صريح معها.
+        </div>
 
         <!-- تذييل -->
         <div class="bank-footer">

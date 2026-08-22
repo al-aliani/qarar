@@ -47,9 +47,15 @@ export class PaywallModal {
         this.store = store;
     }
 
-    /** @param {string} formatLabel - اسم صيغة التصدير المطلوبة (تُعرض في الرسالة، مثال: "تقرير PDF شامل") */
-    open(formatLabel) {
+    /**
+     * @param {string} formatLabel - اسم صيغة التصدير المطلوبة (تُعرض في الرسالة، مثال: "تقرير PDF شامل")
+     * @param {string} [lockReason] - اختياري: توضيح موجز لسبب القفل وما سيحصل عليه المستخدم
+     *   بعد الشراء (يُعرض كسطر إضافي تحت رسالة الترقية الرئيسية). لا يكسر الاستدعاءات
+     *   القديمة بوسيط واحد فقط.
+     */
+    open(formatLabel, lockReason) {
         this.formatLabel = formatLabel || 'هذا التقرير';
+        this.lockReason = lockReason || '';
         this.render();
         this.overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
@@ -122,6 +128,7 @@ export class PaywallModal {
                 </div>
                 <div class="modal-body">
                     <p class="text-muted mb-4">${escapeHtml(this.formatLabel)} متاح ضمن الباقات المدفوعة. اختر الباقة وطريقة الدفع لإكمال الطلب داخل المنصة.</p>
+                    ${this.lockReason ? `<p class="text-xs text-muted mb-3">${escapeHtml(this.lockReason)}</p>` : ''}
                     <button type="button" id="btnPreviewLockedReport" class="btn btn--secondary btn-block mb-3"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> معاينة التقرير قبل الشراء</button>
                     <div id="paywallPayError" class="text-danger text-sm mb-2" style="display:none;"></div>
                     ${decisionNote}
@@ -146,8 +153,9 @@ export class PaywallModal {
         this.overlay.querySelector('#btnPreviewLockedReport')?.addEventListener('click', async () => {
             const { ReportPreviewModal } = await import('./ReportPreviewModal.js');
             const formatLabel = this.formatLabel;
+            const lockReason = this.lockReason;
             this.close();
-            await new ReportPreviewModal(this.store, 'reportPreviewOverlay', () => this.open(formatLabel)).open(formatLabel);
+            await new ReportPreviewModal(this.store, 'reportPreviewOverlay', () => this.open(formatLabel, lockReason)).open(formatLabel);
         });
 
         this._applyPreferredTierHighlight();

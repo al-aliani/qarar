@@ -48,12 +48,10 @@ export class UserProfileView {
                     ? '<span class="badge badge--warning"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg> بانتظار تأكيد الفريق</span>'
                     : '';
 
-        // حذف الحساب: نُحيله لطلب عبر الدعم بدل حذف تلقائي فوري — بعض بياناتك
-        // (الفواتير) يجب الاحتفاظ بها نظاماً حتى بعد طلب الحذف (انظر privacy.html
-        // §6 "الاحتفاظ والأمان")، فالحذف الفوري الكامل قد يخالف هذا الالتزام نفسه.
-        const deleteAccountMailto = 'mailto:contact@shafaq.info'
-            + '?subject=' + encodeURIComponent('طلب حذف حسابي — منصة قرار')
-            + '&body=' + encodeURIComponent('أرغب في حذف حسابي نهائياً من منصة قرار.\nالبريد المرتبط بالحساب: ' + (user.email || user.phone || ''));
+        // حذف الحساب: نُقدّم طلباً عبر AccountService.requestAccountDeletion() بدل
+        // حذف تلقائي فوري — بعض بياناتك (الفواتير) يجب الاحتفاظ بها نظاماً حتى بعد
+        // طلب الحذف (انظر privacy.html §6 "الاحتفاظ والأمان")، فالحذف الفوري الكامل
+        // قد يخالف هذا الالتزام نفسه؛ الطلب يُسجَّل بحالة 'requested' ليعالجه الفريق.
 
         this.container.innerHTML = `
             <div class="user-profile-page" style="max-width: 560px; margin: 0 auto; padding: var(--s-4) 0;">
@@ -113,7 +111,7 @@ export class UserProfileView {
                     </div>
 
                     <p class="text-xs text-center mt-3">
-                        <a href="${deleteAccountMailto}" class="text-danger">حذف حسابي نهائياً</a>
+                        <button type="button" id="btnUserProfileDeleteAccount" class="text-danger" style="background:none;border:none;padding:0;font:inherit;text-decoration:underline;cursor:pointer;">حذف حسابي نهائياً</button>
                     </p>
                 </div>
 
@@ -130,8 +128,30 @@ export class UserProfileView {
 
         document.getElementById('btnUserProfileBack')?.addEventListener('click', () => this.onBack());
 
-        this.container.querySelector('a[href^="mailto:"]')?.addEventListener('click', () => {
-            trackEvent('account_deletion_requested', { surface: 'user_profile' });
+        document.getElementById('btnUserProfileDeleteAccount')?.addEventListener('click', async () => {
+            const [{ default: Swal }, { requestAccountDeletion }] = await Promise.all([
+                import('sweetalert2'),
+                import('../services/AccountService.js'),
+            ]);
+            const result = await Swal.fire({
+                title: 'هل أنت متأكد من حذف حسابك؟',
+                text: 'سيُقدَّم طلب حذف حسابك للمراجعة من فريقنا ولن يُنفَّذ فوراً — بعض بياناتك (كالفواتير) قد تُحتفظ بها للالتزامات النظامية. لا يمكن التراجع عن الطلب بعد تقديمه.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'نعم، قدّم طلب الحذف',
+                cancelButtonText: 'إلغاء',
+                customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                buttonsStyling: false,
+            });
+            if (!result.isConfirmed) return;
+
+            const delResult = await requestAccountDeletion();
+            if (delResult.ok) {
+                trackEvent('account_deletion_requested', { surface: 'user_profile' });
+                toast.success('تم تقديم طلب حذف حسابك. سيراجعه فريقنا وسيتم التواصل معك.');
+            } else {
+                toast.error(delResult.error || 'تعذّر تقديم طلب حذف الحساب، حاول لاحقاً أو تواصل معنا.');
+            }
         });
 
         document.getElementById('btnUserProfileBilling')?.addEventListener('click', () => {

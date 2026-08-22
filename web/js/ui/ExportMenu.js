@@ -601,7 +601,11 @@ export class ExportMenu {
             if (!alreadyPaid) {
                 this.close();
                 const modal = new PaywallModal('paywallModalOverlay', this.store);
-                modal.open(PREMIUM_EXPORT_TYPES.get(type));
+                // سبب القفل + ما سيحصل عليه المستخدم بعد الشراء (بند مراجعة 2026-08-22):
+                // كانت الرسالة تكتفي باسم الصيغة المحجوبة بلا أي سياق يوضّح لماذا هي مدفوعة
+                // أصلاً أو ماذا يكسبه المستخدم بالضبط بعد الدفع.
+                const lockReason = 'هذه الصيغة تقرير نهائي احترافي جاهز للتقديم، وليست بيانات خام — لذلك ضمن الباقات المدفوعة. بعد إتمام الشراء يصبح تصديرها متاحاً فوراً لهذه الدراسة.';
+                modal.open(PREMIUM_EXPORT_TYPES.get(type), lockReason);
                 return;
             }
         }
