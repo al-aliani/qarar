@@ -8,6 +8,30 @@
 @import './tool-report.css';
 @import './central-assumptions.css';
 
+/* غطاء الإقلاع: يخفي هيكل التطبيق أثناء فحص جلسة الدخول — انظر تعليق index.html عند
+   #bootCover. .is-hidden يُضاف من app.js فور معرفة القرار. */
+.boot-cover {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--c-bg-app);
+}
+.boot-cover.is-hidden { display: none; }
+.boot-cover-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--r-md);
+    display: grid;
+    place-items: center;
+    background: linear-gradient(150deg, var(--c-p-500), var(--c-p-600));
+    color: var(--c-p-contrast);
+    font-size: 26px;
+    font-weight: 700;
+}
+
 /* header-toolbar: مدمج هنا لتجنب طلب منفصل (ERR_CONNECTION_REFUSED) */
 .app-shell { grid-template-rows: auto 1fr; }
 .app-header { grid-column: 1 / -1; grid-row: 1; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) var(--s-4); background-color: var(--c-bg-panel); border-bottom: 1px solid var(--c-border); min-height: 48px; flex-wrap: wrap; }

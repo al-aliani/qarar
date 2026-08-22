@@ -74,6 +74,12 @@
 </head>
 
 <body class="is-app-shell-page">
+  <!-- تدقيق حي 2026-08-22: يُخفي هيكل التطبيق (الترويسة/المساحة الفارغة) خلال فحص جلسة
+       الدخول (طلب شبكي حقيقي لـSupabase) — بدونه يظهر الهيكل فارغاً لحظة قبل ظهور نافذة
+       الدخول أو اللوحة الفعلية، فيبدو للزائر غير المسجَّل وكأنه "بداخل" التطبيق. يُخفى من
+       app.js فور معرفة القرار (تسجيل دخول موجود، أو ظهور نافذة الدخول فعلياً)، وله سقف
+       زمني احتياطي يمنع بقاءه عالقاً لو تعثّر أي مسار. -->
+  <div id="bootCover" class="boot-cover" aria-hidden="true"><span class="boot-cover-logo">ق</span></div>
   <!-- مكتبة الأيقونات — نفس عائلة landing.html: 24×24، stroke 1.75، currentColor -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
     <defs>

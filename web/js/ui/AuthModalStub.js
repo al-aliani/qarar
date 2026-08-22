@@ -128,6 +128,10 @@ export class AuthModal {
         `;
         document.body.appendChild(this.overlay);
         document.body.style.overflow = 'hidden';
+        // يُستخدَم لإخفاء غطاء الإقلاع (#bootCover في index.html) فور ظهور هذه النافذة
+        // فعلياً — انظر app.js: كان الغطاء (إن أُضيف لاحقاً) يبقى بانتظار هذه اللحظة
+        // تحديداً حين يكون المستخدم غير مسجَّل دخوله عند أول تحميل.
+        window.dispatchEvent(new CustomEvent('feasibility:authModalShown'));
 
         const onEscape = (e) => { if (e.key === 'Escape') this.close(); };
         document.addEventListener('keydown', onEscape);
