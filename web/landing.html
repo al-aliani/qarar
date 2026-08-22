@@ -162,6 +162,34 @@
       --wrap: 1180px;
     }
 
+    /* تدقيق a11y 2026-08-22: نفس نمط index.html (clip بدل left:-9999px الذي يُضيف
+       تمرير جانبي في RTL). */
+    .skip-link {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+      z-index: 9999;
+      padding: 0.5rem 1rem;
+      background: var(--c-p-500, #0e5b44);
+      color: #fff;
+      font-weight: 600;
+      border-radius: 4px;
+      text-decoration: none;
+    }
+    .skip-link:focus {
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip: auto;
+      clip-path: none;
+    }
+
     * { box-sizing: border-box; }
     /* overflow-x: clip يمنع انزلاق الصفحة يمين/يسار أثناء أنيميشن .reveal--skew-l
        (translateX(-50px) يتجاوز هامش .wrap البالغ 15px على الجوال، فيضيف 42px تمرير
@@ -691,6 +719,7 @@
   <script src="/whatsapp-config.js"></script>
 </head>
 <body>
+  <a href="#mainContent" class="skip-link">انتقل للمحتوى</a>
   <div id="progress" aria-hidden="true"></div>
 
   <!-- مكتبة أيقونات SVG مضمّنة تُستدعى بـ <use> -->
@@ -738,7 +767,7 @@
     </div>
   </header>
 
-  <main>
+  <main id="mainContent">
     <!-- الهيرو -->
     <section class="hero">
       <svg class="hero-curve" viewBox="0 0 600 600" preserveAspectRatio="none" aria-hidden="true">

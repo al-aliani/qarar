@@ -225,7 +225,7 @@ export class DecisionDashboard {
                 <div class="card glass-card decision-reasoning mb-6 ${decisionLocked ? 'hidden' : ''}">
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1.5rem;">
                         <div>
-                            <h4 class="card-title">لماذا هذا القرار؟</h4>
+                            <h3 class="card-title">لماذا هذا القرار؟</h3>
                             ${decision.desc ? `<p class="text-sm" style="line-height:1.8; margin-bottom:.6rem;">${decision.desc}</p>` : ''}
                             ${decision.reasons.length ? `
                                 <ul class="decision-reason-list" style="margin:0; padding-inline-start:1.1rem; font-size:.85rem; line-height:1.8;">
@@ -234,7 +234,7 @@ export class DecisionDashboard {
                             ${decision.positives.length ? `<p class="text-sm text-success" style="margin-top:.6rem;">نقاط القوة: ${decision.positives.join('، ')}.</p>` : ''}
                         </div>
                         <div>
-                            <h4 class="card-title">خطواتك التالية</h4>
+                            <h3 class="card-title">خطواتك التالية</h3>
                             ${decision.nextSteps.length ? `
                                 <ol class="decision-next-steps" style="margin:0; padding-inline-start:1.2rem; font-size:.85rem; line-height:1.9;">
                                     ${decision.nextSteps.map(s => `<li><strong>${s.step}:</strong> ${s.text}</li>`).join('')}
@@ -250,7 +250,7 @@ export class DecisionDashboard {
                     <div class="card dd-status dd-status--danger">
                         <div class="dd-status__head">
                             <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
-                            <h4 class="dd-status__title">أخطاء حرجة - الدراسة غير جاهزة</h4>
+                            <h3 class="dd-status__title">أخطاء حرجة - الدراسة غير جاهزة</h3>
                         </div>
                         <ul class="dd-status__list">
                             ${qaResults.hardErrors.map(err => `<li>${err.message || err}</li>`).join('')}
@@ -261,7 +261,7 @@ export class DecisionDashboard {
                     <div class="card dd-status dd-status--warning">
                         <div class="dd-status__head">
                             <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
-                            <h4 class="dd-status__title">تحذيرات مهمة</h4>
+                            <h3 class="dd-status__title">تحذيرات مهمة</h3>
                         </div>
                         <ul class="dd-status__list">
                             ${qaResults.softWarnings.map(warn => `<li>${warn.message || warn}</li>`).join('')}
@@ -272,7 +272,7 @@ export class DecisionDashboard {
                     <div class="card dd-status dd-status--warning">
                         <div class="dd-status__head">
                             <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-doc"/></svg>
-                            <h4 class="dd-status__title">أخطاء في صحة البيانات</h4>
+                            <h3 class="dd-status__title">أخطاء في صحة البيانات</h3>
                         </div>
                         <p class="dd-status__note">قد تؤثر على دقة النتائج المالية. يُفضّل إصلاحها قبل التصدير أو اتخاذ القرار.</p>
                         <ul class="dd-status__list">
@@ -284,7 +284,7 @@ export class DecisionDashboard {
                     <div class="card dd-status dd-status--success">
                         <div class="dd-status__head">
                             <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
-                            <h4 class="dd-status__title">الدراسة اجتازت فحص الجودة</h4>
+                            <h3 class="dd-status__title">الدراسة اجتازت فحص الجودة</h3>
                         </div>
                     </div>
                 ` : ''}
@@ -293,7 +293,7 @@ export class DecisionDashboard {
                         <div class="dd-status__head">
                             <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
                             <div>
-                                <h4 class="dd-status__title">ملفك محافظ — تنبيه</h4>
+                                <h3 class="dd-status__title">ملفك محافظ — تنبيه</h3>
                                 <p class="dd-status__note">مشروعك عالي المخاطر أو يحتاج مراجعة. كملف محافظ قد لا يتوافق معك. راجع أو ابحث عن بديل أقل مخاطرة.</p>
                             </div>
                         </div>
@@ -304,10 +304,10 @@ export class DecisionDashboard {
                      <!-- Scoring Breakdown -->
                     <div class="dashboard-col grid-stack-item" gs-w="12" gs-h="4">
                         <div class="card glass-card h-full grid-stack-item-content">
-                            <h4 class="card-title flex justify-between items-center">
+                            <h3 class="card-title flex justify-between items-center">
                                 <span>تفاصيل التقييم</span>
                                 <span class="text-xs text-muted font-normal">${evaluation.score}/100 نقطة</span>
-                            </h4>
+                            </h3>
                             <div class="dd-scores">
                                 ${evaluation.details.map(item => `
                                     <div class="dd-score ${item.score > 0 ? 'is-positive' : 'is-negative'}">
@@ -337,12 +337,12 @@ export class DecisionDashboard {
                             بطاقة renderFinancingGate أعلى هذه الصفحة — ثلاث نسخ لنفس الأرقام. FinancialDashboard
                             الآن لوحة الأرقام الكاملة الوحيدة (وفيها إيضاحات indicatorHelp لكل مصطلح)؛ هنا شريط
                             ملخّص نصّي + رابط بدل الشبكة المكرَّرة. -->
-                            <h4 class="card-title flex justify-between items-center">
+                            <h3 class="card-title flex justify-between items-center">
                                 <span>ملخّص المؤشرات المالية</span>
                                 <button type="button" id="btnGoFinancialDashboard" class="btn btn--ghost btn--sm" title="القوائم المالية، الرسوم البيانية، والتوقعات الكاملة">
                                     <svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> التفاصيل الكاملة
                                 </button>
-                            </h4>
+                            </h3>
                             <p class="text-sm text-muted dd-kpi-summary" style="line-height:1.9;">
                                 صافي القيمة الحالية <strong class="${(results?.indicators?.npv ?? 0) >= 0 ? 'text-success' : 'text-danger'}">${this.formatCurrency(results?.indicators?.npv)}</strong> ·
                                 العائد الداخلي <strong>${this.formatPercent(results?.indicators?.irr)}</strong> ·
@@ -364,7 +364,7 @@ export class DecisionDashboard {
 
                         <!-- اختبار الضغط (Stress Test / ماذا لو — Upmetrics) -->
                         <div class="card glass-card stress-test-card">
-                            <h4 class="card-title">ماذا لو؟ — اختبار الضغط</h4>
+                            <h3 class="card-title">ماذا لو؟ — اختبار الضغط</h3>
                             <p class="text-muted text-sm mb-4">لو زاد الإيراد 10%؟ لو زاد الإيجار 20%؟ حرّك المنزلقات لتحديث النتائج فوراً (NPV، هامش الربح).</p>
                             <div class="stress-test-sliders">
                                 <div class="stress-slider-row">
@@ -406,7 +406,7 @@ export class DecisionDashboard {
                         </div>
 
                         <div class="card glass-card">
-                            <h4 class="card-title">جاهزية الأبعاد الأساسية</h4>
+                            <h3 class="card-title">جاهزية الأبعاد الأساسية</h3>
                             <div class="readiness-list">
                                 ${this.renderReadinessItem('جاهزية السوق', readiness.dimensions.market)}
                                 ${this.renderReadinessItem('جاهزية التمويل', readiness.dimensions.financing)}
@@ -423,7 +423,7 @@ export class DecisionDashboard {
                     <!-- Right Column: Context -->
                     <div class="dashboard-col">
                         <div class="card glass-card">
-                            <h4 class="card-title">نتائج السيناريوهات</h4>
+                            <h3 class="card-title">نتائج السيناريوهات</h3>
                             <div class="scenario-results-table">
                                 <table class="data-table small">
                                     <thead>
@@ -455,7 +455,7 @@ export class DecisionDashboard {
                         </div>
 
                         <div class="card glass-card">
-                            <h4 class="card-title">شروط النجاح الحرجة</h4>
+                            <h3 class="card-title">شروط النجاح الحرجة</h3>
                             <ul class="factors-list">
                                 ${readiness.factors.map(f => `<li><span class="bullet" aria-hidden="true"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span> ${f}</li>`).join('')}
                             </ul>
@@ -1015,7 +1015,7 @@ export class DecisionDashboard {
                 <div class="card dd-status dd-status--success">
                     <div class="dd-status__head">
                         <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
-                        <h4 class="dd-status__title">مفسّر القرار: لا يوجد رقم كاسر واضح</h4>
+                        <h3 class="dd-status__title">مفسّر القرار: لا يوجد رقم كاسر واضح</h3>
                     </div>
                     <p class="dd-status__note">${explanation?.summary || 'الأرقام الرئيسية لا تكسر القرار حالياً، لكن يبقى توثيق الافتراضات ضرورياً.'}</p>
                 </div>
@@ -1028,7 +1028,7 @@ export class DecisionDashboard {
                 <div class="dd-status__head">
                     <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
                     <div>
-                        <h4 class="dd-status__title">مفسّر القرار: ما الرقم الذي كسر الدراسة؟</h4>
+                        <h3 class="dd-status__title">مفسّر القرار: ما الرقم الذي كسر الدراسة؟</h3>
                         <p class="dd-status__note">${explanation.summary || ''}</p>
                     </div>
                 </div>
@@ -1115,7 +1115,7 @@ export class DecisionDashboard {
                 <div class="dd-status__head">
                     <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
                     <div>
-                        <h4 class="dd-status__title">${title}</h4>
+                        <h3 class="dd-status__title">${title}</h3>
                         <p class="dd-status__note">قراءة البنك: <strong>${bankLabel}</strong>. ${investorLabel}</p>
                     </div>
                 </div>

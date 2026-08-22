@@ -3678,6 +3678,14 @@ button.qa-detail-item:hover {
     box-shadow: none;
 }
 
+/* تدقيق a11y 2026-08-22: كان :focus أعلاه يُلغي المؤشر البصري نهائياً بلا بديل — مستخدم
+   لوحة المفاتيح لا يرى أين تركيزه أثناء تسجيل الدخول. نُظهره على الحاوية (.auth-field،
+   وهي "الحبة" المرئية فعلياً؛ الحقل نفسه بلا حدود بتصميم) بنفس لغة .input:focus أعلاه. */
+.auth-field:focus-within {
+    border-color: var(--c-p-500);
+    box-shadow: var(--focus-ring);
+}
+
 .auth-strength {
     display: flex;
     align-items: center;

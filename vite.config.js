@@ -49,6 +49,16 @@ export default defineConfig({
     // بناء متعدد الصفحات: بدون هذا كان Vite يبني index.html فقط، فتُفقد صفحة الهبوط
     // والشروط والخصوصية من الإنتاج (روابط التذييل تُعطي 404). smoke_test أداة تطوير — تُستثنى.
     build: {
+        // تدقيق أداء 2026-08-22: manualChunks أدناه يفرض حزمة pptxgenjs (385KB) على
+        // اسم مُنفصل، لكن الحزمة نفسها مُستورَدة ديناميكياً فقط (ShareStudyView.js
+        // وexportWorker.js عبر Worker منفصل) — Rollup مع ذلك يُصنّفها ضمن الرسم
+        // البياني المتزامن لصفحة index.html فيُدرج <link rel="modulepreload"> لها
+        // على كل زيارة رغم عدم الحاجة الفعلية إلا عند تصدير PowerPoint تحديداً.
+        // إزالة تلميح الـpreload فقط (لا تغيير في زمن التحميل الفعلي عند الحاجة —
+        // import() ديناميكي عادي يبقى يعمل كما هو).
+        modulePreload: {
+            resolveDependencies: (_filename, deps) => deps.filter((d) => !d.includes('/pptx-')),
+        },
         rollupOptions: {
             input: {
                 main: resolve(__dirname, 'web/index.html'),

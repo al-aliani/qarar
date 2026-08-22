@@ -76,13 +76,13 @@ export class UserProfileView {
                     </div>
 
                     <div class="form-group mb-4">
-                        <label class="block text-sm font-medium mb-1">اسم العرض (يظهر في الشريط الجانبي)</label>
+                        <label for="inpDisplayName" class="block text-sm font-medium mb-1">اسم العرض (يظهر في الشريط الجانبي)</label>
                         <input type="text" id="inpDisplayName" class="form-input w-full" placeholder="مثال: أحمد محمد" value="${(user.user_metadata?.full_name || '').replace(/"/g, '&quot;')}">
                         <button type="button" id="btnSaveDisplayName" class="btn btn--primary mt-2 text-sm">حفظ الاسم</button>
                     </div>
 
                     <div class="form-group mb-4">
-                        <label class="block text-sm font-medium mb-1">رقم الجوال (واتساب) ${phoneStatusBadge}</label>
+                        <label for="inpPhone" class="block text-sm font-medium mb-1">رقم الجوال (واتساب) ${phoneStatusBadge}</label>
                         <input type="tel" id="inpPhone" class="form-input w-full" placeholder="05xxxxxxxx" dir="ltr" inputmode="numeric" value="${currentPhone.replace(/"/g, '&quot;')}">
                         <div id="phoneError" class="text-danger text-sm mt-1" style="display:none;"></div>
                         <button type="button" id="btnSavePhone" class="btn btn--primary mt-2 text-sm">حفظ الجوال</button>

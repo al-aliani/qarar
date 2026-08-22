@@ -14,6 +14,7 @@ import { escapeHtml } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
 import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
 import { trackEvent } from '../utils/analytics.js';
+import { trapFocus } from '../utils/focusTrap.js';
 import { APP_CONFIG, BANK_COMPLIANCE_SENTENCE } from '../config.js';
 import { ConsultationModal } from './ConsultationModal.js';
 import { PaywallModal } from './PaywallModal.js';
@@ -86,8 +87,10 @@ export class ExportMenu {
         this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
         document.addEventListener('keydown', this._onEscape);
 
-        const first = this.overlay.querySelector('.export-card');
-        if (first) setTimeout(() => first.focus(), 0);
+        // تدقيق a11y 2026-08-22: كانت النافذة الوحيدة (مقارنة بـShareModal/PaywallModal)
+        // بلا حبس Tab — يهرب التركيز خارجها لبقية الصفحة أثناء التنقّل بلوحة المفاتيح.
+        this._removeFocusTrap?.();
+        this._removeFocusTrap = trapFocus(this.overlay.querySelector('[role="dialog"]'), { initial: '.export-card' });
 
         const state = this.store.getState();
         let results = null;
@@ -163,6 +166,8 @@ export class ExportMenu {
             document.removeEventListener('keydown', this._onEscape);
             this._onEscape = null;
         }
+        this._removeFocusTrap?.();
+        this._removeFocusTrap = null;
     }
 
     /**

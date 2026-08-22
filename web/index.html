@@ -136,6 +136,11 @@
 
   <a href="#wizardContainer" class="skip-link">انتقل للمحتوى</a>
 
+  <!-- تدقيق a11y 2026-08-22: لا h1 ثابت كان موجوداً بالصفحة إطلاقاً — عنوان مخفي بصرياً
+       (sr-only) يوفّر نقطة انطلاق واضحة لقارئ الشاشة بلا أي تغيير بصري على العلامة
+       التجارية الظاهرة (.app-header__brand/.brand-name تبقيان كما هما). -->
+  <h1 class="sr-only">قرار — محاكي دراسة الجدوى الذكية</h1>
+
   <div class="app-shell">
 
     <!-- App Header Toolbar (visible in workspace: save, export, theme, KPI mini) -->
@@ -209,7 +214,7 @@
       </div>
 
 
-      <nav id="stepperNav" class="flex-col gap-2">
+      <nav id="stepperNav" class="flex-col gap-2" aria-label="خطوات المعالج">
         <!-- Injected via JS -->
       </nav>
 
