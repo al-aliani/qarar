@@ -2105,29 +2105,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     // للقيمة السابقة عند الفشل، ونُخبر المستخدم بدل الفشل الصامت.
     const previousRoute = _currentRoute;
     _currentRoute = route;
+    // تدقيق 2026-08-21 (قرار مالك): #/home كانت تفتح للزوّار بلا تسجيل دخول (وضع
+    // ضيف عمدي سابقاً — راجع تعليق AuthGuard.init:requireAuth). الآن تسجيل الدخول
+    // إلزامي للوصول للوحة الرئيسية — الزائر غير المسجَّل يُوجَّه لصفحة التسويق بدل
+    // رؤية أي محتوى من اللوحة.
+    // تدقيق 2026-08-22 (إغلاق فجوة اتساق موثّقة بـAI_HANDOFF.md): step/وcategory/ كانتا
+    // الاستثناء الوحيد الباقي — نفس محتوى المعالج الفعلي بلا أي بوابة، فمن يعرف الرابط
+    // المباشر (#/step/0 مثلاً) يتجاوز تسجيل الدخول كاملاً. نفس السياسة والسلوك بالضبط.
+    const runProtectedRoute = (action) =>
+      AuthGuard.protect(action, { message: 'سجّل الدخول أو أنشئ حساباً للمتابعة' }).then((result) => {
+        if (result === null && !AuthGuard.isLoggedIn()) {
+          window.location.href = './landing.html';
+        }
+      });
     try {
       if (route === '' || route === 'home' || HOME_PANEL_ROUTES[route]) {
-        // تدقيق 2026-08-21 (قرار مالك): #/home كانت تفتح للزوّار بلا تسجيل دخول (وضع
-        // ضيف عمدي سابقاً — راجع تعليق AuthGuard.init:requireAuth). الآن تسجيل الدخول
-        // إلزامي للوصول للوحة الرئيسية — الزائر غير المسجَّل يُوجَّه لصفحة التسويق بدل
-        // رؤية أي محتوى من اللوحة.
         const homeRoute = route === '' || route === 'home' ? undefined : route;
-        await AuthGuard.protect(() => showLandingDashboard(homeRoute), {
-          message: 'سجّل الدخول أو أنشئ حساباً للمتابعة'
-        }).then((result) => {
-          if (result === null && !AuthGuard.isLoggedIn()) {
-            window.location.href = './landing.html';
-          }
-        });
+        await runProtectedRoute(() => showLandingDashboard(homeRoute));
       } else if (route.startsWith('category/')) {
         const categoryIndex = parseInt(route.slice(9), 10);
-        if (Number.isInteger(categoryIndex) && categoryIndex >= 0 && categoryIndex < SIDEBAR_SECTIONS.length) {
-          await navigateToCategory(categoryIndex);
-        } else await showLandingDashboard();
+        await runProtectedRoute(async () => {
+          if (Number.isInteger(categoryIndex) && categoryIndex >= 0 && categoryIndex < SIDEBAR_SECTIONS.length) {
+            await navigateToCategory(categoryIndex);
+          } else await showLandingDashboard();
+        });
       } else if (route.startsWith('step/')) {
         const idx = parseInt(route.slice(5), 10);
-        if (Number.isInteger(idx) && idx >= 0 && idx < STEPS.length) await navigateTo(idx);
-        else await showLandingDashboard();
+        await runProtectedRoute(async () => {
+          if (Number.isInteger(idx) && idx >= 0 && idx < STEPS.length) await navigateTo(idx);
+          else await showLandingDashboard();
+        });
       } else if (route.startsWith('project/')) {
         await renderProjectOverviewRoute(route.slice(8));
       } else if (route.startsWith('share/')) {

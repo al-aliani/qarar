@@ -1,10 +1,17 @@
 import { test, expect } from '@playwright/test';
+import { loginTestUser, hasE2ECredentials } from './helpers/auth.js';
 
 test('export menu exposes QA fix center and local downloads history', async ({ page }) => {
+  // تدقيق 2026-08-22: #/step/N صارت تتطلب تسجيل دخول أيضاً (إغلاق فجوة اتساق موثّقة
+  // بـAI_HANDOFF.md — كانت #/home فقط محمية سابقاً بقرار المالك 2026-08-21).
+  test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
   // جولة driver.js التعريفية تظهر بعد ثانية وتحجب النقر بطبقتها الشفافة (driver-overlay)
   // تحت بطء CI — نفس فخ critical_path.spec.js.
   await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
-  await page.goto('/index.html#/step/0');
+  await page.goto('/index.html');
+  await page.waitForLoadState('domcontentloaded');
+  await loginTestUser(page);
+  await page.evaluate(() => { window.location.hash = '#/step/0'; });
 
   const exportButton = page.locator('#headerExportMenu, #btnExportMenu, #btnFabExport').first();
   await expect(exportButton).toBeAttached();
