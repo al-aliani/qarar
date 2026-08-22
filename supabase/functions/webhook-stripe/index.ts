@@ -19,7 +19,13 @@ Deno.serve(async (req: Request) => {
 
   const verification = await verifyStripeSignature(rawBody, signatureHeader, webhookSecret);
   if (!verification.ok) {
-    console.warn('[webhook-stripe] signature rejected:', verification.reason);
+    // TODO(مراقبة): رفض توقيع حقيقي هنا قد يعني هجوم انتحال أو تغيّر السرّ لدى Stripe
+    // دون تحديث STRIPE_WEBHOOK_SECRET — هذا حالياً فشل صامت (سجلّ فقط، بلا أي تنبيه
+    // يصل لأحد). يحتاج ربطاً بقناة تنبيه فعلية لاحقاً؛ لا يوجد حالياً أي مساعد تنبيه
+    // جاهز من جهة الخادم في supabase/functions/_shared يمكن إعادة استخدامه.
+    // ملاحظة: لا يوجد معرّف حدث متاح هنا بأمان — الجسم لم يُوثَّق بعد بنجاح (لا نثق
+    // بمحتواه)، والتحقق يجب أن يسبق أي قراءة لبياناته حتى لأغراض السجلّ.
+    console.warn(`[webhook-stripe] signature rejected (reason=${verification.reason})`);
     return new Response('invalid_signature', { status: 401 });
   }
 
@@ -63,7 +69,11 @@ Deno.serve(async (req: Request) => {
   const { data, error } = await matcher.select('id');
 
   if (error) {
-    console.error('[webhook-stripe] update failed:', error);
+    // TODO(مراقبة): يعني عميلاً دفع فعلياً (Stripe أكّدت الحدث) لكن سجلّ الطلب لم
+    // يُحدَّث — طلب مدفوع بلا وصول ممنوح، وهذا حالياً فشل صامت (سجلّ فقط). يحتاج
+    // ربطاً بقناة تنبيه فعلية تصل لأحد فوراً لاحقاً؛ لا يوجد مساعد تنبيه جاهز حالياً.
+    const logRef = status === 'refunded' ? getStripePaymentIntent(event) : getStripeSessionId(event);
+    console.error(`[webhook-stripe] order update failed (ref=${logRef}, event_id=${event?.id}, status=${status}):`, error);
     return new Response('db_error', { status: 500 });
   }
   if (!data || data.length === 0) {

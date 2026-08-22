@@ -18,11 +18,31 @@ const flushMicrotasks = () => new Promise((resolve) => setTimeout(resolve, 0));
  * إضافي وغير منتظِر عمداً (لا يجوز أن يعطّل أي إجراء في الواجهة).
  * تدقيق 2026-07-21 (بند #47): الإدراج المباشر .insert() استُبدل بـRPC
  * track_event (تفرض حدّ معدّل خادمياً وتشتقّ user_id من الجلسة لا من العميل).
+ * تدقيق كوكيز 2026-08-22: trackEvent أصبح مشروطاً بموافقة الزائر (إشعار الكوكيز
+ * public/js/cookie-notice.js) — الاختبارات أدناه تمنح الموافقة صراحة لتبقى تختبر
+ * آلية الإرسال نفسها، وأُضيف اختبار مستقل يثبت المنع الفعلي بلا موافقة.
  */
 describe('trackEvent', () => {
     beforeEach(() => {
         rpcMock.mockClear();
         getSupabaseClientMock.mockReset().mockResolvedValue({ ok: true, supabase: { rpc: rpcMock } });
+        localStorage.setItem('qarar_cookie_consent', 'granted');
+    });
+
+    it('بلا موافقة كوكيز مسجّلة ⇒ لا استدعاء RPC إطلاقاً، لا استثناء', async () => {
+        localStorage.removeItem('qarar_cookie_consent');
+        const { trackEvent } = await import('../analytics.js');
+        expect(() => trackEvent('export_click', { format: 'pdf' })).not.toThrow();
+        await flushMicrotasks();
+        expect(rpcMock).not.toHaveBeenCalled();
+    });
+
+    it('برفض صريح لكوكيز التحليلات ⇒ لا استدعاء RPC إطلاقاً', async () => {
+        localStorage.setItem('qarar_cookie_consent', 'denied');
+        const { trackEvent } = await import('../analytics.js');
+        trackEvent('export_click', { format: 'pdf' });
+        await flushMicrotasks();
+        expect(rpcMock).not.toHaveBeenCalled();
     });
 
     it('استدعاء متزامن بلا استثناء، لا يعطّل المستدعي', async () => {

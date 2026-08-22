@@ -10,11 +10,19 @@
  * لقطة "الهيكل العام" تختبر الآن هذا المظهر الفعلي (.app-shell بدل .sidebar).
  * اللقطتان الثانية والثالثة تنتقلان إلى #/step/0 (مسار غير محمي، انظر critical_path.spec.js)
  * حيث تُعرض التصنيفات ومحتوى المعالج فعلياً.
+ *
+ * تدقيق 2026-08-22: شريط موافقة الكوكيز (public/js/cookie-notice.js) بات عنصراً
+ * حقيقياً position:fixed بعد إصلاح a11y/الامتثال. لقطات العنصر (لا fullPage) لعناصر
+ * أطول من ارتفاع الفيوبورت (كـ#wizardContainer ~8300px) تُلحِق العناصر الثابتة
+ * بموضع الفيوبورت أثناء تصوير/دمج الأجزاء متعددة، فتظهر مكرَّرة/في مواضع غير ثابتة
+ * داخل اللقطة النهائية — تسبَّب بفشل متقطّع حقيقي (لا وهمي) عبر عدة تشغيلات. الحل:
+ * تثبيت قرار الموافقة قبل التنقّل حتى لا يُحقَن الشريط إطلاقاً بهذه الاختبارات.
  */
 import { test, expect } from '@playwright/test';
 
 test.describe('Visual regression — محاكي الجدوى', () => {
     test('الصفحة الرئيسية — الهيكل العام', async ({ page }) => {
+        await page.addInitScript(() => localStorage.setItem('qarar_cookie_consent', 'granted'));
         await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
         const main = page.locator('#app, body').first();
@@ -30,6 +38,7 @@ test.describe('Visual regression — محاكي الجدوى', () => {
         // جولة driver.js التعريفية تظهر بعد ثانية عبر setTimeout (نفس فخ critical_path.spec.js)
         // وتُزيح تخطيط الصفحة أثناء التقاط اللقطة — نُعطّلها هنا لثبات المقارنة البصرية.
         await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
+        await page.addInitScript(() => localStorage.setItem('qarar_cookie_consent', 'granted'));
         await page.goto('/index.html#/step/0');
         await page.waitForLoadState('domcontentloaded');
         const nav = page.locator('#macroJourneyStepper:visible, #categoryStepper:visible').first();
@@ -41,6 +50,7 @@ test.describe('Visual regression — محاكي الجدوى', () => {
 
     test('منطقة المحتوى الرئيسي (Wizard)', async ({ page }) => {
         await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
+        await page.addInitScript(() => localStorage.setItem('qarar_cookie_consent', 'granted'));
         await page.goto('/index.html#/step/0');
         await page.waitForLoadState('domcontentloaded');
         const wizard = page.locator('#wizardContainer');

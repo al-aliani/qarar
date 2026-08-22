@@ -4,6 +4,7 @@ import { store } from '../core/store.js';
 import { ProjectManager } from '../services/ProjectManager.js';
 import { getBankTransferConfig } from '../config.js';
 import { trackEvent } from '../utils/analytics.js';
+import { monitoring } from '../utils/monitoring.js';
 import { renderBankTransferPanel } from './components/BankTransferPanel.js';
 
 const ADDONS = [
@@ -73,7 +74,12 @@ export class SubscriptionCheckoutView {
                 <span class="checkout-tier__price">${formatPrice(p.price)}</span>
                 <span class="checkout-tier__unit">${p.unit}</span>
             </button>`).join('');
-        this.container.innerHTML = `<div class="p-6 max-w-3xl mx-auto"><button id="checkoutBack" class="btn btn--ghost mb-4">← رجوع</button><h1 class="text-2xl font-bold mb-2">إكمال الطلب</h1><p class="text-muted mb-5">راجع الباقة والخدمات الإضافية، ثم أرسل طلب الدفع بتحويل بنكي.</p><div class="card p-6" id="checkoutCard"><h2 class="text-sm font-bold mb-2">الباقة</h2><div class="checkout-tiers mb-2">${tiersHtml}</div><p class="text-xs text-muted mb-4">${pkg.audience} · التسليم: ${pkg.delivery}</p><h2 class="text-sm font-bold mb-2">خدمات إضافية</h2>${ADDONS.map(a => `<label class="flex justify-between items-center py-2"><span><input type="checkbox" data-addon="${a.id}" data-price="${a.price}"> ${a.name}</span><span>${a.price} ريال</span></label>`).join('')}<div class="form-group mt-4"><label class="text-sm">كوبون الخصم</label><input id="checkoutCoupon" class="form-input w-full" dir="ltr" placeholder="WELCOME10"></div><div class="mt-5" style="border-top:1px solid var(--c-border)"><div class="flex justify-between py-2"><span>${pkg.name}</span><span>${formatPrice(pkg.price)} ريال</span></div><div class="flex justify-between py-2"><span>الإجمالي (شامل الضريبة)</span><span id="checkoutSubtotal"></span></div><div class="flex justify-between py-2"><span>الخصم المتوقع</span><span id="checkoutDiscount">يُتحقق منه عند الدفع</span></div><div class="flex justify-between py-2 text-muted" style="font-size:.9rem"><span>منها ضريبة القيمة المضافة (15%)</span><span id="checkoutVat"></span></div><div class="flex justify-between py-2 font-bold text-lg"><span>المطلوب دفعه</span><span id="checkoutTotal"></span></div></div><div id="checkoutError" class="text-danger text-sm mt-2" style="display:none"></div>${payAction}</div></div>`;
+        // نفس مؤشرات الثقة الثلاثة الظاهرة بجوار زر الدفع في PaywallModal.js (تذييل
+        // الفاتورة/الضريبة، الاسترداد، الأدوات المجانية) — تُكرَّر هنا لأن هذه شاشة
+        // الدفع الرئيسية القادمة من صفحة التسعير، لا PaywallModal فقط. نص الاسترداد
+        // ثابت هنا (لا REFUND_POLICY.shortTitle) بلا استيراد إضافي من config.js.
+        const trustHtml = `<p class="text-xs text-muted text-center w-full mt-3">جميع الأسعار شاملة ضريبة القيمة المضافة (15%) — لا رسوم إضافية عند الدفع.</p><p class="text-xs text-muted text-center w-full">ضمان استرداد خلال 15 يوم على الباقات المدفوعة إن لم تُقنعك النتيجة.</p><p class="text-xs text-muted text-center w-full">الأدوات المجانية (JSON، CSV، لوحة المستثمر للمشاركة) تبقى بلا قيود.</p>`;
+        this.container.innerHTML = `<div class="p-6 max-w-3xl mx-auto"><button id="checkoutBack" class="btn btn--ghost mb-4">← رجوع</button><h1 class="text-2xl font-bold mb-2">إكمال الطلب</h1><p class="text-muted mb-5">راجع الباقة والخدمات الإضافية، ثم أرسل طلب الدفع بتحويل بنكي.</p><div class="card p-6" id="checkoutCard"><h2 class="text-sm font-bold mb-2">الباقة</h2><div class="checkout-tiers mb-2">${tiersHtml}</div><p class="text-xs text-muted mb-4" id="checkoutPkgAudience">${pkg.audience} · التسليم: ${pkg.delivery}</p><h2 class="text-sm font-bold mb-2">خدمات إضافية</h2>${ADDONS.map(a => `<label class="flex justify-between items-center py-2"><span><input type="checkbox" data-addon="${a.id}" data-price="${a.price}"> ${a.name}</span><span>${a.price} ريال</span></label>`).join('')}<div class="form-group mt-4"><label class="text-sm">كوبون الخصم</label><input id="checkoutCoupon" class="form-input w-full" dir="ltr" placeholder="WELCOME10"></div><div class="mt-5" style="border-top:1px solid var(--c-border)"><div class="flex justify-between py-2"><span id="checkoutPkgName">${pkg.name}</span><span id="checkoutPkgPrice">${formatPrice(pkg.price)} ريال</span></div><div class="flex justify-between py-2"><span>الإجمالي (شامل الضريبة)</span><span id="checkoutSubtotal"></span></div><div class="flex justify-between py-2"><span>الخصم المتوقع</span><span id="checkoutDiscount">يُتحقق منه عند الدفع</span></div><div class="flex justify-between py-2 text-muted" style="font-size:.9rem"><span>منها ضريبة القيمة المضافة (15%)</span><span id="checkoutVat"></span></div><div class="flex justify-between py-2 font-bold text-lg"><span>المطلوب دفعه</span><span id="checkoutTotal"></span></div></div><div id="checkoutError" class="text-danger text-sm mt-2" style="display:none"></div>${payAction}${trustHtml}</div></div>`;
         this.container.querySelector('#checkoutBack')?.addEventListener('click', () => this.onBack());
         this.container.querySelectorAll('[data-addon]').forEach(el => el.addEventListener('change', () => this.update(this._pkg)));
         this.container.querySelector('#checkoutPayBank')?.addEventListener('click', (e) => this.payBankTransfer(this._pkg, e.currentTarget));
@@ -81,19 +87,28 @@ export class SubscriptionCheckoutView {
         this.update(pkg);
     }
 
-    /** يبقي الخدمات الإضافية المُحدَّدة عبر إعادة الرسم — التبديل بين الباقات لا يمس الإضافات. */
+    /**
+     * تحديث DOM مباشر بدل إعادة رسم الصفحة كاملة (this._renderCheckout()) — التبديل
+     * بين الباقات كان يعيد بناء الكرت كله (شرائح الأسعار/الإضافات/الكوبون) في كل ضغطة،
+     * ما يمسح تركيز المستخدم ويسبب وميضاً بصرياً. لأن DOM لا يُعاد بناؤه هنا، حالة
+     * الخدمات الإضافية المُحدَّدة تبقى كما هي تلقائياً بلا حاجة لحفظ/استعادتها.
+     */
     _selectTier(tierId) {
         const pkg = PRICING_PACKAGES.find(p => p.id === tierId && p.price > 0);
         if (!pkg || pkg.id === this._pkg?.id) return;
-        const previousAddons = this.selectedAddons();
         try { sessionStorage.setItem('selected_package', tierId); } catch (_) { /* تجاهل بيئات بلا sessionStorage */ }
         trackEvent('checkout_tier_change', { tier: tierId });
-        this._renderCheckout();
-        previousAddons.forEach((id) => {
-            const el = this.container.querySelector(`[data-addon="${id}"]`);
-            if (el) el.checked = true;
+        this._pkg = pkg;
+        this.container.querySelectorAll('[data-tier]').forEach((btn) => {
+            btn.classList.toggle('is-active', btn.dataset.tier === pkg.id);
         });
-        this.update(this._pkg);
+        const audienceEl = this.container.querySelector('#checkoutPkgAudience');
+        if (audienceEl) audienceEl.textContent = `${pkg.audience} · التسليم: ${pkg.delivery}`;
+        const nameEl = this.container.querySelector('#checkoutPkgName');
+        if (nameEl) nameEl.textContent = pkg.name;
+        const priceEl = this.container.querySelector('#checkoutPkgPrice');
+        if (priceEl) priceEl.textContent = `${formatPrice(pkg.price)} ريال`;
+        this.update(pkg);
     }
 
     selectedAddons(){ return [...this.container.querySelectorAll('[data-addon]:checked')].map(el => el.dataset.addon); }
@@ -120,6 +135,9 @@ export class SubscriptionCheckoutView {
             return;
         }
         trackEvent('payment_error', { tier: pkg.id, provider: 'bank_transfer', message: result.error || 'bank_transfer_failed' });
+        // بلوكر #43 (نفس نمط PaymentReturnView.js): فشل الدفع لا يصل لأي مراقبة بلا هذا
+        // الاستدعاء — يظهر للعميل فقط برسالة الخطأ أدناه، بلا أثر يراه الأدمن عبر Sentry.
+        monitoring.captureMessage(`Payment error: bank_transfer checkout failed (tier ${pkg.id})`, 'warning', { tier: pkg.id, provider: 'bank_transfer', studyId: this.studyId, message: result.error || 'bank_transfer_failed' });
         errorEl.textContent = result.error || 'تعذّر إنشاء طلب التحويل البنكي. حاول لاحقاً.';
         errorEl.style.display = 'block';
         button.disabled = false;

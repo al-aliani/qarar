@@ -10,5 +10,7 @@ Disallow: /coverage/
 Disallow: /report/
 Disallow: /export/
 Disallow: /dashboard.html
+Disallow: /admin.html
+Disallow: /financial_charts.html
 
 Sitemap: https://sahib.sa/sitemap.xml

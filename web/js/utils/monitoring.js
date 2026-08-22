@@ -3,6 +3,7 @@
  * Integrates with Sentry or similar service for production error tracking
  */
 import { trackEvent } from './analytics.js';
+import { hasAnalyticsConsent, onAnalyticsConsentGranted } from './cookieConsent.js';
 
 class MonitoringService {
     constructor() {
@@ -23,7 +24,17 @@ class MonitoringService {
         this.environment = isProduction ? 'production' : 'development';
 
         if (this.sentryDsn && isProduction) {
-            this._initSentry();
+            // تدقيق كوكيز 2026-08-22: Sentry كان يُحمَّل ويُهيَّأ تلقائياً بلا أي شرط
+            // موافقة — الآن لا يُهيَّأ إلا بعد ضغط الزائر "موافق" بإشعار الكوكيز
+            // (public/js/cookie-notice.js). إن لم توجد موافقة بعد، تُستخدم المراقبة
+            // المحلية (console) مؤقتاً + استماع لحدث الموافقة لتفعيل Sentry فوراً بلا
+            // إعادة تحميل الصفحة إن وافق الزائر لاحقاً.
+            if (hasAnalyticsConsent()) {
+                this._initSentry();
+            } else {
+                this._initConsoleTracking();
+                onAnalyticsConsentGranted(() => this._initSentry());
+            }
         } else {
             // بلوكر #43: كانت الحالة الفعلية (بلا DSN بالإنتاج) تُسجَّل بنفس رسالة
             // "✅" المطمئنة اللي تظهر بالتطوير — لا فرق مرئي يلفت نظر أحد. أخطاء
@@ -63,9 +74,14 @@ class MonitoringService {
     }
 
     _initConsoleTracking() {
+        // قد تُستدعى مرتين (تأخير الموافقة ثم فشل تحميل Sentry لاحقاً) — امنع تكرار
+        // ربط مستمعي window فتتضاعف تقارير نفس الخطأ.
+        if (this._consoleTrackingInitialized) return;
+        this._consoleTrackingInitialized = true;
+
         // Console-based error tracking for development
         this.enabled = true;
-        
+
         // Capture unhandled errors
         window.addEventListener('error', (event) => {
             this.captureException(event.error || event.message, {
@@ -174,7 +190,9 @@ class MonitoringService {
      * Send error to custom endpoint (fallback)
      */
     _sendToEndpoint(errorInfo) {
-        // Only send in production and if endpoint is configured
+        // Only send in production and if endpoint is configured, and only after
+        // explicit cookie/analytics consent — this is an external network call.
+        if (!hasAnalyticsConsent()) return;
         const endpoint = import.meta.env?.VITE_ERROR_ENDPOINT;
         if (!endpoint) return;
 

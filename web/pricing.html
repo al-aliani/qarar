@@ -7,10 +7,58 @@
     <meta name="description" content="قارن باقات منصة قرار الأربع: مجانية، ذاتية، مراجعة خبير، وخدمة كاملة — وأسعارها الشاملة للضريبة لإعداد دراسة جدوى احترافية." />
     <link rel="canonical" href="https://sahib.sa/pricing.html" />
     <meta name="theme-color" content="#0e5b44" />
+    <meta property="og:title" content="الأسعار — منصة قرار" />
+    <meta property="og:description" content="قارن باقات منصة قرار الأربع: مجانية، ذاتية، مراجعة خبير، وخدمة كاملة — وأسعارها الشاملة للضريبة لإعداد دراسة جدوى احترافية." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://sahib.sa/pricing.html" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="الأسعار — منصة قرار" />
+    <meta name="twitter:description" content="قارن باقات منصة قرار الأربع: مجانية، ذاتية، مراجعة خبير، وخدمة كاملة — وأسعارها الشاملة للضريبة لإعداد دراسة جدوى احترافية." />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e5b44'/><text x='50' y='72' font-size='62' text-anchor='middle' fill='%23fff' font-family='sans-serif' font-weight='700'>ق</text></svg>" type="image/svg+xml" />
     <link rel="stylesheet" href="/fonts/fonts.css" />
     <link rel="stylesheet" href="/css/main.css" />
     <link rel="stylesheet" href="/css/legal-pages.css" />
+
+    <!-- بيانات منظّمة (Schema.org / JSON-LD) — نفس نمط landing.html، بنوع Product لصفحة الأسعار. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "باقات منصة قرار لدراسة الجدوى",
+      "description": "قارن باقات منصة قرار الأربع: مجانية، ذاتية، مراجعة خبير، وخدمة كاملة — وأسعارها الشاملة للضريبة لإعداد دراسة جدوى احترافية.",
+      "brand": { "@type": "Organization", "name": "قرار" },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "مجانية",
+          "price": "0",
+          "priceCurrency": "SAR",
+          "description": "ابدأ دراسة أولية واحفظ مشروعك داخل المنصة."
+        },
+        {
+          "@type": "Offer",
+          "name": "ذاتي",
+          "price": "299",
+          "priceCurrency": "SAR",
+          "description": "المحرك والأدوات لتبني دراستك بنفسك."
+        },
+        {
+          "@type": "Offer",
+          "name": "مراجَع بخبير",
+          "price": "1999",
+          "priceCurrency": "SAR",
+          "description": "مراجعة مختص لافتراضاتك وتوصياته قبل التسليم."
+        },
+        {
+          "@type": "Offer",
+          "name": "خدمة كاملة",
+          "price": "4999",
+          "priceCurrency": "SAR",
+          "description": "جمع البيانات وبناء الدراسة ومراجعتها مع جلسة شرح للنتائج."
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
 
@@ -45,6 +93,7 @@
       <div class="lp-content-wrapper">
 
         <p class="text-muted" style="grid-column:1/-1;text-align:center;margin:0 0 8px">جميع الأسعار شاملة ضريبة القيمة المضافة (15%) — السعر المعلن هو المبلغ النهائي، بلا رسوم إضافية عند الدفع.</p>
+        <p class="text-muted" style="grid-column:1/-1;text-align:center;margin:0 0 20px">الباقات المدفوعة الثلاث مشمولة بضمان استرداد الأموال خلال 15 يوماً — التفاصيل في <a href="refund-policy.html">سياسة الاسترجاع والإلغاء</a>.</p>
         <div id="pricingCards" class="lp-content-wrapper" style="padding:0"></div>
       </div>
       <section id="comparison" class="lp-card" style="grid-column:1/-1;overflow:auto">
@@ -60,13 +109,21 @@
     <script type="module">
       import { PRICING_PACKAGES, PRICING_COMPARISON, formatPrice } from './js/core/pricing.js';
 
+      const CTA_LABELS = {
+        free: 'ابدأ مجاناً',
+        self: 'اشترِ الباقة الذاتية',
+        reviewed: 'اشترِ باقة المراجعة بخبير',
+        full: 'اشترِ باقة الخدمة الكاملة'
+      };
+
       const cards = document.getElementById('pricingCards');
       if (cards) cards.innerHTML = PRICING_PACKAGES.map((plan) => {
         const cardClass = plan.recommended ? 'lp-card lp-card--featured' : 'lp-card';
         const badge = plan.recommended ? '<span class="lp-featured-badge">موصى بها</span>' : '';
         const btnClass = plan.recommended ? 'btn btn--primary' : 'btn btn--outline';
         const feats = plan.features.map((f) => `<li>${f}</li>`).join('');
-        return `<div class="${cardClass}">${badge}<h2>${plan.name} — ${formatPrice(plan.price)} ${plan.unit}</h2><p class="text-muted">${plan.audience}</p><ul>${feats}</ul><a href="./index.html?auth=1&pkg=${plan.id}" class="${btnClass}" style="margin-top:10px">ابدأ الآن</a></div>`;
+        const cta = CTA_LABELS[plan.id] || 'ابدأ الآن';
+        return `<div class="${cardClass}">${badge}<h2>${plan.name} — ${formatPrice(plan.price)} ${plan.unit}</h2><p class="text-muted">${plan.audience}</p><ul>${feats}</ul><a href="./index.html?auth=1&pkg=${plan.id}" class="${btnClass}" style="margin-top:10px">${cta}</a></div>`;
       }).join('');
 
       const rows = document.getElementById('pricingComparisonRows');

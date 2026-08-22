@@ -22,7 +22,12 @@ Deno.serve(async (req: Request) => {
   const configuredSecret = Deno.env.get('MOYASAR_WEBHOOK_SECRET')!;
   const verification = verifyMoyasarSecretToken(payload, configuredSecret);
   if (!verification.ok) {
-    console.warn('[webhook-moyasar] signature rejected:', verification.reason);
+    // TODO(مراقبة): رفض توقيع حقيقي هنا قد يعني هجوم انتحال أو تغيّر السرّ لدى Moyasar
+    // دون تحديث MOYASAR_WEBHOOK_SECRET — هذا حالياً فشل صامت (سجلّ فقط، بلا أي تنبيه
+    // يصل لأحد). يحتاج ربطاً بقناة تنبيه فعلية لاحقاً؛ لا يوجد حالياً أي مساعد
+    // تنبيه جاهز من جهة الخادم في supabase/functions/_shared يمكن إعادة استخدامه.
+    const refForLog = String(payload?.data?.id || payload?.id || 'unknown');
+    console.warn(`[webhook-moyasar] signature rejected (provider_ref=${refForLog}, reason=${verification.reason})`);
     return new Response('invalid_signature', { status: 401 });
   }
 
@@ -53,7 +58,10 @@ Deno.serve(async (req: Request) => {
     .select('id');
 
   if (error) {
-    console.error('[webhook-moyasar] update failed:', error);
+    // TODO(مراقبة): يعني عميلاً دفع فعلياً (Moyasar أكّدت الحدث) لكن سجلّ الطلب لم
+    // يُحدَّث — طلب مدفوع بلا وصول ممنوح، وهذا حالياً فشل صامت (سجلّ فقط). يحتاج
+    // ربطاً بقناة تنبيه فعلية تصل لأحد فوراً لاحقاً؛ لا يوجد مساعد تنبيه جاهز حالياً.
+    console.error(`[webhook-moyasar] order update failed (provider_ref=${providerRef}, status=${status}):`, error);
     return new Response('db_error', { status: 500 });
   }
   if (!data || data.length === 0) {

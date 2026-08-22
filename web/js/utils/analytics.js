@@ -1,5 +1,6 @@
 /** Optional analytics bridge. It stays inert until the product config provides GA4/Meta. */
 import { getSupabaseClient } from '../../supabaseClient.js';
+import { hasAnalyticsConsent } from './cookieConsent.js';
 
 function getSessionId() {
     try {
@@ -74,6 +75,10 @@ function getAttributionParams() {
 }
 
 export function trackEvent(name, params = {}) {
+    // تدقيق كوكيز 2026-08-22 (إشعار الكوكيز public/js/cookie-notice.js): كانت كل
+    // استدعاءات trackEvent تصل فعلياً (gtag/fbq + إدراج Supabase) بلا أي شرط موافقة —
+    // الآن لا شيء يغادر المتصفح قبل ضغط الزائر "موافق" صراحة.
+    if (!hasAnalyticsConsent()) return;
     try {
         const eventParams = { ...getEnvironmentParams(), ...getExperimentParams(), ...getAttributionParams(), ...params };
         if (typeof window !== 'undefined' && typeof window.gtag === 'function') window.gtag('event', name, eventParams);
