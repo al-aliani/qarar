@@ -35,6 +35,25 @@ function makeCache(cache) {
     };
 }
 
+/**
+ * تدقيق أداء 2026-08-22: vendor-globals.js (يضبط window.Chart) كان يُحمَّل عبر
+ * <script> ثابت في index.html فيسحب chart.js (207KB) على كل زيارة/خطوة، رغم
+ * استخدامه فقط بخطوات محدَّدة (dashboard/financing/monteCarlo/services/breakEven/
+ * marketing/staffing). الملفات المستهلِكة (FinancialDashboard.js،
+ * FinancingStructure.js، MonteCarloAnalysis.js، ServiceAnalysis.js،
+ * BreakEvenAnalysis.js، ReviewCharts.js — الأخيرة عبر Wizard.js لا هذا الملف)
+ * تعتمد على window.Chart/Chart العالمي بلا استيراد خاص بها — استدعِ هذه الدالة
+ * قبل رسم أيٍّ منها بدل تعديلها هي نفسها (تفادياً لكسر اختبارات وحدة تستدعي
+ * render() مباشرة بمعزل عن هذا المسجِّل). ملفات أخرى تستخدم `new Chart(...)`
+ * (LivePanel.js، web/js/Charts.js) كود ميت فعلياً — لا مستهلك حي بالإنتاج
+ * (تحقّق بالبحث عن استيراداتها 2026-08-22)، ووُجد أيضاً web/js/charts.js
+ * (بحروف صغيرة) لصفحة منفصلة financial_charts.html تستورد chart.js مباشرة
+ * بمعزل عن vendor-globals.js — لا علاقة له بهذا التغيير.
+ */
+async function ensureChartGlobal() {
+    await import('../vendor-globals.js');
+}
+
 export async function renderStepComponent(step, containerId, index, ctx) {
     const { store, onNavigate, isCurrent, cache, wizardFactory, runFullModel } = ctx;
     const get = makeCache(cache);
@@ -42,6 +61,7 @@ export async function renderStepComponent(step, containerId, index, ctx) {
     if (step.isDashboard) {
         const { FinancialDashboard } = await import('./FinancialDashboard.js');
         if (isCurrent && !isCurrent()) return { instance: null, rendered: false };
+        await ensureChartGlobal();
         const instance = get('dashboard', FinancialDashboard, containerId, store);
         instance.render();
         return { instance };
@@ -77,6 +97,7 @@ export async function renderStepComponent(step, containerId, index, ctx) {
     if (step.isMonteCarlo) {
         const { MonteCarloAnalysis } = await import('./MonteCarloAnalysis.js');
         if (isCurrent && !isCurrent()) return { instance: null, rendered: false };
+        await ensureChartGlobal();
         const instance = get('monteCarlo', MonteCarloAnalysis, containerId, store);
         instance.render();
         return { instance };
@@ -146,6 +167,7 @@ export async function renderStepComponent(step, containerId, index, ctx) {
     if (step.id === 'services') {
         const { ServiceAnalysis } = await import('./ServiceAnalysis.js');
         if (isCurrent && !isCurrent()) return { instance: null, rendered: false };
+        await ensureChartGlobal();
         const instance = get('serviceAnalysis', ServiceAnalysis, containerId, store, onNavigate);
         instance.render(index);
         return { instance };
@@ -188,6 +210,7 @@ export async function renderStepComponent(step, containerId, index, ctx) {
     if (step.isFinancing) {
         const { FinancingStructure } = await import('./FinancingStructure.js');
         if (isCurrent && !isCurrent()) return { instance: null, rendered: false };
+        await ensureChartGlobal();
         const instance = get('financing', FinancingStructure, containerId, store, onNavigate);
         instance.render(index);
         return { instance };
@@ -267,6 +290,7 @@ export async function renderStepComponent(step, containerId, index, ctx) {
     if (step.isBreakEven) {
         const { BreakEvenAnalysis } = await import('./BreakEvenAnalysis.js');
         if (isCurrent && !isCurrent()) return { instance: null, rendered: false };
+        await ensureChartGlobal();
         const instance = get('breakEvenAnalysis', BreakEvenAnalysis, containerId, store);
         instance.render();
         return { instance };

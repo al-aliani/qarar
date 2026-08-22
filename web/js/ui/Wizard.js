@@ -403,18 +403,22 @@ export class Wizard {
                 const chartContainer = document.getElementById('marketingChart');
                 if (chartContainer && sectionData?.competitors?.length > 0) {
                     chartContainer.style.display = 'block';
-                    ReviewCharts.renderMarketingMix('marketingChart', studyData);
+                    import('../vendor-globals.js').then(() => {
+                        ReviewCharts.renderMarketingMix('marketingChart', studyData);
+                    });
                 }
             } else if (stepId === 'staffing') {
                 const chartContainer = document.getElementById('staffingChart');
                 if (chartContainer && sectionData?.length > 0) { // staffing is array in schema usually?
-                    // Actually staffing stores its data in the section root if specialized, or as 'positions' table? 
-                    // Let's check Schema. 'staffing' uses 'positions' table usually. 
+                    // Actually staffing stores its data in the section root if specialized, or as 'positions' table?
+                    // Let's check Schema. 'staffing' uses 'positions' table usually.
                     // Wizard renders tables. The data is in studyData.staffing probably if specialized.
-                    // Wait, Wizard lines 68 show migration logic? 
+                    // Wait, Wizard lines 68 show migration logic?
                     // Let's rely on studyData passed to ReviewCharts.
                     chartContainer.style.display = 'block';
-                    ReviewCharts.renderStaffingCost('staffingChart', { staffing: this.store.get().staffing?.positions || [] });
+                    import('../vendor-globals.js').then(() => {
+                        ReviewCharts.renderStaffingCost('staffingChart', { staffing: this.store.get().staffing?.positions || [] });
+                    });
                 }
             } else if (stepId === 'technical') {
                 const mapEl = document.getElementById('technicalMap');
