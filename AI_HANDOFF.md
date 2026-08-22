@@ -48,7 +48,7 @@ npm test                # 1696/1696 يجب أن تمر خضراء قبل أي co
 | التصدير | `docx`, `exceljs`, `pptxgenjs`, `chart.js`, `qrcode` |
 | الاختبارات | Vitest (وحدة) + Playwright (e2e) |
 | النشر | Vercel/Netlify (كلا الإعدادين موجودين: `vercel.json`, `netlify.toml`) |
-| بايثون قديم | `ai_server.py` / `ai_server_enhanced.py` وملفات `*_engine.py` في الجذر — **بقايا نموذج أولي مبكر**، المنطق الحقيقي المستخدم الآن هو `lib/calc/` + `web/js/core/engine.js`. تحقق قبل التعديل هل ما زالت مستخدمة فعلياً أو ميتة. |
+| بايثون قديم | **حُقِّق ونُظِّف (2026-08-22):** `ai_server.py` (بلا أي مرجع تنفيذي — حُذف). `ai_server_enhanced.py` **حيّ فعلياً** كأداة تطوير محلي + CI: `package.json` (`start:single`)، `start_all.bat`، `serve_local.ps1`، واختبار حارس `web/js/core/__tests__/apiServerContract.guard.test.js` يقرأ مصدره مباشرة (حذفه يكسر CI) — **لا يُلمَس بلا قرار مالك صريح** (حذفه فعلياً هو قرار "هل نتخلى عن خادم AI المحلي؟" لا تنظيف كود ميت). `*_engine.py` (item/market/experience) اعتماديات ناعمة له (`try/except ImportError`) — حذفها لا يكسر شيئاً لكنه يُعطِّل ميزات AI محلياً بصمت؛ تُرِكت مع `ai_server_enhanced.py` لنفس السبب. المنطق المالي الحقيقي المستخدم فعلياً هو `lib/calc/` + `web/js/core/engine.js` بلا علاقة بأيٍّ من هذه الملفات. |
 
 **التشغيل محلياً:** `npm run dev` (Vite على المنفذ 5173 — مضمّن صراحة في الكود). الاختبارات: `npm test` (vitest)، `npm run test:e2e` (playwright).
 

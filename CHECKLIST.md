@@ -37,7 +37,7 @@ npm run dev
 
 ### 3. (اختياري) تشغيل خادم الذكاء الاصطناعي
 ```bash
-python ai_server.py
+python ai_server_enhanced.py
 ```
 
 ## ✅ الميزات المتاحة
