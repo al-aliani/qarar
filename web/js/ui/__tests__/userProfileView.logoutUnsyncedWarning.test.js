@@ -53,11 +53,13 @@ describe('UserProfileView — تحذير الخروج عند وجود دراسا
         await renderView();
 
         document.getElementById('btnUserProfileLogout').click();
-        await new Promise((r) => setTimeout(r, 0));
-        await new Promise((r) => setTimeout(r, 0));
-        await new Promise((r) => setTimeout(r, 0));
+        // معالج النقر يستورد sweetalert2 وsignOutGuard.js ديناميكياً (Promise.all) قبل
+        // استدعاء Swal.fire — عدد دورات microtask/macrotask المطلوبة لاستقرارها غير
+        // ثابت (يتفاوت فعلياً تحت ضغط CI)، فعدد محاولات setTimeout(0) الثابت كان
+        // يفشل أحياناً (0 أو حتى تسرّب لاختبار لاحق) — vi.waitFor يبقى صحيحاً بصرف
+        // النظر عن عدد الدورات الفعلي.
+        await vi.waitFor(() => expect(swalFireMock).toHaveBeenCalledTimes(1));
 
-        expect(swalFireMock).toHaveBeenCalledTimes(1);
         const args = swalFireMock.mock.calls[0][0];
         expect(args.icon).toBe('error');
         expect(args.text).toContain('1');
@@ -72,11 +74,8 @@ describe('UserProfileView — تحذير الخروج عند وجود دراسا
         await renderView();
 
         document.getElementById('btnUserProfileLogout').click();
-        await new Promise((r) => setTimeout(r, 0));
-        await new Promise((r) => setTimeout(r, 0));
-        await new Promise((r) => setTimeout(r, 0));
+        await vi.waitFor(() => expect(signOutMock).toHaveBeenCalledTimes(1));
 
-        expect(signOutMock).toHaveBeenCalledTimes(1);
         expect(auditLogMock).toHaveBeenCalledWith('logout', {});
         expect(toastMock.info).toHaveBeenCalledWith('تم تسجيل الخروج');
     });

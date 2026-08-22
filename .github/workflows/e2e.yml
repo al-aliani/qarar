@@ -50,6 +50,15 @@ jobs:
         run: npm run test:e2e:all-browsers
         env:
           CI: true
+          # تدقيق 2026-08-21: بلا هذا، خادم dev داخل CI يشغّل بإعداد Supabase الافتراضي
+          # المُضمَّن بالكود، وهو "محظور صراحة" في وضع dev الأمني (blockedInDev بـ
+          # supabaseClient.js) لمنع كتابة بيانات محلية بالخطأ على قاعدة الإنتاج —
+          # فيظهر تنبيه "أضف SUPABASE_URL..." بدل نموذج الدخول الفعلي، وتفشل كل
+          # الاختبارات التي تتحقق من واجهة المصادقة. هذا العلم هو نفس مخرج الطوارئ
+          # الموثَّق أصلاً بالتحذير نفسه — لا حاجة لتكرار URL/anon key (عمومي أصلاً)
+          # كأسرار CI منفصلة؛ لا كتابة بيانات فعلية تحدث (E2E_CUSTOMER_EMAIL/PASSWORD
+          # غير مضبوطين بعد بهذا الـCI، فاختبارات تسجيل الدخول الحقيقي تتخطى نفسها).
+          VITE_ALLOW_DEFAULT_SUPABASE_IN_DEV: true
 
       - name: Upload Playwright report
         if: failure()

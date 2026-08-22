@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test('export menu exposes QA fix center and local downloads history', async ({ page }) => {
+  // جولة driver.js التعريفية تظهر بعد ثانية وتحجب النقر بطبقتها الشفافة (driver-overlay)
+  // تحت بطء CI — نفس فخ critical_path.spec.js.
+  await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
   await page.goto('/index.html#/step/0');
 
   const exportButton = page.locator('#headerExportMenu, #btnExportMenu, #btnFabExport').first();
@@ -11,7 +14,8 @@ test('export menu exposes QA fix center and local downloads history', async ({ p
   await expect(page.locator('#btnOpenQaFixCenter')).toBeVisible();
   await page.locator('#btnOpenQaFixCenter').click();
 
-  await expect(page.getByRole('heading', { name: /مركز إصلاح فحص الجودة/ })).toBeVisible();
+  // العنوان الفعلي في ExportMenu.js._openQaFixCenter() هو "مركز إصلاح الجودة" (بلا "فحص").
+  await expect(page.getByRole('heading', { name: /مركز إصلاح الجودة/ })).toBeVisible();
   await expect(page.getByText('الأثر على التقرير:').first()).toBeVisible();
 
   await page.evaluate(() => {
