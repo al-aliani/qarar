@@ -56,9 +56,17 @@ jobs:
           # فيظهر تنبيه "أضف SUPABASE_URL..." بدل نموذج الدخول الفعلي، وتفشل كل
           # الاختبارات التي تتحقق من واجهة المصادقة. هذا العلم هو نفس مخرج الطوارئ
           # الموثَّق أصلاً بالتحذير نفسه — لا حاجة لتكرار URL/anon key (عمومي أصلاً)
-          # كأسرار CI منفصلة؛ لا كتابة بيانات فعلية تحدث (E2E_CUSTOMER_EMAIL/PASSWORD
-          # غير مضبوطين بعد بهذا الـCI، فاختبارات تسجيل الدخول الحقيقي تتخطى نفسها).
+          # كأسرار CI منفصلة.
           VITE_ALLOW_DEFAULT_SUPABASE_IN_DEV: true
+          # تدقيق 2026-08-22: #/step/N و#/category/N صارتا تتطلبان تسجيل دخول أيضاً
+          # (إغلاق فجوة اتساق موثّقة بـAI_HANDOFF.md) — أي اختبار e2e يصل لمحتوى
+          # المعالج مباشرة يحتاج هذين السرّين الآن (e2e/helpers/auth.js: loginTestUser).
+          # غير مضبوطين بعد بمستودع GitHub وقت هذا التغيير → القيمة فارغة →
+          # hasE2ECredentials() ترجع false → الاختبارات المعنية تتخطّى نفسها (test.skip)
+          # بدل الفشل، لا كتابة بيانات فعلية تحدث. أضِفهما كـSecrets حقيقيّين
+          # (Settings → Secrets and variables → Actions) لتفعيل هذه الاختبارات فعلياً.
+          E2E_CUSTOMER_EMAIL: ${{ secrets.E2E_CUSTOMER_EMAIL }}
+          E2E_CUSTOMER_PASSWORD: ${{ secrets.E2E_CUSTOMER_PASSWORD }}
 
       - name: Upload Playwright report
         if: failure()

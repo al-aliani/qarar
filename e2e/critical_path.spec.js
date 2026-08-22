@@ -87,15 +87,19 @@ test.describe('Critical Path: Full User Journey', () => {
   });
 
   test('Export Menu triggers download options', async ({ page }) => {
-    // تدقيق 2026-08-21: goto أول لـ/index.html (بلا هاش) كان يفتح نافذة تسجيل الدخول
-    // (تُفتح تلقائياً الآن على #/home)، وتبقى عالقة فوق الصفحة بعد goto ثانٍ لهاش
-    // مختلف بنفس الوثيقة (لا يُعيد تحميل الصفحة فعلياً) فتحجب #headerExportMenu.
-    // #/step/N نفسها لا تتطلب تسجيل دخول (مسار منفصل غير محمي)، فالتنقّل المباشر إليها كافٍ.
+    // تدقيق 2026-08-22: #/step/N صارت تتطلب تسجيل دخول أيضاً (إغلاق فجوة الاتساق
+    // الموثّقة بـAI_HANDOFF.md — كانت #/home فقط محمية سابقاً بقرار المالك 2026-08-21).
+    // نسجّل الدخول على #/home أولاً ثم نغيّر الهاش مباشرة (بلا goto ثانٍ يُعيد تحميل
+    // الصفحة بالكامل) — يتفادى أيضاً فتح نافذة الدخول من جديد فوق الصفحة إن استُخدم
+    // goto ثانٍ للهاش (كان هذا العطل قبل إضافة تسجيل الدخول هنا).
     // جولة driver.js التعريفية تظهر بعد ثانية عبر setTimeout وتحجب النقر بطبقتها
     // الشفافة (driver-overlay) — ظاهر فقط تحت بطء CI/محاولات إعادة المحاولة، نادراً محلياً.
+    test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
     await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
-    await page.goto('/index.html#/step/0');
+    await page.goto('/index.html');
     await page.waitForLoadState('domcontentloaded');
+    await loginTestUser(page);
+    await page.evaluate(() => { window.location.hash = '#/step/0'; });
     await expect(page.locator('#headerExportMenu')).toBeVisible({ timeout: 10000 });
     await page.click('#headerExportMenu');
     // Modal uses data-type (ExportMenu.js)

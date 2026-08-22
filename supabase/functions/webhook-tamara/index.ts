@@ -8,8 +8,10 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { verifyTamaraNotificationToken } from '../_shared/webhookVerify.ts';
 import { parseTamaraWebhookStatus } from '../_shared/providers/tamara.ts';
+import { sendAlert } from '../_shared/alerting.ts';
 
 Deno.serve(async (req: Request) => {
+  const sentryDsn = Deno.env.get('SENTRY_DSN');
   if (req.method !== 'POST') return new Response('method_not_allowed', { status: 405 });
 
   let payload: any;
@@ -22,12 +24,15 @@ Deno.serve(async (req: Request) => {
   const configuredToken = Deno.env.get('TAMARA_NOTIFICATION_TOKEN')!;
   const verification = verifyTamaraNotificationToken(req.headers.get('Authorization'), configuredToken);
   if (!verification.ok) {
-    // TODO(مراقبة): رفض توكن حقيقي هنا قد يعني هجوم انتحال أو تغيّر التوكن لدى Tamara
-    // دون تحديث TAMARA_NOTIFICATION_TOKEN — هذا حالياً فشل صامت (سجلّ فقط، بلا أي
-    // تنبيه يصل لأحد). يحتاج ربطاً بقناة تنبيه فعلية لاحقاً؛ لا يوجد حالياً أي مساعد
-    // تنبيه جاهز من جهة الخادم في supabase/functions/_shared يمكن إعادة استخدامه.
+    // رفض توكن حقيقي هنا قد يعني هجوم انتحال أو تغيّر التوكن لدى Tamara دون تحديث
+    // TAMARA_NOTIFICATION_TOKEN — تنبيه فعلي (لا سجلّ فقط) عبر Sentry إن SENTRY_DSN مضبوط.
     const refForLog = String(payload?.order_id || payload?.data?.order_id || 'unknown');
     console.warn(`[webhook-tamara] token rejected (provider_ref=${refForLog}, reason=${verification.reason})`);
+    await sendAlert(sentryDsn, {
+      message: `[webhook-tamara] token rejected (provider_ref=${refForLog}, reason=${verification.reason})`,
+      level: 'warning',
+      tags: { source: 'webhook-tamara', kind: 'signature_rejected' },
+    });
     return new Response('invalid_signature', { status: 401 });
   }
 
@@ -56,10 +61,14 @@ Deno.serve(async (req: Request) => {
     .select('id');
 
   if (error) {
-    // TODO(مراقبة): يعني عميلاً دفع فعلياً (Tamara أكّدت الحدث) لكن سجلّ الطلب لم
-    // يُحدَّث — طلب مدفوع بلا وصول ممنوح، وهذا حالياً فشل صامت (سجلّ فقط). يحتاج
-    // ربطاً بقناة تنبيه فعلية تصل لأحد فوراً لاحقاً؛ لا يوجد مساعد تنبيه جاهز حالياً.
+    // يعني عميلاً دفع فعلياً (Tamara أكّدت الحدث) لكن سجلّ الطلب لم يُحدَّث — طلب
+    // مدفوع بلا وصول ممنوح. تنبيه فعلي (لا سجلّ فقط) عبر Sentry إن SENTRY_DSN مضبوط.
     console.error(`[webhook-tamara] order update failed (provider_ref=${providerRef}, status=${status}):`, error);
+    await sendAlert(sentryDsn, {
+      message: `[webhook-tamara] order update failed (provider_ref=${providerRef}, status=${status}): ${error.message || error}`,
+      level: 'error',
+      tags: { source: 'webhook-tamara', kind: 'order_update_failed' },
+    });
     return new Response('db_error', { status: 500 });
   }
   if (!data || data.length === 0) {

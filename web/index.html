@@ -323,8 +323,10 @@
 
   <!-- Scripts -->
   <!-- Chart.js وExcelJS وSheetJS(XLSX) تُحمَّل كوحدات مُجمَّعة (bundled) بدل CDN — تعمل بلا إنترنت.
-       انظر vendor-globals.js. (jsPDF وhtml2canvas أُزيلا — لا استخدام لهما؛ تصدير PDF عبر window.print) -->
-  <script type="module" src="./js/vendor-globals.js"></script>
+       (jsPDF وhtml2canvas أُزيلا — لا استخدام لهما؛ تصدير PDF عبر window.print)
+       تدقيق أداء 2026-08-22: vendor-globals.js (Chart.js) لم يعد يُحمَّل هنا ثابتاً —
+       يُحمَّل ديناميكياً عند الحاجة الفعلية فقط، انظر ensureChartGlobal() بـ
+       stepComponentRegistry.js وWizard.js. -->
 
   <!-- Theme init (external file: enables CSP without 'unsafe-inline' for scripts) -->
   <script src="./js/theme-init.js"></script>

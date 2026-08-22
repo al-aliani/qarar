@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { loginTestUser, hasE2ECredentials } from './helpers/auth.js';
 
 test('Financial charts render without external CDN dependencies', async ({ page }) => {
   const pageErrors = [];
@@ -18,7 +19,12 @@ test('Financial charts render without external CDN dependencies', async ({ page 
 });
 
 test('Interactive charts shortcut opens the current study dashboard', async ({ page }) => {
-  await page.goto('/index.html#/step/0');
+  // تدقيق 2026-08-22: #/step/N صارت تتطلب تسجيل دخول أيضاً.
+  test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
+  await page.goto('/index.html');
+  await page.waitForLoadState('domcontentloaded');
+  await loginTestUser(page);
+  await page.evaluate(() => { window.location.hash = '#/step/0'; });
   const chartsShortcut = page.locator('#btnGoCharts');
   await expect(chartsShortcut).toBeAttached();
   await chartsShortcut.evaluate((button) => button.click());

@@ -92,7 +92,7 @@
 
 2. **تشغيل خادم الذكاء الاصطناعي (AI Server - اختياري):**
    ```bash
-   python ai_server.py
+   python ai_server_enhanced.py
    ```
    يعمل على المنفذ: `8080`
 
@@ -121,7 +121,7 @@ g:\دراسة الجدوى\
 │   │   └── core\          # إدارة الحالة (Store)
 │   ├── css\               # التنسيقات
 │   └── export\            # منطق التصدير (PDF/Excel)
-├── ai_server.py           # خادم الذكاء الاصطناعي البسيط
+├── ai_server_enhanced.py  # خادم الذكاء الاصطناعي
 └── README.md              # هذا الملف
 ```
 

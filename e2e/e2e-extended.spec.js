@@ -9,33 +9,45 @@ test.describe('التصدير والقوائم', () => {
     // #btnExportMenu داخل .sidebar المخفي دائماً — ندخل سياق دراسة فعلية (workspace)
     // حيث #headerExportMenu هو الزر الظاهر فعلياً، بنفس نمط critical_path.spec.js.
     test('قائمة التصدير تحتوي خيار التقرير البنكي', async ({ page }) => {
-        // جولة driver.js التعريفية تظهر بعد ثانية عبر setTimeout وتحجب النقر بطبقتها
-        // الشفافة (driver-overlay) تحت بطء CI — نفس فخ critical_path.spec.js.
+        // تدقيق 2026-08-22: #/step/N صارت تتطلب تسجيل دخول أيضاً (إغلاق فجوة اتساق
+        // موثّقة بـAI_HANDOFF.md). جولة driver.js التعريفية تظهر بعد ثانية عبر setTimeout
+        // وتحجب النقر بطبقتها الشفافة (driver-overlay) تحت بطء CI — نفس فخ critical_path.spec.js.
+        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
         await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
-        await page.goto('/index.html#/step/0');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
+        await loginTestUser(page);
+        await page.evaluate(() => { window.location.hash = '#/step/0'; });
         await page.locator('#headerExportMenu').click();
         await expect(page.locator('.export-modal')).toBeVisible({ timeout: 8000 });
         await expect(page.locator('.export-modal [data-type="lending_ready"], .export-modal button:has-text("بنك التنمية"), .export-modal button:has-text("جاهز للإقراض")').first()).toBeVisible({ timeout: 3000 });
     });
 
     test('قائمة التصدير تحتوي خيار Excel', async ({ page }) => {
-        // جولة driver.js التعريفية تظهر بعد ثانية عبر setTimeout وتحجب النقر بطبقتها
-        // الشفافة (driver-overlay) تحت بطء CI — نفس فخ critical_path.spec.js.
+        // تدقيق 2026-08-22: #/step/N صارت تتطلب تسجيل دخول أيضاً (إغلاق فجوة اتساق
+        // موثّقة بـAI_HANDOFF.md). جولة driver.js التعريفية تظهر بعد ثانية عبر setTimeout
+        // وتحجب النقر بطبقتها الشفافة (driver-overlay) تحت بطء CI — نفس فخ critical_path.spec.js.
+        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
         await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
-        await page.goto('/index.html#/step/0');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
+        await loginTestUser(page);
+        await page.evaluate(() => { window.location.hash = '#/step/0'; });
         await page.locator('#headerExportMenu').click();
         await expect(page.locator('.export-modal')).toBeVisible({ timeout: 8000 });
         await expect(page.locator('.export-modal [data-type="excel"], .export-modal button:has-text("Excel")').first()).toBeVisible({ timeout: 3000 });
     });
 
     test('قائمة التصدير تحتوي خيار PDF', async ({ page }) => {
-        // جولة driver.js التعريفية تظهر بعد ثانية عبر setTimeout وتحجب النقر بطبقتها
-        // الشفافة (driver-overlay) تحت بطء CI — نفس فخ critical_path.spec.js.
+        // تدقيق 2026-08-22: #/step/N صارت تتطلب تسجيل دخول أيضاً (إغلاق فجوة اتساق
+        // موثّقة بـAI_HANDOFF.md). جولة driver.js التعريفية تظهر بعد ثانية عبر setTimeout
+        // وتحجب النقر بطبقتها الشفافة (driver-overlay) تحت بطء CI — نفس فخ critical_path.spec.js.
+        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
         await page.addInitScript(() => localStorage.setItem('tour_category0_seen', 'true'));
-        await page.goto('/index.html#/step/0');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
+        await loginTestUser(page);
+        await page.evaluate(() => { window.location.hash = '#/step/0'; });
         await page.locator('#headerExportMenu').click();
         await expect(page.locator('.export-modal')).toBeVisible({ timeout: 8000 });
         await expect(page.locator('.export-modal [data-type="pdf"], .export-modal button:has-text("PDF")').first()).toBeVisible({ timeout: 3000 });
@@ -44,8 +56,12 @@ test.describe('التصدير والقوائم', () => {
     test('زر حفظ الدراسة ظاهر', async ({ page }) => {
         // #btnSaveStudy الأصلي (.sidebar) مخفي دائماً؛ #headerSaveStudy هو مكافئه
         // الظاهر فعلياً داخل سياق الدراسة.
-        await page.goto('/index.html#/step/0');
+        // تدقيق 2026-08-22: #/step/N صارت تتطلب تسجيل دخول أيضاً.
+        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
+        await loginTestUser(page);
+        await page.evaluate(() => { window.location.hash = '#/step/0'; });
         await expect(page.locator('#headerSaveStudy')).toBeVisible({ timeout: 8000 });
     });
 
@@ -141,8 +157,12 @@ test.describe('النماذج والعناصر التفاعلية', () => {
     test('وجود حقل إدخال أو خطوة في المعالج', async ({ page }) => {
         // الصفحة الرئيسية (لوحة تحكم) بلا حقول نموذج فعلية — الحقول تظهر داخل سياق
         // دراسة فعلية (workspace)، فندخل خطوة معلومات المشروع مباشرة.
-        await page.goto('/index.html#/step/0');
+        // تدقيق 2026-08-22: #/step/N صارت تتطلب تسجيل دخول أيضاً.
+        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
+        await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
+        await loginTestUser(page);
+        await page.evaluate(() => { window.location.hash = '#/step/0'; });
         await expect(page.locator('#wizardContainer')).toBeVisible({ timeout: 8000 });
         const input = page.locator('#wizardContainer input, .category-step input').first();
         const step = page.locator('.category-step, [data-step-index]').first();
