@@ -284,6 +284,7 @@ export class DashboardView {
                 tools: [
                     { name: 'حجم السوق والطلب', desc: 'تقدير العملاء والطلب المتوقع', icon: 'chart', step: stepIndexBy(s => s.id === 'marketing', 16), engine: true },
                     { name: 'تحليل المنافسين', desc: 'قارن السعر، القوة، الضعف، والتموضع', icon: 'scale', step: stepIndexBy(s => s.id === 'marketing', 16) },
+                    { name: 'ترتيبك التنافسي', desc: 'ملخص حي لترتيبك مقابل المنافسين الذين أدخلتهم في «تحليل المنافسين» أعلاه، محسوب من بياناتك الفعلية', icon: 'trend', id: 'linkCompetitorIntelligenceToolkit', engine: true },
                     { name: 'العرض والطلب', desc: 'هل السوق فيه فجوة أم تشبع؟', icon: 'trend', step: stepIndexBy(s => s.id === 'marketing', 16), engine: true },
                     { name: 'استلهام أمثلة', desc: 'نماذج مشاريع وقوالب قريبة من قطاعك', icon: 'bulb', id: 'linkExamplesToolkit' },
                     { name: 'حساسية السعر (ماذا لو؟)', desc: 'معاينة سريعة لأسعارك الحالية وتأثير تغييرها على الطلب، من إعدادات أداة التسعير المثالي', icon: 'target', id: 'linkSurgePricingToolkit', engine: true }
@@ -1386,7 +1387,8 @@ export class DashboardView {
             linkDigitalReputationToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showDigitalReputationRadar')),
             linkMandAHubToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showMandAHub')),
             linkGovTendersToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showGovTendersRadar')),
-            linkIntegrationsHubToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showIntegrationsHub'))
+            linkIntegrationsHubToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showIntegrationsHub')),
+            linkCompetitorIntelligenceToolkit: () => window.dispatchEvent(new CustomEvent('feasibility:showCompetitorIntelligence'))
         };
         this.container.addEventListener('click', (e) => {
             const stepButton = e.target.closest ? e.target.closest('[data-journey-step]') : null;

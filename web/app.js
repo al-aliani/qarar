@@ -1344,20 +1344,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // منصة التمويل (Funding Center)
-  window.addEventListener('feasibility:showFundingCenter', async () => {
-    try {
-      const { FundingCenterView } = await import('./js/ui/FundingCenterView.js');
-      const view = new FundingCenterView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
-    } catch (err) {
-      console.error('FundingCenterView load failed:', err);
-      toast.error('تعذر فتح منصة التمويل');
-    }
-  });
-
   // أكاديمية قرار (Academy)
   window.addEventListener('feasibility:showAcademy', async () => {
     try {
@@ -1379,20 +1365,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       console.error('GlobalAnalyticsView load failed:', err);
       toast.error('تعذر فتح لوحة الإحصائيات');
-    }
-  });
-
-  // غرفة البيانات (Data Room)
-  window.addEventListener('feasibility:showDataRoom', async () => {
-    try {
-      const { DataRoomView } = await import('./js/ui/DataRoomView.js');
-      const view = new DataRoomView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
-    } catch (err) {
-      console.error('DataRoomView load failed:', err);
-      toast.error('تعذر فتح غرفة البيانات');
     }
   });
 
@@ -1482,62 +1454,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // محاكي التوسع والفروع (Multi-Branch Scaling)
-  window.addEventListener('feasibility:showMultiBranchScaling', async () => {
-    try {
-      const { MultiBranchScalingView } = await import('./js/ui/MultiBranchScalingView.js');
-      const view = new MultiBranchScalingView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
-    } catch (err) {
-      console.error('MultiBranchScalingView load failed:', err);
-      toast.error('تعذر فتح محاكي التوسع');
-    }
-  });
-
-  // إدارة الأزمات (Crisis Management)
-  window.addEventListener('feasibility:showCrisisManagement', async () => {
-    try {
-      const { CrisisManagementView } = await import('./js/ui/CrisisManagementView.js');
-      const view = new CrisisManagementView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
-    } catch (err) {
-      console.error('CrisisManagementView load failed:', err);
-      toast.error('تعذر فتح إدارة الأزمات');
-    }
-  });
-
-  // مساعد الذكاء الاصطناعي (AI Copilot)
-  window.addEventListener('feasibility:showAIAssistantCopilot', async () => {
-    try {
-      const { AIAssistantCopilotView } = await import('./js/ui/AIAssistantCopilotView.js');
-      const view = new AIAssistantCopilotView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
-    } catch (err) {
-      console.error('AIAssistantCopilotView load failed:', err);
-      toast.error('تعذر فتح مساعد الذكاء الاصطناعي');
-    }
-  });
-
-  // سوق الخبراء والمستشارين (Experts Marketplace)
-  window.addEventListener('feasibility:showExpertsMarketplace', async () => {
-    try {
-      const { ExpertsMarketplaceView } = await import('./js/ui/ExpertsMarketplaceView.js');
-      const view = new ExpertsMarketplaceView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
-    } catch (err) {
-      console.error('ExpertsMarketplaceView load failed:', err);
-      toast.error('تعذر فتح سوق الخبراء');
-    }
-  });
-
   // رادار المناقصات (Gov Tenders Radar)
   window.addEventListener('feasibility:showGovTendersRadar', async () => {
     try {
@@ -1586,20 +1502,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // التحالفات والمشاريع المشتركة (Joint Ventures)
-  window.addEventListener('feasibility:showJointVentures', async () => {
-    try {
-      const { JointVenturesView } = await import('./js/ui/JointVenturesView.js');
-      const view = new JointVenturesView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
-    } catch (err) {
-      console.error('JointVenturesView load failed:', err);
-      toast.error('تعذر فتح غرفة التحالفات');
-    }
-  });
-
   // محفظة الأصول (Assets Portfolio)
   window.addEventListener('feasibility:showAssetsPortfolio', async () => {
     try {
@@ -1609,20 +1511,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       console.error('AssetsPortfolioView load failed:', err);
       toast.error('تعذر فتح محفظة الأصول');
-    }
-  });
-
-  // محاكي البجعة السوداء (Black Swan Stress Test)
-  window.addEventListener('feasibility:showBlackSwanStressTest', async () => {
-    try {
-      const { BlackSwanStressTestView } = await import('./js/ui/BlackSwanStressTestView.js');
-      const view = new BlackSwanStressTestView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
-    } catch (err) {
-      console.error('BlackSwanStressTestView load failed:', err);
-      toast.error('تعذر فتح محاكي البجعة السوداء');
     }
   });
 
@@ -1683,20 +1571,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       console.error('AcademyView load failed:', err);
       toast.error('تعذر فتح أكاديمية القادة');
-    }
-  });
-
-  // مختبر التسعير (Pricing Strategy Lab)
-  window.addEventListener('feasibility:showPricingStrategyLab', async () => {
-    try {
-      const { PricingStrategyLabView } = await import('./js/ui/PricingStrategyLabView.js');
-      const view = new PricingStrategyLabView(wizardContainer);
-      const el = await view.render();
-      wizardContainer.innerHTML = '';
-      wizardContainer.appendChild(el);
-    } catch (err) {
-      console.error('PricingStrategyLabView load failed:', err);
-      toast.error('تعذر فتح مختبر التسعير');
     }
   });
 
