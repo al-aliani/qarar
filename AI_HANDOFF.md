@@ -159,7 +159,7 @@ web/css/            variables.css (توكنات --c-*) — نظام ألوان �
 - **اختبارات**: `AdminDashboardView.js` كان له فعلياً 8 ملفات اختبار (534 سطراً) — الادّعاء السابق "صفر تغطية" كان خطأً. `FinancialStatements.js` كان فعلياً بلا أي اختبار — أُضيف `financialStatements.render.test.js` (6 اختبارات: حالتا تحذير حقيقيتان، رسم كامل، موسمية، تنقّل).
 - **تنبيه خادمي لفشل webhooks**: بُني `supabase/functions/_shared/alerting.ts` — يرسل لـSentry عبر Envelope API الخام بـ`fetch()` (بلا SDK، Deno-متوافق) عند قراءة `Deno.env.get('SENTRY_DSN')` بنجاح؛ يتراجع لـ`console.error` بصمت (لا يرمي أبداً) بلا هذا السرّ. مُوصَّل بالفعل بنقطتي الفشل الحقيقيتين (رفض توقيع، فشل تحديث طلب مدفوع) بكل من `webhook-moyasar`/`webhook-stripe`/`webhook-tamara`. **يتطلب إجراءً من المالك ليعمل فعلياً**: `supabase secrets set SENTRY_DSN=<DSN مشروع Sentry>` — بلا هذا يبقى بنفس سلوك اليوم (سجلّ محلي فقط، لا كسر لأي شيء).
 
-⚠️ **`test-backend` بـ`.github/workflows/ci.yml` فاشل — سابق ومنفصل تماماً عن PR #19:** `tests/test_tasks.py` يستورد `celery_app.py` الذي يحتاج حزمة `celery`، لكن لا يوجد `requirements.txt` بجذر المستودع يُثبِّتها (الخطوة تُثبِّت `pytest` فقط ثم تتحقق من وجود `requirements.txt` — غير موجود). نفس الفشل كان موجوداً بالضبط على PR #18 قبله. لم يُلمَس — خارج نطاق هذه الجلسة، ويحتاج قراراً: هل ميزة Celery/tasks.py حيّة فعلياً (فتحتاج `requirements.txt`) أم بقايا تجربة أخرى (فتُحذف مثل `ai_server.py` أعلاه)؟ لم يُحقَّق بعد.
+✅ **`test-backend` الفاشل بـCI (كان موثَّقاً هنا كبند معلَّق) — حُقِّق وحُذف (2026-08-22):** `celery_app.py`/`tasks.py` تبيّن أنهما بلا أي مرجع تنفيذي حي — لا `ai_server_enhanced.py` ولا أي دالة منشورة تستدعيهما (`optimizer.py` الذي استوردته `tasks.py` يبقى، فهو مستخدَم فعلياً من `ai_server_enhanced.py` مباشرة). نفس نمط `ai_server.py` المحذوف سابقاً — حُذفت الملفات الثلاثة (`celery_app.py`، `tasks.py`، `tests/test_tasks.py`) ووظيفة `test-backend` نفسها من `ci.yml` (لم يبقَ أي اختبار Python بالمستودع بعد الحذف، فإبقاء الوظيفة كان سيفشل بسبب "لا اختبارات" بدل حزمة مفقودة).
 
 ---
 
@@ -182,5 +182,5 @@ web/css/            variables.css (توكنات --c-*) — نظام ألوان �
    insert into public.reviewers (id, display_name, credentials)
    select id, 'اسم المراجع', null from auth.users where email = '...';
    ```
-2. Word/PPTX لا يزالان يختصران بعض المبالغ الكبيرة لـ"X.X مليون ريال" في مسارات متبقية (أثر منخفض) — راجع تاريخ git لـ`web/export/wordExporter.js`/`pptxExporter.js` إن أردت إغلاقها بالكامل.
+2. ✅ **أُغلق (2026-08-22):** `pptxExporter.js`/`PitchDeckExporter.js` وُحِّدا مع `wordExporter.js` — رقم كامل دائماً، بلا اختصار "X.X مليون ريال".
 3. عمق قطاعي أكبر للقطاعات المساندة (قرار عند وجود طلب فعلي، ليس افتراضياً)

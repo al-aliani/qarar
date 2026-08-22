@@ -13,9 +13,9 @@ import { SAFE } from './utils.js';
 /** معرّفات شرائح المحتوى (بعد الغلاف وقبل شريحة الختام) — قابلة للربط مع reportSectionOrder. */
 const PITCH_CONTENT_SLIDE_IDS = ['executive_summary', 'market', 'financial_kpis', 'recommendation'];
 
+// توحيد مع wordExporter.js (تدقيق 2026-07-22): بلا اختصار — رقم كامل دائماً.
 function formatCurrency(n) {
     if (!n && n !== 0) return '0';
-    if (n >= 1000000) return (n / 1000000).toFixed(1) + ' مليون';
     return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
 }
 
