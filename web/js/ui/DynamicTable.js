@@ -246,13 +246,13 @@ export class DynamicTable {
                     <table class="w-full">
                         <thead>
                             <tr>
-                                <th style="width:40px">#</th>
+                                <th scope="col" style="width:40px">#</th>
                                 ${cols.map(c => `
-                                    <th class="${this.isQuickMode && this.isAdvancedColumn(c.key) ? 'col-advanced hidden' : ''}">
+                                    <th scope="col" class="${this.isQuickMode && this.isAdvancedColumn(c.key) ? 'col-advanced hidden' : ''}">
                                         ${c.label || getLabel(c.key)}
                                     </th>
                                 `).join('')}
-                                <th style="width:50px">حذف</th>
+                                <th scope="col" style="width:50px">حذف</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -352,6 +352,10 @@ export class DynamicTable {
         html += `<td class="text-muted">${rowIndex + 1}</td>`;
 
         columns.forEach(col => {
+            // تدقيق a11y 2026-08-22: حقول الجدول (select/checkbox/نص) لم يكن لها اسم برمجي
+            // إطلاقاً — قارئ الشاشة يقرأ "مربع نص فارغ" بلا أي ربط بعنوان العمود المرئي
+            // في <th>. aria-label هنا يكرّر نفس نص العمود + رقم الصف لتمييز كل حقل.
+            const colLabel = col.label || getLabel(col.key);
             const isHidden = this.isQuickMode && this.isAdvancedColumn(col.key);
             const cellClass = isHidden ? 'col-advanced hidden' : 'col-advanced'; // col-advanced allows toggling
             const displayStyle = isHidden ? 'display:none' : ''; // fallback if class hidden not enough
@@ -372,7 +376,7 @@ export class DynamicTable {
                 }).join('');
 
                 html += `<td class="${isHidden ? 'hidden col-advanced' : ''}">
-                    <select class="table-input" data-row="${rowIndex}" data-col="${col.key}">
+                    <select class="table-input" data-row="${rowIndex}" data-col="${col.key}" aria-label="${escapeHtml(colLabel)} — الصف ${rowIndex + 1}">
                         <option value="">اختر...</option>
                         ${optionsHtml}
                     </select>
@@ -380,10 +384,11 @@ export class DynamicTable {
             } else if (col.type === 'checkbox') {
                 const isChecked = row[col.key] ? 'checked' : '';
                 html += `<td class="text-center ${isHidden ? 'hidden col-advanced' : ''}">
-                    <input type="checkbox" 
-                           class="table-input" 
-                           data-row="${rowIndex}" 
+                    <input type="checkbox"
+                           class="table-input"
+                           data-row="${rowIndex}"
                            data-col="${col.key}"
+                           aria-label="${escapeHtml(colLabel)} — الصف ${rowIndex + 1}"
                            ${isChecked}>
                 </td>`;
             } else {
@@ -423,6 +428,7 @@ export class DynamicTable {
                                data-row="${rowIndex}"
                                data-col="${col.key}"
                                value="${escapeHtml(val)}"
+                               aria-label="${escapeHtml(colLabel)} — الصف ${rowIndex + 1}"
                                ${placeholderAttr}
                                ${inputAttrs}>
                         ${isFractionPct ? '<span class="text-muted" aria-hidden="true">٪</span>' : ''}

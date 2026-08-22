@@ -61,11 +61,11 @@ export class AuthModal {
                     <form id="authModalForm" style="display:block;">
                         <div class="mb-3">
                             <label class="block text-sm mb-1" for="authEmail">البريد الإلكتروني</label>
-                            <div class="auth-field"><svg class="ic"><use href="#i-mail"/></svg><input type="email" id="authEmail" placeholder="you@example.com" required autocomplete="username" dir="ltr"></div>
+                            <div class="auth-field"><svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg><input type="email" id="authEmail" placeholder="you@example.com" required autocomplete="username" dir="ltr"></div>
                         </div>
                         <div class="mb-3">
                             <label class="block text-sm mb-1" for="authPassword">كلمة المرور</label>
-                            <div class="auth-field"><svg class="ic"><use href="#i-lock"/></svg><input type="password" id="authPassword" placeholder="••••••••" required minlength="8" title="8+ أحرف، رقم واحد على الأقل، رمز واحد على الأقل" autocomplete="current-password"></div>
+                            <div class="auth-field"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><input type="password" id="authPassword" placeholder="••••••••" required minlength="8" title="8+ أحرف، رقم واحد على الأقل، رمز واحد على الأقل" autocomplete="current-password"></div>
                             <div id="authPasswordStrength" class="auth-strength" style="display:none;">
                                 <div class="auth-strength-track"><div id="authPasswordStrengthFill" class="auth-strength-fill"></div></div>
                                 <span id="authPasswordStrengthLabel" class="auth-strength-label"></span>
@@ -73,11 +73,11 @@ export class AuthModal {
                         </div>
                         <div class="mb-3" id="authNameGroup" style="display:none;">
                             <label class="block text-sm mb-1" for="authName">الاسم</label>
-                            <div class="auth-field"><svg class="ic"><use href="#i-user"/></svg><input type="text" id="authName" placeholder="اسمك الكامل" autocomplete="name"></div>
+                            <div class="auth-field"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg><input type="text" id="authName" placeholder="اسمك الكامل" autocomplete="name"></div>
                         </div>
                         <div class="mb-3" id="authPhoneGroup" style="display:none;">
                             <label class="block text-sm mb-1" for="authPhone">رقم الجوال (واتساب)</label>
-                            <div class="auth-field"><svg class="ic"><use href="#i-phone"/></svg><input type="tel" id="authPhone" placeholder="05xxxxxxxx" autocomplete="tel" dir="ltr" inputmode="numeric"></div>
+                            <div class="auth-field"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg><input type="tel" id="authPhone" placeholder="05xxxxxxxx" autocomplete="tel" dir="ltr" inputmode="numeric"></div>
                             <p class="text-xs text-muted mt-1">نستخدمه للتواصل معك بخصوص طلباتك عبر واتساب.</p>
                         </div>
                         <div class="flex gap-2 mb-2">
@@ -101,10 +101,10 @@ export class AuthModal {
                         </div>
                     </form>
                     <div id="authModalForgotPanel" class="mb-3" style="display:none;">
-                        <span class="auth-panel-icon"><svg><use href="#i-key"/></svg></span>
+                        <span class="auth-panel-icon"><svg aria-hidden="true"><use href="#i-key"/></svg></span>
                         <p class="text-sm mb-1" style="font-weight:700">إعادة تعيين كلمة المرور</p>
                         <label class="block text-sm mb-1" for="authForgotEmail">أدخل بريدك لإرسال رابط إعادة التعيين</label>
-                        <div class="auth-field mb-2"><svg class="ic"><use href="#i-mail"/></svg><input type="email" id="authForgotEmail" placeholder="you@example.com" autocomplete="email" dir="ltr"></div>
+                        <div class="auth-field mb-2"><svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg><input type="email" id="authForgotEmail" placeholder="you@example.com" autocomplete="email" dir="ltr"></div>
                         <div class="flex gap-2">
                             <button type="button" id="authBtnSendReset" class="btn btn--primary flex-1">إرسال الرابط</button>
                             <button type="button" id="authBtnBackToLogin" class="btn btn--secondary">رجوع</button>
@@ -112,7 +112,7 @@ export class AuthModal {
                         <p id="authForgotMessage" class="text-sm mt-2" style="display:none;"></p>
                     </div>
                     <div id="authModalMfaPanel" class="mb-3" style="display:none;">
-                        <span class="auth-panel-icon"><svg><use href="#i-shield"/></svg></span>
+                        <span class="auth-panel-icon"><svg aria-hidden="true"><use href="#i-shield"/></svg></span>
                         <p class="text-sm mb-1" style="font-weight:700">التحقق بخطوتين</p>
                         <p class="text-muted text-sm mb-3">حسابك محمي بمصادقة ثنائية. أدخل رمز تطبيق المصادقة (6 أرقام).</p>
                         <div id="authMfaError" class="text-danger text-sm mb-2" style="display:none;"></div>
