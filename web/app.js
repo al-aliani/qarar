@@ -2119,7 +2119,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   // متجاوزةً بوابة تسجيل الدخول المضافة داخل routeToView — أول تحميل مباشر لـ#/home
   // (أو بلا هاش إطلاقاً) كان يفتح اللوحة فعلياً بلا أي تحقق. الآن يمر كل شي عبر
   // routeToView نفسها، مسار واحد فقط للتحقق من المصادقة.
-  const initialRoute = parseHash();
+  // تدقيق حي 2026-08-22: عودة Google OAuth (وأي مزوّد آخر) تصل بتوكنات Supabase في
+  // هاش الرابط نفسه (#access_token=...&refresh_token=...، أو #error=... لو رفض
+  // المستخدم/فشل التفويض) — flowType الافتراضي 'implicit'. الموجّه هنا يستخدم نفس
+  // الهاش للتنقّل (#/home، #/step/0...)، فكان يقرأ هذا التوكن كمسار غير معروف
+  // ويعرض NotFoundView بدل اللوحة، رغم أن تسجيل الدخول نجح فعلياً تحت السطح
+  // (AuthGuard.init أعلاه ينتظر GoTrueClient حتى يقرأ الجلسة من الرابط أولاً، فلا
+  // سباق حقيقي هنا — المشكلة تفسير المحتوى لا التوقيت). نتجاهل هذا الهاش كمسار
+  // ونعود للرئيسية، وننظّفه من الرابط حتى لا يبقى ظاهراً أو يُعاد تفسيره لاحقاً.
+  const rawInitialHash = parseHash();
+  const isSupabaseAuthCallbackHash = /^(access_token=|refresh_token=|error=|error_description=|type=recovery)/.test(rawInitialHash);
+  if (isSupabaseAuthCallbackHash) {
+    window.history.replaceState({}, '', window.location.pathname + window.location.search);
+  }
+  const initialRoute = isSupabaseAuthCallbackHash ? 'home' : rawInitialHash;
   routeToView(initialRoute && initialRoute !== 'home' ? initialRoute : 'home');
 
   // 4. Initialize Auto-save
