@@ -9,8 +9,10 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { verifyStripeSignature } from '../_shared/webhookVerify.ts';
 import { parseStripeWebhookStatus, getStripeSessionId, getStripePaymentIntent } from '../_shared/providers/stripe.ts';
+import { sendAlert } from '../_shared/alerting.ts';
 
 Deno.serve(async (req: Request) => {
+  const sentryDsn = Deno.env.get('SENTRY_DSN');
   if (req.method !== 'POST') return new Response('method_not_allowed', { status: 405 });
 
   const rawBody = await req.text();
@@ -19,13 +21,16 @@ Deno.serve(async (req: Request) => {
 
   const verification = await verifyStripeSignature(rawBody, signatureHeader, webhookSecret);
   if (!verification.ok) {
-    // TODO(مراقبة): رفض توقيع حقيقي هنا قد يعني هجوم انتحال أو تغيّر السرّ لدى Stripe
-    // دون تحديث STRIPE_WEBHOOK_SECRET — هذا حالياً فشل صامت (سجلّ فقط، بلا أي تنبيه
-    // يصل لأحد). يحتاج ربطاً بقناة تنبيه فعلية لاحقاً؛ لا يوجد حالياً أي مساعد تنبيه
-    // جاهز من جهة الخادم في supabase/functions/_shared يمكن إعادة استخدامه.
+    // رفض توقيع حقيقي هنا قد يعني هجوم انتحال أو تغيّر السرّ لدى Stripe دون تحديث
+    // STRIPE_WEBHOOK_SECRET — تنبيه فعلي (لا سجلّ فقط) عبر Sentry إن SENTRY_DSN مضبوط.
     // ملاحظة: لا يوجد معرّف حدث متاح هنا بأمان — الجسم لم يُوثَّق بعد بنجاح (لا نثق
     // بمحتواه)، والتحقق يجب أن يسبق أي قراءة لبياناته حتى لأغراض السجلّ.
     console.warn(`[webhook-stripe] signature rejected (reason=${verification.reason})`);
+    await sendAlert(sentryDsn, {
+      message: `[webhook-stripe] signature rejected (reason=${verification.reason})`,
+      level: 'warning',
+      tags: { source: 'webhook-stripe', kind: 'signature_rejected' },
+    });
     return new Response('invalid_signature', { status: 401 });
   }
 
@@ -69,11 +74,15 @@ Deno.serve(async (req: Request) => {
   const { data, error } = await matcher.select('id');
 
   if (error) {
-    // TODO(مراقبة): يعني عميلاً دفع فعلياً (Stripe أكّدت الحدث) لكن سجلّ الطلب لم
-    // يُحدَّث — طلب مدفوع بلا وصول ممنوح، وهذا حالياً فشل صامت (سجلّ فقط). يحتاج
-    // ربطاً بقناة تنبيه فعلية تصل لأحد فوراً لاحقاً؛ لا يوجد مساعد تنبيه جاهز حالياً.
+    // يعني عميلاً دفع فعلياً (Stripe أكّدت الحدث) لكن سجلّ الطلب لم يُحدَّث — طلب
+    // مدفوع بلا وصول ممنوح. تنبيه فعلي (لا سجلّ فقط) عبر Sentry إن SENTRY_DSN مضبوط.
     const logRef = status === 'refunded' ? getStripePaymentIntent(event) : getStripeSessionId(event);
     console.error(`[webhook-stripe] order update failed (ref=${logRef}, event_id=${event?.id}, status=${status}):`, error);
+    await sendAlert(sentryDsn, {
+      message: `[webhook-stripe] order update failed (ref=${logRef}, event_id=${event?.id}, status=${status}): ${error.message || error}`,
+      level: 'error',
+      tags: { source: 'webhook-stripe', kind: 'order_update_failed' },
+    });
     return new Response('db_error', { status: 500 });
   }
   if (!data || data.length === 0) {

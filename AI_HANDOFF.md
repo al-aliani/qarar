@@ -146,12 +146,18 @@ web/css/            variables.css (توكنات --c-*) — نظام ألوان �
 
 🟢 **تقييم شامل بـ10 محاور + إصلاحات (2026-08-22، PR [#17](https://github.com/al-aliani/qarar/pull/17) و[#18](https://github.com/al-aliani/qarar/pull/18)، كلاهما مدموج):**
 أداء، أمان (أعلاه)، UX، إمكانية الوصول، SEO، محتوى/ثقة، CRO، جودة تقنية، مراقبة، امتثال قانوني — كل محور بوكلاء مستقلين بدليل فعلي (curl حي على sahib.sa + فحص كود)، ثم تنفيذ مُتحقَّق (1696/1696 اختبار + بناء إنتاجي).
-- **أداء**: إزالة modulepreload الخاطئ لحزمة pptx (385KB، PR #17). **مؤجَّل بقرار**: نفس المشكلة لحزمة chart.js (207KB) أوسع اعتماداً بكثير مما بدا (3 ملفات + اختبار مبني على `global.Chart` متزامن) — تحتاج جولة مخصّصة، لم تُلمس.
+- **أداء**: إزالة modulepreload الخاطئ لحزمة pptx (385KB، PR #17). **حزمة chart.js (207KB) أُصلحت لاحقاً (2026-08-22):** لم تعد تُحمَّل ثابتة بـ`index.html` — تحميل كسول عبر `ensureChartGlobal()` في `stepComponentRegistry.js`/`Wizard.js` قبل رسم أيٍّ من 6 مكوّنات تستهلكها فعلياً (dashboard/financing/monteCarlo/services/breakEven/marketing+staffing)، بلا لمس الملفات المستهلِكة نفسها فتبقى اختباراتها (`monteCarloAnalysis.test.js`) سليمة.
 - **UX/A11y**: حبس تركيز `ExportMenu.js`، استرجاع مؤشر تركيز حقول الدخول، h1/تسلسل عناوين `DecisionDashboard.js` (16×h4→h3)، `aria-label` على حقول `DynamicTable.js`.
 - **SEO/محتوى/CRO**: canonical/robots/JSON-LD/sitemap، إخلاء مسؤولية فعلي بتقرير البنك (كان يحاكي هوية بنكية رسمية بلا إفصاح)، مؤشرات ثقة + CTA مخصَّص بصفحة الدفع.
 - **مراقبة**: نشر دالة `health` الغائبة عن CI (**نفس نمط ثغرة `reviewer-*` المكتشَفة 2026-08-21** — تحقق دورياً من تطابق `supabase/functions/*/` مع قائمة `supabase-functions-deploy.yml` عند إضافة أي دالة جديدة)، `captureException`/`captureMessage` لفشل المصادقة/الدفع الحرج.
 - **امتثال**: نظام موافقة كوكيز فعلي (لا تحميل Sentry/تحليلات قبل موافقة صريحة)، ربط زر حذف الحساب ببنية `AccountService.requestAccountDeletion()` كانت جاهزة وغير مستخدَمة.
-- **مؤجَّل بقرار (منتج/هندسة، لا أخطاء)**: تحويل بنكي بدل بوابة دفع فورية، ترقيات اعتماديات كاسرة (15→10 ثغرة بـ`npm audit fix` غير الكاسر؛ الباقي `--force` يحتاج خطة مجدولة)، حذف كود بايثون/React مهجور، اختبارات لـ`AdminDashboardView.js`/`FinancialStatements.js`، تنبيه خادمي فعلي لفشل webhooks (لا مساعد جاهز حالياً على مستوى Deno Edge Functions).
+- **مؤجَّل بقرار (منتج/هندسة، لا أخطاء)**: تحويل بنكي بدل بوابة دفع فورية.
+
+✅ **بنود إضافية أُغلقت (2026-08-22):**
+- **`npm audit`**: `uuid` (عبر exceljs) أُصلح بـ`overrides` بلا كسر إصدار exceljs (10→8 ثغرة). **مؤجَّل عمداً بعد تحقّق فعلي، لا افتراض**: esbuild (يحتاج vitest 2→4، جُرِّب فعلياً وكسر `lib/calc/index.js` CJS/ESM + اختبارين آخرين — تراجُع أكبر من قيمة ثغرة "moderate" مقصورة على dev محلي)، و`image-size` (عبر pptxgenjs — `pptxExporter.js` لا يستدعي `addImage()` إطلاقاً، الثغرة غير قابلة للوصول فعلياً بهذا التطبيق).
+- **كود بايثون/React قديم**: `ai_server.py` (صفر مرجع تنفيذي) **حُذف**. `ai_server_enhanced.py` وملفات `*_engine.py` وتجربة React (`src/*.jsx`) **أُبقيت عمداً** — الأول أداة تطوير محلي حيّة فعلياً (`package.json:start:single`، `start_all.bat`، واختبار حارس `apiServerContract.guard.test.js`)، والثانية اعتماديات ناعمة له، والثالثة قرار سابق موثَّق صراحة بـ`vite.config.js` بإبقائها كنقطة بداية محتملة.
+- **اختبارات**: `AdminDashboardView.js` كان له فعلياً 8 ملفات اختبار (534 سطراً) — الادّعاء السابق "صفر تغطية" كان خطأً. `FinancialStatements.js` كان فعلياً بلا أي اختبار — أُضيف `financialStatements.render.test.js` (6 اختبارات: حالتا تحذير حقيقيتان، رسم كامل، موسمية، تنقّل).
+- **تنبيه خادمي لفشل webhooks**: بُني `supabase/functions/_shared/alerting.ts` — يرسل لـSentry عبر Envelope API الخام بـ`fetch()` (بلا SDK، Deno-متوافق) عند قراءة `Deno.env.get('SENTRY_DSN')` بنجاح؛ يتراجع لـ`console.error` بصمت (لا يرمي أبداً) بلا هذا السرّ. مُوصَّل بالفعل بنقطتي الفشل الحقيقيتين (رفض توقيع، فشل تحديث طلب مدفوع) بكل من `webhook-moyasar`/`webhook-stripe`/`webhook-tamara`. **يتطلب إجراءً من المالك ليعمل فعلياً**: `supabase secrets set SENTRY_DSN=<DSN مشروع Sentry>` — بلا هذا يبقى بنفس سلوك اليوم (سجلّ محلي فقط، لا كسر لأي شيء).
 
 ---
 
