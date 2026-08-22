@@ -3651,7 +3651,10 @@ button.qa-detail-item:hover {
     gap: 10px;
     padding: 0 13px;
     height: 48px;
-    border: 1px solid var(--c-border);
+    /* تدقيق تباين 2026-08-22: --c-border العام (1.3:1 هنا) كان يجعل الخانة غير
+       المُركَّز عليها بلا حدود شبه — --c-border-strong يجتاز حد WCAG 3:1 للعناصر
+       التفاعلية دون المساس بـ--c-border المستخدم في بقية الواجهة. */
+    border: 1px solid var(--c-border-strong);
     border-radius: var(--r-md);
     background: var(--c-bg-app);
 }
@@ -3671,6 +3674,21 @@ button.qa-detail-item:hover {
     color: var(--c-text-main);
     padding: 0;
     height: auto;
+}
+
+/* تدقيق تباين 2026-08-22: بلا هذا التجاوز، تعبئة المتصفح التلقائية (بريد/كلمة مرور
+   محفوظة) تفرض خلفية صفراء/بيضاء فاتحة ونص أسود عبر UA stylesheet الخاص بـ WebKit/
+   Blink — يكسر الثيم الداكن بالكامل داخل نافذة الدخول تحديداً (أول مكان يقترح فيه
+   المتصفح التعبئة). transition-delay الطويل هو الحيلة القياسية لمنع Chrome من عرض
+   لونه الأصلي للحظة قبل التراجع. */
+.auth-field input:-webkit-autofill,
+.auth-field input:-webkit-autofill:hover,
+.auth-field input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--c-text-main);
+    -webkit-box-shadow: 0 0 0 1000px var(--c-bg-app) inset;
+    box-shadow: 0 0 0 1000px var(--c-bg-app) inset;
+    caret-color: var(--c-text-main);
+    transition: background-color 9999s ease-in-out 0s;
 }
 
 .auth-field input:focus {

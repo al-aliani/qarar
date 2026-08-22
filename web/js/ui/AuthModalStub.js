@@ -46,7 +46,6 @@ export class AuthModal {
                         <strong id="authModalTitle">أهلاً بعودتك</strong>
                         <span id="authModalSubtitle">احفظ دراستك وزامنها بين أجهزتك</span>
                     </div>
-                    <button type="button" class="btn-close" aria-label="إغلاق" style="margin-inline-start:auto"><svg class="ic" style="width:17px;height:17px"><use href="#i-x"/></svg></button>
                 </div>
                 <div class="modal-body">
                     <div id="authModalError" class="text-danger text-sm mb-2" style="display:none;"></div>
@@ -148,7 +147,6 @@ export class AuthModal {
         };
         this.overlay.addEventListener('keydown', this._onTrap);
 
-        this.overlay.querySelector('.btn-close').addEventListener('click', () => this.close());
         this.overlay.addEventListener('click', (e) => { if (e.target === this.overlay) this.close(); });
 
         const form = this.overlay.querySelector('#authModalForm');
