@@ -391,13 +391,6 @@ export class DashboardView {
                 </div>
             </details>
         `).join('');
-        const currentTheme = (() => {
-            try {
-                const stored = localStorage.getItem('feas_theme') || 'light';
-                if (stored === 'auto') return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                return stored === 'dark' ? 'dark' : 'light';
-            } catch (_) { return 'light'; }
-        })();
         const activeHomePanel = ['studies', 'engines', 'support', 'additional', 'databases'].includes(this.activeHomePanel)
             ? this.activeHomePanel
             : 'studies';
@@ -425,14 +418,6 @@ export class DashboardView {
                     <span class="dv-topbar__sp"></span>
                     <button type="button" id="dvConsultation" class="btn btn--sm btn--primary">طلب استشارة</button>
                     <button type="button" id="dvLanguageToggle" class="btn btn--sm btn--ghost" aria-label="تغيير اللغة" title="تغيير اللغة">العربية</button>
-                    <!-- تدقيق محتوى: زر تبديل المظهر (headerThemeToggle/btnThemeToggle) كان بلا أي
-                         وسيلة وصول في وضع اللوحة — حاويتاهما (.app-header وsidebar) مخفيتان بالكامل
-                         في dashboard-mode. زر مكافئ هنا داخل شريط عمل ظاهر دائماً. -->
-                    <button type="button" id="dvThemeToggle" class="btn-icon" aria-label="تبديل المظهر" title="المظهر: داكن / فاتح">
-                        <span data-theme-icon="dark" style="${currentTheme === 'dark' ? '' : 'display:none'}"><svg class="ic" aria-hidden="true"><use href="#i-moon"/></svg></span>
-                        <span data-theme-icon="light" style="${currentTheme === 'light' ? '' : 'display:none'}"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg></span>
-                        <span data-theme-icon="auto" style="display:none"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
-                    </button>
                     ${this.currentUser ? `
                     <div class="dv-notif" style="position:relative;">
                         <button type="button" id="dvNotifBell" class="btn-icon" aria-label="الإشعارات" title="الإشعارات" style="position:relative;">
@@ -1178,24 +1163,6 @@ export class DashboardView {
                 } else if (badge) badge.remove();
             }, 60000);
         }
-
-        // تبديل المظهر (تدقيق محتوى: كان زرا #btnThemeToggle/#headerThemeToggle بلا أي
-        // وسيلة وصول في وضع اللوحة لأن حاويتيهما مخفيتان بالكامل بـ dashboard-mode).
-        // زر مكافئ هنا يبدّل نفس مفتاح localStorage['feas_theme'] المستخدم في theme-init.js.
-        this.container.querySelector('#dvThemeToggle')?.addEventListener('click', (e) => {
-            let current = 'light';
-            try { current = localStorage.getItem('feas_theme') || 'light'; } catch (_) { /* تجاهل */ }
-            if (current === 'auto') current = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            const next = current === 'light' ? 'dark' : 'light';
-            trackEvent('theme_toggle', { theme: next });
-            try { localStorage.setItem('feas_theme', next); } catch (_) { /* تجاهل */ }
-            document.documentElement.setAttribute('data-theme', next);
-            const btn = e.currentTarget;
-            const darkIc = btn.querySelector('[data-theme-icon="dark"]');
-            const lightIc = btn.querySelector('[data-theme-icon="light"]');
-            if (darkIc) darkIc.style.display = next === 'dark' ? '' : 'none';
-            if (lightIc) lightIc.style.display = next === 'light' ? '' : 'none';
-        });
 
         // حسابي (تدقيق 2026-07-09 — توحيد المصادقة): كان هذا الزر موجوداً فقط داخل
         // AuthComponent.js الميت (حاويته مخفية دائماً)، فصفحة الحساب/إعدادات 2FA

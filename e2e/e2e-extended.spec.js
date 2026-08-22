@@ -78,25 +78,6 @@ test.describe('التصدير والقوائم', () => {
 });
 
 test.describe('المظهر والثيم', () => {
-    test('تبديل الثيم يغيّر data-theme', async ({ page }) => {
-        // #btnThemeToggle (.sidebar) مخفي دائماً؛ #dvThemeToggle هو مكافئه الظاهر
-        // في لوحة التحكم الرئيسية (انظر تعليق DashboardView.js عن هذا الاستبدال).
-        // تدقيق 2026-08-21: #dvThemeToggle جزء من لوحة التحكم التي تتطلب تسجيل دخول الآن.
-        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
-        await page.goto('/index.html');
-        await page.waitForLoadState('domcontentloaded');
-        await loginTestUser(page);
-        const themeBtn = page.locator('#dvThemeToggle');
-        await themeBtn.waitFor({ state: 'visible', timeout: 8000 });
-        const root = page.locator('html');
-        const before = await root.getAttribute('data-theme');
-        await themeBtn.click();
-        await expect(root).toHaveAttribute('data-theme', /dark|light/, { timeout: 2000 });
-        const after = await root.getAttribute('data-theme');
-        expect(after === 'dark' || after === 'light').toBeTruthy();
-        if (before) expect(after).not.toBe(before);
-    });
-
     test('العنوان يحتوي اسم التطبيق', async ({ page }) => {
         await page.goto('/index.html');
         await expect(page).toHaveTitle(/\S/);

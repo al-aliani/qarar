@@ -56,21 +56,6 @@ test.describe('محاكي الجدوى — E2E', () => {
         await expect(main).toBeAttached();
     });
 
-    test('زر تبديل المظهر (Dark/Light) موجود', async ({ page }) => {
-        // #btnThemeToggle الأصلي داخل .sidebar المخفي دائماً؛ #headerThemeToggle
-        // ظاهر فقط داخل وضع الدراسة (workspace)، و#dvThemeToggle ظاهر في لوحة
-        // التحكم الرئيسية — على المستخدم أن يجد واحداً منهما ظاهراً في أي الحالتين.
-        // تدقيق 2026-08-21: كلا العنصرين جزء من لوحة التحكم/مساحة الدراسة، تتطلبان تسجيل دخول الآن.
-        test.skip(!hasE2ECredentials(), 'يتطلب E2E_CUSTOMER_EMAIL و E2E_CUSTOMER_PASSWORD');
-        await page.goto('/index.html');
-        await page.waitForLoadState('domcontentloaded');
-        await loginTestUser(page);
-        // :visible يفلتر عند المطابقة قبل first() — دون هذا، عنصر hidden أسبق في DOM
-        // (headerThemeToggle) قد يُختار بدل dvThemeToggle الظاهر فعلياً، فيفشل التوكيد رغم توفّر الزر.
-        const themeBtn = page.locator('#headerThemeToggle:visible, #dvThemeToggle:visible').first();
-        await expect(themeBtn).toBeVisible({ timeout: 8000 });
-    });
-
     test('شريط التنقل (Breadcrumb) أو المحتوى الرئيسي ظاهر', async ({ page }) => {
         await page.goto('/index.html');
         await page.waitForLoadState('domcontentloaded');
