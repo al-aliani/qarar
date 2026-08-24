@@ -109,7 +109,6 @@ export class AIChatModal {
                 .ai-chat-tip { margin: 12px 16px 0; padding: 10px 12px; border-radius: 10px; background: var(--c-gold-subtle); border-inline-start: 3px solid var(--c-gold-500); font-size: 12.5px; color: var(--c-text-main); line-height: 1.6; }
                 .ai-chat-tip b { color: var(--c-gold-500); }
                 .ai-chat-badge { position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: var(--c-danger-500, #ef4444); border-radius: 50%; border: 2px solid var(--c-bg-card, #fff); }
-                .ai-chat-fab { position: relative; }
             `;
             document.head.appendChild(style);
         }

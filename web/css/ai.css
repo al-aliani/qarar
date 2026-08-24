@@ -22,22 +22,22 @@
     z-index: 9998;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
+    gap: 7px;
+    padding: 10px 16px;
     background: var(--grad-emerald);
     color: var(--c-p-contrast);
     border: none;
     border-radius: var(--r-pill);
     font-family: inherit;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     box-shadow: var(--shadow-lg);
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, padding 0.2s ease, gap 0.2s ease;
 }
 .ai-chat-fab .ic {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     flex: none;
 }
 .ai-chat-fab:hover {
