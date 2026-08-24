@@ -4,6 +4,7 @@
  */
 import Swal from 'sweetalert2';
 import { mfaEnrollTOTP, mfaChallengeAndVerify, mfaListFactors, mfaUnenroll } from '../../supabaseClient.js';
+import { generateMfaRecoveryCodes } from '../services/MfaRecoveryService.js';
 import { toast } from '../utils/toast.js';
 
 export class TwoFactorModal {
@@ -68,7 +69,47 @@ export class TwoFactorModal {
                     <button class="btn btn--ghost btn-sm text-danger" data-factor-id="${f.id}">إلغاء</button>
                 </div>
             `).join('')}
+            <button id="btnRegenerateRecoveryCodes" class="btn btn--ghost" style="width:100%;margin-top:8px;">إعادة توليد رموز الاسترداد</button>
         `;
+    }
+
+    /**
+     * شاشة كشف-لمرة-واحدة لرموز الاسترداد — تُعرَض فور أول تفعيل TOTP ناجح
+     * (لا عند كل دخول لاحق)، وأيضاً بعد "إعادة توليد الرموز" من وضع الإدارة.
+     * نفس أسلوب renderEnrollMode: لا تُخزَّن الرموز في أي مكان آخر غير جسم
+     * استجابة mfa-recovery-generate هذه اللحظة تحديداً.
+     */
+    renderRecoveryCodesScreen(codes) {
+        return `
+            <p style="color:var(--c-text-muted);margin-bottom:12px;">احفظ رموز الاسترداد العشرة التالية في مكان آمن — تُستخدَم بدل تطبيق المصادقة إن فقدته. لن تظهر هذه الرموز مرة أخرى.</p>
+            <div id="2fa-recovery-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:16px;background:var(--c-bg-app);border:1px solid var(--c-border);border-radius:8px;margin-bottom:12px;font-family:monospace;font-size:14px;text-align:center;direction:ltr;">
+                ${codes.map((c) => `<div>${c}</div>`).join('')}
+            </div>
+            <button id="btnCopyRecoveryCodes" class="btn btn--ghost" style="width:100%;margin-bottom:12px;">نسخ الرموز</button>
+            <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:14px;color:var(--c-text-main);cursor:pointer;">
+                <input type="checkbox" id="chkRecoverySaved">
+                لقد حفظت هذه الرموز في مكان آمن
+            </label>
+            <button id="btnDoneRecoveryCodes" class="btn btn--primary" style="width:100%;" disabled>تم</button>
+        `;
+    }
+
+    bindRecoveryCodesEvents(overlay, codes) {
+        const chk = overlay.querySelector('#chkRecoverySaved');
+        const doneBtn = overlay.querySelector('#btnDoneRecoveryCodes');
+        chk?.addEventListener('change', () => { doneBtn.disabled = !chk.checked; });
+        overlay.querySelector('#btnCopyRecoveryCodes')?.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(codes.join('\n'));
+                toast.success('تم نسخ الرموز');
+            } catch (_) {
+                toast.error('تعذّر النسخ — انسخها يدوياً');
+            }
+        });
+        doneBtn?.addEventListener('click', () => {
+            document.body.removeChild(overlay);
+            this.isOpen = false;
+        });
     }
 
     bindEvents(overlay, hasMFA) {
@@ -101,6 +142,32 @@ export class TwoFactorModal {
                         toast.error('فشل الإلغاء: ' + result.error);
                     }
                 });
+            });
+
+            overlay.querySelector('#btnRegenerateRecoveryCodes')?.addEventListener('click', async (e) => {
+                const confirmResult = await Swal.fire({
+                    title: 'إعادة توليد رموز الاسترداد؟',
+                    text: 'ستُبطَل كل رموز الاسترداد القديمة فوراً ولن تعود صالحة.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'نعم، أعد التوليد',
+                    cancelButtonText: 'إلغاء',
+                    customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                    buttonsStyling: false
+                });
+                if (!confirmResult.isConfirmed) return;
+                e.target.disabled = true;
+                e.target.textContent = 'جاري التوليد...';
+                const result = await generateMfaRecoveryCodes();
+                if (result.ok && result.codes) {
+                    const content = overlay.querySelector('#2fa-content');
+                    content.innerHTML = this.renderRecoveryCodesScreen(result.codes);
+                    this.bindRecoveryCodesEvents(overlay, result.codes);
+                } else {
+                    toast.error('فشل إعادة التوليد: ' + (result.error || ''));
+                    e.target.disabled = false;
+                    e.target.textContent = 'إعادة توليد رموز الاسترداد';
+                }
             });
         } else {
             let enrollData = null;
@@ -154,8 +221,20 @@ export class TwoFactorModal {
                 const result = await mfaChallengeAndVerify(enrollData.id, code);
                 if (result.ok) {
                     toast.success('تم تفعيل المصادقة الثنائية بنجاح');
-                    document.body.removeChild(overlay);
-                    this.isOpen = false;
+                    // فور أول تفعيل ناجح فقط (لا عند كل دخول لاحق) — الجلسة عند هذه اللحظة
+                    // aal2 فعلاً (mfa.challengeAndVerify نجح للتو)، فتجتاز فحص AAL2 في
+                    // mfa-recovery-generate. فشل التوليد هنا لا يجوز أن يُسقط نجاح تفعيل
+                    // 2FA نفسه — يُغلَق عادياً، ويقدر المستخدم توليدها لاحقاً من وضع الإدارة.
+                    const recoveryResult = await generateMfaRecoveryCodes();
+                    if (recoveryResult.ok && recoveryResult.codes) {
+                        const content = overlay.querySelector('#2fa-content');
+                        content.innerHTML = this.renderRecoveryCodesScreen(recoveryResult.codes);
+                        this.bindRecoveryCodesEvents(overlay, recoveryResult.codes);
+                    } else {
+                        toast.error('تم التفعيل، لكن تعذّر توليد رموز الاسترداد. أعد المحاولة لاحقاً من إعدادات الحساب.');
+                        document.body.removeChild(overlay);
+                        this.isOpen = false;
+                    }
                 } else {
                     toast.error(result.error || 'رمز غير صحيح');
                     e.target.disabled = false;

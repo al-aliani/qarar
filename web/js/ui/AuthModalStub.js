@@ -23,6 +23,20 @@ function translateAuthError(error) {
     return found ? found.text : 'فشل تسجيل الدخول أو إنشاء الحساب.';
 }
 
+// أكواد خطأ mfa-recovery-unenroll (مصدرها الخادم — انظر supabase/functions/
+// mfa-recovery-unenroll/index.ts) — نفس نمط ERROR_MESSAGES/friendlyError في
+// WhatsAppVerifyModal.js.
+const RECOVERY_ERROR_MESSAGES = {
+    missing_recovery_code: 'أدخل رمز الاسترداد.',
+    invalid_recovery_code: 'رمز الاسترداد غير صحيح.',
+    rate_limited: 'محاولات كثيرة — انتظر قليلاً ثم أعد المحاولة.',
+    factor_removal_failed: 'تعذّر إتمام الاسترداد. حاول مرة أخرى أو تواصل مع الدعم.',
+};
+
+function friendlyRecoveryError(code) {
+    return RECOVERY_ERROR_MESSAGES[code] || 'حدث خطأ غير متوقع، حاول مرة أخرى.';
+}
+
 export class AuthModal {
     constructor(containerId, options = {}) {
         this.containerId = containerId;
@@ -121,6 +135,24 @@ export class AuthModal {
                                 <input type="text" id="authMfaCode" class="input w-full" placeholder="رمز التحقق" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" dir="ltr" style="text-align:center;letter-spacing:4px;font-size:18px;">
                             </div>
                             <button type="submit" id="authBtnMfaVerify" class="btn btn--primary w-full">تأكيد</button>
+                        </form>
+                        <div class="text-center mt-2">
+                            <button type="button" id="authBtnLostDevice" class="btn--text text-sm text-muted">فقدت جهاز المصادقة؟</button>
+                        </div>
+                    </div>
+                    <div id="authModalRecoveryPanel" class="mb-3" style="display:none;">
+                        <span class="auth-panel-icon"><svg aria-hidden="true"><use href="#i-key"/></svg></span>
+                        <p class="text-sm mb-1" style="font-weight:700">استرداد الحساب</p>
+                        <p class="text-muted text-sm mb-3">أدخل أحد رموز الاسترداد العشرة التي حصلت عليها عند تفعيل المصادقة الثنائية. سيُطلَب منك تفعيل مصادقة ثنائية جديدة بعد الدخول.</p>
+                        <div id="authRecoveryError" class="text-danger text-sm mb-2" style="display:none;"></div>
+                        <form id="authRecoveryForm">
+                            <div class="mb-3">
+                                <input type="text" id="authRecoveryCode" class="input w-full" placeholder="XXXX-XXXX" autocomplete="off" dir="ltr" style="text-align:center;letter-spacing:2px;">
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="submit" id="authBtnRecoverySubmit" class="btn btn--primary flex-1">تأكيد</button>
+                                <button type="button" id="authBtnRecoveryBack" class="btn btn--secondary">رجوع</button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -279,6 +311,59 @@ export class AuthModal {
                     }
                 };
                 mfaPanel.querySelector('#authMfaForm').addEventListener('submit', onSubmit);
+
+                // فقدان جهاز المصادقة: مسار بديل لا يمرّ بـauth.mfa.unenroll العادي (يتطلب
+                // هو نفسه AAL2 لا يملكه من فقد جهازه) — يستهلك رمز استرداد عبر Edge
+                // Function بصلاحية service_role (mfa-recovery-unenroll).
+                const recoveryPanel = this.overlay.querySelector('#authModalRecoveryPanel');
+                const recoveryInput = recoveryPanel?.querySelector('#authRecoveryCode');
+                const recoveryErr = recoveryPanel?.querySelector('#authRecoveryError');
+                const recoveryBtn = recoveryPanel?.querySelector('#authBtnRecoverySubmit');
+                this.overlay.querySelector('#authBtnLostDevice')?.addEventListener('click', () => {
+                    trackEvent('mfa_recovery_opened', {});
+                    mfaPanel.style.display = 'none';
+                    if (recoveryPanel) recoveryPanel.style.display = 'block';
+                    if (titleEl) titleEl.textContent = 'استرداد الحساب';
+                    if (subtitleEl) subtitleEl.textContent = 'رمز استرداد بدل تطبيق المصادقة';
+                    setTimeout(() => recoveryInput?.focus(), 30);
+                });
+                this.overlay.querySelector('#authBtnRecoveryBack')?.addEventListener('click', () => {
+                    if (recoveryPanel) recoveryPanel.style.display = 'none';
+                    mfaPanel.style.display = 'block';
+                    if (titleEl) titleEl.textContent = 'خطوة أمان';
+                    if (subtitleEl) subtitleEl.textContent = 'تحقق بخطوتين';
+                    setTimeout(() => codeInput?.focus(), 30);
+                });
+                recoveryPanel?.querySelector('#authRecoveryForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const code = (recoveryInput.value || '').trim();
+                    if (!code) { recoveryErr.textContent = 'أدخل رمز الاسترداد'; recoveryErr.style.display = 'block'; return; }
+                    recoveryErr.style.display = 'none';
+                    recoveryBtn.disabled = true;
+                    recoveryBtn.textContent = 'جاري التحقق...';
+                    const { redeemMfaRecoveryCode } = await import('../services/MfaRecoveryService.js');
+                    const result = await redeemMfaRecoveryCode(code);
+                    if (result.ok) {
+                        trackEvent('mfa_recovery_success', {});
+                        // النجاح يُسقط كل جلسات المستخدم على الخادم فعلياً (حذف عامل verified) —
+                        // لا نحاول استئناف الجلسة القديمة (نفس مبدأ تعليق close() بالأسفل)، بل
+                        // نسجّل خروجاً محلياً صريحاً ونطلب إعادة الدخول وتفعيل 2FA جديدة فوراً.
+                        this._mfaChallengeActive = false;
+                        this._succeeded = false;
+                        const { signOut } = await import('../../supabaseClient.js');
+                        await signOut();
+                        const { toast } = await import('../utils/toast.js');
+                        toast.success('تم استرداد حسابك. سجّل الدخول من جديد وفعّل مصادقة ثنائية جديدة فوراً.', 10000);
+                        this.close();
+                        resolve({ ok: false, recovered: true });
+                    } else {
+                        trackEvent('mfa_recovery_failed', { reason: result.error || 'unknown' });
+                        recoveryErr.textContent = friendlyRecoveryError(result.error);
+                        recoveryErr.style.display = 'block';
+                        recoveryBtn.disabled = false;
+                        recoveryBtn.textContent = 'تأكيد';
+                    }
+                });
             });
         };
 
@@ -346,6 +431,10 @@ export class AuthModal {
                     } else {
                         const mfaResult = await challengeMfaIfNeeded();
                         if (!mfaResult.ok) {
+                            // استرداد ناجح عبر "فقدت جهاز المصادقة؟": ليس فشلاً — أغلق نفسه
+                            // وسجَّل خروج المستخدم عمداً بالفعل (راجع معالج authRecoveryForm
+                            // أعلاه)، لا داعٍ لأي تتبّع/تنبيه إضافي هنا يصوّره كخطأ تقني.
+                            if (mfaResult.recovered) return;
                             trackEvent('mfa_failed', { reason: 'challenge_failed' });
                             // فشل تقني في تدفق تحدي MFA نفسه (لا رمز خاطئ من المستخدم — ذاك مُعالَج بلوحة الخطأ أعلاه).
                             monitoring.captureMessage('Auth: فشل تحدي التحقق بخطوتين بعد نجاح كلمة المرور', 'error', { source: 'AuthModalStub.runAuth' });
