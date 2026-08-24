@@ -3,6 +3,7 @@ import { describeRevenueRampGap } from '../core/engine.js';
 import { escapeHtml } from '../utils/escape.js';
 import { generateNameIdeas } from '../services/InternalAIGenerator.js';
 import { getSupabaseClient } from '../../supabaseClient.js';
+import { operatingRevenueStreamsShadowedWarning, warningHtml } from '../utils/dataQuality.js';
 
 // كلمات ربط عربية شائعة مستبعدة من مطابقة الاسم النصية أدناه — لا تحمل دلالة كافية.
 // مُصدَّرة كي تُعيد TechnicalAssetsView.js استخدام نفس أسلوب المطابقة (تدقيق فجوة المعدات الشائعة)
@@ -138,6 +139,7 @@ export class OfferingView {
 
                 <h3 class="offer-group__title">٢) بكم تبيعه — مصادر الإيرادات</h3>
                 <div class="offer-revenue card">
+                    <div id="revenue-shadow-warning"></div>
                     <div class="offer-revenue__bar">
                         <span class="offer-revenue__hint">أضف كل مصدر إيراد وكميته وسعره. المحرّك المالي يقرأ هذا الجدول مباشرة.</span>
                         <button type="button" id="btnImportOfferings" class="btn btn--sm btn--secondary">استورد منتجاتك وخدماتك كمصادر إيراد</button>
@@ -292,8 +294,17 @@ export class OfferingView {
         table.onChange = (newData) => {
             originalOnChange(newData);
             this._updateReconciliationNote();
+            this._updateShadowWarning();
         };
         this._updateReconciliationNote();
+        this._updateShadowWarning();
+    }
+
+    /** تحذير إن كانت صفوف هذا الجدول ستُتجاهل كلياً لوجود خدمات في «تحليل الخدمات» (dataQuality.js). */
+    _updateShadowWarning() {
+        const el = this.container.querySelector('#revenue-shadow-warning');
+        if (!el) return;
+        el.innerHTML = warningHtml(operatingRevenueStreamsShadowedWarning(this.store.get()));
     }
 
     _bindImport() {

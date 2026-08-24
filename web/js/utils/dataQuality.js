@@ -102,6 +102,62 @@ export function productCatalogWarning(state) {
 }
 
 /**
+ * تدقيق تكرار مدخلات التسعير (2026-08-24): revenue.js يتجاهل كل صفوف revenue.streams
+ * التشغيلية (كل الصفوف عملياً — لا عمود «النوع» في جدول مصادر الإيرادات أصلاً، فتُعامَل
+ * جميعها كـ'operating' ضمناً) إن وُجدت أي خدمة في services.items («تحليل الخدمات»)، لتفادي
+ * احتساب الإيراد مرتين (انظر تعليق revenue.js:30-35). لا تنبيه لهذا حالياً في شاشة الإدخال
+ * نفسها، فيملأ المستخدم جدول «مصادر الإيرادات» ظاناً أنه محتسب بينما المحرك يتجاهله كلياً.
+ * @param {object} state - حالة الدراسة
+ * @returns {{ level: 'warning', message: string, action: string } | null}
+ */
+export function operatingRevenueStreamsShadowedWarning(state) {
+    const hasServiceItems = Array.isArray(state?.services?.items) && state.services.items.length > 0;
+    if (!hasServiceItems) return null;
+    const streams = Array.isArray(state?.revenue?.streams) ? state.revenue.streams : [];
+    const hasFilledStream = streams.some(s => (Number(s?.customersPerMonth) || 0) > 0 || (Number(s?.avgPrice) || 0) > 0);
+    if (!hasFilledStream) return null;
+    return {
+        level: 'warning',
+        message: 'لديك خدمات مُدخلة في «تحليل الخدمات» وأيضاً بيانات في جدول «مصادر الإيرادات» أدناه. بما أن لديك خدمات مفصّلة، يعتمد النموذج المالي على أرقام «تحليل الخدمات» فقط ويتجاهل صفوف هذا الجدول بالكامل تفادياً لاحتساب نفس الإيراد مرتين.',
+        action: 'لا تُدخل نفس الخدمة في الشاشتين معاً. إن كانت هذه الصفوف تمثّل خدماتك الفعلية فانقلها إلى «تحليل الخدمات» بدل هذا الجدول، وإلا فلن تُحتسب ضمن مؤشرات دراستك.'
+    };
+}
+
+/**
+ * تدقيق تكرار مدخلات التسعير (2026-08-24): أداة «التسعير المثالي» تقرأ وتكتب حصراً على
+ * revenue.streams، بينما «تحليل الخدمات» مسار إدخال أسعار مستقل يكتب على services.items
+ * بمخطط مختلف (variableCostPerUnit مطلق لا نسبة). لا تطّلع هذه الأداة على أسعار الخدمات
+ * تلك ولا تعدّلها.
+ * @param {object} state - حالة الدراسة
+ * @returns {{ level: 'warning', message: string, action: string } | null}
+ */
+export function pricingOptimizerCoverageWarning(state) {
+    const items = Array.isArray(state?.services?.items) ? state.services.items : [];
+    if (items.length === 0) return null;
+    return {
+        level: 'warning',
+        message: `لديك ${items.length} خدمة مُسعَّرة في خطوة «تحليل الخدمات» — هذه الأداة تُسعِّر فقط مصادر الإيرادات ولا تطّلع على أسعار تلك الخدمات ولا تُعدّلها.`,
+        action: 'لتسعير خدمة من «تحليل الخدمات» بهذه الأداة أضفها أيضاً كمصدر إيراد بنفس الاسم في خطوة «مصادر الإيرادات»، أو عدّل سعرها مباشرة من «تحليل الخدمات».'
+    };
+}
+
+/**
+ * مثل investmentDataWarningHtml أدناه لكن بلا أيقونة إيموجي — للتنبيهات الجديدة التي لا
+ * تريد إدخال إيموجي في نصوصها. آمن للحقن: يهرّب النص.
+ */
+export function warningHtml(warn) {
+    if (!warn) return '';
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const cls = warn.level === 'critical' ? 'alert--danger' : 'alert--warning';
+    return `
+        <div class="alert ${cls} mb-3" role="alert" style="border-right:4px solid currentColor;">
+            <p><strong>${esc(warn.message)}</strong></p>
+            <p class="text-sm mt-2">${esc(warn.action)}</p>
+        </div>
+    `;
+}
+
+/**
  * يبني HTML لبطاقة تنبيه من ناتج investmentDataWarning (أو '' إن لم يوجد تحذير).
  * آمن للحقن: يهرّب النص.
  */

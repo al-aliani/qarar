@@ -384,7 +384,7 @@ export class ExportMenu {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <p class="text-xs text-muted text-center w-full">يتم معالجة جميع البيانات محلياً على جهازك. (Escape للإغلاق)</p>
+                    <p class="text-xs text-muted text-center w-full">تُعالَج ملفات التصدير محلياً على جهازك، باستثناء خياري Google Sheets والاستشارة. (Escape للإغلاق)</p>
                     <p class="text-xs text-muted text-center w-full mt-1">للاطلاع على فحص الجودة (QA) الكامل، راجع لوحة القرار قبل التصدير.</p>
                 </div>
             </div>

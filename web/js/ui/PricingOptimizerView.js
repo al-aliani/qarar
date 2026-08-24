@@ -3,6 +3,7 @@ import { stepIndexById } from '../core/wizardSteps.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { escapeHtml } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
+import { pricingOptimizerCoverageWarning, warningHtml } from '../utils/dataQuality.js';
 
 const toNumber = (value, fallback = 0) => {
     const n = Number(value);
@@ -56,6 +57,8 @@ export class PricingOptimizerView {
             <div class="pricing-optimizer animate-entry">
                 <h2 class="section-title">التسعير المثالي</h2>
                 <p class="text-muted mb-4">اضبط السعر قبل اعتماده في الإيرادات: تكلفة الوحدة، هامش الربح، سعر المنافسين، واستعداد العميل للدفع.</p>
+
+                ${warningHtml(pricingOptimizerCoverageWarning(state))}
 
                 <div class="card mb-4">
                     <h3 class="text-gold mb-3">إعدادات التسعير</h3>
