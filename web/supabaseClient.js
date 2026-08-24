@@ -456,12 +456,16 @@ export async function updateUserProfile(updates) {
 export async function mfaEnrollTOTP(friendlyName = 'تطبيق المصادقة') {
   const { supabase, ok, error } = await getSupabaseClient();
   if (!ok) return { ok: false, error };
-  const { data, error: e } = await supabase.auth.mfa.enroll({
-    factorType: 'totp',
-    friendlyName: friendlyName
-  });
-  if (e) return { ok: false, error: e.message };
-  return { ok: true, data };
+  try {
+    const { data, error: e } = await supabase.auth.mfa.enroll({
+      factorType: 'totp',
+      friendlyName: friendlyName
+    });
+    if (e) return { ok: false, error: e.message };
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: String(e?.message || e) };
+  }
 }
 
 export async function mfaChallenge(factorId) {
@@ -488,20 +492,28 @@ export async function mfaVerify(factorId, challengeId, code) {
 export async function mfaChallengeAndVerify(factorId, code) {
   const { supabase, ok, error } = await getSupabaseClient();
   if (!ok) return { ok: false, error };
-  const { data, error: e } = await supabase.auth.mfa.challengeAndVerify({
-    factorId,
-    code: String(code).trim()
-  });
-  if (e) return { ok: false, error: e.message };
-  return { ok: true, data };
+  try {
+    const { data, error: e } = await supabase.auth.mfa.challengeAndVerify({
+      factorId,
+      code: String(code).trim()
+    });
+    if (e) return { ok: false, error: e.message };
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: String(e?.message || e) };
+  }
 }
 
 export async function mfaListFactors() {
   const { supabase, ok, error } = await getSupabaseClient();
   if (!ok) return { ok: false, error };
-  const { data, error: e } = await supabase.auth.mfa.listFactors();
-  if (e) return { ok: false, error: e.message };
-  return { ok: true, data };
+  try {
+    const { data, error: e } = await supabase.auth.mfa.listFactors();
+    if (e) return { ok: false, error: e.message };
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: String(e?.message || e) };
+  }
 }
 
 export async function mfaGetAAL() {
@@ -515,9 +527,13 @@ export async function mfaGetAAL() {
 export async function mfaUnenroll(factorId) {
   const { supabase, ok, error } = await getSupabaseClient();
   if (!ok) return { ok: false, error };
-  const { data, error: e } = await supabase.auth.mfa.unenroll({ factorId });
-  if (e) return { ok: false, error: e.message };
-  return { ok: true, data };
+  try {
+    const { data, error: e } = await supabase.auth.mfa.unenroll({ factorId });
+    if (e) return { ok: false, error: e.message };
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: String(e?.message || e) };
+  }
 }
 
 /**

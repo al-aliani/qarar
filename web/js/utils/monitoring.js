@@ -60,6 +60,8 @@ class MonitoringService {
                         if (event.request) {
                             delete event.request.cookies;
                             delete event.request.headers?.Authorization;
+                            delete event.request.data;
+                            delete event.request.query_string;
                         }
                         return event;
                     }
@@ -150,7 +152,6 @@ class MonitoringService {
         if (typeof Sentry !== 'undefined' && Sentry.setUser) {
             Sentry.setUser({
                 id: user?.id,
-                email: user?.email,
                 // Don't include sensitive data
             });
         }
