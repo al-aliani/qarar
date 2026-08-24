@@ -13,6 +13,8 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { OfferingView, findOfferingsWithoutCustomerValue } from '../OfferingView.js';
+import { SECTIONS } from '../../core/schema.js';
+import { stepIndexById } from '../../core/wizardSteps.js';
 
 describe('findOfferingsWithoutCustomerValue', () => {
     it('يُرجع أسماء المنتجات/الخدمات بلا قيمة عميل مطابقة نصياً', () => {
@@ -82,5 +84,68 @@ describe('OfferingView.render — لا يرمي (حارس ضد تعطّل الخ
         stubBtn.click();
         expect(document.querySelector('#image-stub-products .image-stub-result').textContent)
             .toContain('غير متاح الآن');
+    });
+});
+
+/**
+ * توحيد سعر الوحدة (2026-08-24): عند وجود services.items يعرض هذا القسم قراءة فقط من
+ * الخدمات الفعلية (revenue.js يتجاهل صفوف revenue.streams التشغيلية عندها) بدل جدول
+ * قابل للتعديل يُهمَله المحرك صامتاً.
+ */
+describe('OfferingView.render — قسم مصادر الإيرادات عند وجود services.items', () => {
+    beforeEach(() => { document.body.innerHTML = '<div id="c"></div>'; });
+    afterEach(() => { document.body.innerHTML = ''; });
+
+    it('services.items غير فارغة: لا يُرسَم #table-revenueStreams ولا #btnImportOfferings، ويظهر جدول قراءة فقط بالأسعار الصحيحة', () => {
+        const state = {
+            projectInfo: {},
+            services: { items: [{ name: 'استشارة', customersPerMonth: 10, pricePerUnit: 200 }] },
+            revenue: { streams: [] },
+            assumptions: {}
+        };
+        const store = fakeStore(state);
+        const view = new OfferingView('c', store, null, fakeWizard());
+        view.render(0);
+
+        expect(document.querySelector('#table-revenueStreams')).toBeFalsy();
+        expect(document.querySelector('#btnImportOfferings')).toBeFalsy();
+        expect(document.querySelector('#btnGoServiceAnalysis')).toBeTruthy();
+        expect(document.body.textContent).toContain('استشارة');
+        expect(document.body.textContent).toContain('200');
+        // 10 عميل/شهر × 12 × 200 ريال = 24,000 (بالأرقام الهندية العربية، نفس أسلوب toLocaleString('ar-SA') في الملف)
+        expect(document.body.textContent).toContain((24000).toLocaleString('ar-SA'));
+    });
+
+    it('الضغط على #btnGoServiceAnalysis يستدعي onNavigate بفهرس خطوة SECTIONS.SERVICES', () => {
+        const state = {
+            projectInfo: {},
+            services: { items: [{ name: 'استشارة', customersPerMonth: 10, pricePerUnit: 200 }] },
+            revenue: { streams: [] },
+            assumptions: {}
+        };
+        const store = fakeStore(state);
+        let navigatedTo = null;
+        const view = new OfferingView('c', store, (idx) => { navigatedTo = idx; }, fakeWizard());
+        view.render(0);
+
+        document.querySelector('#btnGoServiceAnalysis').click();
+        expect(navigatedTo).toBe(stepIndexById(SECTIONS.SERVICES));
+        expect(navigatedTo).toBeGreaterThanOrEqual(0);
+    });
+
+    it('services.items فارغة: السلوك الحالي يبقى كما هو (جدول revenueStreams وزر الاستيراد يظهران)', () => {
+        const state = {
+            projectInfo: {},
+            services: { items: [] },
+            revenue: { streams: [] },
+            assumptions: {}
+        };
+        const store = fakeStore(state);
+        const view = new OfferingView('c', store, null, fakeWizard());
+        view.render(0);
+
+        expect(document.querySelector('#table-revenueStreams')).toBeTruthy();
+        expect(document.querySelector('#btnImportOfferings')).toBeTruthy();
+        expect(document.querySelector('#btnGoServiceAnalysis')).toBeFalsy();
     });
 });

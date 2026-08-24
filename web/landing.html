@@ -373,6 +373,9 @@
     .hero .hero-headline .hl::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: -.08em; height: 3px; background: linear-gradient(90deg, var(--gold), transparent); border-radius: 3px; }
     .hero .lede { color: rgba(255,255,255,.86); font-size: clamp(16px, 1.7vw, 19px); max-width: 56ch; line-height: 1.72; }
     .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+    .hero-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-top: 14px; }
+    .hero-links a { color: rgba(255,255,255,.82); font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255,255,255,.4); transition: color .2s ease, text-decoration-color .2s ease; }
+    .hero-links a:hover { color: var(--gold); text-decoration-color: var(--gold); }
     .hero-price-note { margin: 14px 0 0; font-size: 14px; color: rgba(255,255,255,.86); }
     .hero-price-emph { color: var(--gold); font-weight: 700; font-family: var(--mono); }
     .hero-guarantee-note { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: rgba(255,255,255,.72); font-size: 13px; }
@@ -789,9 +792,9 @@
             <a href="./index.html?auth=1&amp;cta=hero" class="btn btn-light">ابدأ دراستك الآن</a>
             <a href="#sample" class="btn btn-ghost btn-sm">شاهد نموذج تقرير أولاً</a>
           </div>
-          <div class="hero-cta" aria-label="اختر طريقة البدء" style="margin-top:12px">
-            <a href="./index.html?cta=hero-example#/examples" class="btn btn-ghost btn-sm">جرّب مثالاً جاهزاً</a>
-            <a href="./index.html?auth=1&amp;pkg=reviewed&amp;cta=hero-review" class="btn btn-ghost btn-sm">اطلب مراجعة خبير</a>
+          <div class="hero-links" aria-label="اختر طريقة البدء">
+            <a href="./index.html?cta=hero-example#/examples">جرّب مثالاً جاهزاً</a>
+            <a href="./index.html?auth=1&amp;pkg=reviewed&amp;cta=hero-review">اطلب مراجعة خبير</a>
           </div>
           <p class="hero-price-note">تبدأ الأسعار من <span class="hero-price-emph" data-price-min>299</span> ريالاً — سعر ثابت ومعلن، شامل الضريبة.</p>
           <p class="hero-price-note hero-guarantee-note"><svg class="ic" style="width:14px;height:14px"><use href="#i-shield"/></svg> ضمان استرداد كامل خلال 15 يوماً على الباقات المدفوعة.</p>
@@ -879,7 +882,7 @@
         <div class="sec-head">
           <span class="eyebrow">لماذا قرار بدل المكتب التقليدي؟</span>
           <h2>دراسة تفهمها وتدافع عنها، لا ملف لا تعرف من أين جاءت أرقامه</h2>
-          <p>مكاتب الدراسات التقليدية تسلّمك تقريراً بأرقام نهائية دون أن ترى كيف اُحتسبت. «قرار» يفتح لك الصندوق.</p>
+          <p>كثير من مكاتب الدراسات التقليدية تسلّمك تقريراً بأرقام نهائية دون أن ترى بسهولة كيف اُحتسبت. «قرار» يفتح لك الصندوق.</p>
         </div>
         <div class="pillars">
           <div class="pillar reveal reveal--pop rv-d1">
@@ -895,7 +898,7 @@
           <div class="pillar reveal reveal--pop rv-d3">
             <span class="pillar-ic"><svg class="ic"><use href="#i-bolt"/></svg></span>
             <h3>سريع</h3>
-            <p>من <span data-price-min>299</span> ريالاً وتسليم خلال 24–48 ساعة، مقابل آلاف الريالات وأسابيع في المكتب التقليدي.</p>
+            <p>من <span data-price-min>299</span> ريالاً وتسليم خلال 24–48 ساعة، مقابل ما قد يصل لآلاف الريالات وأسابيع من الانتظار في كثير من المكاتب التقليدية.</p>
           </div>
           <div class="pillar reveal reveal--pop rv-d4">
             <span class="pillar-ic"><svg class="ic"><use href="#i-shield"/></svg></span>
@@ -978,12 +981,12 @@
               <tr>
                 <th scope="row">الشفافية</th>
                 <td class="us"><span class="cmp-cell"><svg class="ic"><use href="#i-check"/></svg>كل رقم مربوط بافتراض ظاهر وقابل للتدقيق</span></td>
-                <td class="them"><span class="cmp-cell"><svg class="ic"><use href="#i-x"/></svg>أرقام نهائية دون بيان طريقة احتسابها</span></td>
+                <td class="them"><span class="cmp-cell"><svg class="ic"><use href="#i-x"/></svg>غالباً: أرقام نهائية دون بيان طريقة احتسابها</span></td>
               </tr>
               <tr>
                 <th scope="row">التخصص</th>
                 <td class="us"><span class="cmp-cell"><svg class="ic"><use href="#i-check"/></svg>نموذج عام مع قوالب مختصين عند اعتمادها</span></td>
-                <td class="them"><span class="cmp-cell"><svg class="ic"><use href="#i-x"/></svg>قوالب عامة تصلح لكل القطاعات</span></td>
+                <td class="them"><span class="cmp-cell"><svg class="ic"><use href="#i-x"/></svg>غالباً: قوالب عامة تصلح لكل القطاعات</span></td>
               </tr>
               <tr>
                 <th scope="row">السعر</th>

@@ -1,11 +1,12 @@
 import { submitConsultationRequest, listMyConsultations } from '../services/ConsultationService.js';
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
+import { trackEvent } from '../utils/analytics.js';
 
 const LEVELS = {
-    specialist: { label: 'أخصائي', price: 190, desc: 'مساعدة تنفيذية وجمع وترتيب البيانات' },
-    consultant: { label: 'مستشار', price: 490, desc: 'مراجعة القطاع والافتراضات وخطة العمل' },
-    advisor: { label: 'استشاري', price: 990, desc: 'توجيه استراتيجي ومالي للحالات المعقدة' }
+    specialist: { label: 'أخصائي', price: 190, desc: 'مساعدة تنفيذية وجمع وترتيب البيانات', output: 'ملاحظات مكتوبة داخل سجل طلبك (نقاط عمل/تصويب) تساعدك على جمع وترتيب بيانات دراستك بنفسك.', responseTime: 'خلال يوم عمل تقريباً', studyReview: 'لا — توجيه عام لطريقة الإدخال والترتيب، لا تدقيق في أرقامك المحفوظة', meeting: 'لا يشمل اجتماعاً؛ التواصل عبر الملاحظات المكتوبة في سجل الطلب' },
+    consultant: { label: 'مستشار', price: 490, desc: 'مراجعة القطاع والافتراضات وخطة العمل', output: 'تقرير مراجعة مكتوب لأهم افتراضات دراستك (الإيرادات، التكاليف، ملاءمة القطاع) مع تعديلات مقترحة محددة.', responseTime: 'خلال يومين إلى ثلاثة أيام عمل تقريباً', studyReview: 'نعم — مراجعة لدراستك المحفوظة إن ربطتها بالطلب', meeting: 'مكالمة قصيرة أو اجتماع (حسب التوفر) لمناقشة الملاحظات، إضافة إلى التقرير المكتوب' },
+    advisor: { label: 'استشاري', price: 990, desc: 'توجيه استراتيجي ومالي للحالات المعقدة', output: 'تقرير استشاري أوسع مع توصيات استراتيجية ومالية مخصصة للحالات الأكثر تعقيداً.', responseTime: 'خلال 3-5 أيام عمل تقريباً (بحسب مدى تعقيد الحالة)', studyReview: 'نعم — مراجعة معمّقة لهيكل الدراسة المالي وليس فقط الافتراضات', meeting: 'اجتماع (مكالمة/Zoom) لمناقشة التوصيات ومتابعة الأسئلة' }
 };
 const STATUS = { submitted: 'تم الاستلام', reviewing: 'قيد المراجعة', quoted: 'تم التسعير', awaiting_payment: 'بانتظار الدفع', paid: 'مدفوع', scheduled: 'تم تحديد الموعد', completed: 'مكتمل', cancelled: 'ملغي' };
 
@@ -25,7 +26,7 @@ export class AdvisoryView {
                 <button type="button" class="btn btn--ghost mb-4" id="advisoryBack">← رجوع</button>
                 <div class="mb-6"><h1 class="text-2xl font-bold mb-2">طلب استشارة</h1><p class="text-muted">حدد نوع المساعدة والخبرة المناسبة، وسيتحول الطلب إلى سجل يمكنك متابعته والدفع عليه داخل المنصة.</p></div>
                 <div class="grid grid-cols-3 gap-3 mb-5">
-                    ${Object.entries(LEVELS).map(([id, item]) => `<label class="card p-4" style="cursor:pointer"><input type="radio" name="consultLevel" value="${id}" ${id === 'consultant' ? 'checked' : ''}><strong class="block mt-2">${item.label}</strong><span class="text-sm text-muted block">${item.desc}</span><span class="text-gold font-bold block mt-2">${item.price} ريال</span></label>`).join('')}
+                    ${Object.entries(LEVELS).map(([id, item]) => `<label class="card p-4" style="cursor:pointer"><input type="radio" name="consultLevel" value="${id}" ${id === 'consultant' ? 'checked' : ''}><strong class="block mt-2">${item.label}</strong><span class="text-sm text-muted block">${item.desc}</span><span class="text-xs text-muted block mt-2"><strong>المخرج:</strong> ${item.output}</span><span class="text-xs text-muted block mt-1"><strong>زمن الرد:</strong> ${item.responseTime}</span><span class="text-xs text-muted block mt-1"><strong>مراجعة الدراسة الفعلية:</strong> ${item.studyReview}</span><span class="text-xs text-muted block mt-1"><strong>الاجتماع:</strong> ${item.meeting}</span><span class="text-gold font-bold block mt-2">${item.price} ريال</span></label>`).join('')}
                 </div>
                 <div class="card p-6 mb-6" id="advisoryRequestForm">
                     <div class="form-group mb-3"><label class="flex items-center gap-2"><input type="checkbox" id="consultFromStart"><span>أحتاج مختصًا يساعدني من بداية كتابة دراسة الجدوى</span></label></div>
@@ -52,16 +53,20 @@ export class AdvisoryView {
         const errorEl = this.container.querySelector('#consultError');
         const button = this.container.querySelector('#consultSubmit');
         errorEl.style.display = 'none'; button.disabled = true; button.textContent = 'جاري الإرسال...';
+        const level = this.container.querySelector('input[name="consultLevel"]:checked')?.value;
+        const specialty = this.container.querySelector('#consultSpecialty')?.value;
+        const sector = this.container.querySelector('#consultSector')?.value;
         const result = await submitConsultationRequest({
             studyId: this.store?.getState?.()?.projectInfo?.id,
             helpFromStart: this.container.querySelector('#consultFromStart')?.checked,
-            level: this.container.querySelector('input[name="consultLevel"]:checked')?.value,
-            specialty: this.container.querySelector('#consultSpecialty')?.value,
-            sector: this.container.querySelector('#consultSector')?.value,
+            level,
+            specialty,
+            sector,
             idea: this.container.querySelector('#consultIdea')?.value,
             notes: this.container.querySelector('#consultNotes')?.value
         });
         if (!result.ok) { errorEl.textContent = result.error || 'تعذر إرسال الطلب'; errorEl.style.display = 'block'; button.disabled = false; button.textContent = 'إرسال الطلب'; return; }
+        trackEvent('consultation_request_submitted', { level, specialty, sector });
         toast.success('تم استلام طلب الاستشارة');
         await this.render();
     }

@@ -4,6 +4,7 @@
  */
 import { APP_CONFIG } from '../config.js';
 import { toast } from '../utils/toast.js';
+import { trackEvent } from '../utils/analytics.js';
 
 export class ConsultationModal {
     constructor(overlayId, store) {
@@ -22,6 +23,7 @@ export class ConsultationModal {
 
     open() {
         this.render();
+        trackEvent('consultation_modal_opened', {});
         this.overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
         this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };

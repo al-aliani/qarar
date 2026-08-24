@@ -3,7 +3,6 @@ import { stepIndexById } from '../core/wizardSteps.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { escapeHtml } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
-import { pricingOptimizerCoverageWarning, warningHtml } from '../utils/dataQuality.js';
 
 const toNumber = (value, fallback = 0) => {
     const n = Number(value);
@@ -49,16 +48,25 @@ export class PricingOptimizerView {
             illustrativePriceChangePercent: 10,
             ...(marketing.pricingOptimization || {})
         };
-        const streams = Array.isArray(state.revenue?.streams) ? state.revenue.streams : [];
-        const rows = streams.map((stream, index) => this.analyzeStream(stream, settings, index));
+        // توحيد سعر الوحدة (2026-08-24): إن وُجدت خدمات في services.items يعتمد المحرّك
+        // أسعارها حصراً (revenue.js يتجاهل صفوف revenue.streams التشغيلية عندها) — نعرض
+        // هنا صفوف الخدمات الفعلية بدل صفوف يُهمَلها المحرك صامتاً، مع إبقاء صفوف
+        // revenue.streams غير التشغيلية (type !== 'operating') لأن المحرك يحتسبها دوماً.
+        const serviceItems = Array.isArray(state.services?.items) ? state.services.items : [];
+        const hasServices = serviceItems.length > 0;
+        const allStreams = Array.isArray(state.revenue?.streams) ? state.revenue.streams : [];
+        const streamRows = allStreams.map((s, i) => ({ ...s, _source: 'stream', _sourceIndex: i }));
+        const nonOperatingStreamRows = streamRows.filter(s => (s.type || 'operating') !== 'operating');
+        const sourceRows = hasServices
+            ? [...serviceItems.map((it, i) => ({ ...it, _source: 'service', _sourceIndex: i })), ...nonOperatingStreamRows]
+            : streamRows;
+        const rows = sourceRows.map((stream, index) => this.analyzeStream(stream, settings, index));
         const volumeChangePercent = computeElasticityVolumeChange(settings.elasticity, settings.illustrativePriceChangePercent);
 
         this.container.innerHTML = `
             <div class="pricing-optimizer animate-entry">
                 <h2 class="section-title">التسعير المثالي</h2>
                 <p class="text-muted mb-4">اضبط السعر قبل اعتماده في الإيرادات: تكلفة الوحدة، هامش الربح، سعر المنافسين، واستعداد العميل للدفع.</p>
-
-                ${warningHtml(pricingOptimizerCoverageWarning(state))}
 
                 <div class="card mb-4">
                     <h3 class="text-gold mb-3">إعدادات التسعير</h3>
@@ -129,7 +137,7 @@ export class PricingOptimizerView {
     }
 
     analyzeStream(stream, settings, index) {
-        const price = toNumber(stream.avgPrice ?? stream.price, 0);
+        const price = toNumber(stream.avgPrice ?? stream.pricePerUnit ?? stream.price, 0);
         const variableCostRate = clamp(toNumber(stream.variableCostRate, 0.3), 0, 0.95);
         const storedUnitCost = toNumber(stream.unitCost ?? stream.variableCostPerUnit, NaN);
         const unitCost = Number.isFinite(storedUnitCost) ? storedUnitCost : (price > 0 ? price * variableCostRate : 0);
@@ -151,6 +159,8 @@ export class PricingOptimizerView {
 
         return {
             index,
+            _source: stream._source,
+            _sourceIndex: stream._sourceIndex,
             name: stream.service || stream.name || `مصدر إيراد ${index + 1}`,
             currentPrice: price,
             unitCost,
@@ -185,7 +195,7 @@ export class PricingOptimizerView {
                         <tbody>
                             ${rows.map(row => `
                                 <tr>
-                                    <td>${escapeHtml(row.name)}</td>
+                                    <td>${escapeHtml(row.name)}${row._source === 'service' ? '<span class="text-muted text-xs"> (تحليل الخدمات)</span>' : ''}</td>
                                     <td class="text-mono">${formatCurrency(row.currentPrice)}</td>
                                     <td>
                                         <input
@@ -263,15 +273,24 @@ export class PricingOptimizerView {
                 const row = rows.find(item => item.index === Number(button.dataset.index));
                 if (!row) return;
                 const state = this.store.getState ? this.store.getState() : this.store.get();
-                const streams = Array.isArray(state.revenue?.streams) ? [...state.revenue.streams] : [];
                 const nextPrice = Math.round(row.idealPrice * 100) / 100;
-                streams[row.index] = {
-                    ...streams[row.index],
-                    avgPrice: nextPrice,
-                    unitCost: Math.round(row.unitCost * 100) / 100,
-                    variableCostRate: nextPrice > 0 ? Math.round((row.unitCost / nextPrice) * 10000) / 10000 : 0
-                };
-                this.store.updatePath(SECTIONS.REVENUE, 'streams', streams);
+                const nextUnitCost = Math.round(row.unitCost * 100) / 100;
+                if (row._source === 'service') {
+                    // إعادة توجيه الكتابة إلى مصدرها الفعلي: services.items — يُشغّل تلقائياً
+                    // DataBridge.syncServicesToRevenue في store.js فتتزامن revenue.streams بلا كود إضافي.
+                    const items = Array.isArray(state.services?.items) ? [...state.services.items] : [];
+                    items[row._sourceIndex] = { ...items[row._sourceIndex], pricePerUnit: nextPrice, variableCostPerUnit: nextUnitCost };
+                    this.store.updatePath(SECTIONS.SERVICES, 'items', items);
+                } else {
+                    const streams = Array.isArray(state.revenue?.streams) ? [...state.revenue.streams] : [];
+                    streams[row._sourceIndex] = {
+                        ...streams[row._sourceIndex],
+                        avgPrice: nextPrice,
+                        unitCost: nextUnitCost,
+                        variableCostRate: nextPrice > 0 ? Math.round((row.unitCost / nextPrice) * 10000) / 10000 : 0
+                    };
+                    this.store.updatePath(SECTIONS.REVENUE, 'streams', streams);
+                }
                 toast.success('تم تطبيق السعر المقترح على مصدر الإيراد.');
                 this.render(this.stepIndex);
             });
@@ -279,18 +298,27 @@ export class PricingOptimizerView {
 
         this.container.querySelectorAll('.input-unit-cost').forEach(input => {
             input.addEventListener('change', () => {
+                const row = rows.find(item => item.index === Number(input.dataset.index));
+                if (!row) return;
                 const state = this.store.getState ? this.store.getState() : this.store.get();
-                const streams = Array.isArray(state.revenue?.streams) ? [...state.revenue.streams] : [];
-                const index = Number(input.dataset.index);
-                if (!streams[index]) return;
                 const unitCost = Math.max(0, toNumber(input.value, 0));
-                const price = toNumber(streams[index].avgPrice ?? streams[index].price, 0);
-                streams[index] = {
-                    ...streams[index],
-                    unitCost,
-                    variableCostRate: price > 0 ? Math.round((unitCost / price) * 10000) / 10000 : toNumber(streams[index].variableCostRate, 0)
-                };
-                this.store.updatePath(SECTIONS.REVENUE, 'streams', streams);
+                if (row._source === 'service') {
+                    // services.items لا يملك عمود نسبة أصلاً — كتابة مباشرة بلا حساب variableCostRate.
+                    const items = Array.isArray(state.services?.items) ? [...state.services.items] : [];
+                    if (!items[row._sourceIndex]) return;
+                    items[row._sourceIndex] = { ...items[row._sourceIndex], variableCostPerUnit: unitCost };
+                    this.store.updatePath(SECTIONS.SERVICES, 'items', items);
+                } else {
+                    const streams = Array.isArray(state.revenue?.streams) ? [...state.revenue.streams] : [];
+                    if (!streams[row._sourceIndex]) return;
+                    const price = toNumber(streams[row._sourceIndex].avgPrice ?? streams[row._sourceIndex].price, 0);
+                    streams[row._sourceIndex] = {
+                        ...streams[row._sourceIndex],
+                        unitCost,
+                        variableCostRate: price > 0 ? Math.round((unitCost / price) * 10000) / 10000 : toNumber(streams[row._sourceIndex].variableCostRate, 0)
+                    };
+                    this.store.updatePath(SECTIONS.REVENUE, 'streams', streams);
+                }
                 this.render(this.stepIndex);
             });
         });

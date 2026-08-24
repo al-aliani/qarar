@@ -3,7 +3,8 @@ import { describeRevenueRampGap } from '../core/engine.js';
 import { escapeHtml } from '../utils/escape.js';
 import { generateNameIdeas } from '../services/InternalAIGenerator.js';
 import { getSupabaseClient } from '../../supabaseClient.js';
-import { operatingRevenueStreamsShadowedWarning, warningHtml } from '../utils/dataQuality.js';
+import { SECTIONS } from '../core/schema.js';
+import { stepIndexById } from '../core/wizardSteps.js';
 
 // كلمات ربط عربية شائعة مستبعدة من مطابقة الاسم النصية أدناه — لا تحمل دلالة كافية.
 // مُصدَّرة كي تُعيد TechnicalAssetsView.js استخدام نفس أسلوب المطابقة (تدقيق فجوة المعدات الشائعة)
@@ -113,6 +114,12 @@ export class OfferingView {
     render(stepIndex) {
         if (typeof stepIndex === 'number') this.stepIndex = stepIndex;
 
+        const data = this.store.get();
+        // وجود خدمات في «تحليل الخدمات» يعني أن المحرّك يتجاهل صفوف revenue.streams
+        // التشغيلية كلياً (revenue.js:38) — نعرض هنا قراءة فقط من services.items بدل
+        // جدول قابل للتعديل يُهمَله المحرك صامتاً، ونوجّه التعديل الفعلي إلى مصدره.
+        const hasServiceItems = Array.isArray(data?.services?.items) && data.services.items.length > 0;
+
         const offeringsHtml = OfferingView.OFFERINGS.map(({ table, title, desc }, i) => `
             <details class="oc-section card" ${i === 0 ? 'open' : ''}>
                 <summary class="oc-section__summary">
@@ -138,6 +145,7 @@ export class OfferingView {
                 </div>
 
                 <h3 class="offer-group__title">٢) بكم تبيعه — مصادر الإيرادات</h3>
+                ${hasServiceItems ? this._renderServicesMirrorTable(data.services.items) : `
                 <div class="offer-revenue card">
                     <div id="revenue-shadow-warning"></div>
                     <div class="offer-revenue__bar">
@@ -147,6 +155,7 @@ export class OfferingView {
                     <div id="table-revenueStreams" class="mt-3"></div>
                     <p id="revenue-reconciliation-note" class="text-muted mt-2" style="font-size:.85em"></p>
                 </div>
+                `}
 
                 <h3 class="offer-group__title">٣) اسم وهوية مقترحة (تجريبي)</h3>
                 <div class="offer-naming card">
@@ -159,17 +168,71 @@ export class OfferingView {
         `;
 
         // تركيب الجداول الأربعة عبر منطق المعالج نفسه — كلٌّ يُحفظ في قسمه الأصلي.
-        const data = this.store.get();
         OfferingView.OFFERINGS.forEach(({ section, table }) => {
             this.wizard.renderTable(section, table, data);
             if (table !== 'customerValues') this._wireImageStubList(table);
         });
-        // revenueStreams: stepId='revenue' → المسار revenue.streams (getTableDataPath)
-        this.wizard.renderTable('revenue', 'revenueStreams', data);
-        this._wireReconciliationNote();
-
-        this._bindImport();
+        if (!hasServiceItems) {
+            // revenueStreams: stepId='revenue' → المسار revenue.streams (getTableDataPath)
+            this.wizard.renderTable('revenue', 'revenueStreams', data);
+            this._wireReconciliationNote();
+            this._bindImport();
+        } else {
+            this.container.querySelector('#btnGoServiceAnalysis')?.addEventListener('click', () => {
+                const idx = stepIndexById(SECTIONS.SERVICES);
+                if (this.onNavigate && idx >= 0) this.onNavigate(idx);
+            });
+        }
         this._bindNameIdeas();
+    }
+
+    /**
+     * قراءة فقط لمصادر الإيرادات حين توجد خدمات في services.items — النموذج المالي
+     * يعتمد أسعار هذه الخدمات فعلياً (revenue.js يتجاهل صفوف revenue.streams التشغيلية
+     * كلياً عند وجود خدمات، انظر revenue.js:38)، فنعرض هنا نفس ما يقرأه المحرّك بدل
+     * جدول قابل للتعديل يُهمَله صامتاً، مع توجيه صريح لمكان التعديل الفعلي.
+     */
+    _renderServicesMirrorTable(items) {
+        const rows = items.map(it => {
+            const customersPerMonth = Number(it?.customersPerMonth) || 0;
+            const price = Number(it?.pricePerUnit) || 0;
+            return { name: it?.name || 'خدمة', customersPerMonth, price, year1: customersPerMonth * 12 * price };
+        });
+        const total = rows.reduce((sum, r) => sum + r.year1, 0);
+        return `
+            <div class="offer-revenue card">
+                <p class="text-muted mb-2">لديك خدمات مُدخلة في «تحليل الخدمات» — النموذج المالي يعتمد أسعارها من هناك مباشرة، وهذا عرض للاطلاع فقط.</p>
+                <div class="table-wrapper">
+                    <table class="service-comparison-table">
+                        <thead>
+                            <tr>
+                                <th>الخدمة</th>
+                                <th>العملاء/شهر</th>
+                                <th>السعر</th>
+                                <th>الإيراد السنوي</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows.map(r => `
+                                <tr>
+                                    <td>${escapeHtml(r.name)}</td>
+                                    <td class="text-mono">${r.customersPerMonth}</td>
+                                    <td class="text-mono">${r.price}</td>
+                                    <td class="text-mono">${r.year1.toLocaleString('ar-SA')}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3">الإجمالي</td>
+                                <td class="text-mono">${total.toLocaleString('ar-SA')}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <button type="button" id="btnGoServiceAnalysis" class="btn btn--sm btn--secondary mt-3">عدّل من تحليل الخدمات ←</button>
+            </div>
+        `;
     }
 
     /**
@@ -294,17 +357,8 @@ export class OfferingView {
         table.onChange = (newData) => {
             originalOnChange(newData);
             this._updateReconciliationNote();
-            this._updateShadowWarning();
         };
         this._updateReconciliationNote();
-        this._updateShadowWarning();
-    }
-
-    /** تحذير إن كانت صفوف هذا الجدول ستُتجاهل كلياً لوجود خدمات في «تحليل الخدمات» (dataQuality.js). */
-    _updateShadowWarning() {
-        const el = this.container.querySelector('#revenue-shadow-warning');
-        if (!el) return;
-        el.innerHTML = warningHtml(operatingRevenueStreamsShadowedWarning(this.store.get()));
     }
 
     _bindImport() {

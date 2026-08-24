@@ -1,4 +1,5 @@
 import { escapeAttr, escapeHtml } from '../utils/escape.js';
+import { trackEvent } from '../utils/analytics.js';
 
 const downloadIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14"/></svg>';
 const fileIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>';
@@ -232,8 +233,8 @@ export class ReadyStudiesView {
                 <p class="rs-card__excerpt">${escapeHtml(excerpt)}</p>
                 <div class="rs-card__tags">${tags}</div>
                 <div class="rs-card__actions">
-                    <a class="btn btn--primary btn--sm" href="${escapeAttr(study.url)}" download="${escapeAttr(study.downloadName || `${study.title}.pdf`)}">${downloadIcon} تحميل الدراسة</a>
-                    <a class="rs-card__preview" href="${escapeAttr(study.url)}" target="_blank" rel="noopener noreferrer">عرض الملف</a>
+                    <a class="btn btn--primary btn--sm" href="${escapeAttr(study.url)}" download="${escapeAttr(study.downloadName || `${study.title}.pdf`)}" data-rs-track data-study-id="${escapeAttr(study.id)}" data-category="${escapeAttr(study.category)}" data-action="download">${downloadIcon} تحميل الدراسة</a>
+                    <a class="rs-card__preview" href="${escapeAttr(study.url)}" target="_blank" rel="noopener noreferrer" data-rs-track data-study-id="${escapeAttr(study.id)}" data-category="${escapeAttr(study.category)}" data-action="preview">عرض الملف</a>
                 </div>
             </article>
         `;
@@ -297,6 +298,15 @@ export class ReadyStudiesView {
                 this.tags = [];
                 this.languages = [];
                 this.draw();
+            });
+        });
+        this.container.querySelectorAll('[data-rs-track]').forEach((link) => {
+            link.addEventListener('click', () => {
+                trackEvent('ready_study_opened', {
+                    study_id: link.dataset.studyId,
+                    category: link.dataset.category,
+                    action: link.dataset.action,
+                });
             });
         });
     }

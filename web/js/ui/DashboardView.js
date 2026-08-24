@@ -1554,7 +1554,7 @@ export class DashboardView {
                 const id = target.dataset?.id;
                 if (!id) return;
                 const { value: newName } = await Swal.fire({
-                    title: 'إعادة تسمية الدراسة',
+                    title: 'إعادة تسمية المشروع',
                     input: 'text',
                     inputValue: target.dataset?.name || '',
                     showCancelButton: true,
@@ -1562,13 +1562,14 @@ export class DashboardView {
                     cancelButtonText: 'إلغاء',
                     customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-secondary' },
                     buttonsStyling: false,
-                    inputValidator: (value) => !value?.trim() ? 'أدخل اسماً للدراسة' : undefined
+                    inputValidator: (value) => !value?.trim() ? 'أدخل اسماً للمشروع' : undefined
                 });
                 if (!newName?.trim()) return;
                 try {
                     const result = await ProjectManager.renameProject(id, newName.trim());
                     if (result.success) {
-                        toast.success('تم تحديث اسم الدراسة');
+                        trackEvent('study_renamed', { surface: 'dashboard' });
+                        toast.success('تم تحديث اسم المشروع');
                         this.render();
                     } else {
                         toast.error(result.error || 'فشل تحديث الاسم');

@@ -86,7 +86,7 @@ export class TemplateGallery {
         return [
             {
                 id: 'empty',
-                name: 'مشروع فارغ (من الصفر)',
+                name: 'بدون قالب (من الصفر)',
                 description: 'ابدأ دراسة جديدة ببياناتك الفعلية، ثم عدّل كل قسم حسب مشروعك.',
                 icon: 'i-code',
                 data: null

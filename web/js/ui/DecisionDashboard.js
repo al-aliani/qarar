@@ -19,6 +19,7 @@ import { escapeHtml } from '../utils/escape.js';
 import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
 import { hasMinimumRevenueData, hasMinimumFinancialData } from '../utils/dataSufficiency.js';
 import { toast } from '../utils/toast.js';
+import { trackEvent } from '../utils/analytics.js';
 import 'gridstack/dist/gridstack.min.css';
 
 export class DecisionDashboard {
@@ -145,6 +146,8 @@ export class DecisionDashboard {
 
         // إذا انتقل المستخدم أثناء فحوص الجودة فلا تكتب نتيجة قديمة فوق الخطوة الجديدة.
         if (!isCurrent()) return false;
+
+        trackEvent('decision_dashboard_viewed', { decision: results?.decision });
 
         // «اجتياز نظيف» = بلا أخطاء حرجة وبلا تحذيرات مهمة وبلا أخطاء بيانات.
         // كان البانر الأخضر «اجتاز 100/100» يظهر بمجرد غياب الأخطاء الحرجة، فيتزامن مع تحذيرات
