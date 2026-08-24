@@ -75,4 +75,31 @@ describe('engine.calculateStudy — رصيد القرض المتبقي عند ن
         const npvOperating = calculateNPV(discountRate, operatingCashFlows);
         expect(results.indicators.npv).toBeCloseTo(npvOperating, 2);
     });
+
+    it('npvWithTerminal (الاسترشادي) يُبنى من npvOperating لا npv المصحَّح — لا يتكرر خصم رصيد القرض المتبقي مرتين', () => {
+        // calculateTerminalValue تطرح remainingDebtAtHorizon داخلياً بالفعل عند بناء tvEquity؛
+        // لو استُخدم npv (المصحَّح أيضاً بنفس الخصم) كأساس لـnpvWithTerminal بدل npvOperating،
+        // لتكرر خصم نفس الدين مرتين. هذا اختبار انحدار صريح يقفل الصيغة الصحيحة (مُصلَح 2026-08-24).
+        const study = studyWithLoanTerm(10);
+        const results = calculateStudy(study);
+        const discountRate = 0.10;
+        const years = 3;
+
+        const remaining = results.loanSchedule.annualSummary.find(s => s.year === years)?.endingBalance ?? 0;
+        expect(remaining).toBeGreaterThan(0); // شرط الاختبار
+
+        const equityOutlay = results.capex.total - results.loanSchedule.loanAmount;
+        const operatingCashFlows = [-equityOutlay, ...results.incomeStatement.map(y => y.cashFlow)];
+        const npvOperating = calculateNPV(discountRate, operatingCashFlows);
+        const terminalValue = results.indicators.terminalValue ?? 0;
+
+        expect(terminalValue).toBeGreaterThan(0); // شرط الاختبار — يجب وجود قيمة نهائية فعلية لكي يكون الاختبار ذا معنى
+
+        // الصحيح: npvOperating + terminalValue (بلا خصم إضافي لرصيد القرض، لأن terminalValue نفسها خصمته)
+        expect(results.indicators.npvWithTerminal).toBeCloseTo(npvOperating + terminalValue, 0);
+
+        // الخطأ القديم (قبل إصلاح 2026-08-24): كان يستخدم npv المصحَّح بدل npvOperating، فيخصم نفس الدين مرتين.
+        const oldBuggyValue = results.indicators.npv + terminalValue;
+        expect(results.indicators.npvWithTerminal).not.toBeCloseTo(oldBuggyValue, 0);
+    });
 });

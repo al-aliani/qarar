@@ -42,6 +42,22 @@ export function calculateIRR(cashflows, guess = 0.1) {
     return rate;
 }
 
+// عدد مرات تغيّر الإشارة بين القيم غير الصفرية في متتالية تدفقات نقدية (قاعدة ديكارت
+// للجذور — تعدد التغيّرات يعني احتمال تعدد جذور IRR رياضياً). الأصفار تُتجاهَل تماماً
+// ولا تُعامَل كإشارة، فلا تُحتسَب كتغيّر مقابل القيمة السابقة/التالية غير الصفرية.
+export function countSignChanges(cashflows) {
+    if (!Array.isArray(cashflows)) return 0;
+    let changes = 0;
+    let lastSign = 0;
+    for (const v of cashflows) {
+        const sign = Math.sign(v);
+        if (sign === 0) continue;
+        if (lastSign !== 0 && sign !== lastSign) changes++;
+        lastSign = sign;
+    }
+    return changes;
+}
+
 export function calculatePaybackPeriod(cashflows) {
     if (!Array.isArray(cashflows) || cashflows.length === 0 || cashflows[0] >= 0) return null;
     let cumulative = 0;

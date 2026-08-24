@@ -59,7 +59,13 @@ describe('قائمة «نوع النشاط» تُطابق قطاعات المح�
 });
 
 describe('WACC and VAT launch fixes', () => {
-    it('keeps manual discount rate by default and uses WACC only when explicitly enabled', () => {
+    // تصحيح 2026-08-24: التدفق النقدي المحسوب هو FCFE (بعد خدمة الدين)، فخصمه بـWACC
+    // (مصمَّم لتدفق غير مرفوع FCFF) كان يزدوج أثر عبء الدين. useWaccAsDiscountRate يستخدم
+    // الآن تكلفة حقوق الملكية (financing.costOfEquity) مباشرة بدل calculateFinancingWACC.
+    // الرقم القديم 0.14875 كان WACC = (0.5×0.20)+(0.5×0.10×(1-0.025))=0.14875 (أوزان
+    // 50/50، تكلفة دين 10% بعد ضريبة/زكاة فعّالة 2.5%). الرقم الجديد الصحيح = costOfEquity
+    // مباشرة = 0.20 (من financing.costOfEquity في بيانات هذا الاختبار نفسها).
+    it('keeps manual discount rate by default and uses cost of equity only when explicitly enabled', () => {
         const study = makeStudy({
             assumptions: { projectionYears: 5, discountRate: 0.10, inflationRate: 0, hiddenOverheadsRate: 0 },
             [SECTIONS.FINANCING]: {
@@ -75,12 +81,12 @@ describe('WACC and VAT launch fixes', () => {
         expect(manual.assumptionsApplied.discountRateSource).toBe('assumptions');
         expect(manual.assumptionsApplied.baseDiscountRate).toBeCloseTo(0.10, 6);
 
-        const wacc = calculateStudy({
+        const costOfEquity = calculateStudy({
             ...study,
             assumptions: { ...study.assumptions, useWaccAsDiscountRate: true }
         });
-        expect(wacc.assumptionsApplied.discountRateSource).toBe('wacc');
-        expect(wacc.assumptionsApplied.baseDiscountRate).toBeCloseTo(0.14875, 6);
+        expect(costOfEquity.assumptionsApplied.discountRateSource).toBe('costOfEquity');
+        expect(costOfEquity.assumptionsApplied.baseDiscountRate).toBeCloseTo(0.20, 6);
     });
 
     it('exposes VAT liquidity impact beside the original cash flow without silently changing NPV cash flows', () => {

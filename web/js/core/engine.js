@@ -8,7 +8,7 @@ import { analyzeSaudiMarket } from './SaudiMarketEngine.js';
 import { explainDecisionBreakers } from './DecisionExplainer.js';
 import { analyzePartnerNeeds } from './partnerNeeds.js';
 import { calculateZakatAndTax } from './financial/tax.js';
-import { calculateNPV, calculateIRR, calculateMIRR, calculateTerminalValue } from './financial/cashflow.js';
+import { calculateNPV, calculateIRR, calculateMIRR, calculateTerminalValue, countSignChanges } from './financial/cashflow.js';
 import { buildDepreciationModel, itemDepAtYear } from './financial/depreciation.js';
 import { buildFinancialRatios } from './financial/ratios.js';
 import { buildRevenueModel } from './financial/revenue.js';
@@ -196,14 +196,20 @@ export function calculateStudy(study, overrides) {
 
     riskPremium = Math.min(0.08, riskPremium); // سقف علاوة المخاطر 8%
 
-    const waccDiscountRate = study.assumptions?.useWaccAsDiscountRate
-        ? calculateFinancingWACC(study)
+    // تصحيح 2026-08-24: التدفق النقدي المحسوب في هذا المحرك هو FCFE (تدفق حقوق ملكية،
+    // بعد خدمة الدين — انظر تعليق 2026-07-06 أعلاه). خصمه بـWACC (مصمَّم لتدفق غير مرفوع
+    // FCFF) كان يزدوج أثر عبء الدين. البديل الصحيح لخصم FCFE هو تكلفة حقوق الملكية (Re)
+    // وحدها. calculateFinancingWACC تبقى قائمة للعرض الإرشادي فقط (renderWACC في
+    // FinancingStructure.js) ولم تعد تُستهلك هنا.
+    const useCostOfEquityDiscountRate = Boolean(study.assumptions?.useWaccAsDiscountRate);
+    const costOfEquityDiscountRate = useCostOfEquityDiscountRate
+        ? (Number.isFinite(Number(study.financing?.costOfEquity)) ? Number(study.financing?.costOfEquity) : 0.15)
         : null;
-    const hasWaccDiscountRate = waccDiscountRate != null && Number.isFinite(Number(waccDiscountRate));
-    const baseDiscountRate = hasWaccDiscountRate
-        ? Number(waccDiscountRate)
+    const hasCostOfEquityDiscountRate = costOfEquityDiscountRate != null && Number.isFinite(Number(costOfEquityDiscountRate));
+    const baseDiscountRate = hasCostOfEquityDiscountRate
+        ? Number(costOfEquityDiscountRate)
         : (Number(study.assumptions?.discountRate) || 0.10);
-    const discountRateSource = hasWaccDiscountRate ? 'wacc' : 'assumptions';
+    const discountRateSource = hasCostOfEquityDiscountRate ? 'costOfEquity' : 'assumptions';
     const discountRate = baseDiscountRate + riskPremium;
     const computedContingencyRate = Number(study.assumptions?.contingencyRate ?? 0.10) + (riskPremium * 0.5);
 
@@ -899,7 +905,7 @@ export function calculateStudy(study, overrides) {
     const tvCfg = study.assumptions?.terminalValue || {};
     const lastYearIncomeStatement = incomeStatement[incomeStatement.length - 1] || {};
 
-    const { tvEquity, terminalValueDiscounted } = calculateTerminalValue({
+    const { terminalValueDiscounted } = calculateTerminalValue({
         tvCfg,
         lastYearIncomeStatement,
         discountRate,
@@ -916,6 +922,7 @@ export function calculateStudy(study, overrides) {
     const npv = remainingDebtAtHorizon > 0 ? calculateNPV(discountRate, cashFlowsForDecision) : npvOperating;
     const npvWithTerminal = npvOperating + terminalValueDiscounted;
 
+    const irrSignChanges = countSignChanges(cashFlowsForDecision);
     let irr = calculateIRR(cashFlowsForDecision);
     if (irr != null) {
         const tol = 1e-6;
@@ -1237,7 +1244,7 @@ export function calculateStudy(study, overrides) {
             discountRate,
             baseDiscountRate,
             discountRateSource,
-            waccDiscountRate,
+            costOfEquityDiscountRate,
             inflationRate: inflation,
             // مصدر وحيد لعتبات القرار المُطبَّقة فعلياً (بعد دمج تجاوزات المستخدم مع
             // الافتراضات) — الشاشات تقرأ من هنا بدل بناء احتياطياتها الخاصة (تدقيق 2026-07-08).
@@ -1255,9 +1262,9 @@ export function calculateStudy(study, overrides) {
         },
         indicators: {
             npv,
-            npvWithTerminal,
-            terminalValue: tvEquity,
             irr,
+            irrSignChanges,
+            irrMultipleRootsRisk: irrSignChanges > 1,
             mirr,
             paybackPeriod: paybackOut,
             payback: paybackOut,
@@ -1286,7 +1293,7 @@ export function calculateStudy(study, overrides) {
             annualROI: arr / 100,
             // القيمة النهائية (مخصومة) — استرشادية؛ القرار على NPV المتحفظ أعلاه
             terminalValue: terminalValueDiscounted,
-            npvWithTerminal: npv + terminalValueDiscounted
+            npvWithTerminal
         },
         dscrAnalysis,
         ...(() => {

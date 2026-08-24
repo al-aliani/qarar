@@ -222,6 +222,7 @@ export class ProjectOverviewView {
                         </div>
                     `).join('')}
                 </div>
+                ${ind?.irrMultipleRootsRisk === true ? '<p class="po__block-note">قد يكون معدل العائد الداخلي غير موثوق لوجود أكثر من نتيجة رياضية ممكنة — استخدم صافي القيمة الحالية (NPV) كمرجع أساسي للقرار.</p>' : ''}
             </section>
         `;
     }

@@ -369,7 +369,7 @@ export const LABELS = {
     taxRate: "ضريبة الدخل (حصة الأجانب فقط)",
     foreignOwnershipRate: "نسبة الملكية الأجنبية",
     discountRate: "معدل الخصم",
-    useWaccAsDiscountRate: "استخدام متوسط تكلفة رأس المال (WACC) كمعدل الخصم بدل المعدل الثابت أعلاه",
+    useWaccAsDiscountRate: "استخدام تكلفة حقوق الملكية (Re) كمعدل الخصم بدل المعدل الثابت أعلاه",
     workingCapitalMonths: "أشهر رأس المال العامل",
     rampUpMonths: "أشهر التصاعد لبلوغ كامل المبيعات",
     seasonalityProfile: "نمط الموسمية (لتخطيط السيولة)",

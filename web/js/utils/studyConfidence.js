@@ -32,7 +32,7 @@ export function buildStudyConfidence(state = {}, results = {}, qa = null) {
     const sourceSet = new Set(['مدخلات صاحب الدراسة: الأسعار، التكاليف، والتمويل']);
     const marketSource = state.marketSizing?.source || results?.marketPreview?.source;
     if (marketSource) sourceSet.add(String(marketSource));
-    if (results?.assumptionsApplied?.discountRateSource === 'wacc') sourceSet.add('معدل الخصم محسوب من هيكل التمويل (WACC)');
+    if (results?.assumptionsApplied?.discountRateSource === 'costOfEquity') sourceSet.add('معدل الخصم = تكلفة حقوق الملكية (Re) من هيكل التمويل');
     else sourceSet.add('معدل الخصم: افتراض معلن في الدراسة');
 
     return {

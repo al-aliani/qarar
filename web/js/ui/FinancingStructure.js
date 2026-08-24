@@ -909,12 +909,15 @@ export class FinancingStructure {
                 </div>
                 <label class="flex items-center gap-2 mt-3 text-sm">
                     <input type="checkbox" id="use-wacc-discount-rate" ${useWaccAsDiscountRate ? 'checked' : ''}>
-                    <span>استخدم WACC كمعدل الخصم في حساب NPV/IRR</span>
+                    <span>استخدم تكلفة حقوق الملكية (Re) كمعدل الخصم في حساب NPV/IRR</span>
                 </label>
                 ${useWaccAsDiscountRate ? `
                 <div class="wacc-disclosure alert alert--info mt-3" style="font-size: 0.85rem;">
-                    ${icon('i-check')} هذا الرقم مُعتمد الآن فعلياً كمعدل الخصم في حساب صافي القيمة الحالية (NPV)
-                    والعائد الداخلي (IRR) في هذه الدراسة، بدلاً من معدل الخصم اليدوي ضمن افتراضات الدراسة.
+                    ${icon('i-check')} معدل تكلفة حقوق الملكية (Re) أعلاه مُعتمد الآن فعلياً كمعدل الخصم في حساب
+                    صافي القيمة الحالية (NPV) والعائد الداخلي (IRR) في هذه الدراسة، بدلاً من معدل الخصم اليدوي ضمن
+                    افتراضات الدراسة. رقم تكلفة رأس المال المرجح (WACC) أعلاه يبقى إرشادياً للمقارنة فقط ولا يُستخدم
+                    في الخصم مباشرة، لأن التدفق النقدي المحسوب في هذه الدراسة هو تدفق لحقوق الملكية بعد خدمة الدين
+                    (FCFE)، وخصمه بـWACC يزدوج أثر عبء الدين.
                 </div>` : `
                 <div class="wacc-disclosure alert alert--warning mt-3" style="font-size: 0.85rem;">
                     ${icon('i-warning')} هذا الرقم إعلامي لمرجعك الشخصي فقط، ولا يُغذّي تلقائياً معدل الخصم الفعلي المستخدم لحساب
