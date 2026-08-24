@@ -391,7 +391,7 @@ export class DashboardView {
                 </div>
             </details>
         `).join('');
-        const activeHomePanel = ['studies', 'engines', 'support', 'additional', 'databases'].includes(this.activeHomePanel)
+        const activeHomePanel = ['studies', 'my-studies', 'engines', 'support', 'additional', 'databases'].includes(this.activeHomePanel)
             ? this.activeHomePanel
             : 'studies';
         const allSupportTools = toolkitGroups.flatMap(group => group.tools);
@@ -453,17 +453,22 @@ export class DashboardView {
                 <div class="dv-workspace" id="homeWorkspace">
                     <aside class="dv-side-nav" aria-label="قائمة لوحة المستخدم">
                         <div class="dv-side-nav__main">
-                            <button type="button" data-dv-panel-button="studies" class="${activeHomePanel === 'studies' ? 'is-active' : ''}">${inlineIcon('folder')} الرئيسية والمشاريع</button>
+                            <button type="button" data-dv-panel-button="studies" class="${activeHomePanel === 'studies' ? 'is-active' : ''}">${inlineIcon('folder')} الرئيسية</button>
+                            <button type="button" data-dv-panel-button="my-studies" class="${activeHomePanel === 'my-studies' ? 'is-active' : ''}">${inlineIcon('briefcase')} دراساتي</button>
+
+                            <h3 class="dv-side-nav__group-title">بناء الدراسة</h3>
                             <button type="button" data-dv-panel-button="engines" class="${activeHomePanel === 'engines' ? 'is-active' : ''}">${inlineIcon('chart')} الأدوات والمحرّكات</button>
                             <button type="button" data-dv-panel-button="support" class="${activeHomePanel === 'support' ? 'is-active' : ''}">${inlineIcon('clipboard')} أدوات مساندة للدراسة</button>
+
+                            <h3 class="dv-side-nav__group-title">الموارد</h3>
                             <button type="button" data-dv-panel-button="additional" class="${activeHomePanel === 'additional' ? 'is-active' : ''}">${inlineIcon('book')} دراسات جدوى جاهزة</button>
                             <button type="button" data-dv-panel-button="databases" class="${activeHomePanel === 'databases' ? 'is-active' : ''}">${inlineIcon('list')} قواعد البيانات</button>
+                            <button type="button" data-dv-route="knowledge">${inlineIcon('book')} مركز المعرفة والموارد</button>
+
+                            <h3 class="dv-side-nav__group-title">الخدمات</h3>
                             <button type="button" data-dv-route="advisory">${inlineIcon('users')} الاستشارات</button>
                             <button type="button" data-dv-route="billing">${inlineIcon('folder')} الطلبات</button>
                             <button type="button" data-dv-route="support">${inlineIcon('bell')} الشكاوى والتذاكر</button>
-                        </div>
-                        <div class="dv-side-nav__bottom">
-                            <button type="button" data-dv-route="knowledge">${inlineIcon('book')} مركز المعرفة والموارد</button>
                         </div>
                     </aside>
                     <div class="dv-home-panels">
@@ -489,7 +494,25 @@ export class DashboardView {
                                     </div>
                                 </div>
 
-                                ${this.currentUser ? `
+                            </div>
+
+                            ${recentStudies.length > 1 ? `
+                            <div class="dv-toolrow--compact dv-recent-strip" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                                <span class="text-xs text-muted" style="align-self:center;">آخر ما فتحته:</span>
+                                ${recentStudies.map(p => `
+                                    <button type="button" class="btn btn--sm btn--ghost dv-recent-strip__item" data-recent-id="${p.id}">${escapeHtml(p.name || 'مشروع')}</button>
+                                `).join('')}
+                            </div>
+                            ` : ''}
+                        </section>
+
+                        <!-- «دراساتي»: كل ما عدا بطاقة البدء وآخر 3 دراسات — انتقل من لوحة «studies» هنا
+                             بلا تغيير في منطقه الداخلي (بحث/فلترة مجلد/فرز/فتح/تصدير/إعادة تسمية/نسخ/حذف/
+                             حفظ في الحساب)، فقط استضافته الآن في لوحة منفصلة (قرار مالك 2026-08-24). -->
+                        <section class="dv-section dv-home-panel" id="homePanel-my-studies" data-home-panel="my-studies" ${activeHomePanel !== 'my-studies' ? 'hidden' : ''}>
+
+                            ${this.currentUser ? `
+                            <div class="dv-bento" role="tablist" aria-label="حسابك">
                                 <button type="button" id="dvTileSubscription" class="dv-bento-tile dv-bento-tile--small">
                                     <span class="dv-bento-tile__label"><span class="dv-bento-tile__ic">${inlineIcon('bank')}</span> اشتراكك</span>
                                     <span class="dv-bento-tile__count dv-num">…</span>
@@ -507,15 +530,6 @@ export class DashboardView {
                                     <span class="dv-bento-tile__count dv-num">${inlineIcon('chev')}</span>
                                     <span class="dv-bento-tile__hint">ابدأ من قالب قطاع جاهز بدل الصفر</span>
                                 </button>
-                                ` : ''}
-                            </div>
-
-                            ${recentStudies.length > 1 ? `
-                            <div class="dv-toolrow--compact dv-recent-strip" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-                                <span class="text-xs text-muted" style="align-self:center;">آخر ما فتحته:</span>
-                                ${recentStudies.map(p => `
-                                    <button type="button" class="btn btn--sm btn--ghost dv-recent-strip__item" data-recent-id="${p.id}">${escapeHtml(p.name || 'مشروع')}</button>
-                                `).join('')}
                             </div>
                             ` : ''}
 
@@ -1198,7 +1212,7 @@ export class DashboardView {
         });
 
         const switchHomePanel = (panel, { scroll = false, focusSelector = null } = {}) => {
-            if (!['studies', 'engines', 'support', 'additional', 'databases'].includes(panel)) return;
+            if (!['studies', 'my-studies', 'engines', 'support', 'additional', 'databases'].includes(panel)) return;
             this.activeHomePanel = panel;
 
             if (panel === 'additional' && this.readyStudiesView && !this.readyStudiesView.loaded) {

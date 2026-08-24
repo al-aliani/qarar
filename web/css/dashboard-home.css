@@ -216,6 +216,22 @@
     color: white !important;
 }
 
+/* عنوان قسم نصي بسيط داخل قائمة الشريط الجانبي (يجمّع أزراراً منطقياً — لا يفتح شيئاً بذاته).
+   نفس نمط .study-map__group-title في main.css: نص صغير مكتوم بلا زخرفة زر. */
+.dv-side-nav__group-title {
+    margin: 4px 4px 0;
+    padding: 0 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--c-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.dv-side-nav__group-title:first-child {
+    margin-top: 0;
+}
+
 /* MAIN CONTENT PANELS */
 .dv-home-panels {
     background: var(--v2-glass-bg) !important;
