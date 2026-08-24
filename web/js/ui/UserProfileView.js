@@ -122,6 +122,8 @@ export class UserProfileView {
                     <a href="./help.html" target="_blank" rel="noopener">مركز المساعدة</a>
                     ·
                     <a href="./contact.html" target="_blank" rel="noopener">تواصل معنا</a>
+                    ·
+                    <a href="./privacy.html" target="_blank" rel="noopener">سياسة الخصوصية</a>
                 </p>
             </div>
         `;
@@ -133,17 +135,31 @@ export class UserProfileView {
                 import('sweetalert2'),
                 import('../services/AccountService.js'),
             ]);
-            const result = await Swal.fire({
+            const step1 = await Swal.fire({
                 title: 'هل أنت متأكد من حذف حسابك؟',
                 text: 'سيُقدَّم طلب حذف حسابك للمراجعة من فريقنا ولن يُنفَّذ فوراً — بعض بياناتك (كالفواتير) قد تُحتفظ بها للالتزامات النظامية. لا يمكن التراجع عن الطلب بعد تقديمه.',
                 icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'متابعة',
+                cancelButtonText: 'إلغاء',
+                customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                buttonsStyling: false,
+            });
+            if (!step1.isConfirmed) return;
+
+            const step2 = await Swal.fire({
+                title: 'تأكيد أخير',
+                text: 'للمتابعة، اكتب كلمة "حذف" ثم اضغط تأكيد.',
+                input: 'text',
+                inputPlaceholder: 'حذف',
                 showCancelButton: true,
                 confirmButtonText: 'نعم، قدّم طلب الحذف',
                 cancelButtonText: 'إلغاء',
                 customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
                 buttonsStyling: false,
+                inputValidator: (value) => (value || '').trim() !== 'حذف' ? 'اكتب كلمة "حذف" بالضبط للمتابعة' : undefined,
             });
-            if (!result.isConfirmed) return;
+            if (!step2.isConfirmed) return;
 
             const delResult = await requestAccountDeletion();
             if (delResult.ok) {

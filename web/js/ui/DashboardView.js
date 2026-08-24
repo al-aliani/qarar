@@ -982,8 +982,7 @@ export class DashboardView {
             return `
                 <div class="dv-quality-mini ${level}">
                     <div class="dv-quality-mini__row">
-                        <span title="نسبة اكتمال حقول الدراسة — لا تقيس جودة القرار المالي نفسه">جودة المسودة</span>
-                        <b class="dv-num">${percentage}%</b>
+                        <span title="نسبة اكتمال حقول الدراسة — لا تقيس جودة القرار المالي نفسه">اكتمال البيانات: <b class="dv-num">${percentage}%</b></span>
                     </div>
                     <div class="dv-track dv-track--thin"><div class="dv-track__fill" style="width: ${percentage}%"></div></div>
                     ${percentage < 100 && tips.length ? `<p class="dv-quality-mini__tip" title="نصائح لرفع النقاط">${inlineIcon('trend')} ${tips[0]}</p>` : ''}
@@ -1043,6 +1042,7 @@ export class DashboardView {
 
                 ${badges ? `<div class="dv-project__badges">${badges}</div>` : ''}
                 ${isLocal && !isCloud ? `<p class="dv-project__local-warning" role="note">هذه المسودة محفوظة على هذا الجهاز فقط. صدّر نسخة احتياطية قبل تغيير الجهاز أو مسح بيانات المتصفح.</p>` : ''}
+                ${isLocal && !isCloud && this.currentUser ? `<button type="button" class="btn btn--sm btn--secondary btn-save-to-cloud" data-id="${project.id}" style="margin-top:6px;">${icon('i-upload')} احفظها في حسابي</button>` : ''}
 
                 ${folders.length ? `
                 <div class="dv-project__folder">
@@ -1532,6 +1532,49 @@ export class DashboardView {
                 } catch (err) {
                     console.error('Rename failed:', err);
                     toast.error('فشل تحديث الاسم');
+                }
+            });
+        });
+
+        // Save to Account — يرفع نسخة سحابية لدراسة محلية بمعرّفها بالذات، دون لمس
+        // الدراسة النشطة حالياً في المتجر. النسخة المحلية تبقى كما هي دائماً: نفس
+        // PersistenceService.save يكتب محلياً أولاً بلا شرط، ثم يحاول السحابة —
+        // فلا فقدان للنسخة الاحتياطية المحلية سواء نجحت السحابة أو فشلت.
+        this.container.querySelectorAll('.btn-save-to-cloud').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                if (!id) return;
+                const originalHTML = btn.innerHTML;
+                btn.disabled = true;
+                btn.textContent = 'جاري الحفظ...';
+                try {
+                    const loaded = await ProjectManager.loadProject(id);
+                    if (!loaded?.data) {
+                        toast.error('تعذر العثور على الدراسة لحفظها');
+                        btn.disabled = false;
+                        btn.innerHTML = originalHTML;
+                        return;
+                    }
+                    // نستدعي PersistenceService.save مباشرة (بدل ProjectManager.saveProject)
+                    // لأن الأخيرة تُرجع success:true حتى لو فشلت المزامنة السحابية فعلياً
+                    // (cloudSyncFailed) طالما الحفظ المحلي نجح — لا يكفي لزر غرضه الوحيد
+                    // تأكيد وجود نسخة سحابية فعلاً.
+                    const { PersistenceService } = await import('../services/PersistenceService.js');
+                    const result = await PersistenceService.save(id, loaded.data);
+                    if (result.location === 'both') {
+                        toast.success('تم حفظ نسخة سحابية من الدراسة في حسابك، والنسخة المحلية باقية كما هي');
+                        this.render();
+                    } else {
+                        toast.error(result.error || 'تعذر رفع الدراسة للسحابة، حاول مرة أخرى');
+                        btn.disabled = false;
+                        btn.innerHTML = originalHTML;
+                    }
+                } catch (err) {
+                    console.error('Save to account failed:', err);
+                    toast.error('فشل الحفظ في الحساب: ' + (err.message || 'خطأ غير معروف'));
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
                 }
             });
         });

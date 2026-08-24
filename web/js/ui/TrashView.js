@@ -70,7 +70,7 @@ export class TrashView {
                         <button class="btn-restore btn btn-sm btn-outline-primary flex-1 py-1" data-id="${project.id}">
                             <svg class="ic" aria-hidden="true"><use href="#i-reset"/></svg> استعادة
                         </button>
-                        <button class="btn-permanent-delete btn btn-sm btn-outline-danger flex-1 py-1 text-red-600 hover:bg-red-50" data-id="${project.id}">
+                        <button class="btn-permanent-delete btn btn-sm btn-outline-danger flex-1 py-1 text-red-600 hover:bg-red-50" data-id="${project.id}" data-name="${String(project.name || '').replace(/"/g, '&quot;')}">
                             <svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> حذف نهائي
                         </button>
                     </div>
@@ -116,25 +116,41 @@ export class TrashView {
         // Permanent Delete
         this.container.querySelectorAll('.btn-permanent-delete').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                const id = e.target.closest('button').dataset.id;
-                const result = await Swal.fire({
+                const target = e.target.closest('button');
+                const id = target.dataset.id;
+                const name = target.dataset.name || 'هذا المشروع';
+                const step1 = await Swal.fire({
                     title: 'هل أنت متأكد؟',
                     text: 'تحذير: الحذف النهائي لا يمكن التراجع عنه! هل أنت متأكد؟',
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonText: 'نعم، احذف نهائياً',
+                    confirmButtonText: 'متابعة',
                     cancelButtonText: 'إلغاء',
                     customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
                     buttonsStyling: false
                 });
-                if (result.isConfirmed) {
-                    try {
-                        await ProjectManager.permanentDelete(id);
-                        toast.success('تم الحذف نهائياً');
-                        this._loadTrash(); // Refresh
-                    } catch (err) {
-                        toast.error('فشل الحذف النهائي');
-                    }
+                if (!step1.isConfirmed) return;
+
+                const step2 = await Swal.fire({
+                    title: 'تأكيد أخير',
+                    text: `للمتابعة، اكتب اسم المشروع "${name}" بالضبط ثم اضغط تأكيد.`,
+                    input: 'text',
+                    inputPlaceholder: name,
+                    showCancelButton: true,
+                    confirmButtonText: 'نعم، احذف نهائياً',
+                    cancelButtonText: 'إلغاء',
+                    customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                    buttonsStyling: false,
+                    inputValidator: (value) => (value || '').trim() !== name ? 'الاسم غير مطابق' : undefined
+                });
+                if (!step2.isConfirmed) return;
+
+                try {
+                    await ProjectManager.permanentDelete(id);
+                    toast.success('تم الحذف نهائياً');
+                    this._loadTrash(); // Refresh
+                } catch (err) {
+                    toast.error('فشل الحذف النهائي');
                 }
             });
         });

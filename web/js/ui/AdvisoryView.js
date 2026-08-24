@@ -27,7 +27,7 @@ export class AdvisoryView {
                 <div class="grid grid-cols-3 gap-3 mb-5">
                     ${Object.entries(LEVELS).map(([id, item]) => `<label class="card p-4" style="cursor:pointer"><input type="radio" name="consultLevel" value="${id}" ${id === 'consultant' ? 'checked' : ''}><strong class="block mt-2">${item.label}</strong><span class="text-sm text-muted block">${item.desc}</span><span class="text-gold font-bold block mt-2">${item.price} ريال</span></label>`).join('')}
                 </div>
-                <div class="card p-6 mb-6">
+                <div class="card p-6 mb-6" id="advisoryRequestForm">
                     <div class="form-group mb-3"><label class="flex items-center gap-2"><input type="checkbox" id="consultFromStart"><span>أحتاج مختصًا يساعدني من بداية كتابة دراسة الجدوى</span></label></div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="form-group"><label class="block text-sm mb-1">المجال المطلوب</label><input id="consultSpecialty" class="form-input w-full" placeholder="مثال: مالي، تسويقي، تشغيلي" required></div>
@@ -38,10 +38,14 @@ export class AdvisoryView {
                     <div id="consultError" class="text-danger text-sm mt-2" style="display:none"></div>
                     <button type="button" id="consultSubmit" class="btn btn--primary mt-4">إرسال الطلب</button>
                 </div>
-                <div class="card p-6"><h2 class="text-lg font-bold mb-4">طلبات الاستشارة</h2>${requests.length ? requests.map(r => `<div class="flex items-center justify-between gap-3 py-3" style="border-bottom:1px solid var(--c-border)"><div><strong>${escapeHtml(LEVELS[r.consultant_level]?.label || r.consultant_level)} — ${escapeHtml(r.specialty)}</strong><div class="text-xs text-muted">${escapeHtml(r.sector)} · ${new Date(r.created_at).toLocaleDateString('ar-SA')}</div></div><div class="text-end"><span class="badge">${escapeHtml(STATUS[r.status] || r.status)}</span><div class="text-sm font-bold mt-1">${Number(r.amount_sar).toLocaleString('ar-SA')} ريال</div></div></div>`).join('') : '<p class="text-muted">لا توجد طلبات استشارة بعد.</p>'}</div>
+                <div class="card p-6"><h2 class="text-lg font-bold mb-4">طلبات الاستشارة</h2>${requests.length ? requests.map(r => `<div class="flex items-center justify-between gap-3 py-3" style="border-bottom:1px solid var(--c-border)"><div><strong>${escapeHtml(LEVELS[r.consultant_level]?.label || r.consultant_level)} — ${escapeHtml(r.specialty)}</strong><div class="text-xs text-muted">${escapeHtml(r.sector)} · ${new Date(r.created_at).toLocaleDateString('ar-SA')}</div></div><div class="text-end"><span class="badge">${escapeHtml(STATUS[r.status] || r.status)}</span><div class="text-sm font-bold mt-1">${Number(r.amount_sar).toLocaleString('ar-SA')} ريال</div></div></div>`).join('') : '<p class="text-muted">لا توجد طلبات استشارة بعد.</p><button type="button" id="advisoryEmptyNewRequestBtn" class="btn btn--secondary mt-2">بدء طلب استشارة جديد</button>'}</div>
             </div>`;
         this.container.querySelector('#advisoryBack')?.addEventListener('click', () => this.onBack());
         this.container.querySelector('#consultSubmit')?.addEventListener('click', () => this.submit());
+        this.container.querySelector('#advisoryEmptyNewRequestBtn')?.addEventListener('click', () => {
+            this.container.querySelector('#advisoryRequestForm')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            this.container.querySelector('#consultSpecialty')?.focus();
+        });
     }
 
     async submit() {

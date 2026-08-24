@@ -7,7 +7,8 @@
 // الآن كل الشاشات والمصدّرات تقرأ من engine.js حصراً.
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { hasMinimumRevenueData } from '../utils/dataSufficiency.js';
-import { DEFAULT_SCENARIOS } from '../core/schema.js';
+import { DEFAULT_SCENARIOS, SECTIONS } from '../core/schema.js';
+import { stepIndexById } from '../core/wizardSteps.js';
 import { SmartAdvisor } from '../services/SmartAdvisor.js';
 import { aiConnector } from '../services/AIConnector.js';
 import { indicatorHelp } from '../utils/glossary.js';
@@ -109,8 +110,15 @@ export class FinancialDashboard {
                             <li>التكاليف الرأسمالية (خطوة "الدراسة الفنية")</li>
                             <li>التكاليف التشغيلية (خطوات "الموارد البشرية" و"اللوجستية" و"الإدارية")</li>
                         </ul>
+                        <button type="button" id="btnGoRevenueStep" class="btn btn--primary btn--sm mt-3">الانتقال إلى خطوة مصادر الإيرادات</button>
                     </div>
                 </div>`;
+            this.container.querySelector('#btnGoRevenueStep')?.addEventListener('click', () => {
+                const stepIndex = stepIndexById(SECTIONS.REVENUE);
+                if (Number.isInteger(stepIndex) && stepIndex >= 0) {
+                    window.dispatchEvent(new CustomEvent('feasibility:navigateToStep', { detail: { stepIndex } }));
+                }
+            });
             return;
         }
 

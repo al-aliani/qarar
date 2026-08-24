@@ -51,7 +51,7 @@ export class SupportTicketsView {
                     ← العودة للدراسة
                 </button>
 
-                <div class="card p-6 mb-4">
+                <div class="card p-6 mb-4" id="supportNewTicketForm">
                     <h2 class="text-xl font-bold mb-4" style="border-bottom: 1px solid var(--c-border); padding-bottom: var(--s-2);">تذكرة دعم جديدة</h2>
                     <div class="form-group mb-3">
                         <label class="block text-sm font-medium mb-1" for="supportSubject">الموضوع</label>
@@ -69,7 +69,7 @@ export class SupportTicketsView {
                     <h2 class="text-xl font-bold mb-4" style="border-bottom: 1px solid var(--c-border); padding-bottom: var(--s-2);">تذاكرك</h2>
                     <div id="supportTicketsList">
                         ${tickets.length === 0
-                            ? '<p class="text-muted">لا توجد تذاكر دعم بعد.</p>'
+                            ? '<p class="text-muted">لا توجد تذاكر دعم بعد.</p><button type="button" id="supportEmptyNewTicketBtn" class="btn btn--secondary mt-2">فتح تذكرة دعم جديدة</button>'
                             : tickets.map((t) => this._renderTicketRow(t)).join('')}
                     </div>
                 </div>
@@ -79,6 +79,10 @@ export class SupportTicketsView {
         this.container.querySelector('#btnSupportBack')?.addEventListener('click', () => this.onBack());
         this._bindSubmitForm();
         this._bindTicketRows(tickets);
+        this.container.querySelector('#supportEmptyNewTicketBtn')?.addEventListener('click', () => {
+            this.container.querySelector('#supportNewTicketForm')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            this.container.querySelector('#supportSubject')?.focus();
+        });
     }
 
     _renderTicketRow(ticket) {

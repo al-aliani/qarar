@@ -11,6 +11,7 @@ export class ReadyStudiesView {
         this.search = '';
         this.categories = [];
         this.tags = [];
+        this.languages = [];
         this.loaded = false;
     }
 
@@ -53,7 +54,8 @@ export class ReadyStudiesView {
         return studies.filter((study) => {
             const matchesCategory = !this.categories.length || this.categories.includes(study.category);
             const matchesTag = !this.tags.length || (study.tags || []).some((tag) => this.tags.includes(tag));
-            if (!matchesCategory || !matchesTag) return false;
+            const matchesLanguage = !this.languages.length || this.languages.includes(study.language);
+            if (!matchesCategory || !matchesTag || !matchesLanguage) return false;
             if (!query) return true;
             const haystack = [study.title, study.filename, study.categoryLabel, study.excerpt, ...(study.tags || [])]
                 .join(' ')
@@ -84,15 +86,30 @@ export class ReadyStudiesView {
             .slice(0, 8);
     }
 
+    getLanguageOptions() {
+        const labels = { ar: 'عربي', en: 'إنجليزي', mixed: 'عربي وإنجليزي' };
+        const counts = new Map();
+        for (const study of this.catalog?.studies || []) {
+            const lang = study.language;
+            if (!lang) continue;
+            counts.set(lang, (counts.get(lang) || 0) + 1);
+        }
+        return [...counts.entries()]
+            .map(([value, count]) => ({ value, label: labels[value] || value, count }))
+            .sort((a, b) => b.count - a.count);
+    }
+
     draw() {
         const catalog = this.catalog || { total: 0, categories: [], tags: [], studies: [] };
         const filtered = this.getFilteredStudies();
         const categories = catalog.categories || [];
         const tags = catalog.tags || [];
-        const hasFilters = Boolean(this.search.trim() || this.categories.length || this.tags.length);
+        const hasFilters = Boolean(this.search.trim() || this.categories.length || this.tags.length || this.languages.length);
         const suggestions = this.getSearchSuggestions();
+        const languageOptions = this.getLanguageOptions();
         const categorySummary = this.categories.length ? `${this.categories.length} محدد` : 'كل التصنيفات';
         const tagSummary = this.tags.length ? `${this.tags.length} محدد` : 'كل الوسوم';
+        const languageSummary = this.languages.length ? `${this.languages.length} محدد` : 'كل اللغات';
         const categoryOptions = categories.map((category) => `
             <label class="rs-filter-option">
                 <input type="checkbox" data-rs-category-option value="${escapeAttr(category.id)}" ${this.categories.includes(category.id) ? 'checked' : ''} />
@@ -103,6 +120,12 @@ export class ReadyStudiesView {
             <label class="rs-filter-option">
                 <input type="checkbox" data-rs-tag-option value="${escapeAttr(tag.label)}" ${this.tags.includes(tag.label) ? 'checked' : ''} />
                 <span>${escapeHtml(tag.label)}</span><small>${escapeHtml(tag.count)}</small>
+            </label>
+        `).join('');
+        const languageOptionsHtml = languageOptions.map((lang) => `
+            <label class="rs-filter-option">
+                <input type="checkbox" data-rs-language-option value="${escapeAttr(lang.value)}" ${this.languages.includes(lang.value) ? 'checked' : ''} />
+                <span>${escapeHtml(lang.label)}</span><small>${escapeHtml(lang.count)}</small>
             </label>
         `).join('');
         const suggestionsHtml = suggestions.length ? `
@@ -166,6 +189,13 @@ export class ReadyStudiesView {
                         <div class="rs-filter-menu">
                             <button type="button" class="rs-filter-clear" data-rs-clear-tags>عرض كل الوسوم</button>
                             ${tagOptions}
+                        </div>
+                    </details>
+                    <details class="rs-multi-select">
+                        <summary><span>اللغة</span><strong>${escapeHtml(languageSummary)}</strong></summary>
+                        <div class="rs-filter-menu">
+                            <button type="button" class="rs-filter-clear" data-rs-clear-languages>عرض كل اللغات</button>
+                            ${languageOptionsHtml}
                         </div>
                     </details>
                     ${hasFilters ? '<button type="button" class="btn btn--ghost btn--sm" data-rs-clear>مسح التصفية</button>' : ''}
@@ -232,6 +262,13 @@ export class ReadyStudiesView {
                 this.draw();
             });
         });
+        this.container.querySelectorAll('[data-rs-language-option]').forEach((input) => {
+            input.addEventListener('change', () => {
+                this.languages = [...this.container.querySelectorAll('[data-rs-language-option]:checked')]
+                    .map((option) => option.value);
+                this.draw();
+            });
+        });
         this.container.querySelectorAll('[data-rs-suggestion]').forEach((button) => {
             button.addEventListener('click', () => {
                 this.search = button.dataset.rsSuggestion || '';
@@ -249,11 +286,16 @@ export class ReadyStudiesView {
             this.tags = [];
             this.draw();
         });
+        this.container.querySelector('[data-rs-clear-languages]')?.addEventListener('click', () => {
+            this.languages = [];
+            this.draw();
+        });
         this.container.querySelectorAll('[data-rs-clear]').forEach((button) => {
             button.addEventListener('click', () => {
                 this.search = '';
                 this.categories = [];
                 this.tags = [];
+                this.languages = [];
                 this.draw();
             });
         });
