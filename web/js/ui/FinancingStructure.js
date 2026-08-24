@@ -399,6 +399,19 @@ export class FinancingStructure {
     renderFundingValidation(sources, totalCapex) {
         const totalFunded = ['equity', 'bankLoan', 'investors', 'governmentSupport']
             .reduce((sum, key) => sum + Number(sources[key]?.amount || 0), 0);
+
+        // تدقيق 2026-08-24: totalCapex=0 (لم تُدخل تكلفة استثمارية بعد) يجعل الفرق أدناه
+        // صفراً فتُحسب "متطابقة" ويظهر نجاح أخضر كاذب رغم عدم وجود أي بيانات فعلياً.
+        if (!(totalCapex > 0)) {
+            return `
+                <div class="funding-validation" id="fundingValidation">
+                    <span class="validation-label">إجمالي التمويل:</span>
+                    <span class="validation-value" id="totalFunding">${this.formatCurrency(totalFunded)} / ${this.formatCurrency(totalCapex)}</span>
+                    <span class="validation-status" id="fundingStatus"><span class="text-muted">${icon('i-info')} لم تُدخل بعد بيانات التكلفة الاستثمارية — أكمل خطوة «الدراسة الفنية» لحساب إجمالي الاستثمار المطلوب، ثم عد لمطابقة مصادر التمويل</span></span>
+                </div>
+            `;
+        }
+
         const gap = totalCapex - totalFunded;
         const isBalanced = Math.abs(gap) < 1;
         // تدقيق 2026-07-08 (ملاحظة منخفضة #65): زر «سدّ الفجوة» يعدّل التمويل الذاتي

@@ -71,6 +71,18 @@ describe('DecisionDashboard UI Tests', () => {
         expect(document.querySelector('.dd-verdict__title')).toBeNull();
     });
 
+    it('يعرض حالة "لا بيانات" حين يوجد إيراد واحد فقط بلا أي تكلفة رأسمالية أو تشغيلية أو تمويل (لا درجة/توصية مزيّفة)', async () => {
+        const state = createGoStudy();
+        state[SECTIONS.TECHNICAL] = { equipment: [], buildings: [], furniture: [], establishmentCosts: [], capacityUtilization: [] };
+        state[SECTIONS.HR] = { positions: [] };
+        state[SECTIONS.TECH_RESOURCES] = { techResources: [] };
+        state[SECTIONS.FINANCING] = { sources: {} };
+        const dashboard = new DecisionDashboard('decisionDashboardContainer', fakeStore(state));
+        await dashboard.render();
+        expect(document.body.textContent).toContain('لا توجد بيانات تكلفة');
+        expect(document.querySelector('.dd-verdict__title')).toBeNull();
+    });
+
     it('يعرض توصية "مشروع مجدي (GO)" لدراسة مطعم مربحة فعلياً عبر المحرك الحقيقي', async () => {
         const dashboard = new DecisionDashboard('decisionDashboardContainer', fakeStore(createGoStudy()));
         // render() يستدعي calculateStudy/calculateProjectScore الحقيقيين داخلياً — لا نتائج مصطنعة هنا.

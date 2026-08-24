@@ -17,7 +17,7 @@ import { buildFinancingDiagnostics } from '../utils/financingDiagnostics.js';
 import { buildIndicatorInsights } from '../utils/indicatorInsights.js';
 import { escapeHtml } from '../utils/escape.js';
 import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
-import { hasMinimumRevenueData } from '../utils/dataSufficiency.js';
+import { hasMinimumRevenueData, hasMinimumFinancialData } from '../utils/dataSufficiency.js';
 import { toast } from '../utils/toast.js';
 import 'gridstack/dist/gridstack.min.css';
 
@@ -45,15 +45,23 @@ export class DecisionDashboard {
         const isCurrent = typeof options.isCurrent === 'function' ? options.isCurrent : () => true;
         const state = this.store.getState();
 
-        // بلا إيرادات لا يصح إصدار حكم «غير مجدي» بأرقام سالبة مضللة —
-        // نعرض حالة «لا بيانات» إرشادية توجّه للخطوات الناقصة (كما في القوائم المالية).
-        if (!hasMinimumRevenueData(state)) {
+        // بلا إيرادات أو بلا أي بيانات تكلفة لا يصح إصدار حكم «غير مجدي» بأرقام سالبة
+        // مضللة — نعرض حالة «لا بيانات» إرشادية توجّه للخطوات الناقصة (كما في القوائم
+        // المالية). مصدر إيراد واحد فقط بلا أي أصل رأسمالي/موظف/تمويل كان يجتاز البوابة
+        // القديمة (hasMinimumRevenueData وحدها) فتُنتج calculateProjectScore درجة/توصية
+        // من مؤشرات NPV/IRR/ROI معوَّضة بصفر بدل تركها غير محسوبة.
+        const hasRevenueData = hasMinimumRevenueData(state);
+        const hasFinancialData = hasMinimumFinancialData(state);
+        if (!hasRevenueData || !hasFinancialData) {
+            const warningHeading = hasRevenueData
+                ? 'لا توجد بيانات تكلفة (رأسمالية أو تشغيلية أو تمويل). يرجى إكمال أحد البنود أدناه.'
+                : 'لا توجد بيانات إيرادات. يرجى إضافة مصادر الإيرادات في خطوة "مصادر الإيرادات".';
             this.container.innerHTML = `
                 <div class="decision-dashboard animate-entry">
                     <div class="card glass-card">
                         <h2 class="card-title page-title">لوحة القرار الاستثماري</h2>
                         <div class="alert alert--warning">
-                            <p><strong><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> لا توجد بيانات إيرادات. يرجى إضافة مصادر الإيرادات في خطوة "مصادر الإيرادات".</strong></p>
+                            <p><strong><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> ${warningHeading}</strong></p>
                             <p class="text-sm mt-2">لا يمكن إصدار توصية (مجدٍ / غير مجدٍ) قبل إدخال الحد الأدنى من البيانات. أكمل:</p>
                             <ul class="text-sm mt-2" style="list-style: disc; padding-right: 20px;">
                                 <li>مصادر الإيرادات (خطوة "مصادر الإيرادات")</li>

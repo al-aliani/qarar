@@ -40,7 +40,10 @@ export class SensitivityAnalysis {
             return;
         }
 
-        const baseNPV = baseResults?.indicators?.npv || 0;
+        // null عند تعذّر الحساب (لا صفراً ملفَّقاً) — نفس حارس runScenario تحت مباشرة؛
+        // `|| 0` السابق كان يحوّل NPV غير معرَّف إلى صفر حقيقي فيُعرض "ر.س. 0" أخضر
+        const baseNPVRaw = baseResults?.indicators?.npv;
+        const baseNPV = (baseNPVRaw == null || Number.isNaN(baseNPVRaw)) ? null : baseNPVRaw;
 
         // Helper to run scenario
         // يُرجع null عند تعذّر الحساب (لا صفراً ملفَّقاً) — كي يظهر «--» محايداً لا رقماً أخضر زائفاً

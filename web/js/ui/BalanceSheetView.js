@@ -181,13 +181,15 @@ export class BalanceSheetView {
                 </div>
 
                 <!-- Balance Check -->
-                <div class="balance-check ${sheet.isBalanced ? 'balanced' : 'unbalanced'}">
-                    ${sheet.isBalanced
+                <div class="balance-check ${sheet.hasNoData ? 'no-data' : (sheet.isBalanced ? 'balanced' : 'unbalanced')}">
+                    ${sheet.hasNoData
+                ? 'لا توجد بيانات كافية بعد'
+                : sheet.isBalanced
                 ? `${icon('i-check')} الميزانية متوازنة (الأصول = الخصوم + حقوق الملكية)`
                 : `${icon('i-warning')} تنبيه: الميزانية غير متوازنة! الفرق: ` + this.formatCurrency(sheet.imbalance)
             }
                 </div>
-                ${!sheet.isBalanced ? `<div class="balance-check-reason">${this.getImbalanceReason(sheet)}</div>` : ''}
+                ${(!sheet.isBalanced && !sheet.hasNoData) ? `<div class="balance-check-reason">${this.getImbalanceReason(sheet)}</div>` : ''}
             </div>
 
             <style>
@@ -258,6 +260,7 @@ export class BalanceSheetView {
                 }
                 .balance-check.balanced { background: rgba(16,185,129,0.06); color: var(--c-success); }
                 .balance-check.unbalanced { background: rgba(239,68,68,0.15); color: #f87171; }
+                .balance-check.no-data { background: rgba(255,255,255,0.04); color: var(--c-text-muted); }
                 .balance-check-reason {
                     margin-top: 8px;
                     padding: 10px 12px;

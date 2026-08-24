@@ -59,7 +59,12 @@ export class BreakEvenAnalysis {
         // عرض توزيع التكاليف فقط (لا يُستخدم لإعادة اشتقاق نقطة التعادل) — بنفس تعريف
         // المحرك (ثوابت السنة الأولى + الإهلاك) كي يتّسق مع رقم bepValue أعلاه.
         const fixedCosts = (year1.fixedCosts || 0) + (year1.depreciation || 0);
-        const bepPercentage = totalRevenue > 0 ? (bepValue / totalRevenue) : 0;
+        // نفس علة DecisionDashboard.js (تدقيق 2026-07-20، الأسطر 97-101): breakEvenPointValue=0
+        // يحتمل معنيين متعاكسين — تعادل مستحيل (هامش مساهمة ≤ 0) أو بلا تكاليف ثابتة — وإيراد صفر
+        // ينتج نفس اللبس. بلا هذا الحارس تُعرض «هامش أمان 100%» ناجحاً حتى بلا إيراد فعلي؛ نعتمد
+        // علَم المحرك breakEvenAchievable مع شرط الإيراد، فتُعرض حالة محايدة (—) بدل نسبة كاذبة.
+        const breakEvenAchievable = results.indicators?.breakEvenAchievable !== false;
+        const bepPercentage = (breakEvenAchievable && totalRevenue > 0) ? (bepValue / totalRevenue) : null;
 
         this.container.innerHTML = `
             <div class="break-even-analysis">
@@ -76,11 +81,11 @@ export class BreakEvenAnalysis {
                         </div>
                         <div class="bep-stat">
                             <span class="label">نسبة التعادل من الإيراد</span>
-                            <span class="value">${(bepPercentage * 100).toFixed(1)}%</span>
+                            <span class="value">${bepPercentage === null ? '—' : (bepPercentage * 100).toFixed(1) + '%'}</span>
                         </div>
                         <div class="bep-stat">
                             <span class="label">هامش الأمان</span>
-                            <span class="value ${bepPercentage <= 1 ? 'text-success' : 'text-danger'}">${((1 - bepPercentage) * 100).toFixed(1)}%</span>
+                            <span class="value ${bepPercentage === null ? 'text-muted' : (bepPercentage <= 1 ? 'text-success' : 'text-danger')}">${bepPercentage === null ? '—' : ((1 - bepPercentage) * 100).toFixed(1) + '%'}</span>
                         </div>
                     </div>
                 </div>
@@ -99,9 +104,11 @@ export class BreakEvenAnalysis {
                     </div>
                     <div class="bep-interpretation">
                         <p>${icon('i-lightbulb')} يحتاج المشروع لتحقيق مبيعات لا تقل عن <strong>${this.formatCurrency(bepValue)}</strong> سنوياً لتغطية كافة تكاليفه دون ربح أو خسارة.</p>
-                        ${bepPercentage <= 1
-                            ? `<p>المشروع في منطقة الأمان بهامش <strong>${((1 - bepPercentage) * 100).toFixed(0)}%</strong> من إيراداته المستهدفة.</p>`
-                            : `<p class="text-danger">${icon('i-warning')} الإيراد المتوقع <strong>دون نقطة التعادل بنسبة ${((bepPercentage - 1) * 100).toFixed(0)}%</strong> — المشروع يعمل بخسارة في السنة الأولى بهذه الأرقام. ارفع المبيعات أو خفّض الثوابت.</p>`}
+                        ${bepPercentage === null
+                            ? `<p class="text-muted">${icon('i-warning')} لا يمكن حساب هامش الأمان — لا يوجد إيراد فعلي أو هامش مساهمة موجب للسنة الأولى بهذه الأرقام.</p>`
+                            : bepPercentage <= 1
+                                ? `<p>المشروع في منطقة الأمان بهامش <strong>${((1 - bepPercentage) * 100).toFixed(0)}%</strong> من إيراداته المستهدفة.</p>`
+                                : `<p class="text-danger">${icon('i-warning')} الإيراد المتوقع <strong>دون نقطة التعادل بنسبة ${((bepPercentage - 1) * 100).toFixed(0)}%</strong> — المشروع يعمل بخسارة في السنة الأولى بهذه الأرقام. ارفع المبيعات أو خفّض الثوابت.</p>`}
                     </div>
                 </div>
             </div>
