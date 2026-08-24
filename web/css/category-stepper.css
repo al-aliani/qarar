@@ -99,3 +99,15 @@
 @media (max-width: 768px) {
   .category-stepper { display: none !important; }
 }
+
+/* بديل الجوال لـcategory-stepper — قائمة <select> واحدة تعرض التصنيفات الثمانية بأسمائها
+   الكاملة وتنتقل مباشرة بينها (StudyJourney.renderMobileCategoryNav). مخفية على المكتب،
+   و:empty تُخفيها قبل أول render (نفس منطق .category-stepper:not(:empty) أعلاه). */
+.mobile-category-nav { display: none; }
+@media (max-width: 768px) {
+  .mobile-category-nav:not(:empty) {
+    display: block;
+    margin: 10px max(16px, calc((100% - 800px) / 2)) 4px;
+    font-weight: 600;
+  }
+}

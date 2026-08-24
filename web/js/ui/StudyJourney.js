@@ -55,6 +55,7 @@ export class StudyJourney {
         this.mobile = document.getElementById(options.mobileId || 'mobileStageIndicator');
         this.breadcrumb = document.getElementById(options.breadcrumbId || 'breadcrumbBar');
         this.categoryStepper = document.getElementById(options.categoryStepperId || 'categoryStepper');
+        this.mobileCategoryNav = document.getElementById(options.mobileCategoryNavId || 'mobileCategoryNav');
         this.openButton = document.getElementById(options.openButtonId || 'btnOpenStudyMap');
         this.dialog = document.getElementById(options.dialogId || 'studyMapDialog');
         this.onNavigate = options.onNavigate || (() => {});
@@ -118,9 +119,17 @@ export class StudyJourney {
      * لا على progressTracker — هذا شريط تقدّم في الرحلة، لا قائمة اكتمال بيانات
      * (تلك مسؤولية Sidebar.js القائمة أصلاً)، فلا داعٍ لربطه بمنطق رؤية الوضع
      * (mini/simple) الذي قد يجعل فئة "غير مكتملة" زوراً لخطوات مخفية عمداً.
+     *
+     * تدقيق 2026-08-24: category-stepper كامل مخفي على الجوال (≤768px، انظر
+     * category-stepper.css) بلا أي بديل — mobileCategoryNav (قائمة <select> في
+     * index.html، ظاهرة فقط بنفس نقطة الكسر) تُبنى هنا من نفس context.visibleSteps
+     * كي تبقى متطابقة تماماً مع النسخة المكتبية (نفس الفلترة حسب وضع مصغّر/بسيط)
+     * وتستخدم نفس data-study-step/onNavigate عبر خيار value في bindEvents().
      */
     renderCategoryStepper(context) {
-        if (!this.categoryStepper || this.unitLabel !== 'التصنيف') return;
+        if (this.unitLabel !== 'التصنيف') return;
+        this.renderMobileCategoryNav(context);
+        if (!this.categoryStepper) return;
 
         const cards = context.visibleSteps.map((step, localIndex) => {
             const isActive = localIndex === context.localIndex;
@@ -152,6 +161,16 @@ export class StudyJourney {
         }).join('');
 
         this.categoryStepper.innerHTML = cards;
+    }
+
+    /** قائمة <select> بديلة لـcategory-stepper على الجوال — انظر تعليق renderCategoryStepper أعلاه. */
+    renderMobileCategoryNav(context) {
+        if (!this.mobileCategoryNav) return;
+        const options = context.visibleSteps.map((step, localIndex) => {
+            const isActive = localIndex === context.localIndex;
+            return `<option value="${context.absoluteIndices[localIndex]}" ${isActive ? 'selected' : ''}>${escapeHtml(step.label)}</option>`;
+        }).join('');
+        this.mobileCategoryNav.innerHTML = options;
     }
 
     renderDialog(context) {
@@ -229,6 +248,12 @@ export class StudyJourney {
             const card = event.target.closest('[data-study-step]');
             if (!card) return;
             const target = Number(card.dataset.studyStep);
+            if (!Number.isInteger(target) || target < 0) return;
+            this.onNavigate(target);
+        });
+
+        this.mobileCategoryNav?.addEventListener('change', () => {
+            const target = Number(this.mobileCategoryNav.value);
             if (!Number.isInteger(target) || target < 0) return;
             this.onNavigate(target);
         });

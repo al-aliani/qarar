@@ -112,4 +112,44 @@ describe('StudyJourney — مسار موحّد ومصنّف لكل الخطوا�
         expect(document.getElementById('headerStageBar').textContent).toContain('التصنيف ٤ من ٨');
         expect(document.getElementById('btnOpenStudyMap').getAttribute('aria-label')).toContain('تصنيفات الدراسة');
     });
+
+    it('يعرض بديل الجوال (mobileCategoryNav) بنفس التصنيفات الثمانية بأسمائها الكاملة وينتقل عبره', () => {
+        const categories = SIDEBAR_SECTIONS.map(section => ({ id: section.id, label: section.label }));
+        const categorySections = categories.map((category, index) => ({
+            id: category.id,
+            label: category.label,
+            range: [index, index]
+        }));
+        const onNavigate = vi.fn();
+        document.body.innerHTML = `
+            <div id="headerStageBar"></div>
+            <div id="mobileStageIndicator"></div>
+            <nav id="breadcrumbBar"><button id="btnOpenStudyMap">المسار</button></nav>
+            <dialog id="studyMapDialog"></dialog>
+            <nav id="categoryStepper"></nav>
+            <select id="mobileCategoryNav"></select>`;
+        const journey = new StudyJourney({
+            steps: categories,
+            masterSteps: categories,
+            sections: categorySections,
+            unitLabel: 'التصنيف',
+            mapHeading: 'انتقل إلى أي تصنيف',
+            onNavigate
+        });
+
+        journey.update(5);
+
+        const select = document.getElementById('mobileCategoryNav');
+        const options = select.querySelectorAll('option');
+        expect(options).toHaveLength(8);
+        options.forEach((option, index) => {
+            expect(option.textContent).toBe(SIDEBAR_SECTIONS[index].label);
+            expect(Number(option.value)).toBe(index);
+        });
+        expect(select.value).toBe('5');
+
+        select.value = '2';
+        select.dispatchEvent(new Event('change'));
+        expect(onNavigate).toHaveBeenCalledWith(2);
+    });
 });

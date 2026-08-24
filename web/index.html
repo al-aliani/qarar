@@ -288,6 +288,9 @@
     <!-- Main Wizard Stage -->
     <main class="main-stage">
       <nav id="categoryStepper" class="category-stepper" aria-label="فئات الدراسة"></nav>
+      <!-- بديل الجوال لـcategoryStepper (مخفي بـ@media أعلاه ≤768px) — قائمة منسدلة تنقل
+           مباشرة بين تصنيفات الدراسة الثمانية، تُبنى وتُربط في StudyJourney.js. -->
+      <select id="mobileCategoryNav" class="mobile-category-nav" aria-label="التنقل بين تصنيفات الدراسة"></select>
       <div id="wizardContainer" class="wizard-container" tabindex="-1">
         <!-- Active Step Content Injected Here -->
       </div>

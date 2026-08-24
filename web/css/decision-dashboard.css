@@ -2502,6 +2502,19 @@
     font-size: 0.78rem;
 }
 
+.dv-onb__choices {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 0 0 16px;
+}
+
+@media (max-width: 480px) {
+    .dv-onb__choices {
+        grid-template-columns: 1fr;
+    }
+}
+
 .dv-onb__actions {
     display: flex;
     flex-wrap: wrap;

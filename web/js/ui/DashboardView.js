@@ -859,26 +859,37 @@ export class DashboardView {
         overlay.id = 'onboardingOverlay';
 
         overlay.innerHTML = `
-            <div class="modal-card modal-card--onboarding" style="max-width:560px;" role="region" aria-labelledby="onboardingTitle">
+            <div class="modal-card modal-card--onboarding" style="max-width:620px;" role="region" aria-labelledby="onboardingTitle">
                 <div class="modal-header">
-                    <h3 id="onboardingTitle">مرحباً بك في محاكي الجدوى</h3>
+                    <h3 id="onboardingTitle">ماذا تريد أن تفعل؟</h3>
                     <button type="button" class="btn-close" aria-label="إغلاق">×</button>
                 </div>
                 <div class="modal-body text-sm">
-                    <p class="text-muted dv-onb__lead">ابدأ بأسرع طريق للوصول لقرار واضح، ثم صدّر تقريرك.</p>
-                    <ol class="dv-onb__steps">
-                        <li>
-                            <b>دراسة احترافية</b>
-                            <span>تفاصيل مناسبة للتمويل والتقديم للجهات.</span>
-                        </li>
-                        <li>
-                            <b>تصدير</b>
-                            <span>من داخل الدراسة: استخدم زر «تصدير» للحصول على التقرير والجداول والملف القابل للتعديل.</span>
-                        </li>
-                    </ol>
+                    <p class="text-muted dv-onb__lead">اختر ما يناسب هدفك الآن — يمكنك تغيير المسار لاحقاً في أي وقت.</p>
+                    <div class="dv-onb__choices">
+                        <button type="button" class="mode-card" data-onb-choice="quick">
+                            <span class="mode-card__icon" aria-hidden="true">${inlineIcon('bulb')}</span>
+                            <span class="mode-card__name">عندي فكرة وأريد اختبارها</span>
+                            <span class="mode-card__desc">دراسة سريعة ومصغّرة — أقل الأسئلة، لقرار أولي بسرعة.</span>
+                        </button>
+                        <button type="button" class="mode-card" data-onb-choice="full">
+                            <span class="mode-card__icon" aria-hidden="true">${inlineIcon('briefcase')}</span>
+                            <span class="mode-card__name">عندي مشروع قائم وأريد دراسة توسّع</span>
+                            <span class="mode-card__desc">دراسة احترافية كاملة بكل الأقسام والتحليلات.</span>
+                        </button>
+                        <button type="button" class="mode-card" data-onb-choice="funding">
+                            <span class="mode-card__icon" aria-hidden="true">${inlineIcon('bank')}</span>
+                            <span class="mode-card__name">أحتاج ملف لجهة تمويل</span>
+                            <span class="mode-card__desc">الدراسة الاحترافية الكاملة هي المسار الصحيح لملفات البنوك وجهات التمويل.</span>
+                        </button>
+                        <button type="button" class="mode-card" data-onb-choice="ready">
+                            <span class="mode-card__icon" aria-hidden="true">${inlineIcon('book')}</span>
+                            <span class="mode-card__name">أريد فقط تحميل نموذج جاهز</span>
+                            <span class="mode-card__desc">تصفّح مكتبة دراسات الجدوى الجاهزة للتحميل مباشرة.</span>
+                        </button>
+                    </div>
                     <div class="dv-onb__actions">
-                        <button type="button" id="btnOnboardingFull" class="btn btn--primary btn--sm">${inlineIcon('briefcase')} ابدأ دراسة احترافية</button>
-                        <button type="button" id="btnOnboardingDismiss" class="btn btn--ghost btn--sm">فهمت</button>
+                        <button type="button" id="btnOnboardingDismiss" class="btn btn--ghost btn--sm">لاحقاً</button>
                     </div>
                 </div>
             </div>
@@ -896,7 +907,7 @@ export class DashboardView {
 
         const closeBtn = overlay.querySelector('.btn-close');
         const btnDismiss = overlay.querySelector('#btnOnboardingDismiss');
-        const btnFull = overlay.querySelector('#btnOnboardingFull');
+        const choiceButtons = overlay.querySelectorAll('[data-onb-choice]');
 
         const restoreOverflow = () => { document.body.style.overflow = previousBodyOverflow; };
         const markDismissed = () => { try { localStorage.setItem(key, '1'); } catch (_) { } };
@@ -924,12 +935,31 @@ export class DashboardView {
         btnDismiss?.addEventListener('click', closeAndCleanup);
         overlay.addEventListener('click', (e) => { if (e.target === overlay) closeAndCleanup(); });
 
-        btnFull?.addEventListener('click', () => {
-            closeAndCleanup();
-            this.container.querySelector('#cardFullStudy')?.click();
+        // «عندي فكرة وأريد اختبارها»: نفس مسار «مشروع فارغ» في TemplateGallery (استبدال
+        // كامل بشاشة اختيار الوضع)، مع محاكاة نقرة حقيقية على بطاقة «مصغّر» — نفس ما يفعله
+        // المستخدم يدوياً لو فتح المعرض بنفسه واختارها، بلا أي منطق جديد.
+        const startQuickStudy = async () => {
+            const { TemplateGallery } = await import('./TemplateGallery.js');
+            const gallery = new TemplateGallery('templateGalleryOverlay', this.store);
+            gallery.open();
+            gallery.renderBlankAttributionForm('empty');
+            const miniCard = gallery.overlay.querySelector('.mode-card[data-mode="mini"]');
+            miniCard?.click();
+            miniCard?.focus();
+        };
+
+        choiceButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                closeAndCleanup();
+                const choice = btn.dataset.onbChoice;
+                if (choice === 'quick') startQuickStudy();
+                else if (choice === 'ready') this.container.querySelector('[data-dv-panel-button="additional"]')?.click();
+                // full / funding: كلاهما نفس مسار الدراسة الاحترافية الكاملة الوحيد
+                else this.container.querySelector('#cardFullStudy')?.click();
+            });
         });
 
-        setTimeout(() => (closeBtn || btnFull || btnDismiss)?.focus(), 0);
+        setTimeout(() => (closeBtn || choiceButtons[0] || btnDismiss)?.focus(), 0);
     }
 
 

@@ -97,6 +97,16 @@ export class StudyCategoryView {
             const pos = visibleStepOrder ? visibleStepOrder.indexOf(idx) : -1;
             return (pos >= 0 ? pos + 1 : idx + 1).toLocaleString('ar-SA');
         };
+        // مبدّل نمط العرض (أساسي/متقدم) في رأس الصفحة — الوسيلة الظاهرة الوحيدة لضبط
+        // localStorage.study_mode_preference بعد إخفاء الشريط الجانبي (Sidebar.js) نهائياً
+        // عبر main.css. نفس المفتاح/القيم المستهلكة فعلاً في DynamicTable.js/Wizard.js.
+        const currentMode = (this.store?.getState && this.store.getState()) || (this.store?.get && this.store.get()) || {};
+        const activeMode = currentMode.appSettings?.mode || localStorage.getItem('study_mode_preference') || 'advanced';
+        const modeToggleHTML = `
+            <div class="category-mode-toggle" role="group" aria-label="نمط الدراسة">
+                <button type="button" class="category-mode-toggle__btn ${activeMode === 'quick' ? 'is-active' : ''}" data-mode="quick" title="إخفاء التفاصيل المعقدة (للمبتدئين)" aria-pressed="${activeMode === 'quick'}">أساسي</button>
+                <button type="button" class="category-mode-toggle__btn ${activeMode === 'advanced' ? 'is-active' : ''}" data-mode="advanced" title="عرض كافة التحليلات (للمستشارين)" aria-pressed="${activeMode === 'advanced'}">متقدم</button>
+            </div>`;
         this.container.innerHTML = `
             <div class="category-page" data-category-index="${categoryIndex}">
                 <header class="category-page__header">
@@ -105,6 +115,7 @@ export class StudyCategoryView {
                         <h2>${category.label}</h2>
                         <p>${this.categoryDescription(category.id)}</p>
                     </div>
+                    ${modeToggleHTML}
                 </header>
 
                 <div class="category-page__sections${stepIndexes.some(index => this.steps[index].gridSize) ? ' category-page__sections--adaptive' : ''}">
@@ -220,6 +231,20 @@ export class StudyCategoryView {
         });
         this.container.querySelector('[data-category-next]')?.addEventListener('click', () => {
             if (this._navNext !== null) this.onNavigateCategory(this._navNext);
+        });
+
+        // مبدّل نمط العرض: يكتب localStorage.study_mode_preference أولاً (تقرؤه نسخ
+        // DynamicTable/Wizard الجديدة في مُنشئها)، ثم يحدّث appSettings.mode عبر الستور
+        // — نفس مسار Sidebar.js/applyMode القائم فعلاً في app.js الذي يعيد رسم صفحة
+        // التصنيف الحالية حياً (navigateToCategory) دون إعادة تحميل الصفحة.
+        this.container.querySelectorAll('.category-mode-toggle__btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.mode;
+                if (!mode) return;
+                localStorage.setItem('study_mode_preference', mode);
+                const state = (this.store?.getState && this.store.getState()) || (this.store?.get && this.store.get()) || {};
+                this.store.update('appSettings', { ...(state.appSettings || {}), mode });
+            });
         });
     }
 
