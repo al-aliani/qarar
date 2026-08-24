@@ -11,7 +11,9 @@
         min-height: 44px;
     }
     
-    .btn-icon {
+    .btn-icon,
+    .btn-icon-sm,
+    .btn-xs {
         min-width: 44px;
         min-height: 44px;
         padding: 8px;

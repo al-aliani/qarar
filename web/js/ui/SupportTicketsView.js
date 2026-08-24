@@ -61,7 +61,7 @@ export class SupportTicketsView {
                         <label class="block text-sm font-medium mb-1" for="supportBody">تفاصيل المشكلة</label>
                         <textarea id="supportBody" class="form-input w-full" rows="4" placeholder="اشرح المشكلة بالتفصيل..."></textarea>
                     </div>
-                    <div id="supportSubmitError" class="text-danger text-sm mb-2" style="display:none;"></div>
+                    <div id="supportSubmitError" class="text-danger text-sm mb-2" role="alert" style="display:none;"></div>
                     <button type="button" id="btnSupportSubmit" class="btn btn--primary">إرسال التذكرة</button>
                 </div>
 

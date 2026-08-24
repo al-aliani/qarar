@@ -364,8 +364,8 @@ export class ShareStudyView {
         const qualityWarningHtml = (recommendation && recommendation !== 'go')
             ? `<div class="alert alert--warning mb-2" style="font-size:0.8rem;">
                     ${recommendation === 'nogo'
-                        ? 'توصية دراستك الحالية: <strong>عدم المضي (NO-GO)</strong> — يمكنك المتابعة، لكن راجع التوصية أولاً في لوحة القرار.'
-                        : 'دراستك تحتاج <strong>مراجعة (REVISE)</strong> حالياً — يُفضَّل استكمالها قبل إرسالها لجهة تمويل أو مستثمر.'}
+                        ? 'توصية دراستك الحالية: <strong>عدم المضي</strong> — يمكنك المتابعة، لكن راجع التوصية أولاً في لوحة القرار.'
+                        : 'دراستك تحتاج <strong>مراجعة</strong> حالياً — يُفضَّل استكمالها قبل إرسالها لجهة تمويل أو مستثمر.'}
                </div>`
             : '';
 

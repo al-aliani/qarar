@@ -26,7 +26,7 @@ export class TwoFactorModal {
             <div style="background:var(--c-bg-card);border-radius:12px;padding:24px;max-width:500px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                     <h3 style="margin:0;font-size:18px;color:var(--c-text-main);"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg> المصادقة الثنائية</h3>
-                    <button id="btn2FAClose" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--c-text-muted);">×</button>
+                    <button id="btn2FAClose" aria-label="إغلاق" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--c-text-muted);">×</button>
                 </div>
                 <div id="2fa-content">
                     ${hasMFA ? this.renderManageMode(factorsList) : this.renderEnrollMode()}

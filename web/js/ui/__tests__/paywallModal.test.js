@@ -192,7 +192,7 @@ describe('PaywallModal — ملاحظة شفافية عند توصية NO-GO/REV
         modal.open('تقرير PDF شامل');
 
         const note = document.querySelector('.alert--danger');
-        expect(note?.textContent).toContain('NO-GO');
+        expect(note?.textContent).toContain('عدم المضي');
         expect(document.querySelectorAll('.paywall-package-card')).toHaveLength(PRICING_PACKAGES.filter(pkg => pkg.price > 0).length);
     });
 
@@ -201,7 +201,7 @@ describe('PaywallModal — ملاحظة شفافية عند توصية NO-GO/REV
         modal.open('تقرير PDF شامل');
 
         const note = document.querySelector('.alert--warning');
-        expect(note?.textContent).toContain('REVISE');
+        expect(note?.textContent).toContain('مراجعة');
     });
 
     it('results.decision = GO: لا تظهر أي ملاحظة', () => {

@@ -87,9 +87,9 @@ export class PaywallModal {
         // تمنع الشراء، تُوضّح فقط أن التقرير سيشرح توصية غير إيجابية لا أن الدفع "يفتح" GO.
         const decision = hasRealModelResults(state.results) ? state.results?.decision : null;
         const decisionNote = decision === 'NO-GO'
-            ? '<div class="alert alert--danger mb-3">دراستك أظهرت توصية عدم المضي (NO-GO) حالياً — هذا التقرير يوضّح لماذا، وهو ما يحميك من قرار استثماري خاطئ لا أنه يمنعك من الشراء.</div>'
+            ? '<div class="alert alert--danger mb-3">دراستك أظهرت توصية عدم المضي حالياً — هذا التقرير يوضّح لماذا، وهو ما يحميك من قرار استثماري خاطئ لا أنه يمنعك من الشراء.</div>'
             : decision === 'REVISE'
-                ? '<div class="alert alert--warning mb-3">دراستك تحتاج مراجعة (REVISE) حالياً — هذا التقرير يوضّح النقاط التي تحتاج تعديلاً.</div>'
+                ? '<div class="alert alert--warning mb-3">دراستك تحتاج مراجعة حالياً — هذا التقرير يوضّح النقاط التي تحتاج تعديلاً.</div>'
                 : '';
 
         const pricingVariant = getExperimentVariant('pricing_cards', ['control', 'recommended_first']);
@@ -130,7 +130,7 @@ export class PaywallModal {
                     <p class="text-muted mb-4">${escapeHtml(this.formatLabel)} متاح ضمن الباقات المدفوعة. اختر الباقة وطريقة الدفع لإكمال الطلب داخل المنصة.</p>
                     ${this.lockReason ? `<p class="text-xs text-muted mb-3">${escapeHtml(this.lockReason)}</p>` : ''}
                     <button type="button" id="btnPreviewLockedReport" class="btn btn--secondary btn-block mb-3"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> معاينة التقرير قبل الشراء</button>
-                    <div id="paywallPayError" class="text-danger text-sm mb-2" style="display:none;"></div>
+                    <div id="paywallPayError" class="text-danger text-sm mb-2" role="alert" style="display:none;"></div>
                     ${decisionNote}
                     <div class="paywall-packages-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
                         ${cards}

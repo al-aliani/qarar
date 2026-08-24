@@ -46,7 +46,7 @@ export class PackagePreferenceModal {
                 </div>
                 <div class="modal-body">
                     <p class="text-muted text-sm mb-3">هذا اختيار أولي غير مُلزم — تقدر تغيّره أو تشتري لاحقاً وقت التصدير.</p>
-                    <div id="packagePreferenceError" class="text-danger text-sm mb-2" style="display:none;"></div>
+                    <div id="packagePreferenceError" class="text-danger text-sm mb-2" role="alert" style="display:none;"></div>
                     <div style="display:grid;gap:10px;">${cards}</div>
                 </div>
             </div>

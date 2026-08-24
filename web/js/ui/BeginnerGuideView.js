@@ -22,7 +22,7 @@ export class BeginnerGuideView {
             { label: 'المرحلة التسويقية', sentence: 'تحليل السوق والمنافسين والعرض والطلب واستراتيجية التسعير.' },
             { label: 'المرحلة الفنية', sentence: 'التكاليف الرأسمالية والتشغيلية والموارد البشرية والمعدات.' },
             { label: 'المرحلة المالية', sentence: 'مصادر الإيرادات والتمويل والافتراضات والمؤشرات (NPV, IRR، نقطة التعادل).' },
-            { label: 'مرحلة القرار', sentence: 'التوصية النهائية: المضي (GO)، أو المراجعة (REVISE)، أو عدم المضي (NO-GO).' }
+            { label: 'مرحلة القرار', sentence: 'التوصية النهائية: المضي، أو المراجعة، أو عدم المضي.' }
         ];
 
         const tips = [
@@ -83,9 +83,9 @@ export class BeginnerGuideView {
                 <h2 class="text-lg font-bold mb-4 text-gold">كيف تقرأ لوحة القرار</h2>
                 <p class="text-muted text-sm mb-4">لوحة القرار تعرض نتيجة الدراسة في شاشة واحدة:</p>
                 <ul class="space-y-2 mb-6 text-sm text-muted" style="list-style: none; padding-right: 0;">
-                    <li><strong class="text-gold">التوصية:</strong> GO (المضي) — المشروع مجدٍ؛ REVISE (مراجعة) — عدّل بعض الافتراضات؛ NO-GO (عدم المضي) — غير مجدٍ في وضعه الحالي.</li>
+                    <li><strong class="text-gold">التوصية:</strong> المضي — المشروع مجدٍ؛ المراجعة — عدّل بعض الافتراضات؛ عدم المضي — غير مجدٍ في وضعه الحالي.</li>
                     <li><strong class="text-gold">المؤشرات:</strong> صافي القيمة الحالية (NPV)، معدل العائد (IRR)، فترة الاسترداد، نقطة التعادل — اقرأها مع التوصية.</li>
-                    <li><strong class="text-gold">الخطوة التالية:</strong> إن كانت التوصية GO يمكنك تصدير التقرير أو نسخة للممول؛ إن كانت REVISE راجع التحذيرات وعدّل المدخلات ثم أعد الحساب.</li>
+                    <li><strong class="text-gold">الخطوة التالية:</strong> إن كانت التوصية المضي يمكنك تصدير التقرير أو نسخة للممول؛ إن كانت المراجعة راجع التحذيرات وعدّل المدخلات ثم أعد الحساب.</li>
                 </ul>
 
                 <h2 class="text-lg font-bold mb-4 text-gold">المصطلحات</h2>

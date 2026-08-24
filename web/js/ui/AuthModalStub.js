@@ -62,7 +62,7 @@ export class AuthModal {
                     </div>
                 </div>
                 <div class="modal-body">
-                    <div id="authModalError" class="text-danger text-sm mb-2" style="display:none;"></div>
+                    <div id="authModalError" class="text-danger text-sm mb-2" role="alert" style="display:none;"></div>
                     <div id="authModalResendBlock" class="mb-2 p-2 rounded text-sm" style="display:none;background:var(--c-danger-subtle);border:1px solid var(--c-danger);">
                         <p class="text-danger mb-1">البريد غير مفعّل. تحقق من صندوق الوارد أو البريد المزعج.</p>
                         <button type="button" id="authBtnResendConfirm" class="btn btn--ghost text-sm">إعادة إرسال رابط التأكيد</button>
@@ -129,7 +129,7 @@ export class AuthModal {
                         <span class="auth-panel-icon"><svg aria-hidden="true"><use href="#i-shield"/></svg></span>
                         <p class="text-sm mb-1" style="font-weight:700">التحقق بخطوتين</p>
                         <p class="text-muted text-sm mb-3">حسابك محمي بمصادقة ثنائية. أدخل رمز تطبيق المصادقة (6 أرقام).</p>
-                        <div id="authMfaError" class="text-danger text-sm mb-2" style="display:none;"></div>
+                        <div id="authMfaError" class="text-danger text-sm mb-2" role="alert" style="display:none;"></div>
                         <form id="authMfaForm">
                             <div class="mb-3">
                                 <input type="text" id="authMfaCode" class="input w-full" placeholder="رمز التحقق" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" dir="ltr" style="text-align:center;letter-spacing:4px;font-size:18px;">
@@ -144,7 +144,7 @@ export class AuthModal {
                         <span class="auth-panel-icon"><svg aria-hidden="true"><use href="#i-key"/></svg></span>
                         <p class="text-sm mb-1" style="font-weight:700">استرداد الحساب</p>
                         <p class="text-muted text-sm mb-3">أدخل أحد رموز الاسترداد العشرة التي حصلت عليها عند تفعيل المصادقة الثنائية. سيُطلَب منك تفعيل مصادقة ثنائية جديدة بعد الدخول.</p>
-                        <div id="authRecoveryError" class="text-danger text-sm mb-2" style="display:none;"></div>
+                        <div id="authRecoveryError" class="text-danger text-sm mb-2" role="alert" style="display:none;"></div>
                         <form id="authRecoveryForm">
                             <div class="mb-3">
                                 <input type="text" id="authRecoveryCode" class="input w-full" placeholder="XXXX-XXXX" autocomplete="off" dir="ltr" style="text-align:center;letter-spacing:2px;">

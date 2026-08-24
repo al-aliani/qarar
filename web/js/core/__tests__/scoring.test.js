@@ -189,7 +189,7 @@ describe('calculateProjectScore — التوصية (recommendation) من قرا�
     it('results.decision = GO ⇒ recommendation=go بصرف النظر عن الدرجة الحرفية', () => {
         const r = calculateProjectScore({}, { decision: 'GO', indicators: ind({ npv: -1, irr: 0 }) });
         expect(r.recommendation).toBe('go');
-        expect(r.recommendationLabel).toContain('GO');
+        expect(r.recommendationLabel).toContain('مجدي');
     });
 
     it('results.decision = NO-GO ⇒ recommendation=nogo', () => {

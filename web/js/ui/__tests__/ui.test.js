@@ -8,7 +8,7 @@
  * (يقرأ this.store.getState() ويحسب النتائج داخلياً عبر calculateStudy)، وليس
  * render(state, results) كما افترض الاختبار القديم — وكان يتحقق من نص
  * "ادخل المشروع بقوة" غير الموجود أصلاً في scoring.js (النصوص الحقيقية:
- * "مشروع مجدي (GO)" / "غير مجدي (NO-GO)" / "مراجعة مطلوبة (REVISE)").
+ * "مشروع مجدي" / "غير مجدي" / "مراجعة مطلوبة").
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { DecisionDashboard } from '../DecisionDashboard.js';
@@ -83,13 +83,13 @@ describe('DecisionDashboard UI Tests', () => {
         expect(document.querySelector('.dd-verdict__title')).toBeNull();
     });
 
-    it('يعرض توصية "مشروع مجدي (GO)" لدراسة مطعم مربحة فعلياً عبر المحرك الحقيقي', async () => {
+    it('يعرض توصية "مشروع مجدي" لدراسة مطعم مربحة فعلياً عبر المحرك الحقيقي', async () => {
         const dashboard = new DecisionDashboard('decisionDashboardContainer', fakeStore(createGoStudy()));
         // render() يستدعي calculateStudy/calculateProjectScore الحقيقيين داخلياً — لا نتائج مصطنعة هنا.
         await dashboard.render();
 
         const titleEl = document.querySelector('.dd-verdict__title');
         expect(titleEl).not.toBeNull();
-        expect(titleEl.textContent).toContain('مشروع مجدي (GO)');
+        expect(titleEl.textContent).toContain('مشروع مجدي');
     });
 });

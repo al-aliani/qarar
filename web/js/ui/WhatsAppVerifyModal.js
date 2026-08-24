@@ -77,7 +77,7 @@ export class WhatsAppVerifyModal {
         if (!this.overlay) return;
         const body = this.overlay.querySelector('.modal-body');
         body.innerHTML = `
-            <div id="whatsappVerifyError" class="text-danger text-sm mb-3">${friendlyError(errorCode)}</div>
+            <div id="whatsappVerifyError" class="text-danger text-sm mb-3" role="alert">${friendlyError(errorCode)}</div>
             <button type="button" id="whatsappVerifyRetry" class="btn btn--primary w-full">إعادة المحاولة</button>
         `;
         body.querySelector('#whatsappVerifyRetry').addEventListener('click', () => this._sendAndRenderForm());
@@ -88,7 +88,7 @@ export class WhatsAppVerifyModal {
         const body = this.overlay.querySelector('.modal-body');
         body.innerHTML = `
             <p class="text-muted text-sm mb-3">أرسلنا رمزاً مكوَّناً من 6 أرقام عبر واتساب لرقمك المسجَّل.</p>
-            <div id="whatsappVerifyError" class="text-danger text-sm mb-2" style="display:none;"></div>
+            <div id="whatsappVerifyError" class="text-danger text-sm mb-2" role="alert" style="display:none;"></div>
             <form id="whatsappVerifyForm">
                 <div class="mb-3">
                     <label class="block text-sm mb-1" for="whatsappVerifyCodeInput">رمز التحقق</label>

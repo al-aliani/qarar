@@ -87,7 +87,7 @@ describe('ExecutiveSummary.renderRecommendation — أفعال ديناميكي�
         const healthyHtml = view.renderRecommendation(0, buildGoResults(3.0), state);
         const weakHtml = view.renderRecommendation(0, buildGoResults(1.30), state);
 
-        expect(healthyHtml).toContain('GO');
-        expect(weakHtml).toContain('GO');
+        expect(healthyHtml).toContain('مجدي');
+        expect(weakHtml).toContain('مجدي');
     });
 });

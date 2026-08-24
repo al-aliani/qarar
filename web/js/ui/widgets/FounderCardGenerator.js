@@ -27,7 +27,7 @@ export class FounderCardGenerator {
         root.innerHTML = `
             <div class="founder-card-modal fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4">
                 <div class="relative bg-gray-900 rounded-2xl border border-gold/30 p-6 max-w-lg w-full text-center shadow-2xl">
-                    <button class="btn-close absolute top-4 left-4 text-white hover:text-red-500 text-xl">&times;</button>
+                    <button class="btn-close absolute top-4 left-4 text-white hover:text-red-500 text-xl" aria-label="إغلاق">&times;</button>
                     
                     <h3 class="text-xl font-bold text-gold mb-4"><svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg> بطاقة رائد الأعمال</h3>
                     <p class="text-sm text-muted mb-6">شارك حلمك مع العالم! هذه البطاقة مصممة للنشر واجتذاب الدعم.</p>

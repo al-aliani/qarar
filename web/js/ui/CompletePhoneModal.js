@@ -23,7 +23,7 @@ export class CompletePhoneModal {
                 </div>
                 <div class="modal-body">
                     <p class="text-muted text-sm mb-3">رقم جوالك على واتساب مطلوب لإكمال الحساب والتواصل معك بخصوص طلباتك.</p>
-                    <div id="completePhoneError" class="text-danger text-sm mb-2" style="display:none;"></div>
+                    <div id="completePhoneError" class="text-danger text-sm mb-2" role="alert" style="display:none;"></div>
                     <form id="completePhoneForm">
                         <div class="mb-3">
                             <label class="block text-sm mb-1" for="completePhoneInput">رقم الجوال (واتساب)</label>

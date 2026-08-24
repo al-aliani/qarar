@@ -418,9 +418,9 @@ export class ExecutiveSummary {
         return `
             <div class="recommendation-container">
                 <div class="decision-banner ${bannerClass}">
-                    ${recommendation === 'go' ? `${icon('i-check')} المشروع مجدي - GO` :
-                recommendation === 'nogo' ? `${icon('i-x')} المشروع غير مجدي - NO-GO` :
-                    `${icon('i-warning')} يحتاج مراجعة - CONDITIONAL`}
+                    ${recommendation === 'go' ? `${icon('i-check')} المشروع مجدي` :
+                recommendation === 'nogo' ? `${icon('i-x')} المشروع غير مجدي` :
+                    `${icon('i-warning')} يحتاج مراجعة`}
                 </div>
                 <p class="recommendation-message">${message}</p>
                 <div class="recommended-actions">

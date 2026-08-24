@@ -82,7 +82,7 @@ export class UserProfileView {
                     <div class="form-group mb-4">
                         <label for="inpPhone" class="block text-sm font-medium mb-1">رقم الجوال (واتساب) ${phoneStatusBadge}</label>
                         <input type="tel" id="inpPhone" class="form-input w-full" placeholder="05xxxxxxxx" dir="ltr" inputmode="numeric" value="${currentPhone.replace(/"/g, '&quot;')}">
-                        <div id="phoneError" class="text-danger text-sm mt-1" style="display:none;"></div>
+                        <div id="phoneError" class="text-danger text-sm mt-1" role="alert" style="display:none;"></div>
                         <button type="button" id="btnSavePhone" class="btn btn--primary mt-2 text-sm">حفظ الجوال</button>
                     </div>
 

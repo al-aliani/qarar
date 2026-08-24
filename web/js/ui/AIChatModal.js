@@ -27,6 +27,23 @@ const SUGGESTED_PROMPTS = [
     { label: 'نصائح عامة للبدء', type: 'advisor_fallback' },
 ];
 
+// تصنيف مصدر الرد لعرضه كتذييل صغير تحت كل فقاعة رد — يميّز رداً محسوباً فعلياً من
+// أرقام الدراسة (advisor/financial_improvement مع بيانات كافية) عن نص ثابت عام لا
+// يقرأ أي رقم (stress: نصه حرفي 100% لكل مستخدم رغم صياغته "بناءً على الأرقام
+// التي ذكرتها")، وعن رد حر لا نموذج توليدي خلفه فقد يخطئ فهم السؤال (promptType=null).
+function getResponseSourceTag(promptType, state) {
+    if (promptType === 'stress') return 'نص تفسيري عام ثابت — غير محسوب من أرقام دراستك الفعلية';
+    if (promptType === 'advisor_fallback') return 'نصائح عامة ثابتة — غير مبنية على بياناتك المالية';
+    if (promptType === 'advisor' || promptType === 'financial_improvement') {
+        return hasMinimumRevenueData(state)
+            ? 'محسوب من أرقام دراستك المالية الفعلية'
+            : 'بيانات دراستك غير مكتملة — رد عام';
+    }
+    if (promptType === 'swot') return 'مبني على بيانات مشروعك الوصفية (لا مؤشرات مالية)';
+    if (!promptType) return 'مساعد قواعد محلي — رد عام قد لا يطابق سؤالك تحديداً';
+    return null; // summary/mitigation عبر aiConnector — بلا تصنيف إضافي حالياً
+}
+
 export class AIChatModal {
     constructor(store) {
         this.store = store;
@@ -109,6 +126,7 @@ export class AIChatModal {
                 .ai-chat-tip { margin: 12px 16px 0; padding: 10px 12px; border-radius: 10px; background: var(--c-gold-subtle); border-inline-start: 3px solid var(--c-gold-500); font-size: 12.5px; color: var(--c-text-main); line-height: 1.6; }
                 .ai-chat-tip b { color: var(--c-gold-500); }
                 .ai-chat-badge { position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: var(--c-danger-500, #ef4444); border-radius: 50%; border: 2px solid var(--c-bg-card, #fff); }
+                .ai-chat-tag { font-size: 11px; color: var(--c-text-muted, #64748b); margin: 2px 4px 10px; }
             `;
             document.head.appendChild(style);
         }
@@ -182,8 +200,11 @@ export class AIChatModal {
         this.render();
         try {
             const responseText = await this.getAIResponse(initialPrompt);
-            
-            this.addMessage('assistant', '');
+
+            // openWithPrompt لا يستقبل promptType، لكن مستدعيها الوحيد (زر «اسأل
+            // المستشار» في اختبار الضغط بـDecisionDashboard.js) لهذا الغرض حصراً.
+            const tag = getResponseSourceTag('stress', this.store.getState());
+            this.addMessage('assistant', '', tag);
             const msgIndex = this.messages.length - 1;
             
             const { InternalAIGenerator } = await import('../services/InternalAIGenerator.js');
@@ -212,8 +233,8 @@ export class AIChatModal {
         this.container.style.display = 'none';
     }
 
-    addMessage(role, content) {
-        this.messages.push({ role, content, ts: Date.now() });
+    addMessage(role, content, tag = null) {
+        this.messages.push({ role, content, ts: Date.now(), tag });
     }
 
     addSystemMessage(content) {
@@ -229,8 +250,9 @@ export class AIChatModal {
 
         try {
             const responseText = await this.getAIResponse(text.trim(), promptType);
-            
-            this.addMessage('assistant', '');
+
+            const tag = getResponseSourceTag(promptType, this.store.getState());
+            this.addMessage('assistant', '', tag);
             const msgIndex = this.messages.length - 1;
             
             const { InternalAIGenerator } = await import('../services/InternalAIGenerator.js');
@@ -372,7 +394,8 @@ export class AIChatModal {
                 // تهريب HTML أولاً ثم تطبيق تنسيق آمن (**عريض** وأسطر) — يمنع حقن السكربت
                 // مع إبقاء التنسيق البسيط يعمل.
                 const content = escapeHtml(m.content).replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                return `<div class="ai-chat-msg ${cls}"><div class="ai-chat-bubble">${content}</div></div>`;
+                const tagHtml = (cls === 'assistant' && m.tag) ? `<div class="ai-chat-tag">${escapeHtml(m.tag)}</div>` : '';
+                return `<div class="ai-chat-msg ${cls}"><div class="ai-chat-bubble">${content}</div>${tagHtml}</div>`;
             })
             .join('');
 

@@ -548,7 +548,7 @@ export class Sidebar {
                 <div class="modal-card" style="max-width: 600px;">
                     <div class="modal-header">
                         <h3>تفاصيل نسبة الاكتمال</h3>
-                        <button class="btn-close">×</button>
+                        <button class="btn-close" aria-label="إغلاق">×</button>
                     </div>
                     <div class="modal-body">
                         <div class="text-center mb-4">

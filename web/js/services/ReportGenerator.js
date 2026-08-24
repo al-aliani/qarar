@@ -596,9 +596,9 @@ export class ReportGenerator {
             case 'executive_summary': {
                 // بطاقة أرقام بارزة تُشتق من نتائج المحرك — الملخص التنفيذي يقدّم القرار والأرقام أولاً
                 const exIn = results.indicators || {};
-                const exDecision = results.decision === 'GO' ? '<span class="status-positive">المضي قدماً (GO)</span>'
-                    : (results.decision === 'NO-GO' || results.decision === 'NOGO') ? '<span class="status-negative">عدم المضي (NO-GO)</span>'
-                    : results.decision === 'REVISE' ? '<span style="color:#b45309;font-weight:700;">مراجعة مطلوبة (REVISE)</span>' : '—';
+                const exDecision = results.decision === 'GO' ? '<span class="status-positive">المضي قدماً</span>'
+                    : (results.decision === 'NO-GO' || results.decision === 'NOGO') ? '<span class="status-negative">عدم المضي</span>'
+                    : results.decision === 'REVISE' ? '<span style="color:#b45309;font-weight:700;">مراجعة مطلوبة</span>' : '—';
                 const exHighlights = `
                             <table style="margin-bottom:14px;"><thead><tr>
                                 <th>الاستثمار المطلوب</th><th>NPV</th><th>IRR</th><th>الاسترداد</th><th>التوصية</th>
@@ -1008,10 +1008,10 @@ export class ReportGenerator {
                             <p style="font-size: 11pt; line-height: 1.9;">
                                 ${state.decisionDashboard?.finalAssessment ||
                     (results.decision === 'GO'
-                        ? '<strong>التوصية: المضي قدماً في المشروع (GO).</strong><br>بناءً على التحليل المالي الشامل، تشير المؤشرات إلى جدوى المشروع.'
+                        ? '<strong>التوصية: المضي قدماً في المشروع.</strong><br>بناءً على التحليل المالي الشامل، تشير المؤشرات إلى جدوى المشروع.'
                         : results.decision === 'NO-GO' || results.decision === 'NOGO'
-                            ? '<strong>التوصية: عدم المضي (NO-GO).</strong><br>المؤشرات المالية لا تحقق الحدود الدنيا. ' + ((results.decisionReasons && results.decisionReasons.length) ? 'بنود للإصلاح: ' + results.decisionReasons.join('؛ ') + '.' : '')
-                            : '<strong>التوصية: مراجعة مطلوبة (REVISE).</strong><br>بعض المؤشرات دون المستوى. ' + ((results.decisionReasons && results.decisionReasons.length) ? 'بنود للإصلاح: ' + results.decisionReasons.join('؛ ') + '. ' : ''))}
+                            ? '<strong>التوصية: عدم المضي.</strong><br>المؤشرات المالية لا تحقق الحدود الدنيا. ' + ((results.decisionReasons && results.decisionReasons.length) ? 'بنود للإصلاح: ' + results.decisionReasons.join('؛ ') + '.' : '')
+                            : '<strong>التوصية: مراجعة مطلوبة.</strong><br>بعض المؤشرات دون المستوى. ' + ((results.decisionReasons && results.decisionReasons.length) ? 'بنود للإصلاح: ' + results.decisionReasons.join('؛ ') + '. ' : ''))}
                             </p>
                         </div>
                     </div>`;

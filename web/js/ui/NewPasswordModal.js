@@ -35,7 +35,7 @@ export class NewPasswordModal {
                 </div>
                 <div class="modal-body">
                     <p class="text-muted text-sm mb-3">${this.description}</p>
-                    <div id="newPasswordError" class="text-danger text-sm mb-2" style="display:none;"></div>
+                    <div id="newPasswordError" class="text-danger text-sm mb-2" role="alert" style="display:none;"></div>
                     <form id="newPasswordForm">
                         <div class="mb-3">
                             <label class="block text-sm mb-1" for="newPassword1">كلمة المرور الجديدة</label>

@@ -150,7 +150,7 @@ describe('ShareStudyView — قسم "لمن ترسل؟" (توجيه المتلق
         document.getElementById('btnRecipientBank').click();
 
         const area = document.getElementById('recipientActionArea');
-        expect(area.textContent).toContain('NO-GO');
+        expect(area.textContent).toContain('عدم المضي');
         // غير حاجب: الأزرار الفعلية ما زالت موجودة وقابلة للنقر
         expect(document.getElementById('btnExportBankDirect')).toBeTruthy();
     });

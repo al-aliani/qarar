@@ -149,31 +149,31 @@ export function calculateProjectScore(state, results) {
 
     // التوصية: نعتمد results.decision (من المحرك/Thresholds) إن وُجد، وإلا نستنتج من الدرجة
     let recommendation = 'revise';
-    let recommendationLabel = 'مراجعة مطلوبة (REVISE)';
+    let recommendationLabel = 'مراجعة مطلوبة';
     let color = 'text-warning';
 
     const d = (results.decision || '').toUpperCase();
     if (d === 'GO') {
         recommendation = 'go';
-        recommendationLabel = 'مشروع مجدي (GO)';
+        recommendationLabel = 'مشروع مجدي';
         color = 'text-success';
     } else if (d === 'NO-GO' || d === 'NOGO') {
         recommendation = 'nogo';
-        recommendationLabel = 'غير مجدي (NO-GO)';
+        recommendationLabel = 'غير مجدي';
         color = 'text-danger';
     } else if (d === 'REVISE') {
         recommendation = 'revise';
-        recommendationLabel = 'مراجعة مطلوبة (REVISE)';
+        recommendationLabel = 'مراجعة مطلوبة';
         color = 'text-warning';
     } else {
         // استنتاج من الدرجة عند غياب results.decision
         if (score >= 80) {
             recommendation = 'go';
-            recommendationLabel = 'مشروع مجدي (GO)';
+            recommendationLabel = 'مشروع مجدي';
             color = 'text-success';
         } else if (score < 50) {
             recommendation = 'nogo';
-            recommendationLabel = 'غير مجدي (NO-GO)';
+            recommendationLabel = 'غير مجدي';
             color = 'text-danger';
         }
     }

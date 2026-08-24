@@ -9,7 +9,7 @@
       "label": "أطعمة ومشروبات",
       "folder": "أكل",
       "description": "مطاعم، مقاهٍ، حلويات، ومشاريع غذائية",
-      "count": 34
+      "count": 33
     },
     {
       "id": "retail-services",
@@ -23,7 +23,7 @@
       "label": "أزياء وعناية رجالية",
       "folder": "الرجال",
       "description": "أزياء وخدمات عناية موجهة للرجال",
-      "count": 5
+      "count": 6
     },
     {
       "id": "leasing",
@@ -37,7 +37,7 @@
       "label": "دراسات متنوعة",
       "folder": "دراسة الجدوى",
       "description": "نماذج ودراسات متنوعة متعددة القطاعات",
-      "count": 99
+      "count": 98
     },
     {
       "id": "education",
@@ -51,7 +51,7 @@
       "label": "سيارات ونقل",
       "folder": "سيارات",
       "description": "خدمات السيارات والنقل والمواقف",
-      "count": 10
+      "count": 14
     },
     {
       "id": "students",
@@ -72,7 +72,7 @@
       "label": "تصنيع وزراعة وثروة حيوانية",
       "folder": "مصنع",
       "description": "مصانع وورش ومشروعات زراعية وحيوانية",
-      "count": 203
+      "count": 200
     },
     {
       "id": "construction",
@@ -236,9 +236,9 @@
       "id": "2e33be3cb73c",
       "title": "صالون حلاقة متنقل",
       "filename": "Barbershops ship.pdf",
-      "category": "food",
-      "categoryLabel": "أطعمة ومشروبات",
-      "categoryDescription": "مطاعم، مقاهٍ، حلويات، ومشاريع غذائية",
+      "category": "mens",
+      "categoryLabel": "أزياء وعناية رجالية",
+      "categoryDescription": "أزياء وخدمات عناية موجهة للرجال",
       "tags": [
         "أطعمة ومشروبات",
         "أزياء وتجميل",
@@ -3165,9 +3165,9 @@
       "id": "a49618d80860",
       "title": "مواقف سيارات آلية",
       "filename": "Auto-parking-.pdf",
-      "category": "misc",
-      "categoryLabel": "دراسات متنوعة",
-      "categoryDescription": "نماذج ودراسات متنوعة متعددة القطاعات",
+      "category": "automotive",
+      "categoryLabel": "سيارات ونقل",
+      "categoryDescription": "خدمات السيارات والنقل والمواقف",
       "tags": [
         "مشروعات متنوعة",
         "سيارات ونقل",
@@ -5470,9 +5470,9 @@
       "id": "d635e6124a07",
       "title": "دراسة جدوى لمشروع غيار زيت السيارات اسم المشروع دراسة جدوى لمشروع غيار زيت سيارات",
       "filename": "0.pdf",
-      "category": "manufacturing-agriculture",
-      "categoryLabel": "تصنيع وزراعة وثروة حيوانية",
-      "categoryDescription": "مصانع وورش ومشروعات زراعية وحيوانية",
+      "category": "automotive",
+      "categoryLabel": "سيارات ونقل",
+      "categoryDescription": "خدمات السيارات والنقل والمواقف",
       "tags": [
         "مشروعات إنتاجية",
         "تجارة وتجزئة",
@@ -9810,9 +9810,9 @@
       "id": "e206d8359a95",
       "title": "ورشة سمكرة ودهان سيارات",
       "filename": "ورشة سمكرة ودهان سيارات.pdf",
-      "category": "manufacturing-agriculture",
-      "categoryLabel": "تصنيع وزراعة وثروة حيوانية",
-      "categoryDescription": "مصانع وورش ومشروعات زراعية وحيوانية",
+      "category": "automotive",
+      "categoryLabel": "سيارات ونقل",
+      "categoryDescription": "خدمات السيارات والنقل والمواقف",
       "tags": [
         "مشروعات إنتاجية",
         "مطاعم ووجبات",
@@ -9878,9 +9878,9 @@
       "id": "c11b99caffb1",
       "title": "ورشة ميكانيكا سيارات",
       "filename": "ورشة ميكانيكا سيارات.pdf",
-      "category": "manufacturing-agriculture",
-      "categoryLabel": "تصنيع وزراعة وثروة حيوانية",
-      "categoryDescription": "مصانع وورش ومشروعات زراعية وحيوانية",
+      "category": "automotive",
+      "categoryLabel": "سيارات ونقل",
+      "categoryDescription": "خدمات السيارات والنقل والمواقف",
       "tags": [
         "مشروعات إنتاجية",
         "تصنيع",
