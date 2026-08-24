@@ -24,6 +24,7 @@ import { detectKeyPeopleSectorGap } from '../core/keyPeopleSectorGap.js';
 import { buildNitaqatHrCardData } from '../core/nitaqatHrCard.js';
 import { findMissingCommonLicenses } from '../core/licensingGap.js';
 import { scanContractRisks } from '../core/contractRiskScan.js';
+import { DatabaseCompanyPicker } from './DatabaseCompanyPicker.js';
 import noUiSlider from 'nouislider';
 import AutoNumeric from 'autonumeric';
 
@@ -846,10 +847,35 @@ export class Wizard {
             const realBtnHtml = `
                 <div class="flex-between mb-2">
                     <span></span>
-                    <button id="btn-real-suppliers" type="button" class="btn-xs btn-magic">${icon('i-pin')} بحث موردين حقيقيين قريبين</button>
+                    <div class="flex gap-2">
+                        <button id="btn-real-suppliers" type="button" class="btn-xs btn-magic">${icon('i-pin')} بحث موردين حقيقيين قريبين</button>
+                        <button id="btn-db-suppliers" type="button" class="btn-xs btn-magic">${icon('i-folder')} أو اختر من قواعد بياناتنا</button>
+                    </div>
                 </div>
             `;
             container.insertAdjacentHTML('beforebegin', realBtnHtml);
+
+            // منتقي مكتبة قواعد البيانات (DatabaseCompanyPicker.js) — مسار بديل عن
+            // البحث الحي (OSM أعلاه): يقرأ ملفات xlsx الجاهزة (أدلة شركات فعلية) بدل
+            // البحث اللحظي، ويدمج الصفوف المحدَّدة بنفس نمط الدمج المستخدم أعلاه تماماً.
+            // اقتصر على الموردين فقط (enabledTargets) — لا يوجد جدول منافسين بنفس آلية
+            // "بحث/إضافة خارجية جاهزة" لِيُربَط بها بأمان في هذه الدفعة.
+            document.getElementById('btn-db-suppliers').addEventListener('click', () => {
+                if (!this._dbCompanyPicker) {
+                    this._dbCompanyPicker = new DatabaseCompanyPicker({
+                        enabledTargets: ['suppliers'],
+                        onAdd: (newRows, targetType) => {
+                            if (targetType !== 'suppliers') return;
+                            const table = this.tables['suppliers'];
+                            if (!table) return;
+                            table.data = [...table.data, ...newRows];
+                            table.onChange(JSON.parse(JSON.stringify(table.data)));
+                            table.render();
+                        }
+                    });
+                }
+                this._dbCompanyPicker.open('suppliers');
+            });
 
             document.getElementById('btn-real-suppliers').addEventListener('click', async (e) => {
                 const btn = e.currentTarget;
