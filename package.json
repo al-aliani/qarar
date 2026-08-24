@@ -50,6 +50,7 @@
     "flatpickr": "^4.6.13",
     "framer-motion": "^12.42.2",
     "gridstack": "^12.6.0",
+    "image-size": "file:./tools/image-size-stub",
     "jszip": "^3.10.1",
     "leader-line-new": "^1.1.9",
     "leaflet": "^1.9.4",
@@ -78,7 +79,8 @@
     "zod": "^4.4.3"
   },
   "overrides": {
-    "uuid": "^14.0.2"
+    "uuid": "^14.0.2",
+    "image-size": "$image-size"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",

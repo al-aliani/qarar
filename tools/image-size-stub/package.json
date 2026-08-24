@@ -1,0 +1,13 @@
+{
+  "name": "image-size",
+  "version": "9.9.9",
+  "description": "بديل محلي معطَّل عن image-size — أُضيف 2026-08-24 لإزالة GHSA-w3rx-r6r6-pgpr و GHSA-5p2g-fcmc-qvqq. راجع index.js.",
+  "license": "MIT",
+  "private": true,
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ]
+}
