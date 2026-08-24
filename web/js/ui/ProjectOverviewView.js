@@ -132,7 +132,7 @@ export class ProjectOverviewView {
         this.container.innerHTML = `
             <div class="dv po animate-entry">
                 ${this._renderHeader(data, completeness, headerName)}
-                ${qualityGate.locked ? this._renderQualityBlocked(qualityGate) : (decision ? this._renderDecision(decision, results) : this._renderInsufficient(completeness))}
+                ${qualityGate.locked ? this._renderQualityBlocked(qualityGate) : (decision ? this._renderDecision(decision, results, data?.appSettings?.mode) : this._renderInsufficient(completeness))}
                 ${this._renderIndicators(indicators)}
                 ${decision ? this._renderSummary(data, results) : ''}
                 ${this._renderActions()}
@@ -167,7 +167,7 @@ export class ProjectOverviewView {
         `;
     }
 
-    _renderDecision(decision, results) {
+    _renderDecision(decision, results, mode) {
         const meta = DECISION_META[decision] || DECISION_META['REVISE'];
         const reasons = (results?.decisionReasons || [])
             .map(r => (typeof r === 'string' ? r : (r?.text || r?.reason || '')))
@@ -176,6 +176,7 @@ export class ProjectOverviewView {
             <section class="po__block">
                 <div class="decision-banner ${bannerClass(decision)}">${escapeHtml(meta.label)}</div>
                 <p class="po__block-desc">${escapeHtml(meta.desc)}</p>
+                ${mode === 'mini' ? '<p class="po__block-note">توصية أولية مبنية على 7 حقول أساسية فقط (الوضع «مصغّر») — لم تُدخَل بيانات السوق أو القانونية أو المخاطر. أكمل الوضع الكامل أو المتقدم لتقرير تمويلي معتمد.</p>' : ''}
                 ${reasons.length ? `
                     <div class="po__reasons">
                         <h3 class="po__reasons-title">لماذا هذا القرار</h3>

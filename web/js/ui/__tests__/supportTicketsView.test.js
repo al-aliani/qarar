@@ -53,7 +53,7 @@ describe('SupportTicketsView', () => {
         document.getElementById('btnSupportSubmit').click();
         await new Promise((r) => setTimeout(r, 0));
 
-        expect(submitTicketMock).toHaveBeenCalledWith({ subject: 'مشكلة تصدير', body: 'الملف لا يفتح بعد التنزيل' });
+        expect(submitTicketMock).toHaveBeenCalledWith({ subject: 'مشكلة تصدير', body: 'الملف لا يفتح بعد التنزيل', issueType: 'technical', priority: 'normal' });
     });
 
     it('فشل الإرسال: يعرض رسالة الخطأ ولا يعيد الرسم', async () => {

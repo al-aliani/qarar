@@ -391,6 +391,16 @@ export class MarketAnalysis {
         }
     }
 
+    /** شارة مصدر رقم TAM/SAM/SOM بجانب حقله مباشرة: مطبَّقة من اقتراح القطاع (افتراض) أم
+     * مُدخلة يدوياً من المستخدم — نفس نمط pa-estimate-badge في ProjectAlternativesView.js.
+     * لا شارة بلا قيمة أو بلا مصدر معروف (دراسات محفوظة قبل هذه الميزة) — لا تخمين. */
+    _renderMarketProvenanceBadge(field) {
+        if (!field?.value || !field.source) return '';
+        return field.source === 'assumption'
+            ? `<span class="badge badge--neutral market-provenance-badge" title="محسوبة تلقائياً من نسب القطاع الافتراضية في marketSizingModel">تقدير افتراضي حسب القطاع</span>`
+            : `<span class="badge badge--neutral market-provenance-badge" title="قيمة أدخلتها بنفسك">من بياناتك</span>`;
+    }
+
     renderTAMSAMSOM(data) {
         const tam = data.tam || { value: 0, description: '' };
         const sam = data.sam || { value: 0, description: '' };
@@ -420,6 +430,7 @@ export class MarketAnalysis {
                             <span class="badge badge--tam">إجمالي حجم السوق</span>
                             <span title="كل الطلب المحتمل للمنتج في المنطقة الجغرافية المستهدفة. مثال: إجمالي مبيعات المطاعم في المملكة">(TAM)</span>
                             ${fieldHelp('إجمالي السوق المتاح: كل الطلب المحتمل للمنتج في المنطقة الجغرافية المستهدفة.', 'مثال: إجمالي مبيعات المطاعم في المملكة')}
+                            ${this._renderMarketProvenanceBadge(tam)}
                         </label>
                         <input type="number" id="market-tam" class="input tam-value" data-field="tam" 
                                value="${tam.value || 0}" placeholder="بالريال">
@@ -431,6 +442,7 @@ export class MarketAnalysis {
                             <span class="badge badge--sam">السوق المتاح</span>
                             <span title="الجزء من إجمالي السوق الذي يمكنك الوصول إليه فعلياً بناءً على قدراتك الجغرافية والتشغيلية">(SAM)</span>
                             ${fieldHelp('السوق المتاح: الجزء من TAM الذي يمكنك الوصول إليه فعلياً بناءً على قدراتك الجغرافية والتشغيلية.', 'مثال: مبيعات المطاعم في المدينة المستهدفة')}
+                            ${this._renderMarketProvenanceBadge(sam)}
                         </label>
                         <input type="number" id="market-sam" class="input sam-value" data-field="sam" 
                                value="${sam.value || 0}" placeholder="بالريال">
@@ -442,6 +454,7 @@ export class MarketAnalysis {
                             <span class="badge badge--som">حصتنا المستهدفة</span>
                             <span title="النسبة من السوق المتاح التي تتوقع الاستحواذ عليها خلال 3-5 سنوات">(SOM)</span>
                             ${fieldHelp('حصة السوق المستهدفة: النسبة من SAM التي تستطيع الاستحواذ عليها فعلياً خلال 3-5 سنوات.', 'مثال: 2% من سوق المطاعم في المدينة')}
+                            ${this._renderMarketProvenanceBadge(som)}
                         </label>
                         <input type="number" id="market-som" class="input som-value" data-field="som"
                                value="${som.value || 0}" placeholder="بالريال">
@@ -1171,9 +1184,9 @@ export class MarketAnalysis {
         if (!suggestion) return;
         const state = this.store.getState();
         const ms = { ...state.marketSizing };
-        ms.tam = { ...(ms.tam || {}), value: suggestion.tam, description: suggestion.description };
-        ms.sam = { ...(ms.sam || {}), value: suggestion.sam, description: `السوق المتاح في المنطقة المستهدفة — تقدير بناءً على ${suggestion.source}` };
-        ms.som = { ...(ms.som || {}), value: suggestion.som, description: `الحصة المستهدفة خلال 3–5 سنوات — تقدير أولي` };
+        ms.tam = { ...(ms.tam || {}), value: suggestion.tam, description: suggestion.description, source: 'assumption' };
+        ms.sam = { ...(ms.sam || {}), value: suggestion.sam, description: `السوق المتاح في المنطقة المستهدفة — تقدير بناءً على ${suggestion.source}`, source: 'assumption' };
+        ms.som = { ...(ms.som || {}), value: suggestion.som, description: `الحصة المستهدفة خلال 3–5 سنوات — تقدير أولي`, source: 'assumption' };
         ms.populationDemographics = {
             ...(ms.populationDemographics || {}),
             totalPopulation: suggestion.population,
@@ -1191,7 +1204,9 @@ export class MarketAnalysis {
 
         const state = this.store.getState();
         const marketSizing = { ...state.marketSizing };
-        marketSizing[field] = { ...marketSizing[field], value };
+        // تعديل يدوي يُسقط وسم «تقدير افتراضي حسب القطاع» ويصبح المصدر «من بياناتك» —
+        // نفس نمط إسقاط pa-estimate-badge عند التعديل اليدوي في ProjectAlternativesView.js.
+        marketSizing[field] = { ...marketSizing[field], value, source: 'user' };
 
         this.store.update('marketSizing', marketSizing);
         this.render();

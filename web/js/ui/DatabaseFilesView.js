@@ -1,4 +1,5 @@
 import { escapeAttr, escapeHtml } from '../utils/escape.js';
+import { parseWorksheetRows } from './DatabaseCompanyPicker.js';
 
 const downloadIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14"/></svg>';
 const fileIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>';
@@ -9,6 +10,9 @@ export class DatabaseFilesView {
         this.catalog = null;
         this.loaded = false;
         this.options = options;
+        this.previewOverlay = null;
+        this.previewState = null;
+        this.container?.addEventListener('click', (e) => this._onContainerClick(e));
     }
 
     async render() {
@@ -89,7 +93,7 @@ export class DatabaseFilesView {
                                     </div>
                                     <div class="rs-db-file__actions">
                                         <a class="btn btn--primary btn--sm" href="${escapeAttr(file.url)}" download="${escapeAttr(file.downloadName)}">${downloadIcon} تحميل</a>
-                                        <a class="rs-card__preview" href="${escapeAttr(file.url)}" target="_blank" rel="noopener noreferrer">عرض</a>
+                                        <button type="button" class="rs-card__preview" data-preview-file="${escapeAttr(file.id)}" data-preview-group="${escapeAttr(group.id)}">معاينة المحتوى</button>
                                     </div>
                                 </article>
                             `).join('')}
@@ -142,5 +146,106 @@ export class DatabaseFilesView {
                 </section>
             </div>
         `;
+    }
+
+    _onContainerClick(e) {
+        const btn = e.target.closest('[data-preview-file]');
+        if (!btn) return;
+        const group = (this.catalog?.groups || []).find((g) => g.id === btn.getAttribute('data-preview-group'));
+        const file = group?.files?.find((f) => f.id === btn.getAttribute('data-preview-file'));
+        if (file) this._openPreview(file);
+    }
+
+    _ensurePreviewOverlay() {
+        let overlay = document.getElementById('databaseFilePreviewOverlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'databaseFilePreviewOverlay';
+            document.body.appendChild(overlay);
+            // مُرفَق مرة واحدة للأبد على مستوى الصفحة — يقرأ overlay._activeView ديناميكياً
+            // بدل الإغلاق على `this` وقت الربط، لأن DatabaseFilesView يُعاد إنشاؤه في كل
+            // DashboardView.draw() (انظر DashboardView.js) فيصبح `this` هنا نسخة ميتة قديمة.
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay._activeView?._closePreview(); });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && overlay.classList.contains('is-open')) overlay._activeView?._closePreview();
+            });
+        }
+        overlay.classList.add('modal-overlay');
+        overlay._activeView = this;
+        this.previewOverlay = overlay;
+        return overlay;
+    }
+
+    async _openPreview(file) {
+        const overlay = this._ensurePreviewOverlay();
+        this.previewState = { file, loading: true, error: null, headers: [], rowCount: 0 };
+        overlay.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+        this._renderPreview();
+        try {
+            const res = await fetch(file.url);
+            if (!res.ok) throw new Error(`status ${res.status}`);
+            const buffer = await res.arrayBuffer();
+            const mod = await import('exceljs');
+            const ExcelJS = mod.default && mod.default.Workbook ? mod.default : mod;
+            const workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.load(buffer);
+            const parsed = parseWorksheetRows(workbook.worksheets[0]);
+            this.previewState.headers = parsed.headers;
+            this.previewState.rowCount = parsed.rows.length;
+        } catch (error) {
+            console.error('DatabaseFilesView: preview parse failed', error);
+            this.previewState.error = 'تعذّر تحليل هذا الملف للمعاينة. جرّب التحميل المباشر.';
+        } finally {
+            this.previewState.loading = false;
+            this._renderPreview();
+        }
+    }
+
+    _closePreview() {
+        if (!this.previewOverlay) return;
+        this.previewOverlay.classList.remove('is-open');
+        document.body.style.overflow = '';
+        this.previewState = null;
+    }
+
+    _renderPreview() {
+        const overlay = this.previewOverlay;
+        const state = this.previewState;
+        if (!overlay || !state) return;
+        const { file, loading, error, headers, rowCount } = state;
+
+        let body;
+        if (loading) {
+            body = `<div class="rs-loading" role="status" aria-live="polite"><div class="loader"></div><p>جاري تحليل الملف…</p></div>`;
+        } else if (error) {
+            body = `<div class="rs-error" role="alert"><strong>${escapeHtml(error)}</strong></div>`;
+        } else {
+            const shown = headers.slice(0, 5);
+            const restCount = headers.length - shown.length;
+            body = headers.length ? `
+                <p class="text-sm"><strong>${escapeHtml(rowCount)}</strong> صف بيانات فعلي · <strong>${escapeHtml(headers.length)}</strong> عمود</p>
+                <p class="text-sm text-muted mb-2">أول أعمدة الملف:</p>
+                <div class="rs-card__tags">${shown.map((h) => `<span class="rs-tag">${escapeHtml(h)}</span>`).join('')}</div>
+                ${restCount > 0 ? `<p class="text-xs text-muted mt-2">و${restCount} عمود آخر.</p>` : ''}
+            ` : `<p class="text-sm text-muted">تعذّر اكتشاف رؤوس أعمدة في هذا الملف.</p>`;
+        }
+
+        overlay.innerHTML = `
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="dbFilePreviewTitle" dir="rtl" style="width:420px;max-width:92vw;">
+                <div class="modal-header">
+                    <h3 id="dbFilePreviewTitle">${fileIcon} ${escapeHtml(file.title)}</h3>
+                    <button type="button" class="btn-close" data-preview-close aria-label="إغلاق">×</button>
+                </div>
+                <div class="modal-body">${body}</div>
+                ${!loading ? `
+                    <div class="modal-footer flex-between gap-2">
+                        <a class="btn btn--primary btn-sm" href="${escapeAttr(file.url)}" download="${escapeAttr(file.downloadName)}">${downloadIcon} تحميل الملف</a>
+                        <button type="button" class="btn btn--secondary btn-sm" data-preview-close>إغلاق</button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        overlay.querySelectorAll('[data-preview-close]').forEach((btn) => btn.addEventListener('click', () => this._closePreview()));
     }
 }

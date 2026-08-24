@@ -15,6 +15,19 @@ const STATUS_META = {
     closed: { label: 'مُغلقة', badge: 'badge--neutral' },
 };
 
+const ISSUE_TYPE_OPTIONS = [
+    { value: 'technical', label: 'مشكلة تقنية' },
+    { value: 'billing', label: 'استفسار عن الدفع/الفوترة' },
+    { value: 'content', label: 'استفسار عن محتوى دراسة' },
+    { value: 'feature_request', label: 'طلب ميزة' },
+    { value: 'other', label: 'غير ذلك' },
+];
+
+const PRIORITY_OPTIONS = [
+    { value: 'normal', label: 'عادية' },
+    { value: 'urgent', label: 'عاجلة' },
+];
+
 function escapeHtml(value) {
     return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -61,6 +74,20 @@ export class SupportTicketsView {
                         <label class="block text-sm font-medium mb-1" for="supportBody">تفاصيل المشكلة</label>
                         <textarea id="supportBody" class="form-input w-full" rows="4" placeholder="اشرح المشكلة بالتفصيل..."></textarea>
                     </div>
+                    <div class="form-group mb-3" style="display:flex; gap: var(--s-3); flex-wrap:wrap;">
+                        <div style="flex:1; min-width:180px;">
+                            <label class="block text-sm font-medium mb-1" for="supportIssueType">نوع المشكلة</label>
+                            <select id="supportIssueType" class="form-input w-full">
+                                ${ISSUE_TYPE_OPTIONS.map((o) => `<option value="${o.value}">${o.label}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div style="flex:1; min-width:140px;">
+                            <label class="block text-sm font-medium mb-1" for="supportPriority">الأولوية</label>
+                            <select id="supportPriority" class="form-input w-full">
+                                ${PRIORITY_OPTIONS.map((o) => `<option value="${o.value}">${o.label}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
                     <div id="supportSubmitError" class="text-danger text-sm mb-2" role="alert" style="display:none;"></div>
                     <button type="button" id="btnSupportSubmit" class="btn btn--primary">إرسال التذكرة</button>
                 </div>
@@ -104,12 +131,14 @@ export class SupportTicketsView {
     _bindSubmitForm() {
         const subjectEl = this.container.querySelector('#supportSubject');
         const bodyEl = this.container.querySelector('#supportBody');
+        const issueTypeEl = this.container.querySelector('#supportIssueType');
+        const priorityEl = this.container.querySelector('#supportPriority');
         const errEl = this.container.querySelector('#supportSubmitError');
         const showErr = (msg) => { errEl.textContent = msg || ''; errEl.style.display = msg ? 'block' : 'none'; };
 
         this.container.querySelector('#btnSupportSubmit')?.addEventListener('click', async () => {
             showErr('');
-            const result = await submitTicket({ subject: subjectEl.value, body: bodyEl.value });
+            const result = await submitTicket({ subject: subjectEl.value, body: bodyEl.value, issueType: issueTypeEl.value, priority: priorityEl.value });
             if (!result.ok) { showErr(result.error || 'فشل إرسال التذكرة'); return; }
             trackEvent('support_ticket_created', { category: 'support' });
             toast.success('تم إرسال تذكرتك — سنرد عليك قريباً');

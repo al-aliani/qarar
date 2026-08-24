@@ -626,10 +626,10 @@ export class FinancingStructure {
         return `
             <div class="dscr-field mb-3" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
                 <label for="financing-targetDSCR" style="font-weight:bold;">نسبة تغطية خدمة الدين المستهدفة (DSCR)
-                    <span class="tooltip-icon" title="DSCR = صافي التدفق النقدي التشغيلي ÷ أقساط الدين. البنوك تطلب عادة ≥ 1.25 لتضمن قدرة المشروع على السداد">${icon('i-info')}</span>
+                    <span class="tooltip-icon" title="DSCR = صافي التدفق النقدي التشغيلي ÷ أقساط الدين. معيار نموذجي شائع الاستخدام في السوق السعودي (وليس نصاً رسمياً معتمداً من جهة معينة) هو ≥ 1.25 لضمان قدرة المشروع على السداد">${icon('i-info')}</span>
                 </label>
                 <input type="number" id="financing-targetDSCR" class="input input--sm" style="width:6rem;text-align:center;" value="${targetDSCR}" min="1" max="5" step="0.05">
-                ${targetDSCR < 1.25 ? `<span class="text-danger text-sm">${icon('i-warning')} أقل من الحد الائتماني المعتاد (1.25)</span>` : `<span class="text-success text-sm">${icon('i-check')} ضمن النطاق المقبول للبنوك</span>`}
+                ${targetDSCR < 1.25 ? `<span class="text-danger text-sm">${icon('i-warning')} أقل من المعيار النموذجي الشائع (1.25)</span>` : `<span class="text-success text-sm">${icon('i-check')} ضمن المعيار النموذجي الشائع لدى البنوك</span>`}
             </div>
             <table class="data-table">
                 <thead>

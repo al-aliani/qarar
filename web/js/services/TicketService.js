@@ -9,13 +9,15 @@
 import { getSupabaseClient, getAuthUser } from '../../supabaseClient.js';
 
 export const TICKET_STATUSES = ['open', 'answered', 'closed'];
+export const TICKET_ISSUE_TYPES = ['technical', 'billing', 'content', 'feature_request', 'other'];
+export const TICKET_PRIORITIES = ['normal', 'urgent'];
 
 /**
  * إنشاء تذكرة جديدة + أول رسالة فيها.
- * @param {{subject: string, body: string, category?: 'support'|'funding_introduction'}} params
+ * @param {{subject: string, body: string, category?: 'support'|'funding_introduction', issueType?: string, priority?: string}} params
  * @returns {Promise<{ok: boolean, ticketId?: string, error?: string}>}
  */
-export async function submitTicket({ subject, body, category = 'support' }) {
+export async function submitTicket({ subject, body, category = 'support', issueType = 'other', priority = 'normal' }) {
     const cleanSubject = String(subject || '').trim();
     const cleanBody = String(body || '').trim();
     if (!cleanSubject) return { ok: false, error: 'أدخل عنوان التذكرة.' };
@@ -29,7 +31,7 @@ export async function submitTicket({ subject, body, category = 'support' }) {
 
     const { data: ticket, error: ticketError } = await supabase
         .from('support_tickets')
-        .insert({ user_id: user.id, subject: cleanSubject, category })
+        .insert({ user_id: user.id, subject: cleanSubject, category, issue_type: issueType, priority })
         .select('id')
         .single();
     if (ticketError) return { ok: false, error: ticketError.message };

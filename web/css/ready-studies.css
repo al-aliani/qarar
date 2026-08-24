@@ -668,6 +668,14 @@
     text-decoration: underline;
 }
 
+button.rs-card__preview {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
 .rs-loading,
 .rs-error,
 .rs-empty {
