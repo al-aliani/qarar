@@ -64,6 +64,18 @@ class MonitoringService {
                             delete event.request.query_string;
                         }
                         return event;
+                    },
+                    beforeBreadcrumb(breadcrumb, hint) {
+                        // Filter out sensitive data from breadcrumb.data
+                        if (breadcrumb.data) {
+                            const sensitiveKeys = ['email', 'password', 'token', 'phone', 'mobile', 'ssn', 'card', 'secret', 'authorization', 'cookie'];
+                            Object.keys(breadcrumb.data).forEach((key) => {
+                                if (sensitiveKeys.includes(key.toLowerCase())) {
+                                    delete breadcrumb.data[key];
+                                }
+                            });
+                        }
+                        return breadcrumb;
                     }
                 });
                 this.enabled = true;

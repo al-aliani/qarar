@@ -74,13 +74,26 @@ function getAttributionParams() {
     }
 }
 
+// أسماء المفاتيح الفعلية المستخدمة في كل نداءات trackEvent(...) الحالية عبر web/js
+// (بما فيها ...context المنتشرة من monitoring.js/captureException). أي مفتاح جديد
+// غير مُدرَج هنا يُسقط بصمت بدل أن يمرّ حرفياً إلى gtag/fbq/Supabase.
+const ALLOWED_EVENT_PARAM_KEYS = new Set([
+    'page', 'application_type', 'type', 'provider', 'model', 'source', 'outcome',
+    'duration_ms', 'message', 'reason', 'level', 'specialty', 'sector', 'status',
+    'tier', 'kind', 'surface', 'decision', 'orderId', 'colKey', 'format',
+    'study_id', 'category', 'action', 'permission', 'expiry_days', 'view_mode',
+    'hide_sensitive', 'stepId', 'key', 'tone', 'filename', 'lineno', 'colno',
+    'url', 'applicationType', 'step', 'operation', 'studyId', 'isSignUp', 'args',
+]);
+
 export function trackEvent(name, params = {}) {
     // تدقيق كوكيز 2026-08-22 (إشعار الكوكيز public/js/cookie-notice.js): كانت كل
     // استدعاءات trackEvent تصل فعلياً (gtag/fbq + إدراج Supabase) بلا أي شرط موافقة —
     // الآن لا شيء يغادر المتصفح قبل ضغط الزائر "موافق" صراحة.
     if (!hasAnalyticsConsent()) return;
     try {
-        const eventParams = { ...getEnvironmentParams(), ...getExperimentParams(), ...getAttributionParams(), ...params };
+        const safeParams = Object.fromEntries(Object.entries(params).filter(([k]) => ALLOWED_EVENT_PARAM_KEYS.has(k)));
+        const eventParams = { ...getEnvironmentParams(), ...getExperimentParams(), ...getAttributionParams(), ...safeParams };
         if (typeof window !== 'undefined' && typeof window.gtag === 'function') window.gtag('event', name, eventParams);
         if (typeof window !== 'undefined' && typeof window.fbq === 'function') window.fbq('trackCustom', name, eventParams);
         if (typeof window !== 'undefined') window.dispatchEvent?.(new CustomEvent('qarar:analytics', { detail: { name, params: eventParams } }));

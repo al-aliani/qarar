@@ -46,6 +46,7 @@
     },
     { "src": "^/$", "dest": "/landing.html" },
     { "handle": "filesystem" },
+    { "src": "^/assets/.*$", "status": 404 },
     { "src": "^/(.*)$", "dest": "/index.html" }
   ]
 }

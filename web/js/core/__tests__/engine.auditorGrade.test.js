@@ -237,9 +237,12 @@ describe('ج. القيمة النهائية (Gordon)', () => {
         expect(r.indicators.npvWithTerminal).toBeCloseTo(r.indicators.npv + r.indicators.terminalValue, 4);
         // معادلة Gordon على تدفق معياري (NOPAT غير مرفوع بالدين) لا التدفق الأخير الخام
         // — بعد إصلاح تدقيق ٢٠٢٦-٠٧-٠٦ #2: normalizedFCF × (1+g) ÷ (r−g) مخصومة للسنوات.
+        // — تصحيح منهجي ٢٠٢٦-٠٨-٢٤: normalizedFCF كانت NOPAT فقط (ebit×(1-effLevy))، وهذا ليس
+        //   FCFF كاملاً لأنه لا يعيد إضافة الإهلاك ولا يطرح الاستثمار الإحلالي؛ الصيغة الآن:
+        //   normalizedFCF = NOPAT + depreciation - replacementCost (بلا ΔNWC — قرار منفصل).
         const last = r.incomeStatement[4];
         const effLevy = last.ebt > 0 ? Math.min(1, (last.zakat + last.tax) / last.ebt) : 0;
-        const normFCF = last.ebit * (1 - effLevy);
+        const normFCF = last.ebit * (1 - effLevy) + (last.depreciation || 0) - (last.replacementCost || 0);
         const expected = (normFCF * 1.02) / (0.10 - 0.02) / Math.pow(1.10, 5);
         expect(r.indicators.terminalValue).toBeCloseTo(expected, 2);
     });

@@ -139,8 +139,15 @@ export class ReadyStudiesView {
             </div>
         ` : '';
 
+        const disclosureNote = catalog.disclosureNote || '';
         this.container.innerHTML = `
             <div class="ready-studies" dir="rtl">
+                ${disclosureNote ? `
+                <div class="rs-notice" role="note">
+                    <span class="rs-notice__mark">!</span>
+                    <span>${escapeHtml(disclosureNote)}</span>
+                </div>
+                ` : ''}
                 <div class="rs-hero">
                     <div class="rs-hero__icon">${fileIcon}</div>
                     <div>

@@ -104,8 +104,10 @@ export function calculateTerminalValue({
         const levyLast = Number(lastYearIncomeStatement.zakat || 0) + Number(lastYearIncomeStatement.tax || 0);
         const effLevyRate = ebtLast > 0 ? Math.min(1, levyLast / ebtLast) : 0;
         
-        // NOPAT
-        const normalizedFCF = ebitLast * (1 - effLevyRate);
+        // FCFF مقرَّب: NOPAT + إعادة إضافة الإهلاك - الاستثمار الإحلالي (بدون ΔNWC — قرار منفصل)
+        const depreciationLast = Number(lastYearIncomeStatement.depreciation || 0);
+        const replacementCostLast = Number(lastYearIncomeStatement.replacementCost || 0);
+        const normalizedFCF = ebitLast * (1 - effLevyRate) + depreciationLast - replacementCostLast;
         const g = Math.min(Number(tvCfg.growthRate ?? 0.02), Math.max(0, discountRate - 0.02));
         
         if (normalizedFCF > 0 && discountRate > g) {
