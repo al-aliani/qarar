@@ -574,13 +574,19 @@ export function calculateStudy(study, overrides) {
     const dpo = Number(wcp.dpoDays);
     const dio = Number(wcp.dioDays);
     const hasCashCycle = [dso, dpo, dio].some(v => Number.isFinite(v) && v > 0);
+    // دالة موحّدة لحساب الدورة النقدية لأي سنة (إيراد وتكلفة متغيرة تشغيلية لتلك السنة) —
+    // تُستخدم لسنة الأساس (rev1Total/year1OperatingVCBase) هنا، ولاحقاً لكل سنة إسقاط داخل
+    // حلقة قائمة الدخل (ΔNWC السنوي) بنفس المنطق حرفياً.
+    const computeCashCycle = (revBase, vcBase) => {
+        const ar = revBase * (Number.isFinite(dso) && dso > 0 ? dso : 0) / 365;
+        const inv = vcBase * (Number.isFinite(dio) && dio > 0 ? dio : 0) / 365;
+        const ap = vcBase * (Number.isFinite(dpo) && dpo > 0 ? dpo : 0) / 365;
+        return { receivables: ar, inventory: inv, payables: ap, net: Math.max(0, ar + inv - ap) };
+    };
     let cashCycle = null;
     if (hasCashCycle) {
         const rev1Total = year1OperatingRevenueBase + year1NonOperatingRevenueBase;
-        const ar = rev1Total * (Number.isFinite(dso) && dso > 0 ? dso : 0) / 365;
-        const inventory = year1OperatingVCBase * (Number.isFinite(dio) && dio > 0 ? dio : 0) / 365;
-        const ap = year1OperatingVCBase * (Number.isFinite(dpo) && dpo > 0 ? dpo : 0) / 365;
-        cashCycle = { receivables: ar, inventory, payables: ap, net: Math.max(0, ar + inventory - ap) };
+        cashCycle = computeCashCycle(rev1Total, year1OperatingVCBase);
         wcCOGS = cashCycle.net; // يحل محل تغطية COGS بالأشهر
     }
 
@@ -704,6 +710,12 @@ export function calculateStudy(study, overrides) {
     // بدل التقريب الخطي annualDepreciation×yearIndex الذي كان يفترض إهلاكاً ثابتاً للأبد.
     let cumulativeDepreciationPriorYears = 0;
 
+    // ΔNWC السنوي: رأس المال العامل التأسيسي (cashCycle أعلاه) يبقى كما هو لحساب
+    // totalInvestment — هذا فقط يتتبّع التغيّر السنوي في صافي رأس المال العامل (AR+مخزون−ذمم
+    // موردين) مع نمو الإيراد/التكلفة الفعليين، لخصمه من التدفق النقدي واسترداده في آخر سنة.
+    let prevNWC = hasCashCycle ? cashCycle.net : 0;
+    const cashCycleByYear = [];
+
     for (let i = 1; i <= years; i++) {
         const yearIndex = i - 1;
         const utilRate = getUtilizationRate(i);
@@ -726,6 +738,17 @@ export function calculateStudy(study, overrides) {
 
         const totalRevenue = opRev + nonOpRev;
         const totalVariableCosts = (opVC + nonOpVC + logisticsVC) * opexMult;
+
+        // الدورة النقدية الفعلية لهذه السنة — القاعدة عمداً opVC فقط (التكلفة المتغيرة
+        // التشغيلية) لا totalVariableCosts (التي تضم logisticsVC): قرار مالك المنتج
+        // 2026-08-24 أن يبقى مخزون/ذمم الموردين مبنياً على نفس قاعدة سنة الأساس تماماً
+        // (year1OperatingVCBase أعلاه)، بلا توسعة لتشمل تكاليف اللوجستيات.
+        const yearCashCycle = hasCashCycle ? computeCashCycle(totalRevenue, opVC) : null;
+        const nwc = yearCashCycle ? yearCashCycle.net : 0;
+        const deltaNWC = hasCashCycle ? (nwc - prevNWC) : 0;
+        prevNWC = nwc;
+        cashCycleByYear.push(yearCashCycle);
+
         const grossProfit = totalRevenue - totalVariableCosts;
 
         // المصاريف الثابتة تتضخم مع الزمن — الرواتب والتسويق تدعمان الآن معدل نمو مخصص لكل
@@ -826,7 +849,12 @@ export function calculateStudy(study, overrides) {
         // التدفق النقدي
         const operatingCF = netIncome + depreciation;
         const financingCF = -principalPaid;
-        const netCashFlow = operatingCF + financingCF - replacementCost;
+        // استرداد رأس المال العامل في آخر سنة من الأفق (قرار مالك المنتج 2026-08-24، رقم 1):
+        // يرفع NPV/IRR لأنه تدفق نقدي حقيقي داخل عند تصفية/نهاية أفق الدراسة، لكنه خارج CFADS
+        // كلياً (قرار رقم 3) — cfads() أدناه يقرأ deltaNWC فقط ولا يقرأ nwcRecapture إطلاقاً.
+        const isLastYear = i === years;
+        const nwcRecapture = (isLastYear && hasCashCycle) ? nwc : 0;
+        const netCashFlow = operatingCF + financingCF - replacementCost - deltaNWC + nwcRecapture;
 
         const prevCum = cumulativeCashFlow;
         cumulativeCashFlow += netCashFlow;
@@ -878,6 +906,8 @@ export function calculateStudy(study, overrides) {
             levy: zakat + tax,
             netIncome,
             replacementCost,
+            deltaNWC,
+            nwcRecapture,
             loanPrincipalPaid: principalPaid,
             cashFlow: netCashFlow
         });
@@ -981,8 +1011,12 @@ export function calculateStudy(study, overrides) {
     // CFADS = EBITDA − الضرائب النقدية (الزكاة+الضريبة = levy) − الإنفاق الرأسمالي للإحلال
     // (replacementCost). المعيار البنكي: خدمة الدين تُسدَّد من نقد فعلي بعد اقتطاع الزكاة/الضريبة
     // والإحلال، لا من ربح تشغيلي خام يتجاهلهما (فيُبالِغ في تغطية الدين). (تدقيق ٢٠٢٦-٠٧-٠٨)
+    // تحديث 2026-08-24 (ΔNWC): CFADS يخصم أيضاً الزيادة السنوية في رأس المال العامل الصافي
+    // (deltaNWC) — نقد حقيقي يُحتجز في AR/مخزون فلا يتوفر لخدمة الدين. عمداً لا يقرأ
+    // nwcRecapture (استرداد آخر سنة) إطلاقاً — قرار مالك المنتج رقم 3: الاسترداد خارج
+    // CFADS/DSCR كلياً مهما كانت السنة.
     const cfads = (stmt) => Math.max(0,
-        (Number(stmt.ebitda) || 0) - (Number(stmt.levy) || 0) - (Number(stmt.replacementCost) || 0));
+        (Number(stmt.ebitda) || 0) - (Number(stmt.levy) || 0) - (Number(stmt.replacementCost) || 0) - (Number(stmt.deltaNWC) || 0));
     const year1Cfads = year1 ? cfads(year1) : 0;
     const debtServiceYear1 = loanYear(1)?.totalPayment || 0;
     const dscrYear1 = debtServiceYear1 > 0 && year1Cfads > 0
@@ -1068,6 +1102,10 @@ export function calculateStudy(study, overrides) {
                 // الدورة النقدية الفعلية (DSO/DIO/DPO) — تُمرَّر كي تُظهر الميزانية ذمم عملاء
                 // حقيقية بدل صفر ثابت («Simplified») حتى مع سياسة تحصيل آجل صريحة (تدقيق دفعة 6).
                 cashCycle,
+                // الدورة النقدية لكل سنة إسقاط (2026-08-24) — تتيح للميزانية استخدام AR/مخزون/ذمم
+                // موردين الفعليين لكل سنة (يتبعون نمو الإيراد الحقيقي) بدل تجميد رقم سنة 1 عبر
+                // كل الأفق؛ cashCycle أعلاه يبقى كما هو للتوافق الخلفي (يُستخدم إن غابت هذه المصفوفة).
+                cashCycleByYear,
                 // مساهمة المالك المُدخلة (وليس رقماً مشتقاً) + الفجوة صراحةً كي تُعرض
                 // «فجوة تمويل غير مغطاة» بدل رأس مال مدفوع مختلَق يوازن الميزانية صمتاً
                 equityAmount: paidCapital,
