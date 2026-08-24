@@ -147,6 +147,11 @@
     box-shadow: var(--v2-glass-shadow) !important;
     padding: 16px 32px !important;
     margin: 0 !important;
+    /* backdrop-filter يجعل الشريط سياق تكديس (stacking context) مستقلاً بذاته دون position/z-index —
+       فيُصبح z-index:70 لقائمة الحساب المنسدلة محلياً داخله فقط، ويرسم .dv-home-panels (بعده في DOM
+       وله backdrop-filter أيضاً) فوق الشريط بالكامل كوحدة واحدة، فتُحجب القائمة خلف بطاقات لوحة البداية. */
+    position: relative;
+    z-index: 5;
 }
 
 /* WORKSPACE GRID */
