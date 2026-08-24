@@ -911,12 +911,17 @@ export class FinancingStructure {
                     <input type="checkbox" id="use-wacc-discount-rate" ${useWaccAsDiscountRate ? 'checked' : ''}>
                     <span>استخدم WACC كمعدل الخصم في حساب NPV/IRR</span>
                 </label>
+                ${useWaccAsDiscountRate ? `
+                <div class="wacc-disclosure alert alert--info mt-3" style="font-size: 0.85rem;">
+                    ${icon('i-check')} هذا الرقم مُعتمد الآن فعلياً كمعدل الخصم في حساب صافي القيمة الحالية (NPV)
+                    والعائد الداخلي (IRR) في هذه الدراسة، بدلاً من معدل الخصم اليدوي ضمن افتراضات الدراسة.
+                </div>` : `
                 <div class="wacc-disclosure alert alert--warning mt-3" style="font-size: 0.85rem;">
                     ${icon('i-warning')} هذا الرقم إعلامي لمرجعك الشخصي فقط، ولا يُغذّي تلقائياً معدل الخصم الفعلي المستخدم لحساب
                     صافي القيمة الحالية (NPV) والعائد الداخلي (IRR) في هذه الدراسة — ذلك المعدل يُضبط بشكل منفصل
                     ضمن افتراضات الدراسة/الإعدادات المالية. إن رغبت في اعتماد هذا الرقم، انسخه يدوياً إلى حقل
                     «معدل الخصم» هناك.
-                </div>
+                </div>`}
             </div>
         `;
     }

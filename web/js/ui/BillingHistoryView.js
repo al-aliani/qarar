@@ -9,6 +9,7 @@ import { AuthGuard } from '../middleware/AuthGuard.js';
 import { listOrders } from '../services/PaymentService.js';
 import { openTaxInvoice } from '../utils/zatcaInvoice.js';
 import { trackEvent } from '../utils/analytics.js';
+import { buildWhatsAppLink } from '../config.js';
 
 const TIER_LABELS = {
     self: 'الباقة الذاتية',
@@ -33,6 +34,11 @@ function formatAmount(order) {
     const amount = Number(order.amount_sar || 0).toFixed(2);
     const currency = order.currency === 'SAR' ? 'ريال' : (order.currency || '');
     return `${amount} ${currency}`.trim();
+}
+
+// نفس الاختصار المعتمد لمرجع الطلب في BankTransferPanel.js (أول 8 خانات من الـUUID).
+function orderRef(order) {
+    return String(order.id || '').slice(0, 8);
 }
 
 export class BillingHistoryView {
@@ -71,16 +77,24 @@ export class BillingHistoryView {
                         <div class="space-y-3">
                             ${orders.map((o, idx) => {
                                 const status = STATUS_META[o.status] || STATUS_META.pending;
+                                const ref = orderRef(o);
+                                // طلب pending بلا أي زر إجراء يترك العميل بلا معرفة ماذا يفعل حياله —
+                                // لا يوجد مسار برمجي لاستئناف جلسة دفع سابقة بعينها، فنستخدم نفس
+                                // قناة التواصل المعتمدة لأغراض مشابهة (BankTransferPanel.js).
+                                const pendingWaLink = o.status === 'pending'
+                                    ? buildWhatsAppLink(`السلام عليكم، عندي طلب "${TIER_LABELS[o.tier] || o.tier}" بمبلغ ${formatAmount(o)} بحالة قيد الانتظار (رقم الطلب #${ref}). أحب أتواصل بخصوصه.`)
+                                    : null;
                                 return `
                                     <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                                         <div>
                                             <div class="font-bold">${TIER_LABELS[o.tier] || o.tier}</div>
-                                            <div class="text-xs text-muted mt-1">${formatDate(o.paid_at || o.created_at)}</div>
+                                            <div class="text-xs text-muted mt-1">${formatDate(o.paid_at || o.created_at)} · #${ref}</div>
                                         </div>
                                         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                                             <span class="font-bold">${formatAmount(o)}</span>
                                             <span class="badge ${status.badge}">${status.label}</span>
                                             ${o.status === 'paid' ? `<button type="button" class="btn btn--ghost btn--sm" data-invoice="${idx}">فاتورة ضريبية</button>` : ''}
+                                            ${pendingWaLink ? `<a href="${pendingWaLink}" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn--sm">تواصل بخصوص الطلب</a>` : ''}
                                         </div>
                                     </div>
                                 `;

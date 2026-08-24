@@ -46,6 +46,10 @@ export class AutoSave {
             try {
                 // Use store.save() so _syncToCloud runs and Sidebar shows "محفوظ في السحابة"
                 if (this.store && typeof this.store.save === 'function') {
+                    // store._dirty (يُرفع في updateSection/updatePath/undo/redo، ويُخفض بعد
+                    // saveLocal ناجح) يمنع تكة الـ30 ثانية من إعادة الحفظ/تسجيل التدقيق
+                    // (PersistenceService.log) حين لا يوجد أي تغيير فعلي منذ آخر حفظ.
+                    if (!this.store._dirty) return;
                     this.store.save();
                     this.lastSaved = new Date();
                     console.log('💾 Auto-save triggered at', this.lastSaved.toLocaleTimeString('ar-SA'));

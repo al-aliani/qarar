@@ -6,13 +6,19 @@
  * «حفظ» في IntegrationsView.js). كان الويب هوك يملك إفصاحاً جزئياً فقط (قائمة
  * الأحداث بلا ذكر أنها نقطة نهاية المستخدم نفسه)، وGoogle Sheets لم يكن يملك أي
  * إفصاح إطلاقاً. الآن كلاهما يعرض جملة إفصاح واضحة أعلى زر التفعيل مباشرة.
+ *
+ * تدقيق أمني 2026-08-24: هذا المحتوى التقني الكامل صار خلف AuthGuard.isAdmin —
+ * يُموَّه هنا كأدمن لاختبار نفس محتوى الدفعة 6 دون تغيير غرضه.
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('../../middleware/AuthGuard.js', () => ({ AuthGuard: { isAdmin: vi.fn(async () => true) } }));
+
 import { IntegrationsView } from '../IntegrationsView.js';
 import { WEBHOOK_CONSENT_TEXT } from '../../services/WebhookService.js';
 import { GSHEETS_CONSENT_TEXT } from '../../services/GoogleSheetsService.js';
 
-describe('IntegrationsView — إفصاح الموافقة عند تفعيل Webhook و Google Sheets', () => {
+describe('IntegrationsView — إفصاح الموافقة عند تفعيل Webhook و Google Sheets (أدمن)', () => {
     beforeEach(() => {
         document.body.innerHTML = '<div id="c"></div>';
         localStorage.clear();

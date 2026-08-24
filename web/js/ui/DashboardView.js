@@ -1115,6 +1115,8 @@ export class DashboardView {
             const renderNotifList = async () => {
                 const { listNotifications } = await import('../services/NotificationService.js');
                 const items = await listNotifications();
+                const markAllBtn = notifPanel.querySelector('#dvNotifMarkAll');
+                if (markAllBtn) markAllBtn.style.display = items.some(n => !n.read_at) ? '' : 'none';
                 const listEl = notifPanel.querySelector('#dvNotifList');
                 if (!listEl) return;
                 if (items.length === 0) {

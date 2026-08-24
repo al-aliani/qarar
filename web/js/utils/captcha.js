@@ -2,9 +2,21 @@
  * CAPTCHA (reCAPTCHA v3) — معيار حرج
  * تنفيذ غير مرئي قبل تسجيل الدخول/التسجيل.
  * يحتاج VERIFY_SITE_KEY على السيرفر للتحقق.
+ * تدقيق 2026-08-24: Site Key يُضبط الآن فقط وقت البناء عبر VITE_RECAPTCHA_SITE_KEY
+ * (نفس نمط VITE_WHATSAPP_NUMBER في config.js) — كان قابلاً للتعديل من متصفح أي
+ * مستخدم عبر localStorage في صفحة التكاملات رغم أنه إعداد مركزي يحمي تسجيل
+ * الدخول لكل المستخدمين، لا إعداد شخصي.
  */
 
-const SITE_KEY = window.RECAPTCHA_SITE_KEY || localStorage.getItem('RECAPTCHA_SITE_KEY') || '';
+function envVar(name) {
+  try {
+    return (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[name]) || '';
+  } catch (_) {
+    return '';
+  }
+}
+
+const SITE_KEY = envVar('VITE_RECAPTCHA_SITE_KEY');
 const SCRIPT_URL = 'https://www.google.com/recaptcha/api.js?render=' + SITE_KEY;
 
 let grecaptchaReady = false;
@@ -42,6 +54,5 @@ function loadScript() {
 }
 
 export function isCaptchaConfigured() {
-  const key = typeof localStorage !== 'undefined' ? localStorage.getItem('RECAPTCHA_SITE_KEY') : '';
-  return !!(SITE_KEY || (key && key.trim()));
+  return !!SITE_KEY;
 }

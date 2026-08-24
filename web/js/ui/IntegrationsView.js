@@ -8,12 +8,12 @@ import { showGoogleSheetsSetup, GSHEETS_CONSENT_TEXT } from '../services/GoogleS
 import { WebhookService, WEBHOOK_EVENTS, WEBHOOK_CONSENT_TEXT } from '../services/WebhookService.js';
 import { isCaptchaConfigured } from '../utils/captcha.js';
 import { toast } from '../utils/toast.js';
+import { AuthGuard } from '../middleware/AuthGuard.js';
 
 const LS_KEYS = {
   supabaseUrl: 'SUPABASE_URL',
   supabaseKey: 'SUPABASE_ANON_KEY',
   gsheets: 'GOOGLE_SHEETS_WEB_APP_URL',
-  recaptcha: 'RECAPTCHA_SITE_KEY',
 };
 
 export class IntegrationsView {
@@ -25,11 +25,19 @@ export class IntegrationsView {
   async render() {
     if (!this.container) return;
 
+    // تدقيق أمني 2026-08-24: تعليمات الإعداد التقني (Supabase/Google OAuth/docs
+    // الداخلية) موجَّهة لمطوّر/مسؤول نظام لا لأي مستخدم يفتح "حسابي" ← "التكاملات" —
+    // نفس نمط AuthGuard.isAdmin المستخدم في AdminDashboardView.js.render().
+    const isAdmin = await AuthGuard.isAdmin();
+    if (!isAdmin) {
+      await this._renderBasic();
+      return;
+    }
+
     const supabaseOk = await this._checkSupabase();
     const gsheetsUrl = (typeof localStorage !== 'undefined' ? localStorage.getItem(LS_KEYS.gsheets) : '') || '';
-    const recaptchaKey = (typeof localStorage !== 'undefined' ? localStorage.getItem(LS_KEYS.recaptcha) : '') || '';
     const gsheetsOk = !!gsheetsUrl.trim();
-    const recaptchaOk = !!recaptchaKey.trim() || isCaptchaConfigured();
+    const recaptchaOk = isCaptchaConfigured();
     const webhooksList = WebhookService.getWebhooks();
 
     this.container.innerHTML = `
@@ -84,12 +92,7 @@ export class IntegrationsView {
             <h3 class="font-bold flex items-center gap-2"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg> reCAPTCHA v3</h3>
             <span class="badge ${recaptchaOk ? 'bg-success' : 'bg-muted'}" style="padding: 4px 10px; border-radius: 999px; font-size: 12px;">${recaptchaOk ? 'مهيأ' : 'غير مهيأ'}</span>
           </div>
-          <p class="text-sm text-muted mb-3">حماية نموذج الدخول من البوتات (اختياري). احصل على Site Key من <a href="https://www.google.com/recaptcha/admin" target="_blank" rel="noopener">Google reCAPTCHA</a>.</p>
-          <div class="form-group mb-2">
-            <label class="block text-xs font-medium mb-1">Site Key (reCAPTCHA v3)</label>
-            <input type="text" id="inpRecaptchaKey" class="form-input text-sm w-full" placeholder="6Lc..." value="${(recaptchaKey || '').replace(/"/g, '&quot;')}" autocomplete="off">
-          </div>
-          <button type="button" id="btnSaveRecaptcha" class="btn btn--primary text-sm">حفظ</button>
+          <p class="text-sm text-muted">حماية نموذج الدخول من البوتات (اختياري). يُضبط Site Key وقت بناء المنصة عبر متغيّر البيئة <code>VITE_RECAPTCHA_SITE_KEY</code> — إعداد مركزي لكل المستخدمين، ليس من هذه الصفحة.</p>
         </div>
 
         <!-- تكامل محاسبة (QuickBooks / Xero) — LivePlan -->
@@ -172,6 +175,49 @@ export class IntegrationsView {
     this._bindEvents();
   }
 
+  /**
+   * عرض مبسّط لمستخدم غير أدمن: أسماء التكاملات المتاحة وحالتها فقط
+   * (مفعّل/غير مفعّل) — بلا تعليمات إعداد تقنية أو روابط docs/ داخلية أو حقول
+   * إدخال مفاتيح. راجع تعليق الأمن أعلى render().
+   */
+  async _renderBasic() {
+    const supabaseOk = await this._checkSupabase();
+    const gsheetsUrl = (typeof localStorage !== 'undefined' ? localStorage.getItem(LS_KEYS.gsheets) : '') || '';
+    const gsheetsOk = !!gsheetsUrl.trim();
+    const recaptchaOk = isCaptchaConfigured();
+    const webhooksOk = WebhookService.getWebhooks().length > 0;
+
+    const items = [
+      { name: 'Supabase', ok: supabaseOk },
+      { name: 'تسجيل الدخول بـ Google', ok: supabaseOk },
+      { name: 'Google Sheets', ok: gsheetsOk },
+      { name: 'reCAPTCHA v3', ok: recaptchaOk },
+      { name: 'Zapier Webhook', ok: webhooksOk },
+    ];
+
+    this.container.innerHTML = `
+      <div class="integrations-page" style="max-width: 640px; margin: 0 auto; padding: var(--s-4) 0;">
+        <button type="button" id="btnIntegrationsBack" class="btn btn--ghost mb-4" style="display: inline-flex; align-items: center; gap: 8px;">
+          ← العودة
+        </button>
+
+        <h2 class="text-xl font-bold mb-2" style="border-bottom: 1px solid var(--c-border); padding-bottom: var(--s-2);"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg> التكاملات</h2>
+        <p class="text-sm text-muted mb-6">حالة التكاملات الخارجية. كلها اختيارية — المنصة تعمل بدونها.</p>
+
+        <div class="card p-4">
+          ${items.map(item => `
+            <div class="flex items-center justify-between gap-2 p-2 rounded mb-2" style="background: var(--c-bg-app);">
+              <span class="text-sm font-medium">${item.name}</span>
+              <span class="badge ${item.ok ? 'bg-success' : 'bg-muted'}" style="padding: 4px 10px; border-radius: 999px; font-size: 12px;">${item.ok ? 'مفعّل' : 'غير مفعّل'}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    this.container.querySelector('#btnIntegrationsBack')?.addEventListener('click', () => this.onBack());
+  }
+
   async _checkSupabase() {
     try {
       const { ok } = await getSupabaseClient();
@@ -203,18 +249,6 @@ export class IntegrationsView {
 
     this.container.querySelector('#btnOpenGSheetsHelp')?.addEventListener('click', () => {
       showGoogleSheetsSetup();
-    });
-
-    this.container.querySelector('#btnSaveRecaptcha')?.addEventListener('click', async () => {
-      const key = this.container.querySelector('#inpRecaptchaKey')?.value?.trim() || '';
-      if (key) {
-        localStorage.setItem(LS_KEYS.recaptcha, key);
-        toast.success('تم حفظ مفتاح reCAPTCHA. حدّث الصفحة لتفعيله في نموذج الدخول.');
-      } else {
-        localStorage.removeItem(LS_KEYS.recaptcha);
-        toast.info('تم إزالة مفتاح reCAPTCHA');
-      }
-      await this.render();
     });
 
     this.container.querySelector('#btnAddWebhook')?.addEventListener('click', async () => {
