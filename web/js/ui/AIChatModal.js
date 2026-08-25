@@ -162,8 +162,11 @@ export class AIChatModal {
 
         let blurTimer = null;
         const isFormField = (el) => el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName);
+        // مصدر حقيقة واحد لشرط «هذا العنصر تحريرٌ يستوجب إخفات الزر» — يستدعيه
+        // مستمعُ focusin والفحصُ الأولي أدناه معاً كي لا يتفرّع الشرط لصيغتين.
+        const isEditingTarget = (el) => isFormField(el) && el !== this.fab;
         const onFocusIn = (e) => {
-            if (!isFormField(e.target) || e.target === this.fab) return;
+            if (!isEditingTarget(e.target)) return;
             if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; }
             this.fab.classList.add('is-editing');
         };
@@ -176,6 +179,13 @@ export class AIChatModal {
         };
         document.addEventListener('focusin', onFocusIn);
         document.addEventListener('focusout', onFocusOut);
+
+        // الحالة الأولية تُشتقّ من الواقع لحظة التركيب، لا من كون الزر «شهد» الحدث:
+        // هذه الوحدة تُحمَّل باستيراد ديناميكي (web/app.js) بينما نافذة الدخول تركّز
+        // حقل البريد بعد 30ms (focusDelay في AuthModalStub.js). سباقٌ حقيقي رُصد
+        // كحالتين مختلفتين للقطة homepage-layout من نفس الالتزام: إن اكتمل التحميل
+        // بعد لحظة التركيز فات الزرَّ حدثُ focusin فبقي بكامل التعتيم فوق النافذة.
+        this.fab.classList.toggle('is-editing', isEditingTarget(document.activeElement));
     }
 
     /**
