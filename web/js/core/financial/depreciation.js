@@ -176,6 +176,21 @@ export function buildDepreciationModel(ctx) {
         return acc + (((yr - 1) % it.life === 0) ? it.replacementBase : 0);
     }, 0);
 
+    /**
+     * نفس مبلغ الإحلال أعلاه لكن مُفصَّلاً بفئة الأصل — يحتاجه المحرك لإضافة الأصل
+     * البديل إلى **مجموعة الإهلاك الزكوي/الضريبي الصحيحة** (ZATCA بالقسط المتناقص:
+     * معدات وموارد تقنية 25%، أثاث 10%). بلا التفصيل كان لا بدّ من افتراض مجموعة
+     * واحدة لكل الإحلال، وهو تحريف: أثاث بنسبة 25% بدل 10% يُبالغ في الإهلاك النظامي.
+     * الفئات هي نفسها المستعملة في buildReplaceable ('Equipment' | 'Furniture' |
+     * 'TechResources')، ومجموع القيم = getReplacementCostAtYear(yr) بحكم البناء.
+     */
+    const getReplacementByCategoryAtYear = (yr) => replaceableItems.reduce((acc, it) => {
+        if (!(it.life > 0) || yr <= 1) return acc;
+        if ((yr - 1) % it.life !== 0) return acc;
+        acc[it.category] = (acc[it.category] || 0) + it.replacementBase;
+        return acc;
+    }, {});
+
     // «الإهلاك السنوي الرسمي» المعروض للمستخدم (AssetsPortfolioView.js:59) والمُصدَّر في
     // result.depreciation وdepreciationSchedules.book، وهو أيضاً احتياط الميزانية عند غياب
     // جدول قائمة الدخل (lib/calc/balanceSheet.js:39).
@@ -195,6 +210,7 @@ export function buildDepreciationModel(ctx) {
         permanentDepAtYear,
         replaceableDepAtYear,
         getReplacementCostAtYear,
+        getReplacementByCategoryAtYear,
         // مُصدَّرة لأول مرة — تُستهلك في engine.js لبناء result.assetSchedule (جدول
         // إهلاك مسمّى لكل أصل بدل رقم فئة مجمّع فقط).
         replaceableItems

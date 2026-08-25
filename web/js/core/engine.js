@@ -513,6 +513,7 @@ export function calculateStudy(study, overrides) {
         permanentDepAtYear,
         replaceableDepAtYear,
         getReplacementCostAtYear,
+        getReplacementByCategoryAtYear,
         replaceableItems
     } = buildDepreciationModel({
         technical,
@@ -667,12 +668,14 @@ export function calculateStudy(study, overrides) {
     //     مبانٍ ثابتة 5%، آلات/معدات/حاسبات/مركبات 25%، أخرى (أثاث…) 10%.
     //     يُستخدم لحساب الربح المعدل زكوياً؛ الإهلاك الدفتري (الخطي) يبقى للقوائم.
     //
-    // فجوة معروفة ومؤجَّلة عمداً (2026-08-25): المجموعات أدناه تُرصَّد مرة واحدة من
-    // capexBreakdown عند التأسيس فقط، فلا تُضاف إليها أصول الإحلال المشتراة في السنوات
-    // اللاحقة (getReplacementCostAtYear) — بينما الإهلاك الدفتري صار يشملها. النتيجة:
-    // في مشروع ذي دورات إحلال متعددة يُبخَّس الإهلاك الزكوي/الضريبي في السنوات المتأخرة
-    // فيرتفع «الربح المعدل» وقد يرتفع معه وعاء الزكاة. لم يُعالَج في هذه الدفعة عمداً
-    // (يتطلب إعادة نمذجة المجموعات كأرصدة متغيّرة بإضافات سنوية).
+    // أُغلقت الفجوة المؤجَّلة (2026-08-25، الجبهة الرابعة): كانت المجموعات تُرصَّد مرة
+    // واحدة من capexBreakdown عند التأسيس فلا تُضاف إليها أصول الإحلال المشتراة لاحقاً —
+    // بينما الإهلاك الدفتري صار يشملها بعد إصلاح P0. فكان الإهلاك النظامي يُبخَّس في
+    // السنوات المتأخرة فيرتفع «الربح المعدل» وقد يرتفع معه وعاء الزكاة بلا سند.
+    // الآن كل دفعة إحلال تُضاف إلى **مجموعتها الصحيحة** (معدات/موارد تقنية 25%، أثاث 10%)
+    // في سنة شرائها، قبل احتساب إهلاك تلك السنة — مطابقةً للإهلاك الدفتري الذي يبدأ في
+    // سنة الشراء أيضاً. التفصيل بالفئة ضروري: افتراض مجموعة واحدة لكل الإحلال كان
+    // سيُهلك الأثاث بـ25% بدل 10%.
     // ═══════════════════════════════════════════════════════════
     const taxDepByYear = (() => {
         const pools = [
@@ -684,8 +687,18 @@ export function calculateStudy(study, overrides) {
             },
             { balance: capexBreakdown.furniture + capexBreakdown.establishment, rate: 0.10 }
         ];
+        // خريطة الفئة ⟶ المجموعة النظامية. الفئات هي نفسها المستعملة في
+        // buildReplaceable، والمجموعات بترتيب pools أعلاه (0 مبانٍ، 1 معدات، 2 أثاث).
+        const POOL_OF_CATEGORY = { Equipment: 1, TechResources: 1, Furniture: 2 };
         const out = [];
         for (let y = 0; y < years; y++) {
+            // إضافات الإحلال أولاً: الأصل المشترى في سنة y يُهلَك نظامياً ابتداءً منها،
+            // كما يفعل الإهلاك الدفتري بالضبط (replaceableItemDepAtYear عند a = 1).
+            const additions = getReplacementByCategoryAtYear(y + 1);
+            Object.entries(additions).forEach(([category, amount]) => {
+                const idx = POOL_OF_CATEGORY[category];
+                if (idx !== undefined) pools[idx].balance += amount;
+            });
             let dep = 0;
             pools.forEach(p => {
                 const d = p.balance * p.rate;
