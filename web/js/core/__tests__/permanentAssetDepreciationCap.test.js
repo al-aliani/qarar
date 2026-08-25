@@ -81,7 +81,9 @@ describe('الإهلاك — معدات: نسبة الاستهلاك المُد�
         });
         const r = calculateStudy(study);
 
-        // launchStrategy الافتراضي (Independent) ⇒ equipmentScale = 1.0 × 1.10 = 1.10
+        // launchStrategy الافتراضي ⇒ مضاعِف 1.0، و2026-08-25: المعامل صار (1 + computedContingencyRate)
+        // بدل 1.10 المصمتة. يساوي 1.10 هنا تحديداً لأن contingencyRate الافتراضي 0.10 وriskPremium = 0
+        // (لا سجل مخاطر في هذه الدراسة) ⇒ 1.0 × (1 + 0.10) = 1.10.
         const expectedYear1Dep = cost * 0.25 * 1.10;
         expect(r.incomeStatement[0].depreciation).toBeCloseTo(expectedYear1Dep, 0);
         // ليس مبلغ الـ15% الافتراضي القديم (200000×0.15×1.10=33000)

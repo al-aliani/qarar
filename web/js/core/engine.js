@@ -9,7 +9,7 @@ import { explainDecisionBreakers } from './DecisionExplainer.js';
 import { analyzePartnerNeeds } from './partnerNeeds.js';
 import { calculateZakatAndTax } from './financial/tax.js';
 import { calculateNPV, calculateIRR, calculateMIRR, calculateTerminalValue, countSignChanges } from './financial/cashflow.js';
-import { buildDepreciationModel, itemDepAtYear } from './financial/depreciation.js';
+import { buildDepreciationModel, itemDepAtYear, replaceableItemDepAtYear } from './financial/depreciation.js';
 import { buildFinancialRatios } from './financial/ratios.js';
 import { buildRevenueModel } from './financial/revenue.js';
 import { computeStressSurvival } from './financial/stressTestMath.js';
@@ -394,10 +394,20 @@ export function calculateStudy(study, overrides) {
     const isCorporate = study[SECTIONS.PROJECT_INFO]?.businessModel === 'Corporate_Venture';
     const corporateAssets = study[SECTIONS.PROJECT_INFO]?.corporateAssets || [];
 
+    // نسبة التوفير المؤسسي = كسر عشري في [0, 1] (التسمية في labels.js: «نسبة التوفير (0.1 - 1.0)»).
+    // إصلاح 2026-08-25: كانت تُقرأ بلا أي حدّ، فمُدخَل «40» (بنيّة 40%) يُنتج (1 − 40) = −39
+    // ⇒ أساس أصل سالب ⇒ capex سالب، ونقد إحلال سالب يدخل سطر التدفق النقدي كأنه إيراد
+    // (NPV قفز من 721,352 إلى 12,897,050 على نفس المُعطى، وIRR = null). والنطاق السالب
+    // يضخّم التكاليف بالمثل (−0.2 ⇒ ×1.2). التقييد هنا حاجز أمان عددي فقط — التصحيح الفعلي
+    // مسؤولية المستخدم، وqaChecks.js (فحص 14) يُنبّهه صراحة قبل التقييد. لا نقسم على 100
+    // نيابةً عنه: تخمين النية صامتاً أخطر من التقييد المُعلَن.
     const getSaving = (category) => {
         if (!isCorporate) return 0;
         const asset = corporateAssets.find(a => a.costSavingType === category);
-        return asset ? (Number(asset.savingPercentage || 0)) : 0;
+        if (!asset) return 0;
+        const raw = Number(asset.savingPercentage);
+        if (!Number.isFinite(raw)) return 0;
+        return Math.min(1, Math.max(0, raw));
     };
 
     // استراتيجية الإطلاق: Full_Launch = 1.0 / Pilot_Phase = 0.5 / Outsourcing = 0.3
@@ -416,18 +426,27 @@ export function calculateStudy(study, overrides) {
     const equipmentTotal = equipmentBase + equipmentContingency;
 
     const initialEstablishmentTotal = toArray(technical.establishmentCosts).reduce((acc, item) => acc + Number(item.amount || 0), 0);
-    const establishmentAmortization = toArray(technical.establishmentCosts).reduce((acc, item) => {
-        return acc + (Number(item.amount || 0) * rateOrDefault(item.amortizationRate, 0.20));
-    }, 0);
     // إطفاء التأسيس بند-ببند مع عمره (life = round(1/rate)، الافتراضي 20% ⇒ 5 سنوات).
     // كان يُحمَّل ثابتاً كل سنوات الإسقاط فيتجاوز 100% من كلفته عند أفق>5 سنوات
     // (أفق 10 ⇒ 200%). يُقصّ الآن عند استنفاد عمره مثل البنود القابلة للإحلال. (تدقيق ٢٠٢٦-٠٧-٠٨)
+    //
+    // إصلاح 2026-08-25: الشرط اليدوي `yr <= life ? dep : 0` كان بلا حقل base وبلا سقف
+    // على المجموع، فيُطفئ life × rate من الأصل — وهي ≠ 1 عموماً لأن life تقريب لأقرب سنة:
+    //   • rate = 0.15 (منتصف نطاق DynamicTable [0.10, 0.20]، وهو ما يقترحه الساحر نفسه)
+    //     ⇒ life = 7 ⇒ 7 × 15,000 = 105,000 على أصل 100,000 (105%) ⇒ isBalanced = false
+    //     واختلال 5,000 في السنة السابعة (زر أفق «7 سنوات» جاهز في الواجهة).
+    //   • rate = 0.40 ⇒ life = round(2.5) = 3 ⇒ 120,000 (120%) ⇒ اختلال 20,000 من السنة 3
+    //     ضمن الأفق الافتراضي.
+    // الحل: نفس itemDepAtYear المستخدمة للأصول الدائمة والقابلة للإحلال — سقف على المتبقي،
+    // والسنة الأخيرة تستوعبه كاملاً ⇒ Σ الإطفاء = amount بالضبط. توحيد المسارات الثلاثة
+    // على منطق واحد بدل ثلاث نسخ قابلة للانحراف.
     const establishmentAmortItems = toArray(technical.establishmentCosts).map(item => {
         const rate = rateOrDefault(item.amortizationRate, 0.20);
-        return { dep: Number(item.amount || 0) * rate, life: rate > 0 ? Math.round(1 / rate) : 0 };
+        const base = Number(item.amount || 0);
+        return { base, dep: base * rate, life: rate > 0 ? Math.round(1 / rate) : 0 };
     });
     const establishmentAmortAtYear = (yr) => establishmentAmortItems.reduce(
-        (d, it) => d + (it.life > 0 && yr <= it.life ? it.dep : 0), 0);
+        (d, it) => d + itemDepAtYear(it, yr), 0);
 
     const capexBreakdown = {
         establishment: initialEstablishmentTotal,
@@ -466,23 +485,37 @@ export function calculateStudy(study, overrides) {
     } = buildDepreciationModel({
         technical,
         techResources,
-        equipmentTotal,
+        // equipmentTotal لم يعد يُمرَّر (2026-08-25): كان مدخل النسبة المصمتة 0.15 في
+        // annualDepreciation، وصار المكوّن مشتقاً من replaceableItems داخل الوحدة نفسها.
         capexBreakdown,
         launchStrategy,
         getSaving,
-        establishmentAmortization,
-        establishmentAmortAtYear
+        // 2026-08-25: صارت الدالة (لا المجموع الثابت establishmentAmortization) هي المُمرَّرة —
+        // annualDepreciation داخل الوحدة يحتاج شحن السنة الأولى الفعلي، وقد يختلف عن
+        // Σ amount×rate بعد تقييد itemDepAtYear (life = 1 مثلاً تستوعب كامل الأصل).
+        establishmentAmortAtYear,
+        // 2026-08-25: نسبة الطوارئ الفعلية المستخدمة في رسملة المعدات أعلاه (السطر 415) —
+        // كانت depreciation.js تفترضها مصمتة 1.10 فينفصل أساس الإهلاك عن المبلغ المُرسمَل
+        // كلما اختلفت النسبة الفعلية عن 10% (contingencyRate مُدخَل و/أو riskPremium > 0).
+        computedContingencyRate
     });
 
     // جدول إهلاك مسمّى لكل أصل قابل للإحلال (معدات/أثاث/موارد تقنية) — replaceableItems
     // كانت داخلية فقط (تُستخدم لحساب replaceableDepAtYear المجمَّع)، الآن تُعرض كجدول
     // بقيمة إهلاك سنوية لكل أصل حتى انتهاء عمره الافتراضي، بدل رقم فئة واحد مجمَّع.
+    // إصلاح 2026-08-25: byYear كان يُبنى بـ itemDepAtYear (بلا وعي بالإحلال) فيطبع أصفاراً
+    // لكل سنة بعد الجيل الأول بينما قائمة الدخل تشحن إهلاك الجيل البديل — جدول معروض
+    // ومُصدَّر (Excel/Word/ReportGenerator) يناقض القوائم المالية في نفس الملف
+    // (330,000 مقابل 1,100,000 على أفق 10 لمعدة بعمر 3). الآن نفس دالة قائمة الدخل.
     const assetSchedule = toArray(replaceableItems).map(it => ({
         name: it.name,
         category: it.category,
+        // المبلغ الاسمي بالقسط الثابت (base × rate) — يُعرض كعمود «الإهلاك السنوي» في
+        // المصدّرات. يبقى كما هو عمداً: byYear هو المرجع للسنة-بالسنة، وقد تختلف عنه
+        // السنة الأخيرة من كل جيل (تستوعب متبقي التقريب) دون أن يكون ذلك «الإهلاك السنوي».
         annualDepreciation: it.dep,
         usefulLifeYears: it.life || null,
-        byYear: Array.from({ length: years }, (_, idx) => itemDepAtYear(it, idx + 1))
+        byYear: Array.from({ length: years }, (_, idx) => replaceableItemDepAtYear(it, idx + 1))
     }));
 
     let totalCapex = Object.values(capexBreakdown).reduce((a, b) => a + b, 0);
@@ -601,6 +634,13 @@ export function calculateStudy(study, overrides) {
     // 4.5 إهلاك نظامي (زكوي/ضريبي) بالقسط المتناقص — مجموعات ZATCA مبسطة:
     //     مبانٍ ثابتة 5%، آلات/معدات/حاسبات/مركبات 25%، أخرى (أثاث…) 10%.
     //     يُستخدم لحساب الربح المعدل زكوياً؛ الإهلاك الدفتري (الخطي) يبقى للقوائم.
+    //
+    // فجوة معروفة ومؤجَّلة عمداً (2026-08-25): المجموعات أدناه تُرصَّد مرة واحدة من
+    // capexBreakdown عند التأسيس فقط، فلا تُضاف إليها أصول الإحلال المشتراة في السنوات
+    // اللاحقة (getReplacementCostAtYear) — بينما الإهلاك الدفتري صار يشملها. النتيجة:
+    // في مشروع ذي دورات إحلال متعددة يُبخَّس الإهلاك الزكوي/الضريبي في السنوات المتأخرة
+    // فيرتفع «الربح المعدل» وقد يرتفع معه وعاء الزكاة. لم يُعالَج في هذه الدفعة عمداً
+    // (يتطلب إعادة نمذجة المجموعات كأرصدة متغيّرة بإضافات سنوية).
     // ═══════════════════════════════════════════════════════════
     const taxDepByYear = (() => {
         const pools = [
@@ -709,6 +749,9 @@ export function calculateStudy(study, overrides) {
     // استنفاد عمره) لبداية كل سنة — يُستخدم في صافي الأصول الثابتة للوعاء الزكوي
     // بدل التقريب الخطي annualDepreciation×yearIndex الذي كان يفترض إهلاكاً ثابتاً للأبد.
     let cumulativeDepreciationPriorYears = 0;
+    // 2026-08-25: الإحلال المُرسمَل في السنوات السابقة — لازم كي يطابق الوعاء الزكوي تعريف
+    // fixedAssetsGross في lib/calc/balanceSheet.js:45 (capex.subtotal + cumulativeReplacement).
+    let cumulativeReplacementPriorYears = 0;
 
     // ΔNWC السنوي: رأس المال العامل التأسيسي (cashCycle أعلاه) يبقى كما هو لحساب
     // totalInvestment — هذا فقط يتتبّع التغيّر السنوي في صافي رأس المال العامل (AR+مخزون−ذمم
@@ -784,22 +827,13 @@ export function calculateStudy(study, overrides) {
         }
         const ebitdaFinal = ebitda - builderSuccessFee;
 
-        // إحلال الأصول قصيرة العمر (يبدأ من السنة التالية لانتهاء العمر)
-        const checkReplacement = (arr, defaultRate) => toArray(arr).reduce((acc, item) => {
-            const rate = rateOrDefault(item.depreciationRate, defaultRate);
-            if (rate <= 0) return acc;
-            const life = Math.round(1 / rate);
-            if (life > 0 && (i - 1) % life === 0 && i > 1) {
-                const cost = Number(item.price || item.cost || 0);
-                const qty = Number(item.quantity || item.count || 1);
-                return acc + (cost * qty);
-            }
-            return acc;
-        }, 0);
-        let replacementCost = 0;
-        replacementCost += checkReplacement(technical.equipment, 0.15);
-        replacementCost += checkReplacement(technical.furniture, 0.20);
-        replacementCost += checkReplacement(techResources.techResources, 0.25);
+        // إحلال الأصول قصيرة العمر (يبدأ من السنة التالية لانتهاء العمر) — 2026-08-25:
+        // مصدر واحد مشترك مع أساس الإهلاك في depreciation.js (كلاهما replacementBase لنفس
+        // العنصر)، بعد أن كان منطقاً مكرراً هنا يمكن أن ينحرف عنه (getReplacementCostAtYear
+        // كانت مفكَّكة أعلاه بلا أي استخدام — كود ميت). القيمة تغيّرت عمداً في نفس اليوم
+        // (ع-2): صارت replacementBase = base المُقيَّس (cost×qty×(1−saving)×scale) لا cost×qty
+        // الخام — الأصل البديل هو نفس الأصل بنفس نمذجته، فيتطابق نقد الإحلال مع المُرسمَل.
+        const replacementCost = getReplacementCostAtYear(i);
 
         // Bug B: الإهلاك الدفتري لا يبقى ثابتاً للأبد — الأصناف القابلة للإحلال
         // تتوقف عن الإهلاك الدفتري بعد استنفاد عمرها الأصلي (صُرِفت نقداً كإحلال).
@@ -827,7 +861,11 @@ export function calculateStudy(study, overrides) {
         // + establishmentAmortAtYear لكل سنة سابقة) بدل annualDepreciation الخطي — كان يفترض
         // استمرار إهلاك الأصول القابلة للإحلال/التأسيس للأبد فيُحرّف صافي الأصول الثابتة (وبالتالي
         // الوعاء الزكوي بطريقة مصادر الأموال) في السنوات التي يُستنفد فيها عمر أي بند منها.
-        const netFixedStart = Math.max(0, totalCapex - cumulativeDepreciationPriorYears);
+        // تصحيح 2026-08-25: الأصول الثابتة الإجمالية تشمل الإحلال المُرسمَل في السنوات
+        // السابقة — نفس تعريف fixedAssetsGross في lib/calc/balanceSheet.js:45 بالضبط. كان
+        // الوعاء الزكوي يستبعده فيُبخّس صافي الأصول الثابتة أول السنة ويضخّم الوعاء بطريقة
+        // مصادر الأموال، فيختلف نفس البند بين قائمة الزكاة والميزانية المعروضة.
+        const netFixedStart = Math.max(0, totalCapex + cumulativeReplacementPriorYears - cumulativeDepreciationPriorYears);
         const taxDepY = taxDepByYear[yearIndex] || 0;
         
         const { zakatBase, zakat, tax, adjustedProfit } = calculateZakatAndTax({
@@ -845,6 +883,9 @@ export function calculateStudy(study, overrides) {
         const netIncome = ebt - zakat - tax;
         retainedEarningsStart += netIncome; // ترحيل لبداية السنة التالية
         cumulativeDepreciationPriorYears += depreciation; // نفس الترحيل: تراكم الإهلاك الفعلي لبداية السنة التالية
+        // 2026-08-25: بعد netFixedStart أعلاه عمداً — إحلال السنة الجارية يدخل «أول السنة
+        // التالية» لا هذه، تماماً كما يفعل slice(0, year) في lib/calc/balanceSheet.js:32.
+        cumulativeReplacementPriorYears += replacementCost;
 
         // التدفق النقدي
         const operatingCF = netIncome + depreciation;
@@ -1250,7 +1291,11 @@ export function calculateStudy(study, overrides) {
         },
         depreciation: annualDepreciation,
         depreciationSchedules: {
-            book: incomeStatement.map(() => annualDepreciation), // خطي (للقوائم)
+            // تدقيق 2026-08-25: كان `map(() => annualDepreciation)` — خطاً مسطّحاً يكرّر شحن
+            // السنة الأولى لكل السنوات، فيناقض قائمة الدخل من أول دورة إحلال أو استنفاد عمر.
+            // الشحن الدفتري الفعلي محسوب أصلاً لكل سنة (permanent + replaceable + إطفاء
+            // التأسيس) ومخزَّن في صف قائمة الدخل — يُقرأ منه مباشرة ليبقى مصدراً واحداً.
+            book: incomeStatement.map(s => Number(s.depreciation) || 0),
             tax: taxDepByYear.slice(0, incomeStatement.length)   // متناقص (زكوي/ضريبي — ZATCA)
         },
         incomeStatement,

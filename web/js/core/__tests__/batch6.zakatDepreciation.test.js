@@ -3,16 +3,32 @@
  * -----------------------------------------------------------------
  * الخلل: صافي الأصول الثابتة أول السنة (netFixedStart) في حساب الزكاة كان يُقرَّب خطياً
  * (annualDepreciation × yearIndex) بينما الإهلاك الفعلي المُحمَّل في قائمة الدخل غير خطي
- * (يتوقف الجزء القابل للإحلال عن الإهلاك الدفتري بعد استنفاد عمره الأصلي — Bug B).
+ * (ينخفض بعد استنفاد عمر الأصل الأصلي لأن أساس الأصل البديل أصغر — لا خصم/طوارئ/مضاعِف).
  * لمشروع فيه أصل قابل للإحلال بعمر أقصر من أفق الدراسة، الرقمان يتباعدان مع الزمن
  * فيُحرِّف الوعاء الزكوي بطريقة مصادر الأموال في السنوات المتأخرة.
  *
- * هذا الاختبار يبني دراسة واقعية بأفق 6 سنوات فيها معدة (equipment) بعمر سنتين
- * (depreciationRate: 0.5 ⇒ life = round(1/0.5) = 2)، فتُستبدل نقداً في السنة 3 و5
- * بينما يتوقف إهلاكها الدفتري تماماً بعد السنة 2 (حسب تصميم replaceableDepAtYear
- * الموثق في engine.js — "Bug B"). هذا يجعل incomeStatement[j].depreciation
- * غير ثابت عبر السنوات (ينخفض بعد السنة 2)، خلافاً لـ annualDepreciation الخطي
- * الثابت المُستخدم في التقريب القديم.
+ * تحديث 2026-08-25 (إصلاح الإحلال + توحيد الوعاء الزكوي مع الميزانية):
+ * كان هذا الملف يوثّق سلوكاً معطوباً في ترويسته: «يتوقف إهلاكها الدفتري تماماً بعد السنة 2»
+ * (Bug B). هذا لم يكن سلوكاً صحيحاً يُوثَّق بل عيباً — الأصل البديل كان يُشترى ويُرسمَل نقداً
+ * ولا يُهلَك أبداً. صار الآن كل جيل بديل يُهلَك من سنة شرائه على نفس العمر
+ * (replaceableItemDepAtYear في financial/depreciation.js).
+ * وبالتوازي: netFixedStart في المحرك صار يشمل الإحلال المُرسمَل في السنوات السابقة، تطابقاً
+ * حرفياً مع تعريف fixedAssetsGross في lib/calc/balanceSheet.js:45.
+ *
+ * تحديث ثانٍ 2026-08-25 (ع-1 + ع-2 + ع-4) — تغيير مقصود لمُدخل الفيكستشر:
+ * كانت نسبة استهلاك المعدة 0.5، ومصدر لا-خطية الإهلاك في هذا الفيكستشر كان **العيب نفسه**
+ * (أساس البديل الخام 200,000 أصغر من الأساس المُقيَّس 220,000 ⇒ 125,000 ثم 115,000). بعد
+ * ع-2 صار أساس كل جيل واحداً، فالإهلاك ثابت 125,000 ويساوي annualDepreciation بالضبط —
+ * وعندها يفقد هذا الاختبار قدرته على التمييز بين التراكم الحقيقي والتقريب الخطي (فرق صفر).
+ * لذا غُيّرت النسبة إلى 0.4 (⇒ life = round(2.5) = 3) كي تبقى اللا-خطية قائمة لسبب مشروع:
+ * متبقي التقريب الذي تستوعبه السنة الأخيرة من كل جيل (3 × 0.4 = 1.2 > 1 — فرع «التجاوز»
+ * الذي كان يعمل قبل ع-1 ويجب ألا يتغيّر بعده؛ فرع «النقص» مُغطّى في
+ * financial/__tests__/depreciation.test.js).
+ *
+ * الدراسة أدناه: أفق 6 سنوات، معدة بعمر 3 سنوات (depreciationRate: 0.4 ⇒ life = 3) تُستبدل
+ * نقداً في السنة 4، ومبنى دائم (life = 20) يستمر إهلاكه. الإهلاك غير خطي
+ * (103,000 / 103,000 / 59,000 — انظر الاشتقاق في الاختبار الأول)، خلافاً لـ
+ * annualDepreciation الخطي الثابت (103,000) المُستخدم في التقريب القديم.
  */
 import { describe, it, expect } from 'vitest';
 import { calculateStudy } from '../engine.js';
@@ -29,9 +45,9 @@ function makeStudy(overrides = {}) {
             hiddenOverheadsRate: 0
         },
         [SECTIONS.TECHNICAL]: {
-            // معدة قابلة للإحلال بعمر سنتين (rate=0.5 ⇒ life=2) — تتوقف عن الإهلاك الدفتري
-            // بعد السنة 2 رغم استبدالها نقداً لاحقاً (Bug B / replaceableDepAtYear).
-            equipment: [{ price: 200000, quantity: 1, depreciationRate: 0.5 }],
+            // معدة قابلة للإحلال بعمر 3 سنوات (rate=0.4 ⇒ life=round(2.5)=3) — تُستبدل نقداً
+            // في السنة 4، وكل جيل بديل يُهلَك من سنة شرائه على نفس أساس الأصل الأصلي (ع-2).
+            equipment: [{ price: 200000, quantity: 1, depreciationRate: 0.4 }],
             buildings: [{ price: 300000, quantity: 1 }], // أصل دائم (لا قابل للإحلال) يستمر إهلاكه
             furniture: [], establishmentCosts: [], capacityUtilization: []
         },
@@ -55,9 +71,27 @@ function makeStudy(overrides = {}) {
 describe('دفعة 6 — الوعاء الزكوي: صافي الأصول الثابتة تراكمي حقيقي لا تقريب خطي', () => {
     it('الإهلاك الفعلي للمعدة القابلة للإحلال غير خطي عبر السنوات (شرط عدم-عبثية الأصل)', () => {
         const r = calculateStudy(makeStudy());
-        // السنة 1-2: إهلاك المعدة فعّال. السنة 4 (index 3): استُنفد عمر المعدة (life=2) فتوقف
-        // إهلاكها الدفتري ⇒ إهلاك السنة الأولى أعلى بوضوح من إهلاك السنة الرابعة.
-        expect(r.incomeStatement[0].depreciation).toBeGreaterThan(r.incomeStatement[3].depreciation + 1000);
+        // ── الاشتقاق التحليلي (2026-08-25) من الصيغة الجديدة وبيانات الفيكستشر أعلاه ──
+        // launchStrategy الافتراضي Full_Launch ⇒ مضاعِف 1.0؛ contingencyRate الافتراضي 0.10
+        // وriskPremium = 0 (لا سجل مخاطر) ⇒ computedContingencyRate = 0.10
+        // ⇒ equipmentScale = 1.0 × (1 + 0.10) = 1.10
+        //   كل الأجيال على نفس الأساس (ع-2): base = 200,000 × 1.10 = 220,000، life = 3،
+        //   dep الاسمي = 220,000 × 0.4 = 88,000، والسنة الأخيرة من كل جيل تستوعب المتبقي (ع-1):
+        //   220,000 − 2 × 88,000 = 44,000 ⇒ نمط الجيل = [88,000 ، 88,000 ، 44,000]
+        //   المبنى (دائم، life = 20): 300,000 × 0.05 = 15,000 كل سنة
+        // ⇒ الإهلاك = [103,000 ، 103,000 ، 59,000 ، 103,000 ، 103,000 ، 59,000]
+        const dep = r.incomeStatement.map(s => s.depreciation);
+        expect(dep[0]).toBeCloseTo(103000, 6);
+        expect(dep[1]).toBeCloseTo(103000, 6);
+        expect(dep[2]).toBeCloseTo(59000, 6);
+        expect(dep[3]).toBeCloseTo(103000, 6);
+        expect(dep[5]).toBeCloseTo(59000, 6);
+        // حارس الانحدار الأهم: بعد استنفاد عمر الأصل الأصلي (السنة 3) لا يهبط الإهلاك إلى
+        // إهلاك المبنى وحده (15,000) — الأصل البديل المُرسمَل في السنة 4 يُهلَك فعلاً.
+        expect(dep[3]).toBeGreaterThan(15000 + 1);
+        // ويبقى غير خطي (شرط صحة الاختبار الثاني): فارق 44,000 بين السنة 1 والسنة 3،
+        // مصدره متبقي التقريب الذي تستوعبه السنة الأخيرة من الجيل (88,000 − 44,000).
+        expect(dep[0] - dep[2]).toBeCloseTo(44000, 6);
     });
 
     it('صافي الأصول الثابتة والزكاة في سنة متأخرة (5) يطابقان التراكم الحقيقي لا annualDepreciation×yearIndex', () => {
@@ -71,21 +105,47 @@ describe('دفعة 6 — الوعاء الزكوي: صافي الأصول الث
 
         // إعادة بناء التراكم الحقيقي (الصحيح) من نفس أرقام قائمة الدخل التي يصدّرها المحرك:
         // مجموع incomeStatement[j].depreciation لِـ j = 0..targetYearIdx-1 (سنوات 1..4)
+        // وتحديث 2026-08-25: ومجموع replacementCost لنفس السنوات — الإحلال يُرسمَل في الأصول
+        // الثابتة (fixedAssetsGross في lib/calc/balanceSheet.js:45)، فاستبعاده كان يُبخّس صافي
+        // الأصول الثابتة أول السنة ويضخّم الوعاء الزكوي.
         let realCumulativeDep = 0;
+        let realCumulativeReplacement = 0;
         let retainedEarningsStart = 0; // نفس ترحيل المحرك: مجموع netIncome للسنوات السابقة
         for (let j = 0; j < targetYearIdx; j++) {
             realCumulativeDep += r.incomeStatement[j].depreciation;
+            realCumulativeReplacement += r.incomeStatement[j].replacementCost;
             retainedEarningsStart += r.incomeStatement[j].netIncome;
         }
         const linearCumulativeDep = linearAnnualDep * targetYearIdx; // annualDepreciation × yearIndex (الخاطئ القديم)
 
+        // ── الاشتقاق التحليلي لهذا الفيكستشر (لا نسخاً من مخرجات المحرك) ──
+        // capex.subtotal = مبنى 300,000 + معدات 200,000×1.10 = 220,000 ⇒ 520,000
+        // realCumulativeDep (سنوات 1..4)         = 103,000 + 103,000 + 59,000 + 103,000 = 368,000
+        // realCumulativeReplacement (سنوات 1..4) = 220,000 (شراء السنة 4 فقط؛ الشراء التالي في السنة 7 خارج الأفق)
+        // linearAnnualDep = 15,000 (مبنى) + 88,000 (معدات، إهلاك السنة الأولى الفعلي بعد ع-4)
+        //                 = 103,000 ⇒ ×4 = 412,000
+        // ⇒ netFixedStartCorrect = 520,000 + 220,000 − 368,000 = 372,000
+        // ⇒ netFixedStartBuggy   = 520,000 − 412,000           = 108,000   (فارق 264,000)
+        expect(totalCapex).toBeCloseTo(520000, 6);
+        expect(linearAnnualDep).toBeCloseTo(103000, 6);
+        expect(realCumulativeDep).toBeCloseTo(368000, 6);
+        expect(realCumulativeReplacement).toBeCloseTo(220000, 6);
+        expect(linearCumulativeDep).toBeCloseTo(412000, 6);
+
         // إثبات عدم-عبثية الاختبار: التراكمان (الصحيح والخطي) يختلفان اختلافاً معنوياً لهذا
-        // المُعطى — لولا ذلك لن يميّز الاختبار بين السلوك الصحيح والخاطئ.
+        // المُعطى — لولا ذلك لن يميّز الاختبار بين السلوك الصحيح والخاطئ. (44,000 هنا)
         expect(Math.abs(realCumulativeDep - linearCumulativeDep)).toBeGreaterThan(1000);
 
-        const netFixedStartCorrect = Math.max(0, totalCapex - realCumulativeDep);
+        // نفس تعريف fixedAssetsGross − accumulatedDepreciation في lib/calc/balanceSheet.js:45-46
+        const netFixedStartCorrect = Math.max(0, totalCapex + realCumulativeReplacement - realCumulativeDep);
         const netFixedStartBuggy = Math.max(0, totalCapex - linearCumulativeDep);
-        expect(Math.abs(netFixedStartCorrect - netFixedStartBuggy)).toBeGreaterThan(1000);
+        expect(netFixedStartCorrect).toBeCloseTo(372000, 6);
+        expect(netFixedStartBuggy).toBeCloseTo(108000, 6);
+        expect(Math.abs(netFixedStartCorrect - netFixedStartBuggy)).toBeGreaterThan(1000); // 264,000
+
+        // وحدة التعريف مع الميزانية المعروضة: صافي الأصول الثابتة أول السنة 5 = صافيها
+        // نهاية السنة 4 في lib/calc/balanceSheet.js (سبب توحيد الصيغتين).
+        expect(r.balanceSheets[targetYearIdx - 1].assets.fixed.net).toBeCloseTo(netFixedStartCorrect, 0);
 
         const y = r.incomeStatement[targetYearIdx];
 

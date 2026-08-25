@@ -530,6 +530,33 @@ export async function runQAChecks(state, results) {
             } catch (benchErr) {
                 console.warn('Benchmark checks failed:', benchErr);
             }
+
+            // 14) «نسبة التوفير» للأصول المؤسسية خارج النطاق العشري [0, 1] (2026-08-25)
+            // الحقل كسر عشري (labels.js: «نسبة التوفير (0.1 - 1.0)») ويدخل المحرك كـ
+            // (1 − saving) على أساس الأصل وعلى الرواتب/الإيجار/التسويق. مُدخَل «40» بنيّة
+            // 40% كان يُنتج معامل −39 ⇒ أصول وcapex سالبة ونقد إحلال سالب يدخل التدفق
+            // النقدي كأنه إيراد (NPV 721,352 ⟶ 12,897,050 على نفس المُعطى). المحرك يُقيّد
+            // الآن إلى [0, 1] (engine.js: getSaving)، والتقييد وحده صامت — فهذا التحذير
+            // يجعله مرئياً. عمداً لا نقسم على 100 نيابةً عن المستخدم: تخمين النية صامتاً
+            // يُنتج رقماً خاطئاً بثقة، والتقييد المُعلَن يُنتج رقماً محافظاً قابلاً للتصحيح.
+            {
+                const isCorporateVenture = state?.projectInfo?.businessModel === 'Corporate_Venture';
+                const corpAssets = Array.isArray(state?.projectInfo?.corporateAssets) ? state.projectInfo.corporateAssets : [];
+                const outOfRange = isCorporateVenture ? corpAssets.filter(a => {
+                    const raw = Number(a?.savingPercentage);
+                    return Number.isFinite(raw) && (raw < 0 || raw > 1);
+                }) : [];
+                if (outOfRange.length) {
+                    const listed = outOfRange
+                        .map(a => `${a?.name || a?.costSavingType || 'أصل مؤسسي'}: ${Number(a.savingPercentage)}`)
+                        .join('، ');
+                    qaResults.softWarnings.push({
+                        code: 'CORPORATE_SAVING_OUT_OF_RANGE',
+                        message: `«نسبة التوفير» تُقرأ ككسر عشري لا كنسبة مئوية — 0.4 تعني 40%. القيم التالية خارج النطاق [0 – 1]: ${listed}. قُيِّدت آلياً عند 0 أو 1 لحماية الحسابات (قيمة مثل 40 كانت تُنتج تكاليف سالبة وأرباحاً وهمية)، ولم يُقسَم أي رقم على 100 نيابةً عنك — صحّح القيمة يدوياً.`,
+                        path: 'projectInfo.corporateAssets'
+                    });
+                }
+            }
         } catch (coherenceErr) {
             console.warn('Coherence checks failed:', coherenceErr);
         }
