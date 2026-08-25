@@ -68,7 +68,22 @@ jobs:
             python3 -c "import struct,sys; d=open(sys.argv[1],'rb').read(24); print('%dx%d' % struct.unpack('>II', d[16:24]))" "$f"
           done
 
+      # النقل عبر السجل مُرمَّزاً base64 بدل الأرشيف: حصة تخزين الأرشيفات على مستوى
+      # الحساب ممتلئة (فشل upload-artifact بـ"Artifact storage quota has been hit")،
+      # ولا أرشيفات في هذا المستودع أصلاً لتنظيفها. تُطبع الملفات المتغيّرة وحدها.
+      - name: Emit changed snapshots as base64
+        run: |
+          changed=$(git diff --name-only -- e2e/visual.spec.js-snapshots/)
+          if [ -z "$changed" ]; then echo "NO_SNAPSHOT_CHANGES"; exit 0; fi
+          for f in $changed; do
+            echo "===B64_BEGIN $(basename "$f") $(stat -c%s "$f")==="
+            base64 -w 120 "$f"
+            echo "===B64_END $(basename "$f")==="
+          done
+
       - name: Upload regenerated snapshots
+        if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: visual-snapshots-linux
