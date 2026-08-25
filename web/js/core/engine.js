@@ -8,7 +8,7 @@ import { analyzeSaudiMarket } from './SaudiMarketEngine.js';
 import { explainDecisionBreakers } from './DecisionExplainer.js';
 import { analyzePartnerNeeds } from './partnerNeeds.js';
 import { calculateZakatAndTax } from './financial/tax.js';
-import { calculateNPV, calculateIRR, calculateMIRR, calculateTerminalValue, countSignChanges } from './financial/cashflow.js';
+import { calculateNPV, calculateIRR, calculateMIRR, calculateTerminalValue, countSignChanges, outstandingDebtAtHorizon } from './financial/cashflow.js';
 import { buildDepreciationModel, itemDepAtYear, replaceableItemDepAtYear } from './financial/depreciation.js';
 import { buildFinancialRatios } from './financial/ratios.js';
 import { buildRevenueModel } from './financial/revenue.js';
@@ -1031,7 +1031,10 @@ export function calculateStudy(study, overrides) {
     // npv/irr الأساسيين، خلافاً لـnpvWithTerminal أدناه). قبل هذا التصحيح كان تمديد مدة
     // القرض وحده — بلا أي تغيير تشغيلي فعلي — يُخفي هذا الالتزام فيرفع NPV/IRR وهماً،
     // ويمرّ نفس الرقم غير المصحَّح لبوابة القرار GO/REVISE/NO-GO ولكل التقارير المصدَّرة.
-    const remainingDebtAtHorizon = loanScheduleData?.annualSummary?.find(s => s.year === years)?.endingBalance ?? 0;
+    // مصدر واحد (cashflow.js) بدل نسختين متوازيتين — النسخة السابقة هنا كانت تطابق السنة
+    // حرفياً، فتُعيد صفراً حين تكون مدة القرض أقصر من الأفق ويبقى رصيد قائم. التفاصيل
+    // والقياس في تعليق outstandingDebtAtHorizon.
+    const remainingDebtAtHorizon = outstandingDebtAtHorizon(loanScheduleData, years);
     const cashFlowsForDecision = remainingDebtAtHorizon > 0
         ? [...cashFlows.slice(0, -1), cashFlows[cashFlows.length - 1] - remainingDebtAtHorizon]
         : cashFlows;

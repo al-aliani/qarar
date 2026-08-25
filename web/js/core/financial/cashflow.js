@@ -98,6 +98,40 @@ export function calculateMIRR(cashflows, financeRate, reinvestRate) {
     return Math.pow(-fvPos / pvNeg, 1 / (n - 1)) - 1;
 }
 
+/**
+ * رصيد القرض غير المسدَّد عند نهاية أفق الدراسة.
+ *
+ * تدقيق 2026-08-25: كان `annualSummary.find(s => s.year === years)?.endingBalance ?? 0`
+ * في موضعين متوازيين. و`computeLoanSchedule` يبني صفوفاً لـ`1..termYears` **فقط**، فحين
+ * تكون مدة القرض **أقصر** من الأفق ويبقى رصيد غير مسدَّد (قرض سنة واحدة مع فترة سماح
+ * 12 شهراً مثلاً — وكلاهما داخل حدود حقول الواجهة) لا يوجد صف للسنة `years` فيصير الرصيد
+ * صفراً صمتاً **ويختفي القرض كلياً من التقييم**.
+ *
+ * قياس فعلي على مشروع واحد: بالعيب NPV = +508,872 والقرار «امضِ»؛ وبقرض يُسدَّد فعلاً
+ * NPV = −781,040 والقرار «لا تمضِ». فارق 1.29 مليون ريال من حقلين في نموذج.
+ *
+ * التصحيح السابق (2026-07-22) عالج الاتجاه المعاكس فقط (قرض **أطول** من الأفق) —
+ * ولهذا بقي هذا الاتجاه مكشوفاً: الاختبار كُتب من زاوية العيب الذي فُكِّر فيه.
+ *
+ * الصواب: رصيد **آخر** صف عند أو قبل الأفق. القرض لا يُسدَّد بانتهاء مدته الاسمية؛
+ * الرصيد الذي بقي عند آخر سنة مجدولة يبقى التزاماً قائماً عند الأفق.
+ */
+export function outstandingDebtAtHorizon(loanScheduleData, years) {
+    const rows = loanScheduleData?.annualSummary;
+    if (!Array.isArray(rows) || rows.length === 0) return 0;
+    let balance = 0;
+    let bestYear = -Infinity;
+    for (const row of rows) {
+        const y = Number(row?.year);
+        if (!Number.isFinite(y) || y > years) continue;
+        if (y > bestYear) {
+            bestYear = y;
+            balance = Number(row?.endingBalance) || 0;
+        }
+    }
+    return Math.max(0, balance);
+}
+
 export function calculateTerminalValue({
     tvCfg,
     lastYearIncomeStatement,
@@ -122,7 +156,7 @@ export function calculateTerminalValue({
         
         if (normalizedFCF > 0 && discountRate > g) {
             const tvEnterprise = (normalizedFCF * (1 + g)) / (discountRate - g);
-            const remainingDebtAtHorizon = loanScheduleData?.annualSummary?.find(s => s.year === years)?.endingBalance ?? 0;
+            const remainingDebtAtHorizon = outstandingDebtAtHorizon(loanScheduleData, years);
             tvEquity = Math.max(0, tvEnterprise - remainingDebtAtHorizon);
             terminalValueDiscounted = tvEquity / Math.pow(1 + discountRate, years);
         }
