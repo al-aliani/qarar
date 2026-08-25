@@ -2,7 +2,7 @@
  * Company Valuation Component
  * Calculates Pre-money and Post-money valuation using DCF and Multiples
  */
-import { calculateStudy as runFullModel } from '../core/engine.js';
+import { calculateStudy as runFullModel, rateOrDefault } from '../core/engine.js';
 import { resolveValuationMultiple, GENERIC_VALUATION_MULTIPLE } from '../core/sectorBenchmarks.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
@@ -122,7 +122,17 @@ export class ValuationAnalysis {
 
         // B4: معدل الخصم من فروض الدراسة نفسها + علاوة حجم وسيولة لمنشأة صغيرة خاصة
         // (كان 12% مصمتاً — أقل بكثير من العائد المطلوب لمقهى صغير، فينتفخ التقييم).
-        const baseRate = Number(state.assumptions?.discountRate || results.assumptionsApplied?.discountRate || 0.10);
+        // rateOrDefault (المحرك) لا `||`: خصم 0 صريح في الفروض كان يسقط صمتاً إلى معدل
+        // المحرك (شامل علاوة المخاطر) ثم إلى 10% — أي تجاهل لاختيار المستخدم.
+        // تصحيح 2026-08-25: الأولوية للمعدل الذي **طبّقه المحرك فعلاً**، لا لخام الفروض.
+        // خانة «استخدام تكلفة حقوق الملكية كمعدل الخصم» (FinancingStructure) تجعل المحرك
+        // يشتق المعدل من financing.costOfEquity ويتجاهل assumptions.discountRate تماماً —
+        // فتقديم الخام هنا كان يُنتج نفس عيب «قيمتان لدراسة واحدة» بالاتجاه المعكوس
+        // (المحرك 0.15 والشاشة 0). الخام يبقى احتياطاً لنتائج لا تحمل assumptionsApplied.
+        const baseRate = rateOrDefault(
+            results.assumptionsApplied?.discountRate,
+            rateOrDefault(state.assumptions?.discountRate, 0.10)
+        );
         const wacc = Math.max(baseRate + 0.08, 0.18);
         const growth = Math.min(0.02, Math.max(0, wacc - 0.02)); // نمو مستدام مقصوص تحت معدل الخصم
 

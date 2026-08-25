@@ -5,6 +5,7 @@
  * تماماً: طالما الرقم غير مُتحقَّق فعلياً، هذه الخطوة إلزامية.
  */
 import { sendWhatsAppOtp, verifyWhatsAppOtp } from '../services/WhatsAppOtpService.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 
 const ERROR_MESSAGES = {
     no_phone_on_file: 'لا يوجد رقم جوال مسجَّل على حسابك.',
@@ -24,8 +25,7 @@ export class WhatsAppVerifyModal {
     constructor(options = {}) {
         this.overlay = null;
         this.options = options;
-        this._prevFocus = null;
-        this._onTrap = null;
+        this._a11y = null;
         this._resendTimer = null;
         this._resendAvailableAt = null;
     }
@@ -48,17 +48,11 @@ export class WhatsAppVerifyModal {
         document.body.appendChild(this.overlay);
         document.body.style.overflow = 'hidden';
 
-        this._prevFocus = document.activeElement;
-        this._onTrap = (e) => {
-            if (e.key !== 'Tab' || !this.overlay) return;
-            const f = Array.from(this.overlay.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])'))
-                .filter((el) => !el.disabled && el.offsetParent !== null);
-            if (!f.length) return;
-            const first = f[0], last = f[f.length - 1];
-            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-        };
-        this.overlay.addEventListener('keydown', this._onTrap);
+        // onEscape غائب عمداً — خطوة إلزامية (انظر رأس الملف).
+        this._a11y = attachModalA11y({
+            container: this.overlay,
+            labelledBy: 'whatsappVerifyModalTitle'
+        });
 
         await this._sendAndRenderForm();
     }
@@ -165,13 +159,12 @@ export class WhatsAppVerifyModal {
     close() {
         if (this._resendTimer) { clearInterval(this._resendTimer); this._resendTimer = null; }
         if (this.overlay) {
-            if (this._onTrap) this.overlay.removeEventListener('keydown', this._onTrap);
-            this._onTrap = null;
             this.overlay.classList.remove('is-open');
             this.overlay.remove();
             this.overlay = null;
         }
         document.body.style.overflow = '';
-        try { this._prevFocus?.focus?.(); } catch (_) {}
+        this._a11y?.release();
+        this._a11y = null;
     }
 }

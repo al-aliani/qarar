@@ -16,6 +16,7 @@ import { getFieldOptionSpec } from '../core/fieldOptions.js';
 import { getFieldHelp } from '../core/fieldHelpTexts.js';
 import { fieldHelp } from './components/FieldHelp.js';
 import { escapeHtml } from '../utils/escape.js';
+import { captureFocusOwner, restoreFocusAfterRerender } from '../utils/focusRestore.js';
 import { describeRevenueRampGap } from '../core/engine.js';
 import { suggest, isUsable } from '../services/DataConnectors.js';
 import '../services/connectors/ChamberSuppliersConnector.js'; // يسجّل 'market.suppliers' ذاتياً عند التحميل
@@ -185,6 +186,32 @@ export class Wizard {
         return this.stepIndexMap[localIndex] ?? localIndex;
     }
 
+    /**
+     * إدارة التركيز بعد كل إعادة رسم للخطوة (تدقيق a11y 2026-08-25، أُعيد بناؤه 2026-08-25).
+     *
+     * renderStep يستبدل container.innerHTML بالكامل، فالعنصر الذي كان مُركَّزاً عليه
+     * يُحذف من الشجرة ويعود التركيز إلى <body> — مستخدم لوحة المفاتيح كان يضطر لإعادة
+     * التنقّل من أول الصفحة عند كل انتقال خطوة، ولا يسمع قارئ الشاشة أي إعلان بأن
+     * الخطوة تغيّرت أصلاً. ننقل التركيز إلى عنوان الخطوة الجديدة (tabindex="-1").
+     *
+     * النسخة الأولى من هذا الإصلاح كانت ميّتة في الإنتاج: كانت تتخطّى «أول رسم» عبر
+     * علَم على النسخة (this._hasRenderedStep)، لكن المسار الوحيد في الإنتاج
+     * (stepComponentRegistry.js: `wizardFactory()` ⟵ StudyCategoryView) يبني نسخة
+     * Wizard جديدة كل رسم، فكان العلَم فارغاً دوماً والدالة ترجع في كل انتقال بلا استثناء.
+     * المعيار الآن حالة المستند لا هوية النسخة (راجع utils/focusRestore.js): ننقل
+     * التركيز فقط إن كان الرسم قد أتلف عنصراً كان المستخدم مركّزاً عليه داخل هذه
+     * الحاوية تحديداً — فيعمل مع نسخة جديدة كل مرة، ولا يخطف شيئاً عند إقلاع الصفحة،
+     * ولا يخطفه من خطوة إلى أخرى في صفحة التصنيف التي ترسم عدة خطوات دفعةً واحدة.
+     */
+    _restoreStepFocus(focusOwner) {
+        // صنف لا مُعرِّف: صفحة التصنيف ترسم حتى 7 خطوات في صفحة واحدة، فمُعرِّف
+        // `id="wizardStepHeading"` كان يتكرّر 7 مرات في المستند (مخالفة HTML) —
+        // والبحث المُقيَّد بالحاوية عن مُعرِّف مكرّر غير موثوق (nwsapi يختصره إلى
+        // getElementById فيعيد أول تطابق في المستند ثم يرفضه لأنه خارج الحاوية،
+        // فترجع null ويموت الإصلاح صامتاً في كل خطوة عدا الأولى).
+        restoreFocusAfterRerender(focusOwner, this.container.querySelector('.wizard-step-heading'));
+    }
+
     renderStep(stepId, metadata, stepIndex = 0) {
         if (!this.container) return;
         this.currentStepIndex = stepIndex;
@@ -192,7 +219,7 @@ export class Wizard {
         const isQuickMode = localStorage.getItem('study_mode_preference') === 'quick';
         let html = `
             <div class="step-content" key="${stepId}">
-                <h2 class="animate-entry" style="margin-bottom: var(--s-3)">${metadata.label}</h2>
+                <h2 class="animate-entry wizard-step-heading" tabindex="-1" style="margin-bottom: var(--s-3)">${metadata.label}</h2>
                 ${(function () {
                 const help = getStepHelp(stepIndex);
                 if (!help || !help.why) return '';
@@ -396,7 +423,9 @@ export class Wizard {
         }
 
         html += `</div>`; // Close step-content
+        const focusOwner = captureFocusOwner(this.container);
         this.container.innerHTML = html;
+        this._restoreStepFocus(focusOwner);
 
         // Render Charts after HTML insertion
         setTimeout(() => {

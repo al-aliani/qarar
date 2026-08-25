@@ -4,7 +4,7 @@
  * أفكار مختلفة عن "مقارنة مصادر التمويل": درجة الجاذبية، قائمة الجاهزية،
  * معايير المستثمر vs مشروعك، مقارنة ديون/أسهم، مسارات الخروج.
  */
-import { calculateStudy as runFullModel } from '../core/engine.js';
+import { calculateStudy as runFullModel, rateOrDefault } from '../core/engine.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -157,7 +157,10 @@ export class InvestorAnalysis {
         let p = 0;
         const gaps = [];
         if (ctx.npv > 0) p += 20; else gaps.push('تحسين NPV (صافي القيمة الحالية)');
-        if (ctx.irr > (ctx.discountRate || 0.10)) p += 15; else if (ctx.irr != null) gaps.push('رفع IRR فوق معدل الخصم');
+        // rateOrDefault لا `||`: معدل خصم 0 صريح كان يُرفع إلى 10% هنا وحده، بينما بقية
+        // الملف (buildReadinessChecklist/buildInvestorCriteriaTable) يحترمه بـ`??` —
+        // فيتناقض «IRR فوق معدل الخصم» بين درجة الجاذبية وجدول المعايير في الصفحة نفسها.
+        if (ctx.irr > rateOrDefault(ctx.discountRate, 0.10)) p += 15; else if (ctx.irr != null) gaps.push('رفع IRR فوق معدل الخصم');
         // عتبة الاسترداد موحّدة فعلياً مع maxPayback الحقيقي في محرك القرار (engine.js عبر
         // assumptionsApplied.thresholds) — لا رقم مستقل (كانت 7 ثابتة هنا بينما الفعلية 3.5).
         if (ctx.payback < ctx.maxPayback && ctx.payback >= 0) p += 15; else if (ctx.payback >= 0) gaps.push('تقليل فترة الاسترداد');

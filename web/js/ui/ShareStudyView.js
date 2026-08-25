@@ -5,6 +5,7 @@
  */
 
 import { toast } from '../utils/toast.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 import { getAuthUser } from '../../supabaseClient.js';
 import { createShareLink, listShares, revokeShare } from '../services/ShareService.js';
 import { buildShareUrl } from './ShareModal.js';
@@ -63,24 +64,32 @@ export class ShareStudyView {
         // Try to load members from store if not provided
         const stateMembers = store?.getState?.()?.projectInfo?.members || [];
         this._members = options.initialMembers || stateMembers;
-        this._onEscape = null;
+        this._a11y = null;
     }
 
-    open() {
-        this.render();
+    async open() {
+        // render() غير متزامنة (تنتظر getAuthUser/listShares) — نبدأها ونُظهر النافذة
+        // فوراً كما كان، ثم ننتظرها قبل ربط الوصول: البطاقة [role="dialog"] يجب أن
+        // تكون في DOM أولاً. كان هنا Escape يدوي فقط، بلا حبس Tab ولا إعادة تركيز.
+        const rendering = this.render();
         this.overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
-        this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
-        document.addEventListener('keydown', this._onEscape);
+        await rendering;
+        if (!this._a11y) {
+            this._a11y = attachModalA11y({
+                container: this.overlay,
+                labelledBy: 'share-study-title',
+                initialFocus: '.btn-close',
+                onEscape: () => this.close()
+            });
+        }
     }
 
     close() {
         this.overlay.classList.remove('is-open');
         document.body.style.overflow = '';
-        if (this._onEscape) {
-            document.removeEventListener('keydown', this._onEscape);
-            this._onEscape = null;
-        }
+        this._a11y?.release();
+        this._a11y = null;
         this.onClose();
     }
 
@@ -417,6 +426,10 @@ export class ShareStudyView {
         this.overlay.querySelectorAll('.btn-direct-export').forEach((btn) => {
             btn.addEventListener('click', () => this._runDirectExport(btn.dataset.format));
         });
+
+        // إعادة الرسم (بعد إلغاء رابط مثلاً) تستبدل innerHTML فيختفي العنصر المركَّز —
+        // أعِد التركيز داخل النافذة بدل تركه يسقط على body خلفها.
+        if (this._a11y && !this.overlay.contains(document.activeElement)) this._a11y.focusInitial();
     }
 
     /**

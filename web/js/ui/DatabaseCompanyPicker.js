@@ -16,6 +16,7 @@
  */
 import { escapeHtml, escapeAttr } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 
 const MAX_VISIBLE_ROWS = 50;
 
@@ -193,9 +194,17 @@ export class DatabaseCompanyPicker {
         this.defaultTarget = this.enabledTargets.includes(targetType) ? targetType : this.enabledTargets[0];
         this.overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
-        this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
-        document.addEventListener('keydown', this._onEscape);
         this.render();
+        // بعد render() فقط: بطاقة [role="dialog"] يجب أن تكون في DOM قبل الربط.
+        // كان هنا مستمع Escape يدوي بلا حبس تركيز ولا إعادة تركيز للزر الفاتح.
+        if (!this._a11y) {
+            this._a11y = attachModalA11y({
+                container: this.overlay,
+                labelledBy: 'dbPickerTitle',
+                initialFocus: '[data-picker-close]',
+                onEscape: () => this.close()
+            });
+        }
         await this._loadCatalog();
         this.render();
     }
@@ -203,10 +212,8 @@ export class DatabaseCompanyPicker {
     close() {
         this.overlay.classList.remove('is-open');
         document.body.style.overflow = '';
-        if (this._onEscape) {
-            document.removeEventListener('keydown', this._onEscape);
-            this._onEscape = null;
-        }
+        this._a11y?.release();
+        this._a11y = null;
     }
 
     async _loadCatalog() {
@@ -329,6 +336,11 @@ export class DatabaseCompanyPicker {
         if (newRowsListEl) newRowsListEl.scrollTop = rowsScrollTop;
 
         this._bindEvents();
+
+        // إعادة الرسم تستبدل innerHTML فيختفي العنصر المركَّز ويسقط التركيز على body
+        // (خارج النافذة). لا نتدخّل إن بقي التركيز داخلها — _rerenderPreservingFocus
+        // يعيده لحقل البحث بنفسه.
+        if (this._a11y && !this.overlay.contains(document.activeElement)) this._a11y.focusInitial();
     }
 
     _renderGroupsView() {

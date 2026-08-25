@@ -30,7 +30,8 @@
 .mode-toggle-widget { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--c-border); border-radius: 999px; background: var(--c-bg-card); margin-bottom: var(--s-3); }
 .btn-mode-sidebar { flex: 1; border: 0; background: transparent; color: var(--c-text-muted); font: inherit; font-size: 12px; padding: 5px 10px; border-radius: 999px; cursor: pointer; transition: background .15s ease, color .15s ease; }
 .btn-mode-sidebar.active { background: var(--c-p-500); color: var(--c-p-contrast); font-weight: 500; }
-.btn-mode-sidebar:focus-visible { outline: 2px solid var(--c-gold-500); outline-offset: 1px; }
+/* الزر النشط خلفيته p-500 الخضراء؛ النحاسي #8a5f1c فوقها 1.44:1 — الحلقة المزدوجة بدلاً منه. */
+.btn-mode-sidebar:focus-visible { outline: 2px solid transparent; outline-offset: 2px; box-shadow: var(--focus-ring); }
 
 /* 5) عناصر الخطوات: نقطة هادئة بدل الإيموجي، وعلامة ✓ خضراء عند الاكتمال */
 .step-icon { width: 14px; height: 14px; margin-left: var(--s-2); font-size: 11px; color: var(--c-success); filter: none; }

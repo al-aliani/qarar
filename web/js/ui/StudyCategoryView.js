@@ -4,6 +4,7 @@ import { enhanceFieldHelp } from './components/FieldHelpEnhancer.js';
 import { Wizard } from './Wizard.js';
 import { renderStepComponent } from './stepComponentRegistry.js';
 import { trackEvent } from '../utils/analytics.js';
+import { captureFocusOwner, restoreFocusAfterRerender } from '../utils/focusRestore.js';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import tippy from 'tippy.js';
@@ -107,12 +108,17 @@ export class StudyCategoryView {
                 <button type="button" class="category-mode-toggle__btn ${activeMode === 'quick' ? 'is-active' : ''}" data-mode="quick" title="إخفاء التفاصيل المعقدة (للمبتدئين)" aria-pressed="${activeMode === 'quick'}">أساسي</button>
                 <button type="button" class="category-mode-toggle__btn ${activeMode === 'advanced' ? 'is-active' : ''}" data-mode="advanced" title="عرض كافة التحليلات (للمستشارين)" aria-pressed="${activeMode === 'advanced'}">متقدم</button>
             </div>`;
+        // الانتقال الفعلي الذي يراه المستخدم هو «تصنيف ⟶ تصنيف»: زرّا التصنيف
+        // السابق/التالي أدناه داخل this.container، والسطر التالي يستبدله بالكامل —
+        // فيُتلف الزرّ المُركَّز عليه ويسقط التركيز إلى <body>. نلتقطه قبل الإتلاف
+        // ونعيده إلى عنوان التصنيف الجديد بعده (راجع utils/focusRestore.js).
+        const focusOwner = captureFocusOwner(this.container);
         this.container.innerHTML = `
             <div class="category-page" data-category-index="${categoryIndex}">
                 <header class="category-page__header">
                     <div>
                         <span class="category-page__eyebrow">التصنيف ${categoryNumber} من ${categoryTotal}</span>
-                        <h2>${category.label}</h2>
+                        <h2 id="categoryPageHeading" tabindex="-1">${category.label}</h2>
                         <p>${this.categoryDescription(category.id)}</p>
                     </div>
                     ${modeToggleHTML}
@@ -143,6 +149,9 @@ export class StudyCategoryView {
         `;
 
         this.bindCategoryEvents(categoryIndex);
+        // فوراً بعد الاستبدال لا بعد انتهاء رسم الأقسام: العنوان موجود الآن، ورسم
+        // الأقسام أدناه متسلسل بفسحات setTimeout قد تمتد ثوانيَ يبقى فيها التركيز ضائعاً.
+        restoreFocusAfterRerender(focusOwner, this.container.querySelector('#categoryPageHeading'));
         // تدقيق أداء 2026-07-11: Promise.all كانت ترسم كل خطوات التصنيف دفعة واحدة
         // متزامنة — وأثقلها (تحليل الخدمات: ~14 تشغيلة محرّك مالي متداخلة) يحجب رسم
         // البقية بالكامل حتى ينتهي، فتبقى الصفحة فارغة طوال تلك المدة. حلقة متسلسلة

@@ -15,6 +15,7 @@ import { indicatorHelp } from '../utils/glossary.js';
 import { ScenarioSwitcher } from './ScenarioSwitcher.js';
 import { PresentationView } from './PresentationView.js';
 import { renderBenchmarkingSection } from './BenchmarkingView.js'; // المهمة 4 — هل أرقامي منطقية؟
+import { announce } from '../utils/ui.js';
 
 // «اسأل عن رقمك» — تحويل سؤال حر مثل «لو زاد الإيجار 20%؟» لتغيير فعلي عبر نفس آلية
 // تجاوزات المحرك (overrides) التي تستخدمها منزلقات اختبار الضغط في لوحة القرار
@@ -102,7 +103,7 @@ export class FinancialDashboard {
             this.container.innerHTML = `
                 <div class="card glass-card">
                     <h2 class="card-title">لوحة المؤشرات المالية</h2>
-                    <div class="alert alert--warning">
+                    <div class="alert alert--warning" role="alert">
                         <p><strong><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> لا توجد بيانات إيرادات. يرجى إضافة مصادر الإيرادات في خطوة "مصادر الإيرادات".</strong></p>
                         <p class="text-sm mt-2">لعرض المؤشرات المالية (صافي القيمة الحالية، العائد، التعادل) أكمل:</p>
                         <ul class="text-sm mt-2" style="list-style: disc; padding-right: 20px;">
@@ -119,6 +120,8 @@ export class FinancialDashboard {
                     window.dispatchEvent(new CustomEvent('feasibility:navigateToStep', { detail: { stepIndex } }));
                 }
             });
+            // خطأ يمنع الحساب أصلاً — assertive لا polite.
+            announce('تعذّر حساب المؤشرات المالية: لا توجد بيانات إيرادات. أضف مصادر الإيرادات أولاً.', { assertive: true });
             return;
         }
 
@@ -468,6 +471,16 @@ export class FinancialDashboard {
         this.renderForecastChart();
 
         this.bindEvents();
+
+        // تغيير الوضع المبسّط/الكامل أو سنوات التوقّع يستدعي render() فيُعاد بناء اللوحة
+        // كاملة بـ innerHTML — كل المؤشرات تتغيّر بلا أي إعلان. ملخّص من أربع قيم رئيسية
+        // بدل إجبار قارئ الشاشة على إعادة مسح اللوحة كلها بحثاً عمّا تغيّر.
+        const decisionLabel = decision === 'GO' ? 'المشروع مجدٍ'
+            : (decision === 'REVISE' ? 'المشروع يحتاج مراجعة' : 'المشروع غير مجدٍ');
+        const irrText = Number.isFinite(indicators.irr) ? `${(indicators.irr * 100).toFixed(1)}%` : 'غير محسوب';
+        const paybackText = Number.isFinite(indicators.paybackPeriod)
+            ? `${indicators.paybackPeriod.toFixed(1)} سنة` : 'غير محددة';
+        announce(`تحدّثت المؤشرات المالية. ${decisionLabel}. صافي القيمة الحالية: ${this.formatCurrency(indicators.npv)}. العائد الداخلي: ${irrText}. فترة الاسترداد: ${paybackText}.`);
 
         // Initialize Scenario Switcher
         this.initializeScenarioSwitcher();

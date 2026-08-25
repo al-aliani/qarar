@@ -58,20 +58,30 @@ export function countSignChanges(cashflows) {
     return changes;
 }
 
+// الاسترداد لا يُعتمد إلا إن بقي التراكمي ≥ 0 من لحظة العبور حتى نهاية السلسلة — نفس منطق
+// engine.js حرفياً (تصحيح 2026-08-25). قبل ذلك كان **أول** عبور يُرجَع فوراً (return داخل
+// الحلقة)، فمشروعٌ يعبر مبكراً ثم ينهار إلى السالب بنهاية الأفق كان يعرض «0.8 سنة» في بطاقة
+// كل خدمة (ServiceAnalysis.js). عبورٌ جديد بعد الانتكاس يُسجَّل من جديد.
+// المخرجات: رقم = استرداد معتمَد، Infinity = لم يعبر الصفر قط (سلوك قائم لم يتغيّر،
+// تعرضه الشاشة «∞»)، null = مدخلات غير صالحة أو عبورٌ انتكس ولم يتعافَ (اصطلاح المحرك).
 export function calculatePaybackPeriod(cashflows) {
     if (!Array.isArray(cashflows) || cashflows.length === 0 || cashflows[0] >= 0) return null;
     let cumulative = 0;
+    let payback = Infinity;
+    let reverted = false;
     for (let i = 0; i < cashflows.length; i++) {
         const previous = cumulative;
-        cumulative += Number(cashflows[i]) || 0;
-        if (cumulative >= 0) {
-            if (i === 0) return 0;
-            const current = Number(cashflows[i]) || 0;
-            if (current <= 0) return null;
-            return (i - 1) + (-previous / current);
+        const current = Number(cashflows[i]) || 0;
+        cumulative += current;
+        if (previous < 0 && cumulative >= 0 && current > 0) {
+            payback = (i - 1) + (-previous / current);
+        } else if (cumulative < 0 && Number.isFinite(payback)) {
+            payback = Infinity;
+            reverted = true;
         }
     }
-    return Infinity;
+    if (Number.isFinite(payback)) return payback;
+    return reverted ? null : Infinity;
 }
 
 export function calculateMIRR(cashflows, financeRate, reinvestRate) {

@@ -1,5 +1,6 @@
 import { signInWithOtpPhone, verifyOtpPhone, updateUserProfile, signInWithOAuth } from '../../supabaseClient.js';
 import { normalizeSaudiPhone } from '../utils/phoneUtils.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 
 /** دخول سريع برقم الجوال. الإرسال الحقيقي يتم عبر Supabase Phone Auth بقناة WhatsApp. */
 export class PhoneAuthModal {
@@ -10,6 +11,7 @@ export class PhoneAuthModal {
         this.overlay = null;
         this.phone = '';
         this.succeeded = false;
+        this._a11y = null;
     }
 
     open() {
@@ -164,7 +166,14 @@ export class PhoneAuthModal {
             sendForm.style.display = 'block';
             setTimeout(() => this.overlay?.querySelector('#phoneAuthNumber')?.focus(), 20);
         });
-        setTimeout(() => this.overlay?.querySelector('#phoneAuthNumber')?.focus(), 20);
+        // onEscape غائب عمداً: لا توجد إغلاق بـEscape هنا اليوم — الخروج الوحيد هو زر
+        // «تخطي الآن» الذي يُبلّغ AuthGuard بتخطٍّ صريح.
+        this._a11y = attachModalA11y({
+            container: this.overlay,
+            labelledBy: 'phoneAuthTitle',
+            initialFocus: '#phoneAuthNumber',
+            focusDelay: 20
+        });
     }
 
     /**
@@ -215,6 +224,8 @@ export class PhoneAuthModal {
         this.overlay.remove();
         this.overlay = null;
         document.body.style.overflow = '';
+        this._a11y?.release();
+        this._a11y = null;
     }
 
     /** تخطي الدخول: يُغلق النافذة بلا تسجيل ويُخطر onClose (AuthGuard يعامله كتخطٍّ صريح). */
@@ -223,6 +234,8 @@ export class PhoneAuthModal {
         this.overlay.remove();
         this.overlay = null;
         document.body.style.overflow = '';
+        this._a11y?.release();
+        this._a11y = null;
         this.onClose();
     }
 }

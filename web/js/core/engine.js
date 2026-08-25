@@ -168,14 +168,28 @@ export function calculateStudy(study, overrides) {
     const vcRateMult = 1 + (overrides?.vcRateChange ?? 0);
     const fixedMult = 1 + (overrides?.fixedChange ?? 0);
 
-    // أفق الدراسة: حارس `> 0` منفصل عمداً — أفق صفر أو سالب غير منطقي، فيبقى الافتراضي.
+    // أفق الدراسة: حارس `>= 1` منفصل عمداً — أفق صفر أو سالب غير منطقي، فيبقى الافتراضي.
     // (بخلاف معدلات التضخم/الخصم أدناه حيث الصفر قرار مستخدم واعٍ لا فراغ.)
+    //
+    // تصحيح 2026-08-25: الحارس كان `> 0` فيقبل الكسور دون سنة (0.5 أو "0.03") — وحلقة
+    // بناء القوائم `for (y = 1; y <= years; y++)` لا تدور ولا مرة، فينتج incomeStatement
+    // فارغ وكل المؤشرات صفر/null: نفس «أفق الصفر» الذي أُنشئ الحارس لمنعه، من مدخل آخر.
+    // الآن: أقل من سنة كاملة ⟶ الافتراضي (5)، والكسور فوق ذلك تُقطع لأسفل عمداً
+    // (2.5 ⟶ سنتان) — القوائم المالية سنوية بحكم البناء فلا معنى لنصف سنة، والقطع لأسفل
+    // متحفّظ (سنة إضافية جزئية لا تُحتسب أرباحها).
     const yearsInput = Number(study.assumptions?.projectionYears);
-    const years = Number.isFinite(yearsInput) && yearsInput > 0 ? yearsInput : 5;
+    const years = Number.isFinite(yearsInput) && yearsInput >= 1 ? Math.floor(yearsInput) : 5;
     // تضخم صفر = «سيناريو أسعار ثابتة» يختاره المستخدم صراحةً، لا غياب قيمة. النمط القديم
     // `|| 0.02` كان يستبدله صمتاً بـ2% فتُنتج الدراسة نتائج مطابقة حرفياً لما لم يطلبه —
     // نفس الفخ الذي أُنشئت rateOrDefault أعلاه لتفاديه (كانت تُستخدم للفائدة/الإهلاك فقط).
-    const inflation = rateOrDefault(study.assumptions?.inflationRate, 0.02);
+    //
+    // حارس ‎≤ −1‎ (2026-08-25): التضخم يدخل الحسابات كـ`Math.pow(1 + inflation, i)` فقط
+    // (لا مقاماً)، فلا ينفجر إلى Infinity كمعدل الخصم — لكنه ينهار بصمت: عند −1 بالضبط
+    // يصبح المعامل صفراً فتختفي كل التكاليف من السنة الثانية فصاعداً (تشغيل مجاني ⟶ أرباح
+    // وهمية)، وتحت −1 يتناوب المعامل بين موجب وسالب (تكاليف سالبة في سنوات فردية).
+    // الانكماش المعتدل (−2% مثلاً) سيناريو اقتصادي مشروع فيبقى مقبولاً؛ الرفض عند ‎≤ −1‎ فقط.
+    const inflationInput = rateOrDefault(study.assumptions?.inflationRate, 0.02);
+    const inflation = inflationInput > -1 ? inflationInput : 0.02;
     const technical = study[SECTIONS.TECHNICAL] || {};
     const marketing = study[SECTIONS.MARKETING] || {};
     const techResources = study[SECTIONS.TECH_RESOURCES] || {};
@@ -212,11 +226,21 @@ export function calculateStudy(study, overrides) {
         ? (Number.isFinite(Number(study.financing?.costOfEquity)) ? Number(study.financing?.costOfEquity) : 0.15)
         : null;
     const hasCostOfEquityDiscountRate = costOfEquityDiscountRate != null && Number.isFinite(Number(costOfEquityDiscountRate));
-    const baseDiscountRate = hasCostOfEquityDiscountRate
+    const rawBaseDiscountRate = hasCostOfEquityDiscountRate
         ? Number(costOfEquityDiscountRate)
         // معدل خصم صفر = مقارنة اسمية يطلبها المستخدم صراحةً (لا فراغ) — rateOrDefault
         // تحترمه، بينما `Number(...) || 0.10` كانت تفرض 10% صمتاً على نفس المدخل.
         : rateOrDefault(study.assumptions?.discountRate, 0.10);
+    // حارس المعدل السالب (2026-08-25): معامل الخصم = ‎1 / (1 + r)^i‎، فمعدل ‎−1‎ يجعل المقام
+    // صفراً ⟹ المعامل ‎Infinity‎ ⟹ ‎NPV = Infinity‎ وقرار «امضِ» مؤكَّد لأي مشروع مهما كانت
+    // خسائره؛ وأي معدل سالب آخر يجعل الريال المستقبلي أثمن من الحاضر — عكس معنى الخصم —
+    // فينفخ NPV بلا أساس. CentralAssumptionsView تقصّ بـ`Math.max(0, …)` لكن Wizard.updateStore
+    // لا تقصّ (ولا أي مسار استيراد/مزامنة)، فالحدّ يُفرض هنا في المحرك لا في الواجهة وحدها.
+    // الصفر يبقى **مقبولاً** عمداً (مقارنة اسمية يطلبها المستخدم — تصحيح 052c6ef).
+    // السقوط إلى افتراضي المسار نفسه: 15% لتكلفة حقوق الملكية، 10% لمعدل الافتراضات.
+    const baseDiscountRate = rawBaseDiscountRate >= 0
+        ? rawBaseDiscountRate
+        : (hasCostOfEquityDiscountRate ? 0.15 : 0.10);
     const discountRateSource = hasCostOfEquityDiscountRate ? 'costOfEquity' : 'assumptions';
     const discountRate = baseDiscountRate + riskPremium;
     const computedContingencyRate = Number(study.assumptions?.contingencyRate ?? 0.10) + (riskPremium * 0.5);
@@ -1098,9 +1122,18 @@ export function calculateStudy(study, overrides) {
     const breakEvenUnits = (contributionMarginPerUnit > 0 && fixedForBENetOfNonOp > 0)
         ? fixedForBENetOfNonOp / contributionMarginPerUnit
         : 0;
-    const breakEvenReason = cmRatio <= 0
-        ? 'no_contribution_margin'
-        : (fixedForBENetOfNonOp <= 0 ? 'covered_by_non_operating' : null);
+    // ترتيب الفحص مقصود (تصحيح 2026-08-25): التغطية بالإيراد غير التشغيلي تُفحص **أولاً**.
+    // كان `cmRatio <= 0` أولاً، فمشروع كل إيراده غير تشغيلي (تأجير عقار مثلاً) يغطي كل
+    // ثوابته يُصنَّف 'no_contribution_margin' وbreakEvenAchievable=false — أي «يخسر على كل
+    // وحدة» وهو وصف معكوس تماماً لمشروع رابح بلا مبيعات تشغيلية أصلاً. قياس الانقطاع:
+    // إضافة 12 ريالاً من إيراد تشغيلي كانت تقلب التصنيف كلياً. المنطق: متى غطّت الثوابتُ
+    // بالكامل، فالتعادل محقق عند صفر وحدات مهما كان هامش الوحدة — فالسؤال عن الهامش لا
+    // يُطرح أصلاً.
+    const fixedFullyCoveredByNonOp = fixedForBENetOfNonOp <= 0;
+    const breakEvenReason = fixedFullyCoveredByNonOp
+        ? 'covered_by_non_operating'
+        : (cmRatio <= 0 ? 'no_contribution_margin' : null);
+    const breakEvenAchievable = fixedFullyCoveredByNonOp || cmRatio > 0;
 
     // DSCR من جدول السداد الفعلي — بسطه CFADS (النقد المتاح لخدمة الدين) لا EBITDA خام.
     // CFADS = EBITDA − الضرائب النقدية (الزكاة+الضريبة = levy) − الإنفاق الرأسمالي للإحلال
@@ -1414,19 +1447,40 @@ export function calculateStudy(study, overrides) {
             // breakEvenValue=0 غامض: قد يعني تعادلاً مستحيلاً (هامش مساهمة ≤ 0، يخسر على كل وحدة)
             // أو غياب تكاليف ثابتة (يتعادل فوراً). هذا العلَم يميّزهما كي لا تعرض اللوحة
             // «هامش أمان لنقطة التعادل = 100%» لمشروع لا يمكنه التعادل أصلاً.
-            breakEvenAchievable: cmRatio > 0,
+            breakEvenAchievable,
             // يميّز صفرَي breakEvenPointValue المتعاكسين: no_contribution_margin (يخسر على
             // كل وحدة ⟶ تعادل مستحيل) مقابل covered_by_non_operating (الإيراد غير التشغيلي
             // يغطي كل الثوابت ⟶ التعادل محقق أصلاً). null = نقطة تعادل موجبة عادية.
             breakEvenReason,
-            breakEvenUnits: Math.round(breakEvenUnits),
+            // ‎Math.ceil‎ لا ‎Math.round‎ (تصحيح 2026-08-25): لا يتعادل مشروع ببيع جزء وحدة،
+            // فالعدد الصحيح الصحيح محاسبياً هو أول عدد وحدات **يبلغ** التعادل أو يتجاوزه.
+            // التقريب لأقرب كان يُنقص العدد متى كان الكسر < 0.5 (1.2 وحدة ⟶ 1) فيظهر
+            // «تعادل» عند مبيعات لا تغطي الثوابت فعلاً — أخطر اتجاه للخطأ.
+            //
+            // فارق تقريب مقصود، ليس تناقضاً بين الشاشتين: breakEvenPointValue يبقى دقيقاً
+            // بلا تقريب، فحاصل ‎breakEvenUnits × السعر الضمني‎ يساويه أو **يتجاوزه** بأقل من
+            // سعر وحدة واحدة (0 ≤ الفارق < السعر الضمني) — ويتجاوزه دائماً في الاتجاه
+            // المتحفّظ. المشاريع عالية سعر الوحدة تُظهر الفارق بأوضح صورة: سعر 100,000 وثوابت
+            // 112,500 بهامش 65% ⟹ 173,076.92 ريال مقابل 2 × 100,000 = 200,000 (فارق 26,923
+            // = جزء الوحدة غير القابل للبيع 0.269 × 100,000)، ولا سبيل لإزالته دون كسر إحدى
+            // الخاصيتين: دقة قيمة الريال، أو صحة عدد الوحدات كعدد صحيح.
+            breakEvenUnits: Math.ceil(breakEvenUnits),
             dscr: dscrYear1 != null ? Number(dscrYear1.toFixed(2)) : null,
             dscrReason,
             profitMargin: year1Revenue > 0 ? (incomeStatement[0].netIncome / year1Revenue) : 0,
             // هامش إجمالي تشغيلي: كل التكاليف المتغيرة تشغيلية، فقسمتها على الإيراد الكلي
-            // (شاملاً غير التشغيلي) كانت تُظهر 99% لمشروع هامشه الحقيقي 65%. نفس تعريف
-            // cmRatio أعلاه حرفياً — مصدر واحد كي لا ينحرف الرقمان (تصحيح 2026-08-25).
-            grossMargin: cmRatio,
+            // (شاملاً غير التشغيلي) كانت تُظهر 91% لمشروع هامشه الحقيقي 65% (القياس الفعلي:
+            // ‎(1,360,000 − 126,000) ÷ 1,360,000 = 0.9074‎ — انظر نفس الرقم عند تعريف cmRatio
+            // أعلاه). نفس تعريف cmRatio حرفياً — مصدر واحد كي لا ينحرف الرقمان.
+            //
+            // بلا إيراد تشغيلي إطلاقاً: ‎null‎ لا صفر (تصحيح 2026-08-25). الكسر ‎0 ÷ 0‎ غير
+            // معرَّف، و«هامش إجمالي = 0%» ادّعاء موضوعي كاذب («يبيع بالتكلفة») عن مشروع لا
+            // يبيع شيئاً — نفس مبدأ payback/dscr/irr في هذا الملف: غير المنطبق يبقى null.
+            // (cmRatio يبقى صفراً داخلياً لأن حرّاس التعادل أعلاه تقارن `> 0`.)
+            // عقد المستهلكات: null هنا = «غير منطبق» (تُعرض —)، وليس «حقل مفقود من نتيجة
+            // قديمة» — فلا يصحّ السقوط عنده إلى حساب محلي على الإيراد الكلي (يعطي 100%
+            // لمشروع بلا مبيعات، وهو بالضبط الكسر الذي أُصلح هنا).
+            grossMargin: year1OperatingRevenue > 0 ? cmRatio : null,
             netMargin: year1Revenue > 0 ? (incomeStatement[0].netIncome / year1Revenue) : 0,
             ebitdaYear1: year1 ? year1.ebitda : 0,
             freeCashFlowYear1: year1 ? year1.cashFlow : 0,

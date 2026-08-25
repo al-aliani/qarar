@@ -3,6 +3,8 @@
  * تُفتح تلقائياً عند حدث PASSWORD_RECOVERY من Supabase (انظر AuthGuard.js).
  * نفس اتفاقيات AuthModalStub.js (overlay/escape/focus-trap) لتوحيد تجربة المصادقة.
  */
+import { attachModalA11y } from '../utils/modalA11y.js';
+
 export class NewPasswordModal {
     /**
      * @param {object} options
@@ -12,7 +14,7 @@ export class NewPasswordModal {
      */
     constructor(options = {}) {
         this.overlay = null;
-        this._prevFocus = null;
+        this._a11y = null;
         this._succeeded = false;
         this.description = options.description || 'وصلت هنا عبر رابط استعادة كلمة المرور. أدخل كلمة مرور جديدة لإكمال الدخول.';
         // onSuccess/onClose (تدقيق أمني 2026-08-21): جلسة PASSWORD_RECOVERY مقيَّدة حتى
@@ -54,22 +56,13 @@ export class NewPasswordModal {
         document.body.appendChild(this.overlay);
         document.body.style.overflow = 'hidden';
 
-        const onEscape = (e) => { if (e.key === 'Escape') this.close(); };
-        document.addEventListener('keydown', onEscape);
-        this._onEscape = onEscape;
-
-        this._prevFocus = document.activeElement;
-        setTimeout(() => { this.overlay?.querySelector('#newPassword1')?.focus(); }, 30);
-        this._onTrap = (e) => {
-            if (e.key !== 'Tab' || !this.overlay) return;
-            const f = Array.from(this.overlay.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])'))
-                .filter(el => !el.disabled && el.offsetParent !== null);
-            if (!f.length) return;
-            const first = f[0], last = f[f.length - 1];
-            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-        };
-        this.overlay.addEventListener('keydown', this._onTrap);
+        this._a11y = attachModalA11y({
+            container: this.overlay,
+            labelledBy: 'newPasswordModalTitle',
+            initialFocus: '#newPassword1',
+            focusDelay: 30,
+            onEscape: () => this.close()
+        });
 
         this.overlay.querySelector('.btn-close').addEventListener('click', () => this.close());
         this.overlay.addEventListener('click', (e) => { if (e.target === this.overlay) this.close(); });
@@ -135,17 +128,14 @@ export class NewPasswordModal {
     }
 
     close() {
-        if (this._onEscape) document.removeEventListener('keydown', this._onEscape);
-        this._onEscape = null;
         if (this.overlay) {
-            if (this._onTrap) this.overlay.removeEventListener('keydown', this._onTrap);
-            this._onTrap = null;
             this.overlay.classList.remove('is-open');
             this.overlay.remove();
             this.overlay = null;
         }
         document.body.style.overflow = '';
-        try { this._prevFocus?.focus?.(); } catch (_) {}
+        this._a11y?.release();
+        this._a11y = null;
         // إن أُغلقت بلا إكمال تغيير كلمة المرور فعلياً، أبلغ المستدعي مرّة واحدة —
         // AuthGuard يسجّل خروجاً فعلياً هنا (يُبطل جلسة الاستعادة المقيَّدة بدل تركها صالحة).
         if (!this._succeeded && this.onClose) {

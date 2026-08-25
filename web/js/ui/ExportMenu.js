@@ -14,7 +14,7 @@ import { escapeHtml } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
 import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
 import { trackEvent } from '../utils/analytics.js';
-import { trapFocus } from '../utils/focusTrap.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 import { APP_CONFIG, BANK_COMPLIANCE_SENTENCE } from '../config.js';
 import { ConsultationModal } from './ConsultationModal.js';
 import { PaywallModal } from './PaywallModal.js';
@@ -84,13 +84,17 @@ export class ExportMenu {
         this.render();
         this.overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
-        this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
-        document.addEventListener('keydown', this._onEscape);
 
-        // تدقيق a11y 2026-08-22: كانت النافذة الوحيدة (مقارنة بـShareModal/PaywallModal)
-        // بلا حبس Tab — يهرب التركيز خارجها لبقية الصفحة أثناء التنقّل بلوحة المفاتيح.
-        this._removeFocusTrap?.();
-        this._removeFocusTrap = trapFocus(this.overlay.querySelector('[role="dialog"]'), { initial: '.export-card' });
+        // Escape + حبس Tab + إعادة التركيز للزر الفاتح — من المساعد المشترك بدل النسخة
+        // اليدوية (كانت تحبس Tab لكنها لا تُعيد التركيز إطلاقاً عند الإغلاق).
+        if (!this._a11y) {
+            this._a11y = attachModalA11y({
+                container: this.overlay,
+                labelledBy: 'export-modal-title',
+                initialFocus: '.export-card',
+                onEscape: () => this.close()
+            });
+        }
 
         const state = this.store.getState();
         let results = null;
@@ -162,12 +166,8 @@ export class ExportMenu {
     close() {
         this.overlay.classList.remove('is-open');
         document.body.style.overflow = '';
-        if (this._onEscape) {
-            document.removeEventListener('keydown', this._onEscape);
-            this._onEscape = null;
-        }
-        this._removeFocusTrap?.();
-        this._removeFocusTrap = null;
+        this._a11y?.release();
+        this._a11y = null;
     }
 
     /**
@@ -577,9 +577,26 @@ export class ExportMenu {
             const impact = typeof item === 'object' ? (item.impact || 'قد تقل دقة التقرير أو قابليته للتقديم.') : 'قد تقل دقة التقرير أو قابليته للتقديم.';
             return `<div class="qa-fix-item p-3 mb-2 border border-white/10 rounded"><strong>السبب:</strong> ${escapeHtml(message)}<br><strong>الأثر على التقرير:</strong> ${escapeHtml(impact)}</div>`;
         }).join('');
-        overlay.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true"><div class="modal-header"><h3>مركز إصلاح الجودة</h3><button type="button" class="btn-close" aria-label="إغلاق">×</button></div><div class="modal-body">${details || '<p class="text-muted">لا توجد ملاحظات مسجلة.</p>'}${action ? `<div class="mt-3">${action}</div>` : ''}</div></div>`;
+        overlay.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true"><div class="modal-header"><h3 id="qaFixCenterHeading">مركز إصلاح الجودة</h3><button type="button" class="btn-close" aria-label="إغلاق">×</button></div><div class="modal-body">${details || '<p class="text-muted">لا توجد ملاحظات مسجلة.</p>'}${action ? `<div class="mt-3">${action}</div>` : ''}</div></div>`;
         document.body.appendChild(overlay);
-        overlay.querySelector('.btn-close')?.addEventListener('click', () => overlay.remove());
+
+        // تدقيق 2026-08-25: هذا السطح يُفتح **فوق** قائمة التصدير المفتوحة، وكان يحمل
+        // role="dialog" + aria-modal="true" بلا Escape ولا حبس تركيز ولا إعادة تركيز —
+        // أي كذب على قارئ الشاشة. وبعد ترحيل قائمة التصدير إلى الحابس المشترك (يُسجَّل
+        // على document بـcapture، بخلاف focusTrap القديم الذي كان على الحاوية) صار حابس
+        // القائمة ينتزع التركيز من هذا السطح المتداخل. الترحيل يجعله أعلى openStack
+        // فيتولّى مفاتيحه بنفسه، ويسقط الانحدار والعيب معاً.
+        const closeFixCenter = () => {
+            a11y.release();
+            overlay.remove();
+        };
+        const a11y = attachModalA11y({
+            container: overlay,
+            labelledBy: 'qaFixCenterHeading',
+            initialFocus: '.btn-close',
+            onEscape: closeFixCenter
+        });
+        overlay.querySelector('.btn-close')?.addEventListener('click', closeFixCenter);
         overlay.querySelector('[data-action="project_name"]')?.addEventListener('click', () => {
             const name = String(state.projectInfo?.concept || '').trim();
             this.store.updatePath('projectInfo', 'name', name);
@@ -1097,9 +1114,21 @@ export class ExportMenu {
                  </div>`;
             document.body.appendChild(ov);
 
-            const done = (val) => { document.removeEventListener('keydown', onKey); ov.remove(); resolve(val); };
-            const onKey = (e) => { if (e.key === 'Escape') done(false); };
-            document.addEventListener('keydown', onKey);
+            // تدقيق 2026-08-25: بوابة الجودة تُفتح **فوق** قائمة التصدير المفتوحة. بعد
+            // ترحيل القائمة إلى الحابس المشترك (يُسجَّل على document بـcapture، بخلاف
+            // focusTrap القديم الذي كان على الحاوية) صار حابس القائمة يرى Tab الصادر من
+            // هذه البوابة فينتزع التركيز إليها — فيصبح زر «مراجعة أولاً» غير قابل للوصول
+            // بلوحة المفاتيح إطلاقاً. الترحيل يجعل البوابة أعلى openStack فتتولّى مفاتيحها
+            // بنفسها. (كانت أيضاً تُعلن aria-modal بلا حبس تركيز — ادّعاء غير صحيح.)
+            const done = (val) => { a11y.release(); ov.remove(); resolve(val); };
+            const a11y = attachModalA11y({
+                container: ov,
+                dialog: ov,
+                label: hasHard ? 'لا يمكن تصدير الدراسة بعد' : 'مراجعة الجودة قبل التصدير',
+                initialFocus: () => ov.querySelector('button[data-act="proceed"]') || ov.querySelector('button[data-act="cancel"]'),
+                focusDelay: 0,
+                onEscape: () => done(false)
+            });
             ov.addEventListener('click', (e) => { if (e.target === ov) done(false); });
             ov.querySelectorAll('button[data-act]').forEach((b) => {
                 b.addEventListener('click', () => done(b.dataset.act === 'proceed'));
@@ -1111,8 +1140,7 @@ export class ExportMenu {
                     this._navigateToStep(stepIndex);
                 });
             });
-            const focusBtn = ov.querySelector('button[data-act="proceed"]') || ov.querySelector('button[data-act="cancel"]');
-            if (focusBtn) setTimeout(() => focusBtn.focus(), 0);
+            // التركيز الأولي يتولّاه attachModalA11y عبر initialFocus أعلاه.
         });
     }
 }

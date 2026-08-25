@@ -10,6 +10,7 @@ import { generateSWOT, generateAdvisorFallback, generateFinancialImprovementAdvi
 import { escapeHtml } from '../utils/escape.js';
 import { CATEGORY_TIPS } from '../core/categoryTips.js';
 import { hasMinimumRevenueData } from '../utils/dataSufficiency.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 
 // رسالة موحّدة تُعرض بدل أي استنتاج مبني على مؤشرات مالية (توصية/جدوى) حين لا تتوفر
 // بيانات إيرادات كافية بعد — بدل حكم سلبي قاطع («صافي القيمة الحالية غير إيجابي...
@@ -54,6 +55,7 @@ export class AIChatModal {
         this.fab = null;
         this.currentTip = null;
         this._lastTipCategoryId = null;
+        this._a11y = null;
     }
 
     /**
@@ -176,16 +178,33 @@ export class AIChatModal {
         document.addEventListener('focusout', onFocusOut);
     }
 
+    /**
+     * لوحة المستشار ليست نافذة حاجبة (modal): لا خلفية معتّمة، والصفحة خلفها تبقى
+     * صالحة للاستخدام. لذلك role="dialog" بلا aria-modal وبلا حبس تركيز — حبس Tab
+     * هنا كان سيحبس المستخدم في لوحة جانبية لا تحجب شيئاً. ما ينقصها فعلاً هو
+     * الإغلاق بـEscape وإعادة التركيز للزر العائم عند الإغلاق.
+     */
+    _attachA11y() {
+        this._a11y?.release({ restoreFocus: false });
+        this._a11y = attachModalA11y({
+            container: this.container,
+            modal: false,
+            label: 'المستشار الذكي',
+            initialFocus: '.ai-chat-input',
+            restoreFocusTo: '#aiChatFab',
+            onEscape: () => this.close()
+        });
+    }
+
     toggle() {
-        this.isOpen = !this.isOpen;
-        this.container.style.display = this.isOpen ? 'flex' : 'none';
-        if (this.isOpen) {
-            if (this.messages.length === 0) {
-                this.addSystemMessage('مرحباً! أنا المستشار الذكي. اسألني عن مشروعك، التوصيات، تحليل SWOT، أو أي استفسار عن دراسة الجدوى.');
-            }
-            this.render();
-            this.container.querySelector('.ai-chat-input')?.focus();
+        if (this.isOpen) { this.close(); return; }
+        this.isOpen = true;
+        this.container.style.display = 'flex';
+        if (this.messages.length === 0) {
+            this.addSystemMessage('مرحباً! أنا المستشار الذكي. اسألني عن مشروعك، التوصيات، تحليل SWOT، أو أي استفسار عن دراسة الجدوى.');
         }
+        this.render();
+        this._attachA11y();
     }
 
     /**
@@ -195,6 +214,7 @@ export class AIChatModal {
         if (!this.container) return;
         this.isOpen = true;
         this.container.style.display = 'flex';
+        this._attachA11y();
         this.addMessage('user', initialPrompt);
         this.isLoading = true;
         this.render();
@@ -231,6 +251,8 @@ export class AIChatModal {
     close() {
         this.isOpen = false;
         this.container.style.display = 'none';
+        this._a11y?.release();
+        this._a11y = null;
     }
 
     addMessage(role, content, tag = null) {
@@ -451,6 +473,8 @@ export class AIChatModal {
     }
 
     unmount() {
+        this._a11y?.release({ restoreFocus: false });
+        this._a11y = null;
         if (this.fab) this.fab.remove();
         if (this.container) this.container.remove();
         this.fab = null;

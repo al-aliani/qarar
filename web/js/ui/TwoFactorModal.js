@@ -6,10 +6,26 @@ import Swal from 'sweetalert2';
 import { mfaEnrollTOTP, mfaChallengeAndVerify, mfaListFactors, mfaUnenroll } from '../../supabaseClient.js';
 import { generateMfaRecoveryCodes } from '../services/MfaRecoveryService.js';
 import { toast } from '../utils/toast.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 
 export class TwoFactorModal {
     constructor() {
         this.isOpen = false;
+        this._a11y = null;
+    }
+
+    /**
+     * الإغلاق الوحيد للنافذة. كان الحذف مكرَّراً في 5 مواضع، فكان أي منها يترك
+     * مستمعات الوصول والتركيز معلَّقة. لا يغيّر ما تفعله الأزرار — فقط يوحّد الحذف.
+     *
+     * ملاحظة SweetAlert: نوافذ Swal.fire داخل هذا الملف (إلغاء 2FA / إعادة توليد
+     * الرموز) تدير تركيزها و Escape بنفسها، ومساعد الوصول هنا يتنحّى ما دامت مفتوحة.
+     */
+    _close(overlay) {
+        if (overlay?.parentNode) overlay.parentNode.removeChild(overlay);
+        this.isOpen = false;
+        this._a11y?.release();
+        this._a11y = null;
     }
 
     async show() {
@@ -25,7 +41,7 @@ export class TwoFactorModal {
         overlay.innerHTML = `
             <div style="background:var(--c-bg-card);border-radius:12px;padding:24px;max-width:500px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                    <h3 style="margin:0;font-size:18px;color:var(--c-text-main);"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg> المصادقة الثنائية</h3>
+                    <h3 id="twoFactorModalTitle" style="margin:0;font-size:18px;color:var(--c-text-main);"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg> المصادقة الثنائية</h3>
                     <button id="btn2FAClose" aria-label="إغلاق" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--c-text-muted);">×</button>
                 </div>
                 <div id="2fa-content">
@@ -36,6 +52,13 @@ export class TwoFactorModal {
 
         document.body.appendChild(overlay);
         this.bindEvents(overlay, hasMFA);
+        this._a11y = attachModalA11y({
+            container: overlay,
+            dialog: overlay.firstElementChild,
+            labelledBy: 'twoFactorModalTitle',
+            initialFocus: '#btn2FAClose',
+            onEscape: () => this._close(overlay)
+        });
     }
 
     renderEnrollMode() {
@@ -107,15 +130,13 @@ export class TwoFactorModal {
             }
         });
         doneBtn?.addEventListener('click', () => {
-            document.body.removeChild(overlay);
-            this.isOpen = false;
+            this._close(overlay);
         });
     }
 
     bindEvents(overlay, hasMFA) {
         overlay.querySelector('#btn2FAClose')?.addEventListener('click', () => {
-            document.body.removeChild(overlay);
-            this.isOpen = false;
+            this._close(overlay);
         });
 
         if (hasMFA) {
@@ -136,8 +157,7 @@ export class TwoFactorModal {
                     const result = await mfaUnenroll(factorId);
                     if (result.ok) {
                         toast.success('تم إلغاء المصادقة الثنائية');
-                        document.body.removeChild(overlay);
-                        this.isOpen = false;
+                        this._close(overlay);
                     } else {
                         toast.error('فشل الإلغاء: ' + result.error);
                     }
@@ -232,8 +252,7 @@ export class TwoFactorModal {
                         this.bindRecoveryCodesEvents(overlay, recoveryResult.codes);
                     } else {
                         toast.error('تم التفعيل، لكن تعذّر توليد رموز الاسترداد. أعد المحاولة لاحقاً من إعدادات الحساب.');
-                        document.body.removeChild(overlay);
-                        this.isOpen = false;
+                        this._close(overlay);
                     }
                 } else {
                     toast.error(result.error || 'رمز غير صحيح');
@@ -245,8 +264,7 @@ export class TwoFactorModal {
 
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) {
-                document.body.removeChild(overlay);
-                this.isOpen = false;
+                this._close(overlay);
             }
         });
     }

@@ -5,6 +5,7 @@
 import { APP_CONFIG } from '../config.js';
 import { toast } from '../utils/toast.js';
 import { trackEvent } from '../utils/analytics.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 
 export class ConsultationModal {
     constructor(overlayId, store) {
@@ -26,17 +27,19 @@ export class ConsultationModal {
         trackEvent('consultation_modal_opened', {});
         this.overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
-        this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
-        document.addEventListener('keydown', this._onEscape);
+        this._a11y = attachModalA11y({
+            container: this.overlay,
+            labelledBy: 'consultation-modal-title',
+            initialFocus: '.consultation-close',
+            onEscape: () => this.close()
+        });
     }
 
     close() {
         this.overlay.classList.remove('is-open');
         document.body.style.overflow = '';
-        if (this._onEscape) {
-            document.removeEventListener('keydown', this._onEscape);
-            this._onEscape = null;
-        }
+        this._a11y?.release();
+        this._a11y = null;
     }
 
     getSummary(state) {

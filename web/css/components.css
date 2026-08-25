@@ -101,7 +101,11 @@
 }
 .btn:hover { transform: translateY(-1px); }
 .btn:active { transform: translateY(0) scale(.985); }
-.btn:focus-visible { outline: 2px solid var(--c-gold-deco); outline-offset: 2px; }
+/* الصفحات العامة (about/pricing/contact/legal…) تحمّل main.css وحده — بلا polish.css
+   ولا accessibility.css — فهذه القاعدة هي مؤشر التركيز الفعلي لأزرارها. النحاسي
+   الزخرفي #b07d2c يقيس 2.24:1 فقط فوق الزر الأخضر الداكن p-500 (وحده 3.05:1 على
+   bg-panel، على حافة الحد) — دون 3:1. حلقة --focus-ring المزدوجة بدلاً منه. */
+.btn:focus-visible { outline: 2px solid transparent; outline-offset: 3px; box-shadow: var(--focus-ring); }
 
 .btn--primary {
     /* تدرج عمودي مبني على الرموز — يعمل في الثيمين لأن p-500/p-600 يتبدلان */
@@ -4213,7 +4217,9 @@ input[type="number"] {
     letter-spacing: -0.01em;
 }
 
-/* focus ذهبي موحد للعناصر التفاعلية غير النصية — لغة landing */
+/* focus موحد للعناصر التفاعلية غير النصية — نفس حلقة --focus-ring المزدوجة.
+   كان النحاسي الزخرفي #b07d2c وحده (3.05:1 على bg-panel، 2.24:1 فوق أي سطح
+   أخضر داكن) — تحت حد 3:1 على الأسطح الملوّنة. */
 .export-card:focus-visible,
 .report-builder-card:focus-visible,
 .step-item:focus-visible,
@@ -4221,8 +4227,9 @@ input[type="number"] {
 .btn-close:focus-visible,
 .btn-icon:focus-visible,
 .btn-magic-wand:focus-visible {
-    outline: 2px solid var(--c-gold-deco);
-    outline-offset: 2px;
+    outline: 2px solid transparent;
+    outline-offset: 3px;
+    box-shadow: var(--focus-ring);
 }
 .table-container.scrollable-x {
     position: relative;

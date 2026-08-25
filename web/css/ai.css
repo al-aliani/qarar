@@ -44,9 +44,12 @@
     transform: translateY(-2px) scale(1.03);
     box-shadow: 0 10px 26px -8px rgba(14, 91, 68, 0.55), var(--shadow-lg);
 }
+/* زر عائم خلفيته --grad-emerald الداكنة — يعوم فوق محتوى متغيّر، فالحلقة المزدوجة
+   (داخلية فاتحة 10.8:1 فوق p-600 + خارجية خضراء 8.08:1 على الأبيض) أضمن من حلقة واحدة. */
 .ai-chat-fab:focus-visible {
-    outline: 2px solid var(--c-gold-deco);
-    outline-offset: 2px;
+    outline: 2px solid transparent;
+    outline-offset: 3px;
+    box-shadow: var(--focus-ring);
 }
 
 /* تدقيق اختبار عميل 2026-07-12: تصغير الزر لدائرة أثناء التمرير (لا يغطي عرضاً

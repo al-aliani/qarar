@@ -13,7 +13,7 @@ import { PRICING_PACKAGES, formatPrice } from '../core/pricing.js';
 import { REFUND_POLICY, getBankTransferConfig } from '../config.js';
 import { startCheckout } from '../services/PaymentService.js';
 import { getExperimentVariant, trackEvent } from '../utils/analytics.js';
-import { trapFocus } from '../utils/focusTrap.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 import { renderBankTransferPanel } from './components/BankTransferPanel.js';
 
 function escapeHtml(str) {
@@ -59,21 +59,22 @@ export class PaywallModal {
         this.render();
         this.overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
-        this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
-        document.addEventListener('keydown', this._onEscape);
-        this._removeFocusTrap?.();
-        this._removeFocusTrap = trapFocus(this.overlay.querySelector('[role="dialog"]'), { initial: '.paywall-close' });
+        // إعادة الفتح وهي مفتوحة: نُحدِّث التركيز فقط ولا نُعيد الربط، كي لا يُستبدل
+        // العنصر الفاتح المحفوظ بعنصر من داخل النافذة نفسها.
+        if (this._a11y) this._a11y.focusInitial();
+        else this._a11y = attachModalA11y({
+            container: this.overlay,
+            labelledBy: 'paywall-modal-title',
+            initialFocus: '.paywall-close',
+            onEscape: () => this.close()
+        });
     }
 
     close() {
         this.overlay.classList.remove('is-open');
         document.body.style.overflow = '';
-        if (this._onEscape) {
-            document.removeEventListener('keydown', this._onEscape);
-            this._onEscape = null;
-        }
-        this._removeFocusTrap?.();
-        this._removeFocusTrap = null;
+        this._a11y?.release();
+        this._a11y = null;
     }
 
     render() {

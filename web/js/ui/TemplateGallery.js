@@ -13,6 +13,7 @@ import {
 } from '../services/ExpertTemplateService.js';
 import { STEPS, isStepVisibleInStudyMode, STEPS_ABSORBED_IN_CATEGORY_VIEW } from '../core/wizardSteps.js';
 import { trackEvent } from '../utils/analytics.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 
 // عدد خطوات كل وضع — محسوب من مصدر الحقيقة الوحيد (wizardSteps.js) لا رقماً مُخمَّناً،
 // ومطابق لما يراه المستخدم فعلياً في صفحة الفئات: يستبعد الخطوات المستوعَبة بصرياً داخل
@@ -237,18 +238,23 @@ export class TemplateGallery {
         this.render();
         this.overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
-        this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
-        document.addEventListener('keydown', this._onEscape);
-        this.overlay.querySelector('.btn-close')?.focus();
+        // كان هنا Escape يدوي + تركيز أولي على زر الإغلاق، بلا حبس Tab (رغم
+        // aria-modal="true") وبلا إعادة تركيز للزر الفاتح عند الإغلاق.
+        if (!this._a11y) {
+            this._a11y = attachModalA11y({
+                container: this.overlay,
+                labelledBy: 'template-gallery-title',
+                initialFocus: '.btn-close',
+                onEscape: () => this.close()
+            });
+        }
     }
 
     close() {
         this.overlay.classList.remove('is-open');
         document.body.style.overflow = '';
-        if (this._onEscape) {
-            document.removeEventListener('keydown', this._onEscape);
-            this._onEscape = null;
-        }
+        this._a11y?.release();
+        this._a11y = null;
     }
 
     render() {
@@ -349,6 +355,10 @@ export class TemplateGallery {
                 this.close();
             };
         });
+
+        // «رجوع» من نموذج البداية يُعيد render() فيستبدل البطاقة كلها ويختفي العنصر
+        // المركَّز — أعِد التركيز داخل النافذة بدل تركه يسقط على body خلفها.
+        if (this._a11y && !this.overlay.contains(document.activeElement)) this._a11y.focusInitial();
     }
 
     async startSmartWizard(templateId) {

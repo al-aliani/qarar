@@ -3,7 +3,7 @@
  * Provides detailed analysis for each service (Pool, Padel, Gym, etc.)
  * Including individual Break-even, NPV, IRR calculations
  */
-import { calculateStudy as runFullModel } from '../core/engine.js';
+import { calculateStudy as runFullModel, rateOrDefault } from '../core/engine.js';
 import { calculateIRR, calculateNPV, calculatePaybackPeriod } from '../core/financial/cashflow.js';
 import { investmentDataWarning, investmentDataWarningHtml, productCatalogWarning } from '../utils/dataQuality.js';
 import { stepIndexById } from '../core/wizardSteps.js';
@@ -269,7 +269,15 @@ export class ServiceAnalysis {
             growthRate = 0.07
         } = service;
 
-        const discountRate = assumptions.discountRate || 0.10;
+        // rateOrDefault (المحرك) لا `||`: معدل خصم 0 قرارُ مستخدمٍ صريح (مقارنة اسمية)،
+        // و`|| 0.10` كانت تفرض 10% هنا بينما المحرك يحترم الصفر ⟶ NPVان مختلفان لدراسة واحدة.
+        // تصحيح 2026-08-25: rateOrDefault تحترم الصفر لكنها لا تقصّ السالب. هذه الشاشة
+        // تقرأ فروض المستخدم الخام (لا assumptionsApplied)، وWizard.updateStore لا تقصّ —
+        // فـ-1 كانت تُنتج معامل خصم ∞ ⟹ NPV = Infinity و isViable = true، و-0.5 تنفخ
+        // NPV ‎27×‎ ويُعرض كاملاً. نفس حدّ المحرك (engine.js: رفض ما دون الصفر والسقوط
+        // للافتراضي) مطبَّق هنا كي لا تختلف الشاشة عن المحرك في أي اتجاه.
+        const rawDiscountRate = rateOrDefault(assumptions.discountRate, 0.10);
+        const discountRate = rawDiscountRate >= 0 ? rawDiscountRate : 0.10;
         // اقتطاع فعلي متسق مع المحرك: زكاة 2.5% على الحصة السعودية + ضريبة على حصة الأجانب
         const foreignShare = Math.min(1, Math.max(0, Number(assumptions.foreignOwnershipRate ?? 0)));
         const taxRate = (0.025 * (1 - foreignShare)) + (Number(assumptions.taxRate ?? 0.20) * foreignShare);

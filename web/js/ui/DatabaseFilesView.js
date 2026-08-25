@@ -1,5 +1,6 @@
 import { escapeAttr, escapeHtml } from '../utils/escape.js';
 import { parseWorksheetRows } from './DatabaseCompanyPicker.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 
 const downloadIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14"/></svg>';
 const fileIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>';
@@ -166,9 +167,6 @@ export class DatabaseFilesView {
             // بدل الإغلاق على `this` وقت الربط، لأن DatabaseFilesView يُعاد إنشاؤه في كل
             // DashboardView.draw() (انظر DashboardView.js) فيصبح `this` هنا نسخة ميتة قديمة.
             overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay._activeView?._closePreview(); });
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && overlay.classList.contains('is-open')) overlay._activeView?._closePreview();
-            });
         }
         overlay.classList.add('modal-overlay');
         overlay._activeView = this;
@@ -182,6 +180,16 @@ export class DatabaseFilesView {
         overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
         this._renderPreview();
+        // بعد أول رسم: بطاقة [role="dialog"] صارت في DOM. كان هنا Escape يدوي فقط —
+        // بلا حبس Tab (رغم aria-modal) وبلا إعادة تركيز لزر «معاينة المحتوى» الفاتح.
+        if (!this._a11y) {
+            this._a11y = attachModalA11y({
+                container: overlay,
+                labelledBy: 'dbFilePreviewTitle',
+                initialFocus: '[data-preview-close]',
+                onEscape: () => this._closePreview()
+            });
+        }
         try {
             const res = await fetch(file.url);
             if (!res.ok) throw new Error(`status ${res.status}`);
@@ -207,6 +215,8 @@ export class DatabaseFilesView {
         this.previewOverlay.classList.remove('is-open');
         document.body.style.overflow = '';
         this.previewState = null;
+        this._a11y?.release();
+        this._a11y = null;
     }
 
     _renderPreview() {
@@ -247,5 +257,9 @@ export class DatabaseFilesView {
             </div>
         `;
         overlay.querySelectorAll('[data-preview-close]').forEach((btn) => btn.addEventListener('click', () => this._closePreview()));
+
+        // الرسم الثاني (بعد تحليل الملف) يستبدل innerHTML فيختفي العنصر المركَّز —
+        // أعِد التركيز داخل النافذة بدل تركه يسقط على body.
+        if (this._a11y && !overlay.contains(document.activeElement)) this._a11y.focusInitial();
     }
 }

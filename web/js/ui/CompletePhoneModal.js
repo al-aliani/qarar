@@ -4,11 +4,13 @@
  * البريد/كلمة المرور تجمعه أصلاً عند إنشاء الحساب في AuthModalStub.js). لا يوجد
  * زر إغلاق/ESC/نقر-خلفي عمداً — رقم الجوال مطلوب لكل حساب (انظر AuthGuard.js).
  */
+import { attachModalA11y } from '../utils/modalA11y.js';
+
 export class CompletePhoneModal {
     constructor(options = {}) {
         this.overlay = null;
         this.options = options;
-        this._prevFocus = null;
+        this._a11y = null;
     }
 
     open() {
@@ -37,18 +39,13 @@ export class CompletePhoneModal {
         document.body.appendChild(this.overlay);
         document.body.style.overflow = 'hidden';
 
-        this._prevFocus = document.activeElement;
-        setTimeout(() => { this.overlay?.querySelector('#completePhoneInput')?.focus(); }, 30);
-        this._onTrap = (e) => {
-            if (e.key !== 'Tab' || !this.overlay) return;
-            const f = Array.from(this.overlay.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])'))
-                .filter(el => !el.disabled && el.offsetParent !== null);
-            if (!f.length) return;
-            const first = f[0], last = f[f.length - 1];
-            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-        };
-        this.overlay.addEventListener('keydown', this._onTrap);
+        // onEscape غائب عمداً: رقم الجوال مطلوب، فلا تُغلق النافذة بـEscape (انظر رأس الملف).
+        this._a11y = attachModalA11y({
+            container: this.overlay,
+            labelledBy: 'completePhoneModalTitle',
+            initialFocus: '#completePhoneInput',
+            focusDelay: 30
+        });
 
         const form = this.overlay.querySelector('#completePhoneForm');
         const errEl = this.overlay.querySelector('#completePhoneError');
@@ -85,13 +82,12 @@ export class CompletePhoneModal {
 
     close() {
         if (this.overlay) {
-            if (this._onTrap) this.overlay.removeEventListener('keydown', this._onTrap);
-            this._onTrap = null;
             this.overlay.classList.remove('is-open');
             this.overlay.remove();
             this.overlay = null;
         }
         document.body.style.overflow = '';
-        try { this._prevFocus?.focus?.(); } catch (_) {}
+        this._a11y?.release();
+        this._a11y = null;
     }
 }

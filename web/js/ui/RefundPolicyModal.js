@@ -3,6 +3,7 @@
  * استنساخ لنقاط قوة LivePlan: "35-day money-back guarantee"
  */
 import { REFUND_POLICY } from '../config.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 
 export class RefundPolicyModal {
     constructor() {
@@ -21,17 +22,19 @@ export class RefundPolicyModal {
         this.render();
         this.overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
-        this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
-        document.addEventListener('keydown', this._onEscape);
+        this._a11y = attachModalA11y({
+            container: this.overlay,
+            labelledBy: 'refund-policy-title',
+            initialFocus: '.refund-policy-close',
+            onEscape: () => this.close()
+        });
     }
 
     close() {
         this.overlay.classList.remove('is-open');
         document.body.style.overflow = '';
-        if (this._onEscape) {
-            document.removeEventListener('keydown', this._onEscape);
-            this._onEscape = null;
-        }
+        this._a11y?.release();
+        this._a11y = null;
     }
 
     render() {

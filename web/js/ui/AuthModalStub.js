@@ -4,6 +4,7 @@
  */
 import { trackEvent } from '../utils/analytics.js';
 import { monitoring } from '../utils/monitoring.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 
 // تدقيق 2026-07-17: supabaseClient.js:signIn() يُعيد e.message الخام من Supabase GoTrue
 // بلا أي ترجمة — قبل هذا كان أي خطأ غير "email not confirmed" يظهر كنص إنجليزي حرفي
@@ -44,7 +45,7 @@ export class AuthModal {
         this.onClose = options.onClose || null; // يُستدعى عند الإغلاق بلا نجاح (يعامله الحارس كتخطٍّ)
         this.overlay = null;
         this._succeeded = false;
-        this._prevFocus = null;
+        this._a11y = null;
     }
 
     open() {
@@ -165,23 +166,14 @@ export class AuthModal {
         // تحديداً حين يكون المستخدم غير مسجَّل دخوله عند أول تحميل.
         window.dispatchEvent(new CustomEvent('feasibility:authModalShown'));
 
-        const onEscape = (e) => { if (e.key === 'Escape') this.close(); };
-        document.addEventListener('keydown', onEscape);
-        this._onEscape = onEscape;
-
-        // إدارة التركيز: احفظ العنصر السابق، ركّز أول حقل، واحبس Tab داخل النافذة (a11y)
-        this._prevFocus = document.activeElement;
-        setTimeout(() => { this.overlay?.querySelector('#authEmail')?.focus(); }, 30);
-        this._onTrap = (e) => {
-            if (e.key !== 'Tab' || !this.overlay) return;
-            const f = Array.from(this.overlay.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])'))
-                .filter(el => !el.disabled && el.offsetParent !== null);
-            if (!f.length) return;
-            const first = f[0], last = f[f.length - 1];
-            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-        };
-        this.overlay.addEventListener('keydown', this._onTrap);
+        // إدارة التركيز (حبس Tab + Escape + إعادة التركيز للفاتح) — انظر utils/modalA11y.js
+        this._a11y = attachModalA11y({
+            container: this.overlay,
+            labelledBy: 'authModalTitle',
+            initialFocus: '#authEmail',
+            focusDelay: 30,
+            onEscape: () => this.close()
+        });
 
         this.overlay.addEventListener('click', (e) => { if (e.target === this.overlay) this.close(); });
 
@@ -574,18 +566,15 @@ export class AuthModal {
     }
 
     close() {
-        if (this._onEscape) document.removeEventListener('keydown', this._onEscape);
-        this._onEscape = null;
         if (this.overlay) {
-            if (this._onTrap) this.overlay.removeEventListener('keydown', this._onTrap);
-            this._onTrap = null;
             this.overlay.classList.remove('is-open');
             this.overlay.remove();
             this.overlay = null;
         }
         document.body.style.overflow = '';
         // أعِد التركيز للعنصر الذي فتح النافذة (a11y)
-        try { this._prevFocus?.focus?.(); } catch (_) {}
+        this._a11y?.release();
+        this._a11y = null;
         // تدقيق أمني 2026-08-21: جلسة aal1 صالحة فعلياً بهذي اللحظة (كلمة المرور تحققت)
         // لكن تحدي 2FA لم يكتمل — إغلاق النافذة هنا (Escape/×/نقر خارجي، كلها تصل لـclose())
         // يجب أن يُنهي هذه الجلسة فعلياً، لا يتركها صالحة صامتة تُستخدَم لاحقاً بلا الرمز.

@@ -151,6 +151,14 @@
        التجارية الظاهرة (.app-header__brand/.brand-name تبقيان كما هما). -->
   <h1 class="sr-only">قرار — محاكي دراسة الجدوى الذكية</h1>
 
+  <!-- تدقيق a11y 2026-08-25: منطقتان حيّتان ثابتتان تُعلنان النتائج المحسوبة بعد كل
+       تغيير افتراض (NPV، القرار، المؤشرات). يجب أن تكونا في DOM منذ الإقلاع: منطقة
+       aria-live تُحقَن مع محتواها دفعةً واحدة لا يُعلنها قارئ الشاشة إطلاقاً، ولوحتا
+       القرار والمؤشرات تُعيدان الرسم بـ innerHTML كاملاً. تُكتبان عبر announce()
+       في js/utils/ui.js — لا تُحذفا ولا يُغيَّر معرّفاهما. -->
+  <div id="a11yStatusRegion" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="a11yAlertRegion" class="sr-only" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
   <div class="app-shell">
 
     <!-- App Header Toolbar (visible in workspace: save, export, theme, KPI mini) -->

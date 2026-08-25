@@ -10,7 +10,7 @@ import { calculateProjectScore } from '../core/scoring.js';
 import { downloadBlob } from '../../export/utils.js';
 import { createShareLink } from '../services/ShareService.js';
 import { buildShareUrl } from './ShareModal.js';
-import { animateCounter } from '../utils/ui.js';
+import { animateCounter, announce } from '../utils/ui.js';
 import { runQAChecks } from '../utils/qaChecks.js';
 import { buildDecisionQualityGate } from '../utils/decisionQuality.js';
 import { buildFinancingDiagnostics } from '../utils/financingDiagnostics.js';
@@ -61,7 +61,7 @@ export class DecisionDashboard {
                 <div class="decision-dashboard animate-entry">
                     <div class="card glass-card">
                         <h2 class="card-title page-title">لوحة القرار الاستثماري</h2>
-                        <div class="alert alert--warning">
+                        <div class="alert alert--warning" role="alert">
                             <p><strong><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> ${warningHeading}</strong></p>
                             <p class="text-sm mt-2">لا يمكن إصدار توصية (مجدٍ / غير مجدٍ) قبل إدخال الحد الأدنى من البيانات. أكمل:</p>
                             <ul class="text-sm mt-2" style="list-style: disc; padding-right: 20px;">
@@ -74,6 +74,9 @@ export class DecisionDashboard {
                         </div>
                     </div>
                 </div>`;
+            // خطأ يمنع الحساب أصلاً — assertive: المستخدم يحتاج معرفة أن لا قرار سيصدر
+            // الآن، لا أن ينتظر إعلاناً مهذّباً خلف بقية الكلام.
+            announce(`تعذّر إصدار توصية. ${warningHeading}`, { assertive: true });
             return;
         }
 
@@ -398,7 +401,10 @@ export class DecisionDashboard {
                                     </div>
                                 </div>
                             </div>
-                            <div class="stress-test-results">
+                            <!-- منزلقات الضغط تُحدّث هذين الرقمين في مكانهما (لا إعادة رسم)،
+                                 والحاوية موجودة في DOM قبل أي تحديث — فهذه aria-live تعمل فعلاً.
+                                 aria-atomic لتُقرأ التسمية مع الرقم لا الرقم وحده. -->
+                            <div class="stress-test-results" aria-live="polite" aria-atomic="true">
                                 <div class="stress-kpi">
                                     <span class="stress-kpi-label">صافي القيمة الحالية (بعد الصدمة)</span>
                                     <span id="stressNPV" class="stress-kpi-value">${this.formatCurrency(results?.indicators?.npv)}</span>
@@ -513,6 +519,15 @@ export class DecisionDashboard {
         `;
 
         this.bindEvents(state, results);
+
+        // إعلان مقتضب لقارئ الشاشة بعد كل إعادة رسم: تغيير أي افتراض يعيد بناء اللوحة
+        // كاملة بـ innerHTML، فكان القرار والدرجة وNPV تتغيّر كلها بصمت تامة.
+        // ملخّص من ثلاث قيم — لا إعادة قراءة اللوحة كلها.
+        const announcedVerdict = decisionLocked ? qualityGate.title : evaluation.recommendationLabel;
+        const announcedNpv = Number.isFinite(results?.indicators?.npv)
+            ? this.formatCurrency(results.indicators.npv)
+            : 'غير محسوبة';
+        announce(`تحدّثت نتيجة القرار. التوصية: ${announcedVerdict}. الدرجة: ${evaluation.score} من 100. صافي القيمة الحالية: ${announcedNpv}.`);
 
         // Stress-test sliders: live update NPV and Profit Margin
         this.bindStressTestSliders(state, results);

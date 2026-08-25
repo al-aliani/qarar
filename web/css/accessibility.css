@@ -29,22 +29,35 @@
     }
 }
 
-/* 2. Better keyboard focus states */
+/* 2. Better keyboard focus states
+   تدقيق تباين 2026-08-25: هذا الملف آخر @import في bundle.css، والقاعدتان أدناه
+   بنفس خصوصية `.btn:focus-visible` في components.css — فكانتا تغلبانه وتُلغيان
+   outline الصلب بالكامل (`outline: none`)، ولا يبقى سوى ظل شبه شفاف
+   rgba(14,91,68,0.3) يُركَّب على الأبيض إلى rgb(183,206,199) بتباين 1.658:1 —
+   أقل من نصف حد 3:1 (WCAG 2.2 §1.4.11). أي أن الملف المكتوب لعلاج الوصول هو من
+   كان يكسر مؤشر التركيز على كل أزرار التطبيق.
+   الحل: نفس حلقة --focus-ring المزدوجة الصلبة من variables.css — بلا ألوان جديدة
+   خارج رموز الهوية. القياس بعد الإصلاح: 8.08:1 على الأبيض، 7.88:1 على bg-card،
+   6.83:1 على bg-panel، و8.08:1 للحلقة الداخلية فوق الزر الأخضر الداكن.
+   outline شفاف مقصود (نفس نمط polish.css): في أوضاع التباين القسري
+   (forced-colors) يُلغى box-shadow تماماً فيتحوّل هذا الـoutline للون النظام
+   ويبقى المؤشر موجوداً — لولاه لاختفى التركيز كلياً في ذلك الوضع. */
 *:focus-visible {
-    outline: 2px solid var(--c-primary, #0e5b44);
-    outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(14, 91, 68, 0.2);
+    outline: 2px solid transparent;
+    outline-offset: 3px;
+    box-shadow: var(--focus-ring);
     border-radius: 4px; /* Fallback */
 }
 
 /* Specific focus fixes */
-.btn:focus-visible, 
-.input:focus-visible, 
-select:focus-visible, 
+.btn:focus-visible,
+.input:focus-visible,
+select:focus-visible,
 textarea:focus-visible {
-    outline: none; /* Rely on box-shadow from existing styles or above */
-    border-color: var(--c-primary, #0e5b44);
-    box-shadow: 0 0 0 3px rgba(14, 91, 68, 0.3);
+    outline: 2px solid transparent;
+    outline-offset: 3px;
+    border-color: var(--c-focus-ring-color);
+    box-shadow: var(--focus-ring);
 }
 
 /* 3. Screen reader only class (if needed beyond what's in index.html) */

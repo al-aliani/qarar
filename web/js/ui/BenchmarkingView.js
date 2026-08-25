@@ -89,7 +89,22 @@ export function renderBenchmarkingSection(results, studyData) {
 
     // استخراج Labor و Rent من opex إن وُجد (aggregateOpex يُرجع fixed/variable arrays)
     const foodCostPct = rev > 0 ? (vc / rev) * 100 : null;
-    const grossMarginPct = rev > 0 ? (gross / rev) * 100 : null;
+    // مجمل الربح من مصدر المحرك الموحّد (indicators.grossMargin = هامش المساهمة التشغيلي،
+    // كسر 0..1) لا من حساب محلي. الحساب المحلي grossProfit ÷ الإيراد **الكلي** يقسم على
+    // إيراد يشمل غير التشغيلي، فيعرض 99% لمشروع هامشه التشغيلي 65% — نفس العيب المُصحَّح
+    // في المحرك (2026-08-25)، وهذه هي الشاشة الوحيدة التي يراه فيها المستخدم فعلاً.
+    // الاحتياطي (الحساب القديم) لنتائج مُخزَّنة قبل التصحيح لا تحمل الحقل أصلاً.
+    // تصحيح 2026-08-25: `typeof null === 'object'` — فالفحص السابق كان يسقط عند
+    // grossMargin=null إلى الحساب المحلي، وهو بالضبط ما يحذّر منه تعليق المحرك:
+    // مشروع بلا إيراد تشغيلي (تأجير عقاري مثلاً) grossProfit÷revenue = 100% فتُعرض
+    // «100.0% — خارج النطاق» لمنشأة لا تبيع شيئاً. التمييز الآن بوجود الحقل:
+    //   null      = المحرك حسبها وقرّر «غير منطبق» ⟶ لا نعرض رقماً
+    //   undefined = نتيجة مُخزَّنة قبل التصحيح لا تحمل الحقل ⟶ الاحتياطي المحلي
+    const hasEngineGrossMargin = 'grossMargin' in indicators;
+    const engineGrossMargin = indicators.grossMargin;
+    const grossMarginPct = hasEngineGrossMargin
+        ? (Number.isFinite(engineGrossMargin) ? engineGrossMargin * 100 : null)
+        : (rev > 0 ? (gross / rev) * 100 : null);
     const profitMarginPct = rev > 0 ? (net / rev) * 100 : null;
     const ratios = getCostRatios(results);
     const laborPct = rev > 0 ? ratios.labor * 100 : null;

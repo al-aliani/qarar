@@ -5,7 +5,7 @@
  */
 import { createShareLink, listShares, revokeShare } from '../services/ShareService.js';
 import { toast } from '../utils/toast.js';
-import { trapFocus } from '../utils/focusTrap.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 import { trackEvent } from '../utils/analytics.js';
 
 function escapeHtml(str) {
@@ -33,20 +33,24 @@ export class ShareModal {
         this.studyId = state.projectInfo?.id || state.id || null;
         this.overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
-        this._onEscape = (e) => { if (e.key === 'Escape') this.close(); };
-        document.addEventListener('keydown', this._onEscape);
+        // بعد render(): بطاقة [role="dialog"] يجب أن تكون موجودة أولاً. render() لا
+        // ينقل التركيز، فيبقى الزر الفاتح هو activeElement عند الربط.
         await this.render();
+        if (!this._a11y) {
+            this._a11y = attachModalA11y({
+                container: this.overlay,
+                labelledBy: 'share-modal-title',
+                initialFocus: '.btn-close',
+                onEscape: () => this.close()
+            });
+        }
     }
 
     close() {
         this.overlay.classList.remove('is-open');
         document.body.style.overflow = '';
-        if (this._onEscape) {
-            document.removeEventListener('keydown', this._onEscape);
-            this._onEscape = null;
-        }
-        this._removeFocusTrap?.();
-        this._removeFocusTrap = null;
+        this._a11y?.release();
+        this._a11y = null;
     }
 
     async render() {
@@ -110,9 +114,10 @@ export class ShareModal {
         this.overlay.querySelector('.btn-close')?.addEventListener('click', () => this.close());
     }
 
+    // بعد كل إعادة رسم للمحتوى: حبس التركيز نفسه يبقى فعّالاً (يُحلّ الحوار وقت
+    // الحدث لا وقت الربط)، ولا يتبقّى إلا إعادة التركيز داخل المحتوى الجديد.
     _refreshFocusTrap() {
-        this._removeFocusTrap?.();
-        this._removeFocusTrap = trapFocus(this.overlay.querySelector('[role="dialog"]'), { initial: '.btn-close' });
+        this._a11y?.focusInitial();
     }
 
     _bindActions() {

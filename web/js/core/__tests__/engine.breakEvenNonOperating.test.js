@@ -13,6 +13,9 @@
  * في بسط التعادل — على المسارين معاً (بالريال وبالوحدات).
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { calculateStudy } from '../engine.js';
 import { SECTIONS } from '../schema.js';
 
@@ -75,11 +78,14 @@ describe('المحرك — نقطة التعادل مع إيراد غير تشغ
 
     it('بلا إيراد غير تشغيلي: المساران متطابقان والهامش الإجمالي = الهامش التشغيلي', () => {
         const i = calculateStudy(makeStudy(0)).indicators;
-        // 112,500 ÷ 0.65 = 173,076.92 ريال ⟵ 112,500 ÷ 65 = 1,730.77 وحدة
+        // 112,500 ÷ 0.65 = 173,076.92 ريال ⟵ 112,500 ÷ 65 = 1,730.77 وحدة ⟹ ceil = 1,731
         expect(i.breakEvenPointValue).toBeCloseTo(FIXED_FOR_BE / CM_RATIO, 6);
-        expect(i.breakEvenUnits).toBe(Math.round(FIXED_FOR_BE / CM_PER_UNIT));
-        // الفارق المسموح = ريال وحدة واحدة (breakEvenUnits مُقرَّبة لعدد صحيح)
-        expect(Math.abs(i.breakEvenPointValue - i.breakEvenUnits * PRICE)).toBeLessThanOrEqual(PRICE);
+        expect(i.breakEvenUnits).toBe(Math.ceil(FIXED_FOR_BE / CM_PER_UNIT));
+        // الوحدات تُقرَّب لأعلى (لا يتعادل مشروع بجزء وحدة)، فحاصل الضرب لا يقلّ أبداً عن
+        // قيمة الريال ولا يتجاوزها بأكثر من سعر وحدة واحدة — انظر engine.breakEvenUnitsRounding.
+        const diff = i.breakEvenUnits * PRICE - i.breakEvenPointValue;
+        expect(diff).toBeGreaterThanOrEqual(0);
+        expect(diff).toBeLessThan(PRICE);
         expect(i.grossMargin).toBeCloseTo(CM_RATIO, 10);
         expect(i.breakEvenReason).toBeNull();
         expect(i.breakEvenAchievable).toBe(true);
@@ -92,8 +98,10 @@ describe('المحرك — نقطة التعادل مع إيراد غير تشغ
         //                                          ⇒ 62,500 ÷ 65   = 961.54 وحدة
         const numerator = FIXED_FOR_BE - NON_OP;
         expect(i.breakEvenPointValue).toBeCloseTo(numerator / CM_RATIO, 6);
-        expect(i.breakEvenUnits).toBe(Math.round(numerator / CM_PER_UNIT));
-        expect(Math.abs(i.breakEvenPointValue - i.breakEvenUnits * PRICE)).toBeLessThanOrEqual(PRICE);
+        expect(i.breakEvenUnits).toBe(Math.ceil(numerator / CM_PER_UNIT)); // ceil(961.54) = 962
+        const diff = i.breakEvenUnits * PRICE - i.breakEvenPointValue;
+        expect(diff).toBeGreaterThanOrEqual(0);
+        expect(diff).toBeLessThan(PRICE);
         // الانحدار الأساسي: الهامش الإجمالي هو الهامش التشغيلي الحقيقي 65%، لا الكسر المنفوخ
         // بالإيراد غير التشغيلي (410,000 − 126,000) ÷ 410,000 = 0.6927 الذي كان يُنشر سابقاً.
         expect(i.grossMargin).toBeCloseTo(CM_RATIO, 10);
@@ -101,7 +109,7 @@ describe('المحرك — نقطة التعادل مع إيراد غير تشغ
         expect(i.breakEvenReason).toBeNull();
     });
 
-    it('إيراد غير تشغيلي ضخم (99% من الإيراد): grossMargin يبقى 65% لا 99%', () => {
+    it('إيراد غير تشغيلي ضخم (74% من الإيراد): grossMargin يبقى 65% لا 91%', () => {
         // نفس القياس المُبلَّغ: تشغيلي 360,000 بهامش 65% + غير تشغيلي 1,000,000.
         const i = calculateStudy(makeStudy(1000000)).indicators;
         expect(i.grossMargin).toBeCloseTo(CM_RATIO, 10);
@@ -118,7 +126,7 @@ describe('المحرك — نقطة التعادل مع إيراد غير تشغ
         expect(i.breakEvenAchievable).toBe(true);
     });
 
-    it('هامش مساهمة سالب: السبب no_contribution_margin (لا يختلط بحالة التغطية)', () => {
+    it('هامش مساهمة سالب مع ثوابت غير مغطاة: السبب no_contribution_margin (لا يختلط بحالة التغطية)', () => {
         const study = makeStudy(0);
         // 0.90 + 0.30 = 1.20 من الإيراد (نسبة > 1 في حقل واحد تُفسَّر كنسبة مئوية خام
         // فتُقسم على 100 — انظر revenue.js — لذا نوزّعها على حقلين كسريين)
@@ -128,5 +136,71 @@ describe('المحرك — نقطة التعادل مع إيراد غير تشغ
         expect(i.breakEvenPointValue).toBe(0);
         expect(i.breakEvenAchievable).toBe(false);
         expect(i.breakEvenReason).toBe('no_contribution_margin');
+    });
+});
+
+/**
+ * تصحيح 2026-08-25 (ترتيب الفحص): `cmRatio <= 0` كان يُفحص **قبل** حالة التغطية الكاملة
+ * بالإيراد غير التشغيلي. مشروع كل إيراده غير تشغيلي (تأجير عقار مثلاً) يغطي كل ثوابته
+ * كان يُصنَّف 'no_contribution_margin' وbreakEvenAchievable=false — أي «يخسر على كل وحدة
+ * ولا يمكنه التعادل أبداً» عن مشروع رابح لا يبيع وحدات أصلاً: وصف معكوس تماماً.
+ *
+ * قياس الانقطاع الذي كشف العيب: إضافة **12 ريالاً** من إيراد تشغيلي سنوي (بلا أي أثر
+ * اقتصادي) كانت تقلب breakEvenAchievable من false إلى true وbreakEvenReason من
+ * 'no_contribution_margin' إلى 'covered_by_non_operating' — وهو بالضبط ما يثبت أن
+ * التصنيف كان يتبع ترتيب الشرطين لا واقع المشروع.
+ */
+function makeNonOperatingOnlyStudy(nonOperatingAnnual, operatingUnitPrice = 0) {
+    const study = makeStudy(nonOperatingAnnual);
+    study[SECTIONS.REVENUE].streams = study[SECTIONS.REVENUE].streams.filter(s => s.type === 'non-operating');
+    if (operatingUnitPrice > 0) {
+        // إيراد تشغيلي رمزي: 1 عميل/شهر × 12 شهراً × السعر
+        study[SECTIONS.REVENUE].streams.push({ type: 'operating', customersPerMonth: 1, avgPrice: operatingUnitPrice, variableCostRate: VC_RATE, growthRate: 0 });
+    }
+    return study;
+}
+
+describe('المحرك — تصنيف مشروع بلا إيراد تشغيلي (ترتيب فحص التعادل)', () => {
+    it('صفر إيراد تشغيلي والثوابت مغطاة بالكامل: التعادل محقق، لا «يخسر على كل وحدة»', () => {
+        // غير تشغيلي 200,000 > ثوابت التعادل 112,500 (96,000 إيجار + 16,500 إهلاك)
+        const i = calculateStudy(makeNonOperatingOnlyStudy(200000)).indicators;
+        expect(i.breakEvenReason).toBe('covered_by_non_operating');
+        expect(i.breakEvenAchievable).toBe(true);   // كان false — الانحدار الأساسي
+        expect(i.breakEvenPointValue).toBe(0);
+        expect(i.breakEvenUnits).toBe(0);
+    });
+
+    it('قياس الانقطاع: 12 ريالاً من إيراد تشغيلي لا تغيّر التصنيف (كانت تقلبه كلياً)', () => {
+        const without = calculateStudy(makeNonOperatingOnlyStudy(200000)).indicators;
+        const withTwelve = calculateStudy(makeNonOperatingOnlyStudy(200000, 1)).indicators; // 1 × 12 = 12 ريالاً
+        expect(withTwelve.breakEvenReason).toBe(without.breakEvenReason);
+        expect(withTwelve.breakEvenAchievable).toBe(without.breakEvenAchievable);
+        expect(withTwelve.breakEvenPointValue).toBe(without.breakEvenPointValue);
+    });
+
+    it('صفر إيراد تشغيلي والثوابت غير مغطاة: التعادل غير قابل للتحقيق فعلاً (لا انقلاب)', () => {
+        // غير تشغيلي 50,000 < 112,500 ⟹ لا يمكن سدّ الفجوة بلا مبيعات ذات هامش
+        const i = calculateStudy(makeNonOperatingOnlyStudy(50000)).indicators;
+        expect(i.breakEvenAchievable).toBe(false);
+        expect(i.breakEvenReason).toBe('no_contribution_margin');
+        expect(i.breakEvenPointValue).toBe(0);
+    });
+
+    it('grossMargin = null (لا صفر) عند غياب الإيراد التشغيلي — 0÷0 غير معرَّف', () => {
+        // «هامش إجمالي 0%» ادّعاء موضوعي كاذب («يبيع بالتكلفة») عن مشروع لا يبيع شيئاً؛
+        // null = غير منطبق، على نفس نهج payback/dscr/irr في هذا المحرك.
+        expect(calculateStudy(makeNonOperatingOnlyStudy(200000)).indicators.grossMargin).toBeNull();
+        expect(calculateStudy(makeNonOperatingOnlyStudy(50000)).indicators.grossMargin).toBeNull();
+        // وبمجرد وجود إيراد تشغيلي يعود رقماً حقيقياً (الهامش التشغيلي 65%)
+        expect(calculateStudy(makeNonOperatingOnlyStudy(200000, 1)).indicators.grossMargin).toBeCloseTo(CM_RATIO, 10);
+    });
+});
+
+describe('توثيق: تعليق grossMargin يذكر الرقم المقيس فعلياً', () => {
+    it('لا يدّعي 99% — القياس المذكور (1,360,000 − 126,000) ÷ 1,360,000 = 0.9074 ≈ 91%', () => {
+        const src = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'engine.js'), 'utf8');
+        const block = src.slice(src.indexOf('// هامش إجمالي تشغيلي'), src.indexOf('grossMargin: year1OperatingRevenue'));
+        expect(block).not.toContain('99%');
+        expect(block).toContain('91%');
     });
 });

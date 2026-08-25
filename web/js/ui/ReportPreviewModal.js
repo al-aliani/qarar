@@ -4,6 +4,7 @@ import { buildDecisionQualityGate } from '../utils/decisionQuality.js';
 import { buildIndicatorInsights } from '../utils/indicatorInsights.js';
 import { escapeHtml } from '../utils/escape.js';
 import { formatIrrPct } from '../utils/indicatorFormat.js';
+import { attachModalA11y } from '../utils/modalA11y.js';
 
 const money = (value) => new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(Number(value) || 0);
 
@@ -65,17 +66,20 @@ export class ReportPreviewModal {
         this.overlay.classList.add('is-open');
         this.overlay.querySelectorAll('.report-preview-close').forEach(btn => btn.addEventListener('click', () => this.close()));
         this.overlay.onclick = (event) => { if (event.target === this.overlay) this.close(); };
-        this._onEscape = (event) => { if (event.key === 'Escape') this.close(); };
-        document.addEventListener('keydown', this._onEscape);
-        this.overlay.querySelector('.report-preview-close')?.focus();
+        this._a11y = attachModalA11y({
+            container: this.overlay,
+            labelledBy: 'report-preview-title',
+            initialFocus: '.report-preview-close',
+            onEscape: () => this.close()
+        });
     }
 
     close() {
         if (!this.overlay.classList.contains('is-open')) return;
         this.overlay.classList.remove('is-open');
         document.body.style.overflow = this._previousOverflow || '';
-        if (this._onEscape) document.removeEventListener('keydown', this._onEscape);
-        this._onEscape = null;
+        this._a11y?.release();
+        this._a11y = null;
         this.onClose?.();
     }
 }
