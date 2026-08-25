@@ -36,6 +36,11 @@
   <!-- Fonts: مستضافة محلياً (/fonts) — لا اعتماد على Google CDN. انظر css/fonts.css -->
   <link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- الشريحة اللاتينية 400 (19KB): كل رقم على الشاشة (مبالغ، نسب، تواريخ، NPV/IRR)
+       يقع في U+0030-0039 أي خارج نطاق ملف العربية، فهي مطلوبة في أول رسم على كل
+       صفحة تقريباً — وبلا preload لا يكتشفها المتصفح إلا بعد تحميل fonts.css
+       وتحليلها، فتظهر الأرقام بخط النظام ثم تقفز (FOUT). -->
+  <link rel="preload" href="/fonts/ibm-plex-sans-arabic-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts/fonts.css" />
 
   <!-- Styles: حزمة موحّدة — 13 ملف CSS دُمجت في bundle.css (يُدمجها Vite وقت البناء

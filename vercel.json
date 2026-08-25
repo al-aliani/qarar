@@ -25,6 +25,21 @@
       "continue": true
     },
     {
+      "src": "^/(.*)\\.(png|jpe?g|gif|svg|webp|avif|ico)$",
+      "headers": { "Cache-Control": "public, max-age=604800, stale-while-revalidate=2592000" },
+      "continue": true
+    },
+    {
+      "src": "^/(.*)\\.(pdf|xlsx|xls|docx|csv)$",
+      "headers": { "Cache-Control": "public, max-age=2592000, stale-while-revalidate=31536000" },
+      "continue": true
+    },
+    {
+      "src": "^/(.*)\\.(woff2|woff|ttf|otf)$",
+      "headers": { "Cache-Control": "public, max-age=31536000, stale-while-revalidate=31536000" },
+      "continue": true
+    },
+    {
       "src": "^/assets/(.*)$",
       "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
       "continue": true
@@ -32,6 +47,26 @@
     {
       "src": "^/(.*)\\.(js|css)$",
       "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
+      "continue": true
+    },
+    {
+      "src": "^/fonts/fonts\\.css$",
+      "headers": { "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800" },
+      "continue": true
+    },
+    {
+      "src": "^/js/(.*)\\.js$",
+      "headers": { "Cache-Control": "public, max-age=0, must-revalidate" },
+      "continue": true
+    },
+    {
+      "src": "^/whatsapp-config\\.js$",
+      "headers": { "Cache-Control": "public, max-age=0, must-revalidate" },
+      "continue": true
+    },
+    {
+      "src": "^/bank-transfer-config\\.js$",
+      "headers": { "Cache-Control": "public, max-age=0, must-revalidate" },
       "continue": true
     },
     {

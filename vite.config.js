@@ -3,9 +3,15 @@ import { dirname, resolve } from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
+import { computeBuildId, stampBuildId } from './scripts/sw-build-id.js';
+import { emptyDirRobust } from './scripts/empty-dir.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const assetsDir = resolve(__dirname, 'assets');
+
+// انظر scripts/empty-dir.js: `emptyOutDir` في Vite لا يعمل هنا إطلاقاً وبصمت،
+// لأن `fs.rmSync` يفشل دون رمي على المسارات العربية (جذر المشروع «G:\دراسة الجدوى»).
+let emptyOutDirEnabled = true;
 
 // build فقط: configureServer أعلاه يخدم /studies /databases محلياً
 // في وضع dev فقط (middleware لا يعمل أثناء vite build) — بدونها كانت روابط
@@ -49,16 +55,6 @@ export default defineConfig({
     // بناء متعدد الصفحات: بدون هذا كان Vite يبني index.html فقط، فتُفقد صفحة الهبوط
     // والشروط والخصوصية من الإنتاج (روابط التذييل تُعطي 404). smoke_test أداة تطوير — تُستثنى.
     build: {
-        // تدقيق أداء 2026-08-22: manualChunks أدناه يفرض حزمة pptxgenjs (385KB) على
-        // اسم مُنفصل، لكن الحزمة نفسها مُستورَدة ديناميكياً فقط (ShareStudyView.js
-        // وexportWorker.js عبر Worker منفصل) — Rollup مع ذلك يُصنّفها ضمن الرسم
-        // البياني المتزامن لصفحة index.html فيُدرج <link rel="modulepreload"> لها
-        // على كل زيارة رغم عدم الحاجة الفعلية إلا عند تصدير PowerPoint تحديداً.
-        // إزالة تلميح الـpreload فقط (لا تغيير في زمن التحميل الفعلي عند الحاجة —
-        // import() ديناميكي عادي يبقى يعمل كما هو).
-        modulePreload: {
-            resolveDependencies: (_filename, deps) => deps.filter((d) => !d.includes('/pptx-')),
-        },
         rollupOptions: {
             input: {
                 main: resolve(__dirname, 'web/index.html'),
@@ -96,10 +92,26 @@ export default defineConfig({
                 // احتاج تطويرها بشكل صحيح لاحقاً — فقط لم تعد تُنسخ لمجلد الإنتاج dist/.
             },
             output: {
-                manualChunks: {
-                    exceljs: ['exceljs'],
-                    pptx: ['pptxgenjs'],
-                    apexcharts: ['apexcharts']
+                // تدقيق أداء 2026-08-25: كانت هذه الصيغة كائناً
+                // ({exceljs:['exceljs'], pptx:['pptxgenjs'], apexcharts:['apexcharts']}).
+                // صيغة الكائن في Rollup تُسنِد الوحدة المذكورة *وكل اعتمادياتها* التي لم
+                // تُسنَد بعد، فابتلعت حزمة pptx وحدةَ مساعدات CommonJS الوهمية
+                // ('\0commonjsHelpers.js') — وهي مشتركة بين كل اعتماديات CJS في المشروع.
+                // النتيجة: main يستورد getDefaultExportFromCjs (دالة interop طولها 101 بايت،
+                // تُستعمل مرة واحدة لفكّ nprogress) عبر `import{g}from"./pptx-*.js"` —
+                // استيراد **ثابت** يُلزم المتصفح بجلب 385KB خام / 114KB brotli من مُصدِّر
+                // PowerPoint على كل زيارة، رغم أن pptxgenjs نفسها لا تُستورَد إلا ديناميكياً
+                // (ShareStudyView.js وexportWorker.js). وكان يوجد فوق هذا فلتر
+                // modulePreload يحذف تلميح preload لـpptx تحديداً، فيمنع اكتشافها المبكر
+                // بينما يبقى الاستيراد الثابت مُلزِماً — أي رحلة شبكة مُسلسلة، فيضاعف الضرر
+                // بدل إزالته. حُذف الفلتر لأن الحزمة لم تعد في الرسم الثابت أصلاً.
+                // الحل: صيغة دالة تعزل المساعدات في حزمة خاصة دقيقة (~مئات البايتات)،
+                // فيستوردها main بدل الـ385KB وتبقى pptxgenjs كسولة بالكامل.
+                manualChunks(id) {
+                    if (id.includes('commonjsHelpers')) return 'cjs-interop';
+                    if (id.includes('node_modules/exceljs')) return 'exceljs';
+                    if (id.includes('node_modules/pptxgenjs')) return 'pptx';
+                    if (id.includes('node_modules/apexcharts')) return 'apexcharts';
                 }
             }
         },
@@ -196,6 +208,26 @@ export default defineConfig({
     plugins: [
         react(),
         {
+            // انظر scripts/empty-dir.js: بديل عن emptyOutDir المعطوب صامتاً هنا.
+            // التوقيت مطابق لتوقيت Vite نفسه: buildEnd يعمل بعد انتهاء طور البناء بنجاح
+            // وقبل prepareOutDir (الذي ينسخ publicDir) وقبل كتابة أي ملف — فلا يُحذف
+            // شيء كتبه هذا البناء، ولا يُفرَّغ المجلد إن فشل البناء.
+            name: 'robust-empty-out-dir',
+            apply: 'build',
+            configResolved(config) {
+                // نحترم `--emptyOutDir false` صراحةً؛ null (الافتراضي) يعني «فرِّغ».
+                // متغيّر بنطاق الوحدة لا `this`: قيمة `this` في configResolved (كائن
+                // الملحق) غيرها في buildEnd (سياق Rollup) — الحفظ على this يضيع.
+                emptyOutDirEnabled = config.build.emptyOutDir !== false;
+            },
+            buildEnd(error) {
+                if (error) return; // بناء فاشل: أبقِ المخرجات السابقة كما تفعل Vite
+                if (!emptyOutDirEnabled) return;
+                const removed = emptyDirRobust(resolve(__dirname, 'web/dist'));
+                if (removed) console.log(`[robust-empty-out-dir] حُذف ${removed} عنصراً من web/dist`);
+            }
+        },
+        {
             name: 'configure-server',
             configureServer(server) {
                 // الجذر "/" يعرض صفحة الهبوط (الرئيسية) في التطوير — مطابقةً للإنتاج.
@@ -253,6 +285,25 @@ export default defineConfig({
                 
                 serveDir('/studies', 'درسات جدوى');
                 serveDir('/databases', 'ملفات قواعد البيانات');
+            }
+        },
+        {
+            // web/public/sw.js يُنسخ حرفياً (publicDir بلا transform) فلا يمكنه قراءة
+            // import.meta.env أو أي استبدال وقت بناء — تُختم بصمة البناء عليه هنا بعد
+            // النسخ ليتغيّر اسم الكاش مع كل نشر (كان ثابتاً: نمو كاش بلا سقف).
+            name: 'stamp-sw-build-id',
+            apply: 'build',
+            closeBundle() {
+                const distDir = resolve(__dirname, 'web/dist');
+                const swPath = resolve(distDir, 'sw.js');
+                if (!fs.existsSync(swPath)) {
+                    throw new Error('[stamp-sw-build-id] web/dist/sw.js غير موجود بعد البناء');
+                }
+                const assetsPath = resolve(distDir, 'assets');
+                const assetNames = fs.existsSync(assetsPath) ? fs.readdirSync(assetsPath) : [];
+                const buildId = computeBuildId(assetNames);
+                fs.writeFileSync(swPath, stampBuildId(fs.readFileSync(swPath, 'utf-8'), buildId));
+                console.log(`[stamp-sw-build-id] CACHE_NAME = feasibility-${buildId}`);
             }
         },
         {

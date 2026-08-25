@@ -27,7 +27,6 @@ import { findMissingCommonLicenses } from '../core/licensingGap.js';
 import { scanContractRisks } from '../core/contractRiskScan.js';
 import { DatabaseCompanyPicker } from './DatabaseCompanyPicker.js';
 import noUiSlider from 'nouislider';
-import AutoNumeric from 'autonumeric';
 
 // أيقونة sprite + تجريد إيموجي من التسميات القادمة من schema (smartFill.label تحوي 🪄)
 // — تدقيق تنظيف 2026-07-11: تُنظَّف عند العرض بلا لمس ملف schema المشترك.
@@ -517,19 +516,19 @@ export class Wizard {
                             input.dispatchEvent(new Event('change'));
                         });
                     } catch(e) { console.error('Slider error', e); }
-                } else if (input.type !== 'number' && !input.dataset.key?.includes('projectionYears') && !input.dataset.key?.includes('Months')) {
-                    // AutoNumeric لا يدعم input[type=number] إطلاقاً (يرمي خطأً دائماً — انظر
-                    // توثيقه). كانت المحاولة تفشل بصمت هنا على كل حقول العتبات/الأيام
-                    // (thresholds.*, workingCapitalPolicy.*Days) في كل مرة تُرسم فيها هذه
-                    // الخطوة، فتُغرق الـconsole بأخطاء متكررة بلا أي أثر فعلي.
-                    try {
-                        new AutoNumeric(input, {
-                            currencySymbol: '',
-                            decimalPlaces: 0,
-                            digitGroupSeparator: ','
-                        });
-                    } catch(e) { console.error('AutoNumeric error', e); }
                 }
+                // تدقيق أداء 2026-08-25: كان هنا فرع `else if (input.type !== 'number' && …)`
+                // يُنشئ AutoNumeric لتنسيق فواصل الآلاف. الفرع **ميت منطقياً**: الحلقة تدور
+                // على نتيجة querySelectorAll('input[type="number"]')، فكل عنصر فيها
+                // input.type === 'number' حتماً ⟹ الشرط `input.type !== 'number'` لا يصحّ أبداً.
+                // (الشرط أُضيف أصلاً لإسكات أخطاء console لأن AutoNumeric لا يدعم
+                // input[type=number] فيرمي دائماً — فأسكتها بتعطيل الميزة بالكامل.)
+                // مُقاس: صفر استدعاء للمُنشئ عبر 20 حقل رقم في خطوتَي assumptions+financing.
+                // النتيجة: حزمة autonumeric (~30% من main بـrenderedLength) كانت تُحمَّل
+                // بشغف على كل زيارة دون أن تُنسّق رقماً واحداً. حُذف الفرع واستيرادُه.
+                // الحقول تبقى input[type=number] بتنسيق المتصفح الأصلي كما كانت فعلياً.
+                // لإعادة تنسيق فواصل الآلاف مستقبلاً: يلزم تحويلها إلى type="text"
+                // (قرار منتج — يغيّر لوحة المفاتيح على الجوال والتحقق الأصلي).
             });
         }
 
