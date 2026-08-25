@@ -9,6 +9,7 @@
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { calculateProjectScore } from '../js/core/scoring.js';
 import { SAFE } from './utils.js';
+import { netMarginText } from './netMargin.js';
 
 /** معرّفات شرائح المحتوى (بعد الغلاف وقبل شريحة الختام) — قابلة للربط مع reportSectionOrder. */
 const PITCH_CONTENT_SLIDE_IDS = ['executive_summary', 'market', 'financial_kpis', 'recommendation'];
@@ -92,7 +93,7 @@ export class PitchDeckExporter {
                     </div>
                     <div style="padding:32px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:16px;text-align:center;">
                         <div style="font-size:14px;color:#94a3b8;margin-bottom:12px;">هامش الربح</div>
-                        <div style="font-size:36px;font-weight:800;color:#fbbf24;">${((results.incomeStatement?.[0]?.netMargin || 0) * 100).toFixed(1)}%</div>
+                        <div style="font-size:36px;font-weight:800;color:#fbbf24;">${netMarginText(results)}</div>
                     </div>
                 </div>
             </div>`;
