@@ -12,7 +12,11 @@ class StorageManager {
         this.db = null;
         this.useIndexedDB = false;
         this.localStorageLimit = 5 * 1024 * 1024; // 5MB warning threshold
-        this._init();
+        // يُحتفظ بوعد التهيئة: setItem/getItem/removeItem تنتظره قبل أي قرار يعتمد على
+        // `this.db`. بدونه كانت أول قراءة عند الإقلاع (store.load) تسبق فتح القاعدة فترى
+        // `this.db === null` وتحكم على المفتاح بمعزل عن IndexedDB — نفس صنف الخلل الذي
+        // تعالجه هذه الوحدة، لكن ناتجاً عن سباق لا عن علامة مفقودة.
+        this._ready = this._init();
     }
 
     async _init() {
@@ -62,9 +66,34 @@ class StorageManager {
     }
 
     /**
+     * الثابت: المفتاح يعيش في مكان واحد فقط.
+     * حين تصير IndexedDB هي موطن القيمة، تُمسح نسخة localStorage القديمة **أولاً** (تحرير
+     * المساحة يجعل كتابة العلامة الصغيرة أرجح نجاحاً)، ثم تُكتب العلامة. العلامة تحسين
+     * لا شرط للصحة: إن فشلت كتابتها فالقراءة تصل لـIndexedDB على أي حال لأن القيمة
+     * القديمة لم تعد موجودة في localStorage لتحجبها.
+     */
+    _moveHomeToIndexedDB(key) {
+        localStorage.removeItem(key);
+        try {
+            localStorage.setItem(`${key}_ref`, 'indexeddb');
+        } catch (e) {
+            // التخزين ممتلئ: العلامة تحسين للقراءة (تختصر مسار البحث) لا شرط لصحتها.
+        }
+    }
+
+    /**
+     * العكس: القيمة صارت تعيش في localStorage، فأي علامة قديمة تحوّل القراءة لـIndexedDB
+     * يجب أن تزول. لا يكفي الاتكال على الكتابة المزدوجة في المسار الصغير — الثابت يُصرَّح به.
+     */
+    _moveHomeToLocalStorage(key) {
+        localStorage.removeItem(`${key}_ref`);
+    }
+
+    /**
      * Save data (auto-selects storage method)
      */
     async setItem(key, value) {
+        await this._ready;
         const dataString = typeof value === 'string' ? value : JSON.stringify(value);
         const size = this._getSize(dataString);
         const sizeInMB = size / (1024 * 1024);
@@ -78,6 +107,7 @@ class StorageManager {
             // Try localStorage first (faster for small data)
             if (!this._shouldUseIndexedDB(dataString)) {
                 localStorage.setItem(key, dataString);
+                this._moveHomeToLocalStorage(key);
                 // Also store in IndexedDB as backup
                 if (this.db) {
                     await this._saveToIndexedDB(key, dataString);
@@ -87,16 +117,12 @@ class StorageManager {
                 // Use IndexedDB for large data
                 if (this.db) {
                     await this._saveToIndexedDB(key, dataString);
-                    // Try to save a reference in localStorage
-                    try {
-                        localStorage.setItem(`${key}_ref`, 'indexeddb');
-                    } catch (e) {
-                        // localStorage might be full
-                    }
+                    this._moveHomeToIndexedDB(key);
                     return { success: true, method: 'indexedDB', size: sizeInMB };
                 } else {
                     // Fallback: try localStorage anyway (might fail)
                     localStorage.setItem(key, dataString);
+                    this._moveHomeToLocalStorage(key);
                     return { success: true, method: 'localStorage', size: sizeInMB, warning: 'Large data in localStorage' };
                 }
             }
@@ -105,6 +131,9 @@ class StorageManager {
             if (e.name === 'QuotaExceededError' && this.db) {
                 console.warn('localStorage quota exceeded, switching to IndexedDB');
                 await this._saveToIndexedDB(key, dataString);
+                // كان هذا المسار يترك النسخة القديمة عالقة في localStorage بلا علامة، فيُبلّغ
+                // بالنجاح بينما القراءة التالية تُعيد ما قبلها — فقدُ عملِ المستخدم صامتاً.
+                this._moveHomeToIndexedDB(key);
                 return { success: true, method: 'indexedDB', size: sizeInMB, fallback: true };
             }
             throw e;
@@ -115,12 +144,19 @@ class StorageManager {
      * Get data (checks both storages)
      */
     async getItem(key) {
+        await this._ready;
         // Check if reference exists in localStorage
         const ref = localStorage.getItem(`${key}_ref`);
-        
-        if (ref === 'indexeddb' && this.db) {
-            // Data is in IndexedDB
-            return await this._loadFromIndexedDB(key);
+
+        if (ref === 'indexeddb') {
+            if (this.db) {
+                // Data is in IndexedDB
+                return await this._loadFromIndexedDB(key);
+            }
+            // العلامة تقول إن الموطن هو IndexedDB والقاعدة غير متاحة: السقوط على
+            // localStorage هنا يعني تقديم بقايا أقدم كأنها أحدث نسخة. «لا شيء» أصدق.
+            console.warn(`[Storage] "${key}" يعيش في IndexedDB وهي غير متاحة — لا تُقرأ نسخة localStorage القديمة`);
+            return null;
         }
 
         // Try localStorage first
@@ -144,6 +180,7 @@ class StorageManager {
      * Remove data from both storages
      */
     async removeItem(key) {
+        await this._ready;
         localStorage.removeItem(key);
         localStorage.removeItem(`${key}_ref`);
         if (this.db) {
