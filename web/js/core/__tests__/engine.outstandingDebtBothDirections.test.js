@@ -88,8 +88,13 @@ describe('التقييم يخصم الدين القائم في الاتجاهي�
 
         // بالعيب كانت 1,776,046؛ بعد الإصلاح تُخصم 1,500,000 مخصومة 5 سنوات بـ10%
         const discountedDebt = 1500000 / Math.pow(1.10, 5);
-        expect(r.indicators.npv).toBeCloseTo(1776046 - discountedDebt, 0);
-        expect(r.indicators.npv).toBeLessThan(1000000);
+        // 2026-08-25: استرداد رأس المال العامل في نهاية الأفق لم يعد مشروطاً بوجود سياسة
+        // دورة نقدية (هذه الدراسة بلا DSO/DPO/DIO) — تدفق داخل حقيقي في السنة الأخيرة
+        // يُضاف مخصوماً بنفس المعامل. يُشتق من النتيجة نفسها لا كرقم سحري.
+        const discountedRecapture = r.capex.workingCapital / Math.pow(1.10, 5);
+        expect(r.indicators.npv).toBeCloseTo(1776046 - discountedDebt + discountedRecapture, 0);
+        // خصم الدين أكبر من استرداد رأس المال العامل، فالنتيجة تبقى أدنى من قيمة العيب
+        expect(r.indicators.npv).toBeLessThan(1776046);
         expect(r.indicators.npv).not.toBeCloseTo(1776046, 0);
     });
 
@@ -106,7 +111,10 @@ describe('التقييم يخصم الدين القائم في الاتجاهي�
         const five = calculateStudy(makeStudy({ termYears: 5, years: 5 }));
         expect(five.loanSchedule.annualSummary.at(-1).endingBalance).toBe(0);
         expect(outstandingDebtAtHorizon(five.loanSchedule, 5)).toBe(0);
-        // رقم مرجعي مقاس قبل الإصلاح وبعده — يجب ألا يتحرك
-        expect(Math.round(five.indicators.npv)).toBe(483264);
+        // رقم مرجعي مقاس قبل إصلاح خصم الدين وبعده — الجزء الخاص بالدين يجب ألا يتحرك.
+        // 2026-08-25: أُضيف استرداد رأس المال العامل في نهاية الأفق لكل دراسة (لم يعد
+        // مشروطاً بسياسة الدورة النقدية)، فالمرجع = 483,264 + الاسترداد مخصوماً 5 سنوات.
+        const discountedRecapture = five.capex.workingCapital / Math.pow(1.10, 5);
+        expect(Math.round(five.indicators.npv)).toBe(Math.round(483264 + discountedRecapture));
     });
 });

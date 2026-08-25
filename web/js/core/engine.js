@@ -804,7 +804,8 @@ export function calculateStudy(study, overrides) {
     // ΔNWC السنوي: رأس المال العامل التأسيسي (cashCycle أعلاه) يبقى كما هو لحساب
     // totalInvestment — هذا فقط يتتبّع التغيّر السنوي في صافي رأس المال العامل (AR+مخزون−ذمم
     // موردين) مع نمو الإيراد/التكلفة الفعليين، لخصمه من التدفق النقدي واسترداده في آخر سنة.
-    let prevNWC = hasCashCycle ? cashCycle.net : 0;
+    const initialCashCycleNWC = hasCashCycle ? cashCycle.net : 0;
+    let prevNWC = initialCashCycleNWC;
     const cashCycleByYear = [];
 
     for (let i = 1; i <= years; i++) {
@@ -946,8 +947,20 @@ export function calculateStudy(study, overrides) {
         // استرداد رأس المال العامل في آخر سنة من الأفق (قرار مالك المنتج 2026-08-24، رقم 1):
         // يرفع NPV/IRR لأنه تدفق نقدي حقيقي داخل عند تصفية/نهاية أفق الدراسة، لكنه خارج CFADS
         // كلياً (قرار رقم 3) — cfads() أدناه يقرأ deltaNWC فقط ولا يقرأ nwcRecapture إطلاقاً.
+        //
+        // إصلاح 2026-08-25 (فكّ الاقتران بوجود سياسة نقدية): كان الشرط `hasCashCycle`،
+        // فمشروع لا يملأ DSO/DPO/DIO **لا يسترد رأس ماله العامل إطلاقاً** بينما مشروع
+        // بيوم DSO واحد يستردّه — تفضيل بنيوي غير مبرَّر يقلب إشارة NPV عند تغيير مُدخَل
+        // واحد بمقدار يوم. رأس المال العامل المُقيَّد عند التأسيس (workingCapital: تغطية
+        // أشهر الإيجار/الرواتب/التسويق + غطاء COGS أياً كان مسار حسابه) يُحرَّر عند نهاية
+        // الأفق بصرف النظر عن مسار إدخاله، وكذلك كل زيادة سنوية احتُجزت لاحقاً
+        // (Σ deltaNWC = nwc − initialCashCycleNWC). الصافي عبر العمر صفر بحكم البناء:
+        // −workingCapital (سنة 0) − Σ deltaNWC + الاسترداد = 0.
+        // أثر مقصود وموثَّق: كل دراسة بلا سياسة نقدية يرتفع NPV لها (تكسب استرداداً لم
+        // تكن تناله)، وكل دراسة بسياسة نقدية ترتفع أيضاً بمقدار غطاء الأشهر الذي كان
+        // يبقى محتجزاً للأبد. الاسترداد يبقى خارج CFADS/DSCR كلياً كما هو (قرار رقم 3).
         const isLastYear = i === years;
-        const nwcRecapture = (isLastYear && hasCashCycle) ? nwc : 0;
+        const nwcRecapture = isLastYear ? (workingCapital - initialCashCycleNWC + nwc) : 0;
         const netCashFlow = operatingCF + financingCF - replacementCost - deltaNWC + nwcRecapture;
 
         // الاسترداد لا يُعتمد إلا إن بقي التراكمي ≥ 0 من لحظة العبور حتى نهاية الأفق:
@@ -1100,6 +1113,18 @@ export function calculateStudy(study, overrides) {
     const year1 = incomeStatement[0];
     const year1Revenue = year1 ? year1.revenue : 0;
     const year1VariableCosts = year1 ? year1.variableCosts : 0;
+    // التكاليف الثابتة للسنة الأولى = ما تشحنه قائمة الدخل حرفياً (المصدر الواحد).
+    // إصلاح 2026-08-25: كان `opex.fixedAnnual` يُحسب بمسار مُوازٍ (totalFixedOpexYear1)
+    // لا يمرّ بالطوارئ التشغيلية المخفية (hiddenOverheadsRate) ولا بمضاعِف fixedMult،
+    // بينما قائمة الدخل تشحن baseFixed × (1 + hiddenOverheadsRate). وبما أن الافتراض
+    // الإنتاجي في createEmptyStudy هو 5% (schema.js: hiddenOverheadsRate: 5)، كانت **كل**
+    // دراسة تعرض رقماً مُبخَّساً 5% يناقض قائمة الدخل لنفس السنة (قياس على دراسة مقهى
+    // نموذجية: 860,430 في البطاقة مقابل 903,452 في القائمة = فجوة 43,022 ريالاً، وتصل
+    // 215,108 عند 25%). الرقم المُبخَّس كان يصل المستخدم في بطاقة «التكاليف الثابتة
+    // التشغيلية» (FinancialDashboard)، ويُصدَّر في sectionExporter/excelExporter، ويُغذّي
+    // monthlyFixed في اختبار التحمل أدناه فيُبالغ في «أشهر البقاء».
+    // totalFixedOpexYear1 يبقى للاستخدام الداخلي فقط (احتياطي عند غياب قائمة دخل).
+    const year1FixedCosts = year1 ? year1.fixedCosts : totalFixedOpexYear1;
     // الإيراد التشغيلي وغير التشغيلي للسنة الأولى بعد كل المضاعِفات (الحلقة أعلاه):
     // كل التكاليف المتغيرة تشغيلية بحكم البناء (nonOpVC = 0 دائماً)، فمقام هامش المساهمة
     // هو الإيراد التشغيلي وحده، والإيراد غير التشغيلي يُعالَج على حدة كخصم من الثوابت.
@@ -1384,9 +1409,9 @@ export function calculateStudy(study, overrides) {
             total: totalInvestment
         },
         opex: {
-            fixedAnnual: totalFixedOpexYear1,
+            fixedAnnual: year1FixedCosts,
             variableAnnual: year1VariableCosts,
-            totalAnnual: totalFixedOpexYear1 + year1VariableCosts,
+            totalAnnual: year1FixedCosts + year1VariableCosts,
             // مكونات السنة الأولى — تستهلكها فحوصات معايير «السائقين» القطاعية
             payrollAnnual: annualPayroll,
             laborAnnual: annualPayroll,
@@ -1546,6 +1571,22 @@ export function calculateStudy(study, overrides) {
                     `مصادر التمويل أقل من الاستثمار المطلوب بفجوة ${Math.round(fundingGap).toLocaleString('ar-SA')} ريال — لا تعتمد القرار قبل رفع رأس المال أو خفض التكاليف الرأسمالية/رأس المال العامل`
                 );
             }
+            // ميزانية غير متوازنة = القوائم الثلاث لا تُغلق على نفسها، فأي مؤشر مبني عليها
+            // (NPV/IRR/DSCR) يستند إلى أرقام لا تتطابق مع نفسها. المحرك كان **يحسب**
+            // isBalanced/imbalance ثم يرميهما: computeDecision لا يقرأهما إطلاقاً، فكان
+            // ممكناً أن يخرج «امضِ» لدراسة ميزانيتها مختلّة بملايين الريالات
+            // (إصلاح 2026-08-25). استثناء hasNoData مقصود: ميزانية بلا أي بيانات تُبلّغ
+            // isBalanced=false بالتصميم (lib/calc/balanceSheet.js:155) كي لا تُعرض
+            // «متوازنة» قبل الإدخال — وهي ليست اختلالاً حقيقياً فلا تُصعّد القرار.
+            const unbalancedYear = (balanceSheets || [])
+                .filter(b => b && b.isBalanced === false && !b.hasNoData)
+                .sort((a, b) => Math.abs(Number(b.imbalance) || 0) - Math.abs(Number(a.imbalance) || 0))[0];
+            if (unbalancedYear) {
+                if (d.decision === 'GO') d.decision = 'REVISE';
+                d.decisionReasons.unshift(
+                    `الميزانية العمومية غير متوازنة في السنة ${unbalancedYear.year} بفرق ${Math.round(Math.abs(Number(unbalancedYear.imbalance) || 0)).toLocaleString('ar-SA')} ريال (الأصول ≠ الخصوم + حقوق الملكية) — كل المؤشرات المبنية عليها غير موثوقة قبل إغلاق هذا الفرق`
+                );
+            }
             const minDscr = resolveDecisionThresholds(study.assumptions?.thresholds, financing).targetDSCR;
             if (loanAmount > 0 && (dscrYear1 == null || dscrYear1 < minDscr)) {
                 if (d.decision === 'GO') d.decision = 'REVISE';
@@ -1573,7 +1614,7 @@ export function calculateStudy(study, overrides) {
             // الإنتاج (تدقيق 2026-07-08: القرار كان لا يدمج نتيجة اختبار التحمل إطلاقاً).
             const stressBase = {
                 monthlyRevenue: year1Revenue / 12,
-                monthlyFixed: totalFixedOpexYear1 / 12,
+                monthlyFixed: year1FixedCosts / 12,
                 monthlyVariable: year1VariableCosts / 12,
                 monthlyDebt: (loanSchedule?.annualSummary?.find(s => s.year === 1)?.totalPayment || 0) / 12,
                 cashReserve: Math.max(Number(workingCapital) || 0, Number(balanceSheets?.[0]?.assets?.current?.cash) || 0)
