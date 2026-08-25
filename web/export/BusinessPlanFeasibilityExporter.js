@@ -100,8 +100,15 @@ export class BusinessPlanFeasibilityExporter {
         const marketTwoLines = esc(marketLine || 'السوق المستهدف: يُضاف من تحليل السوق.') + ' المنافسون: ' + esc(competitorsLine);
 
         const rev = year1.revenue || 0;
-        const cost = (year1.totalVariableCosts || 0) + (year1.fixedCosts || 0) + (year1.depreciation || 0);
-        const net = year1.netIncome != null ? year1.netIncome : (rev - cost);
+        // «—» أصدق من «٠»: صافٍ غير منتهٍ (NaN/±Infinity) يعني فشل حساب لا ربحاً صفرياً،
+        // و`|| 0` كان يطبعه صفراً متوازناً يُخفي الفشل. المفقود (null/undefined) وحده صفر.
+        const net = year1.netIncome == null ? 0 : year1.netIncome;
+        // التكلفة تُشتقّ من الإيراد والصافي كي يتوازن السطر المطبوع بحكم البناء
+        // (إيراد − تكلفة = صافي دائماً). الجمع اليدوي للبنود كان يُسقط بنوداً صامتاً:
+        // كان يقرأ year1.totalVariableCosts وهو اسم متغيّر داخل المحرك لا مفتاح في صف
+        // قائمة الدخل (المفتاح الفعلي variableCosts) ⟶ undefined ⟶ 0، كما كان يُسقط
+        // الفوائد والزكاة والضريبة أصلاً. الرقم الآن = كل التكاليف والأعباء حتى صافي الربح.
+        const cost = rev - net;
         const npvStr = ind.npv != null ? formatCurrency(ind.npv, currency) : '—';
         const irrStr = ind.irr != null ? formatPercent(ind.irr) : '—';
         const paybackStr = ind.paybackPeriod != null ? (ind.paybackPeriod.toFixed(1) + ' سنة') : '—';
@@ -112,7 +119,7 @@ export class BusinessPlanFeasibilityExporter {
             ? `<strong>الطلب:</strong> ${formatCurrency(askAmount, currency)} — ${esc(useOfFunds).slice(0, 120)}`
             : 'الطلب: يُضاف من هيكل التمويل إن وُجد (تمويل أو شريك).';
 
-        const financialHtml = `<p>إيراد متوقع: ${formatCurrency(rev, currency)} — تكلفة: ${formatCurrency(cost, currency)} — صافي: ${formatCurrency(net, currency)}.</p><p>مؤشرات: NPV ${npvStr}، IRR ${irrStr}، فترة استرداد ${paybackStr}.</p>`;
+        const financialHtml = `<p>إيراد متوقع: ${formatCurrency(rev, currency)} — إجمالي التكاليف والأعباء: ${formatCurrency(cost, currency)} — صافي: ${formatCurrency(net, currency)}.</p><p>مؤشرات: NPV ${npvStr}، IRR ${irrStr}، فترة استرداد ${paybackStr}.</p>`;
 
         const bpContent = { vision, objectivesHtml, productLine, productLine2, marketTwoLines, financialHtml, requestHtml };
         const summaryOrder = this._getBPSummarySectionOrder(state);

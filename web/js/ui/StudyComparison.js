@@ -19,7 +19,19 @@ export class StudyComparison {
         if (!this.container) return;
 
         const currentStudy = this.store.get();
-        const availableStudies = await DataService.getAvailableStudiesForComparison(currentStudy.projectInfo?.id);
+        // PersistenceService.listHeaders يرمي عمداً حين يفشل جلب السحابة ولا توجد نسخة
+        // محلية، كي لا نكذب على المستخدم بـ«لا توجد دراسات» والشبكةُ هي المشكلة. لكن
+        // DataService.getAvailableStudiesForComparison وسيط بلا حراسة، والاستثناء كان
+        // يصعد من render() فيترك الحاوية فارغة تماماً بلا أي رسالة — وفي مسار صفحة
+        // التصنيف يُسقط معه رسم بقية خطوات التصنيف. نمسكه هنا ونعرضه رسالةً صادقة.
+        let availableStudies = [];
+        let loadError = null;
+        try {
+            availableStudies = await DataService.getAvailableStudiesForComparison(currentStudy.projectInfo?.id);
+        } catch (err) {
+            console.error('Failed to load studies for comparison:', err);
+            loadError = err;
+        }
 
         this.container.innerHTML = `
             <div class="comparison-panel animate-entry">
@@ -36,6 +48,12 @@ export class StudyComparison {
 
                 <!-- Selection Control -->
                 <div class="comparison-controls card p-4 mb-6">
+                    ${loadError ? `
+                        <div class="alert alert--danger" role="alert" id="comparisonListError">
+                            <p>${escapeHtml(loadError.message || 'تعذّر تحميل قائمة دراساتك المحفوظة.')}</p>
+                            <button type="button" class="btn btn--secondary btn-sm mt-2" id="btnRetryComparisonList">إعادة المحاولة</button>
+                        </div>
+                    ` : `
                     <label class="block text-sm font-medium mb-2" for="compareStudySelect">اختر دراسة للمقارنة معها:</label>
                     <div class="flex gap-4">
                         <select id="compareStudySelect" class="form-input flex-1">
@@ -50,6 +68,7 @@ export class StudyComparison {
                             مقارنة الآن
                         </button>
                     </div>
+                    `}
                 </div>
 
                 <!-- Results Container -->
@@ -165,6 +184,10 @@ export class StudyComparison {
                 this.render();
             });
         }
+
+        this.container.querySelector('#btnRetryComparisonList')?.addEventListener('click', () => {
+            this.render();
+        });
 
         this.container.querySelector('#btnAddIdeaForComparison')?.addEventListener('click', () => {
             const idx = stepIndexById('projectAlternatives');
