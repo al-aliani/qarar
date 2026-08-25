@@ -531,12 +531,29 @@ describe('(ط) ع-5: نسبة التوفير المؤسسية مُقيَّدة �
             expect(r.capex.breakdown.equipment).toBeCloseTo(expectedBase, 6);
             expect(r.incomeStatement[0].depreciation).toBeCloseTo(expectedBase * 0.5, 6);
         });
-        // القيمة المرجعية الكاملة للمدخل الصحيح 0.4 (هي نفسها قبل الإصلاح وبعده)
+        // القيمة المرجعية الكاملة للمدخل الصحيح 0.4
         const r04 = withSaving(0.4);
         expect(r04.capex.breakdown.equipment).toBeCloseTo(132000, 6);
         expect(r04.incomeStatement.map(s => Math.round(s.replacementCost)))
             .toEqual([0, 0, 132000, 0, 132000, 0]);
-        expect(r04.indicators.npv).toBeCloseTo(721351.789, 2);
+
+        // 2026-08-26: كان هنا `expect(r04.indicators.npv).toBeCloseTo(721351.789, 2)`.
+        // رقم NPV مُجمَّد يثبّت المحرك بأكمله، لا موضوع هذا الاختبار — فانكسر زوراً حين
+        // تغيّر استرداد رأس المال العامل في السنة الأخيرة (تغيير صحيح لا علاقة له
+        // بالتقييد) وقفز إلى 824,091. نثبّت المعنى الفعلي بدله: توفير 40% من الشركة
+        // الأم مكافئ **تماماً** لشراء المعدة بـ60% من ثمنها بلا أي أصل مؤسسي. هذه
+        // مساواة نسبية تصمد أمام أي تحسين لاحق في المحرك، وتفشل فوراً لو سرّب مسار
+        // التوفير أثراً جانبياً لا يفعله خفض السعر المباشر.
+        const equivalentByPrice = calculateStudy({
+            ...makeStudy({
+                years: 6,
+                technical: { equipment: [{ price: 200000 * (1 - 0.4), quantity: 1, depreciationRate: 0.5 }] }
+            }),
+            [SECTIONS.PROJECT_INFO]: { businessModel: 'Corporate_Venture', corporateAssets: [] }
+        });
+        expect(r04.indicators.npv).toBeCloseTo(equivalentByPrice.indicators.npv, 6);
+        expect(r04.indicators.irr).toBeCloseTo(equivalentByPrice.indicators.irr, 6);
+        expect(Number.isFinite(r04.indicators.npv)).toBe(true);
     });
 
     // 40 و1.5 يُقيَّدان إلى 1 (توفير كامل ⇒ الأصل مُقدَّم من الشركة الأم ⇒ لا رسملة ولا
