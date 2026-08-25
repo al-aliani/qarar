@@ -850,14 +850,21 @@ export class ReportGenerator {
             case 'capex': {
                 const assetScheduleRows = results.assetSchedule || [];
                 const operatingWC = results.capex?.capitalStructure?.operating;
+                // بنود هذا الجدول تُشتق من مجموعَي المحرك (subtotal/total) بالطرح، فتجمع إلى
+                // «إجمالي الاستثمار المطلوب» بحكم البناء مهما تغيّرت مكوّنات capexBreakdown.
+                // كان صف «التراخيص» يقرأ capex.items — مفتاح لا ينتجه calculateStudy إطلاقاً —
+                // فيطبع ٠ دائماً بينما المبلغ مندسّ داخل subtotal المُعنون «التجهيزات والمعدات».
+                const capexSubtotal = results.capex?.subtotal || 0;
+                const capexTotal = results.capex?.total || 0;
+                const establishmentCosts = results.capex?.capitalStructure?.establishment?.total || 0;
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>الدراسة الفنية (التكاليف الاستثمارية)</h3>
                         <div class="section-content">
                             <table><thead><tr><th>بند التكلفة</th><th>القيمة التقديرية</th></tr></thead><tbody>
-                                <tr><td>التجهيزات والمعدات</td><td>${formatCurrency(results.capex?.subtotal || 0)}</td></tr>
-                                <tr><td>مصاريف التأسيس والتراخيص</td><td>${formatCurrency(results.capex?.items?.filter(i => i.category === 'legal').reduce((s, x) => s + x.amount, 0) || 0)}</td></tr>
-                                <tr><td>رأس المال العامل</td><td>${formatCurrency(results.capex?.workingCapital || 0)}</td></tr>
-                                <tr class="financial-highlight"><td>إجمالي الاستثمار المطلوب</td><td>${formatCurrency(results.capex?.total || 0)}</td></tr>
+                                <tr><td>الأصول والتجهيزات</td><td>${formatCurrency(capexSubtotal - establishmentCosts)}</td></tr>
+                                <tr><td>مصاريف التأسيس والتراخيص</td><td>${formatCurrency(establishmentCosts)}</td></tr>
+                                <tr><td>رأس المال العامل</td><td>${formatCurrency(capexTotal - capexSubtotal)}</td></tr>
+                                <tr class="financial-highlight"><td>إجمالي الاستثمار المطلوب</td><td>${formatCurrency(capexTotal)}</td></tr>
                             </tbody></table>
                             ${this.renderAssetSchedule(assetScheduleRows, fmt)}
                             ${operatingWC?.total ? this.renderOperatingWorkingCapital(operatingWC, fmt) : ''}

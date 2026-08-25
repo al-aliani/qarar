@@ -387,6 +387,10 @@ export class WordExporter {
         // داخل احتساب EBITDA نفسه في engine.js).
         const hasFranchiseFees = rows.some((r) => (r.franchiseFees || 0) > 0);
         const hasBuilderFee = rows.some((r) => (r.builderSuccessFee || 0) > 0);
+        // الزكاة والضريبة صفان منفصلان — كان صف الزكاة وحده، فضريبة حصة الأجانب
+        // (assumptions.foreignOwnershipRate) تُخصم من صافي الربح بلا بند يفسّرها
+        // فلا يُجمَع العمود أمام محلل الائتمان. نفس إصلاح excelExporter.js:375-377.
+        const hasTax = rows.some((r) => (r.tax || 0) > 0);
         const lineItems = [
             [t('revenue', lang), 'revenue'],
             [t('variable_costs', lang), 'variableCosts'],
@@ -398,6 +402,7 @@ export class WordExporter {
             [t('depreciation', lang), 'depreciation'],
             [t('interest', lang), 'interest'],
             [t('zakat', lang), 'zakat'],
+            ...(hasTax ? [[`${t('tax', lang)}${lang === 'en' ? ' (Non-Saudi Share)' : ' (حصة الأجانب)'}`, 'tax']] : []),
             [t('net_income', lang), 'netIncome']
         ];
         const tableRows = [this.createTableRow(header, true)];
