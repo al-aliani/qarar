@@ -55,7 +55,10 @@ export class BreakEvenAnalysis {
         // رقماً قد يختلف عن رقم المحرك ولوحة القرار (نفس علة «ثلاث قيم مختلفة» الموثقة في
         // engine.js عند تعريف breakEvenValue — تدقيق دفعة 6).
         const bepValue = results.indicators?.breakEvenPointValue || 0;
-        const totalRevenue = year1.revenue || 0;
+        // نسبة التعادل تُقاس على الإيراد التشغيلي لا الكلي: نقطة التعادل من المحرك مُعرَّفة
+        // على الإيراد التشغيلي وحده (غير التشغيلي مخصوم من ثوابت بسطها) — مقارنتها بإيراد
+        // كلي تُظهر نسبة تعادل أدنى من الحقيقية (تصحيح 2026-08-25). احتياطي: الإيراد الكلي.
+        const totalRevenue = year1.operatingRevenue || year1.revenue || 0;
         // عرض توزيع التكاليف فقط (لا يُستخدم لإعادة اشتقاق نقطة التعادل) — بنفس تعريف
         // المحرك (ثوابت السنة الأولى + الإهلاك) كي يتّسق مع رقم bepValue أعلاه.
         const fixedCosts = (year1.fixedCosts || 0) + (year1.depreciation || 0);

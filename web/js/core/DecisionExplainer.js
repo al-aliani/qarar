@@ -141,7 +141,11 @@ export function explainDecisionBreakers(study = {}, results = {}) {
     // هامش أمان نقطة التعادل: نسبة قيمة التعادل إلى إيراد السنة الأولى الفعلي. هامش ضيق
     // (<15%) يعني أن أي تراجع بسيط في الإيراد يُسقط المشروع تحت التعادل؛ bepRatio > 1
     // يعني أن التعادل غير قابل للتحقيق أصلاً بافتراضات الإيراد الحالية.
-    const year1Revenue = num(results.incomeStatement?.[0]?.revenue);
+    // المقام هو الإيراد **التشغيلي** لا الكلي: نقطة التعادل من المحرك مُعرَّفة على الإيراد
+    // التشغيلي وحده (الإيراد غير التشغيلي مخصوم من الثوابت في بسطها — engine.js)، فمقارنتها
+    // بإيراد كلي يضخّم هامش الأمان ويكتم التحذير (تصحيح 2026-08-25). الاحتياطي هو الإيراد
+    // الكلي لنتائج قديمة/مُخزَّنة بلا حقل operatingRevenue.
+    const year1Revenue = num(results.incomeStatement?.[0]?.operatingRevenue) || num(results.incomeStatement?.[0]?.revenue);
     const breakEvenValue = num(indicators.breakEvenPointValue);
     if (year1Revenue > 0 && breakEvenValue > 0) {
         const bepRatio = breakEvenValue / year1Revenue;

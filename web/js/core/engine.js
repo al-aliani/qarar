@@ -168,8 +168,14 @@ export function calculateStudy(study, overrides) {
     const vcRateMult = 1 + (overrides?.vcRateChange ?? 0);
     const fixedMult = 1 + (overrides?.fixedChange ?? 0);
 
-    const years = study.assumptions?.projectionYears || 5;
-    const inflation = study.assumptions?.inflationRate || 0.02;
+    // أفق الدراسة: حارس `> 0` منفصل عمداً — أفق صفر أو سالب غير منطقي، فيبقى الافتراضي.
+    // (بخلاف معدلات التضخم/الخصم أدناه حيث الصفر قرار مستخدم واعٍ لا فراغ.)
+    const yearsInput = Number(study.assumptions?.projectionYears);
+    const years = Number.isFinite(yearsInput) && yearsInput > 0 ? yearsInput : 5;
+    // تضخم صفر = «سيناريو أسعار ثابتة» يختاره المستخدم صراحةً، لا غياب قيمة. النمط القديم
+    // `|| 0.02` كان يستبدله صمتاً بـ2% فتُنتج الدراسة نتائج مطابقة حرفياً لما لم يطلبه —
+    // نفس الفخ الذي أُنشئت rateOrDefault أعلاه لتفاديه (كانت تُستخدم للفائدة/الإهلاك فقط).
+    const inflation = rateOrDefault(study.assumptions?.inflationRate, 0.02);
     const technical = study[SECTIONS.TECHNICAL] || {};
     const marketing = study[SECTIONS.MARKETING] || {};
     const techResources = study[SECTIONS.TECH_RESOURCES] || {};
@@ -208,7 +214,9 @@ export function calculateStudy(study, overrides) {
     const hasCostOfEquityDiscountRate = costOfEquityDiscountRate != null && Number.isFinite(Number(costOfEquityDiscountRate));
     const baseDiscountRate = hasCostOfEquityDiscountRate
         ? Number(costOfEquityDiscountRate)
-        : (Number(study.assumptions?.discountRate) || 0.10);
+        // معدل خصم صفر = مقارنة اسمية يطلبها المستخدم صراحةً (لا فراغ) — rateOrDefault
+        // تحترمه، بينما `Number(...) || 0.10` كانت تفرض 10% صمتاً على نفس المدخل.
+        : rateOrDefault(study.assumptions?.discountRate, 0.10);
     const discountRateSource = hasCostOfEquityDiscountRate ? 'costOfEquity' : 'assumptions';
     const discountRate = baseDiscountRate + riskPremium;
     const computedContingencyRate = Number(study.assumptions?.contingencyRate ?? 0.10) + (riskPremium * 0.5);
@@ -725,6 +733,9 @@ export function calculateStudy(study, overrides) {
     let cumulativeDiscountedCashFlow = -equityOutlay;
     let paybackPeriod = Infinity;
     let discountedPaybackPeriod = Infinity;
+    // انتكاس بعد العبور: عبر التراكمي الصفر ثم عاد سالباً ولم يتعافَ حتى نهاية الأفق —
+    // يميّزه عن «لم يعبر قط» في paybackReason أدناه (نفس اصطلاح breakEvenReason/dscrReason).
+    let paybackReverted = false;
 
     // حقوق الملكية للوعاء الزكوي والميزانية: مساهمة المالك المُدخلة في خطوة التمويل هي
     // مصدر الحقيقة؛ الاشتقاق (الاستثمار − القرض) يبقى احتياطاً فقط عند غياب الإدخال —
@@ -769,6 +780,11 @@ export function calculateStudy(study, overrides) {
         // التشغيلي يتدرج مع الاستغلال؛ غير التشغيلي دخل شبه ثابت
         // السعر يحرك الإيراد فقط؛ الحجم يحرك الإيراد والتكاليف المتغيرة معاً
         const opRev = sourcesAtYear(true, 'rev1', yearIndex) * revMult * priceMult * volumeMult * utilRate * rampFactor;
+        // الوحدات التشغيلية الفعلية لهذه السنة — نفس مضاعِفات الحجم المطبَّقة على opRev/opVC
+        // بالضبط (بلا priceMult/vcRateMult: السعر ومعدل التكلفة لا يغيّران عدد الوحدات).
+        // مصدر واحد لمقام «هامش المساهمة للوحدة» أدناه، كي لا يُقسَم إيراد بمقياس على وحدات
+        // بمقياس آخر (فخّ موثَّق: إيراد مخفّض بالاستغلال ÷ وحدات كاملة يضاعف التعادل زوراً).
+        const opUnits = sourcesAtYear(true, 'units1', yearIndex) * volumeMult * utilRate * rampFactor;
         // التكاليف المتغيرة تتبع حجم المبيعات في الاتجاهين (كانت غير متماثلة:
         // زيادة الإيراد لم تكن ترفعها فينتفخ السيناريو المتفائل)
         const opVC = sourcesAtYear(true, 'vc1', yearIndex) * costInflation * revMult * volumeMult * vcRateMult * utilRate * rampFactor;
@@ -897,11 +913,19 @@ export function calculateStudy(study, overrides) {
         const nwcRecapture = (isLastYear && hasCashCycle) ? nwc : 0;
         const netCashFlow = operatingCF + financingCF - replacementCost - deltaNWC + nwcRecapture;
 
+        // الاسترداد لا يُعتمد إلا إن بقي التراكمي ≥ 0 من لحظة العبور حتى نهاية الأفق:
+        // أي انتكاس لاحق إلى السالب يُلغي العبور المسجَّل (وعبورٌ جديد بعده يُسجَّل من
+        // جديد). قبل هذا التصحيح كان **أول** عبور يُثبَّت للأبد، فمشروعٌ يعبر في السنة
+        // الأولى ثم ينهار إلى −4.5 مليون بنهاية الأفق (NPV سالب) كان يعرض «0.8 سنة» —
+        // أقوى مؤشر في الملخص التنفيذي وتقرير الممول — ويمرّر passPayback في بوابة القرار.
         const prevCum = cumulativeCashFlow;
         cumulativeCashFlow += netCashFlow;
         if (prevCum < 0 && cumulativeCashFlow >= 0 && netCashFlow > 0) {
             const fraction = Math.abs(prevCum) / netCashFlow;
             paybackPeriod = (i - 1) + fraction;
+        } else if (cumulativeCashFlow < 0 && Number.isFinite(paybackPeriod)) {
+            paybackPeriod = Infinity;
+            paybackReverted = true;
         }
 
         const df = 1 / Math.pow(1 + discountRate, i);
@@ -911,12 +935,15 @@ export function calculateStudy(study, overrides) {
         if (prevCumDiscounted < 0 && cumulativeDiscountedCashFlow >= 0 && discountedCF > 0) {
             const fractionD = Math.abs(prevCumDiscounted) / discountedCF;
             discountedPaybackPeriod = (i - 1) + fractionD;
+        } else if (cumulativeDiscountedCashFlow < 0 && Number.isFinite(discountedPaybackPeriod)) {
+            discountedPaybackPeriod = Infinity;
         }
 
         incomeStatement.push({
             year: i,
             revenue: totalRevenue,
             operatingRevenue: opRev,
+            operatingUnits: opUnits,
             utilizationRate: utilRate,
             variableCosts: totalVariableCosts,
             grossProfit,
@@ -1033,20 +1060,47 @@ export function calculateStudy(study, overrides) {
     const year1 = incomeStatement[0];
     const year1Revenue = year1 ? year1.revenue : 0;
     const year1VariableCosts = year1 ? year1.variableCosts : 0;
+    // الإيراد التشغيلي وغير التشغيلي للسنة الأولى بعد كل المضاعِفات (الحلقة أعلاه):
+    // كل التكاليف المتغيرة تشغيلية بحكم البناء (nonOpVC = 0 دائماً)، فمقام هامش المساهمة
+    // هو الإيراد التشغيلي وحده، والإيراد غير التشغيلي يُعالَج على حدة كخصم من الثوابت.
+    const year1OperatingRevenue = year1 ? year1.operatingRevenue : 0;
+    const year1NonOperatingRevenue = Math.max(0, year1Revenue - year1OperatingRevenue);
+    const year1OperatingCM = year1OperatingRevenue - year1VariableCosts;
 
     // نقطة التعادل (السنة الأولى) — تعريف واحد قانوني لكل الشاشات والتقارير:
     // الثوابت المحتسبة = ثوابت السنة الأولى الفعلية (شاملة الأوفرهيد الخفي) + الإهلاك الدفتري.
     // كانت الشاشات تتضارب: المحرك بلا إهلاك/أوفرهيد، وشاشة التعادل تضيفهما، والنص المولد ثالثة —
     // ثلاث قيم مختلفة لنفس «نقطة التعادل» في دراسة واحدة (تدقيق ٢٠٢٦-٠٧-٠٦).
+    //
+    // تصحيح 2026-08-25 (تناقض المسارين): cmRatio كان يُحسب على الإيراد **الكلي**
+    // (تشغيلي + غير تشغيلي) بينما هامش المساهمة للوحدة يُحسب على التشغيلي وحده — فيتناقض
+    // «التعادل بالريال» مع «التعادل بالوحدات × السعر» بمقدار وزن الإيراد غير التشغيلي
+    // (قياس فعلي: تشغيلي 360,000 بهامش 65% + غير تشغيلي 1,000,000 ⟶ 18,185 ريال مقابل
+    // 254 وحدة × 100 = 25,400 ريال)، ودائماً في الاتجاه المُطَمئِن زوراً (تعادل يبدو أقرب
+    // مما هو فعلاً)، وكان يرفع grossMargin المعروض إلى 91% لمشروع هامشه التشغيلي 65%.
+    // الإصلاح: (أ) النسبة وهامش الوحدة من نفس البسط التشغيلي بالضبط (year1OperatingCM)
+    // فيتطابق المساران بحكم البناء لا بالمصادفة؛ (ب) الإيراد غير التشغيلي بالمعالجة
+    // القياسية — خصماً من التكاليف الثابتة في البسط (دخل لا يتبع حجم النشاط) — ويُطبَّق
+    // على المسارين معاً كي يبقيا متسقين.
     const year1FixedForBE = year1 ? (year1.fixedCosts + year1.depreciation) : totalFixedOpexYear1;
-    const cmRatio = year1Revenue > 0 ? (year1Revenue - year1VariableCosts) / year1Revenue : 0;
-    const breakEvenValue = cmRatio > 0 ? year1FixedForBE / cmRatio : 0;
-    // هامش المساهمة للوحدة يُحسب على أساس 100% طاقة للطرفين (سعر − تكلفة متغيرة للوحدة)
-    // — كان يقسم إيراداً مخفّضاً بالاستغلال على وحدات كاملة فيضاعف نقطة التعادل زوراً
-    const contributionMarginPerUnit = year1Units > 0
-        ? (year1OperatingRevenueBase - year1OperatingVCBase) / year1Units
+    const fixedForBENetOfNonOp = year1FixedForBE - year1NonOperatingRevenue;
+    const cmRatio = year1OperatingRevenue > 0 ? year1OperatingCM / year1OperatingRevenue : 0;
+    // هامش المساهمة للوحدة على وحدات السنة الأولى الفعلية (operatingUnits) — نفس مقياس
+    // year1OperatingRevenue تماماً (حجم/استغلال/تصاعد)، فالسعر الضمني = الإيراد ÷ الوحدات
+    // وبالتالي breakEvenValue = breakEvenUnits × السعر الضمني حسابياً. القاعدة المحفوظة من
+    // التصحيح السابق: لا يُقسم إيراد بمقياس على وحدات بمقياس آخر.
+    const year1OperatingUnits = year1 ? year1.operatingUnits : 0;
+    const contributionMarginPerUnit = year1OperatingUnits > 0 ? year1OperatingCM / year1OperatingUnits : 0;
+    // بسط سالب = الإيراد غير التشغيلي وحده يغطي كل الثوابت ⟶ التعادل محقق بلا أي مبيعات
+    // تشغيلية. القيمة صفر مع سبب صريح (breakEvenReason) كي لا تختلط بصفر «تعادل مستحيل»
+    // (هامش مساهمة ≤ 0) الذي يميّزه breakEvenAchievable أصلاً.
+    const breakEvenValue = (cmRatio > 0 && fixedForBENetOfNonOp > 0) ? fixedForBENetOfNonOp / cmRatio : 0;
+    const breakEvenUnits = (contributionMarginPerUnit > 0 && fixedForBENetOfNonOp > 0)
+        ? fixedForBENetOfNonOp / contributionMarginPerUnit
         : 0;
-    const breakEvenUnits = contributionMarginPerUnit > 0 ? year1FixedForBE / contributionMarginPerUnit : 0;
+    const breakEvenReason = cmRatio <= 0
+        ? 'no_contribution_margin'
+        : (fixedForBENetOfNonOp <= 0 ? 'covered_by_non_operating' : null);
 
     // DSCR من جدول السداد الفعلي — بسطه CFADS (النقد المتاح لخدمة الدين) لا EBITDA خام.
     // CFADS = EBITDA − الضرائب النقدية (الزكاة+الضريبة = levy) − الإنفاق الرأسمالي للإحلال
@@ -1117,6 +1171,9 @@ export function calculateStudy(study, overrides) {
     // فترة استرداد غير محققة تبقى null — لا تتحول إلى 0 («أفضل مؤشر» زوراً)
     const paybackOut = Number.isFinite(paybackPeriod) ? paybackPeriod : null;
     const discountedPaybackOut = Number.isFinite(discountedPaybackPeriod) ? discountedPaybackPeriod : null;
+    // يميّز سببَي null: لم يعبر التراكمي الصفر قط، مقابل عبَره ثم انتكس ولم يتعافَ حتى
+    // نهاية الأفق (الحالة الثانية أخطر: أرباح مبكرة تبتلعها خسائر لاحقة).
+    const paybackReason = paybackOut != null ? null : (paybackReverted ? 'reverted_to_negative' : 'never_recovered');
 
     // ═══════════════════════════════════════════════════════════
     // 9. التحليلات المشتقة (فقط في التشغيل الأعلى بدون overrides)
@@ -1351,17 +1408,25 @@ export function calculateStudy(study, overrides) {
             mirr,
             paybackPeriod: paybackOut,
             payback: paybackOut,
+            paybackReason,
             roi: roi / 100,
             breakEvenPointValue: breakEvenValue,
             // breakEvenValue=0 غامض: قد يعني تعادلاً مستحيلاً (هامش مساهمة ≤ 0، يخسر على كل وحدة)
             // أو غياب تكاليف ثابتة (يتعادل فوراً). هذا العلَم يميّزهما كي لا تعرض اللوحة
             // «هامش أمان لنقطة التعادل = 100%» لمشروع لا يمكنه التعادل أصلاً.
             breakEvenAchievable: cmRatio > 0,
+            // يميّز صفرَي breakEvenPointValue المتعاكسين: no_contribution_margin (يخسر على
+            // كل وحدة ⟶ تعادل مستحيل) مقابل covered_by_non_operating (الإيراد غير التشغيلي
+            // يغطي كل الثوابت ⟶ التعادل محقق أصلاً). null = نقطة تعادل موجبة عادية.
+            breakEvenReason,
             breakEvenUnits: Math.round(breakEvenUnits),
             dscr: dscrYear1 != null ? Number(dscrYear1.toFixed(2)) : null,
             dscrReason,
             profitMargin: year1Revenue > 0 ? (incomeStatement[0].netIncome / year1Revenue) : 0,
-            grossMargin: year1Revenue > 0 ? ((year1Revenue - year1VariableCosts) / year1Revenue) : 0,
+            // هامش إجمالي تشغيلي: كل التكاليف المتغيرة تشغيلية، فقسمتها على الإيراد الكلي
+            // (شاملاً غير التشغيلي) كانت تُظهر 99% لمشروع هامشه الحقيقي 65%. نفس تعريف
+            // cmRatio أعلاه حرفياً — مصدر واحد كي لا ينحرف الرقمان (تصحيح 2026-08-25).
+            grossMargin: cmRatio,
             netMargin: year1Revenue > 0 ? (incomeStatement[0].netIncome / year1Revenue) : 0,
             ebitdaYear1: year1 ? year1.ebitda : 0,
             freeCashFlowYear1: year1 ? year1.cashFlow : 0,

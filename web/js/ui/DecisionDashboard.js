@@ -102,12 +102,16 @@ export class DecisionDashboard {
         const mcLastRun = state?.monteCarlo?.lastRun;
         const mcProbability = Number.isFinite(Number(mcLastRun?.successProbability)) ? Number(mcLastRun.successProbability) : null;
         const year1Revenue = Number(results?.incomeStatement?.[0]?.revenue) || 0;
+        // مقام هامش أمان التعادل هو الإيراد التشغيلي لا الكلي: نقطة التعادل من المحرك
+        // مُعرَّفة على الإيراد التشغيلي وحده (غير التشغيلي مخصوم من ثوابت البسط) — مقارنتها
+        // بإيراد كلي تُظهر أماناً أوسع من الحقيقي (تصحيح 2026-08-25). احتياطي: الإيراد الكلي.
+        const year1OperatingRevenue = Number(results?.incomeStatement?.[0]?.operatingRevenue) || year1Revenue;
         const breakEvenRevenue = Number(results?.indicators?.breakEvenPointValue) || 0;
         // breakEvenPointValue=0 يحتمل معنيين متعاكسين: تعادل مستحيل (هامش مساهمة ≤ 0) أو بلا تكاليف ثابتة.
         // بلا التمييز كان مشروع يخسر على كل وحدة يُظهر «هامش أمان 100%» مضلِّلاً — نعتمد علَم المحرك،
         // فعند استحالة التعادل يُعرض «—» (null) بدل نسبة أمان كاذبة.
         const breakEvenAchievable = results?.indicators?.breakEvenAchievable !== false;
-        const breakEvenMargin = (breakEvenAchievable && year1Revenue > 0) ? Math.max(0, 1 - (breakEvenRevenue / year1Revenue)) : null;
+        const breakEvenMargin = (breakEvenAchievable && year1OperatingRevenue > 0) ? Math.max(0, 1 - (breakEvenRevenue / year1OperatingRevenue)) : null;
         const minCumulativeCash = Array.isArray(results?.cashFlow) && results.cashFlow.length
             ? Math.min(...results.cashFlow.map(row => Number(row.cumulative)).filter(Number.isFinite))
             : null;
