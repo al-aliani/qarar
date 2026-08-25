@@ -1,0 +1,76 @@
+# ═══════════════════════════════════════════════════════════════════════
+# إعادة توليد لقطات الانحدار البصري على Linux — تشغيل يدوي فقط
+# ═══════════════════════════════════════════════════════════════════════
+# لماذا ورشة منفصلة؟ لقطات Playwright حسّاسة لنظام التشغيل (خطوط/تنعيم/عرض
+# شريط التمرير)، فملفات *-linux.png لا يمكن توليدها من جهاز ويندوز — ولا من
+# أي بيئة غير بيئة CI نفسها. هذه الورشة تولّدها في نفس الصورة التي تُقارَن
+# فيها لاحقاً (ubuntu-latest بنفس خطوات e2e.yml حرفياً).
+#
+# لماذا أرشيف (artifact) لا التزام مباشر من CI؟ الالتزام من داخل الورشة يحتاج
+# منحها `contents: write`، ويُدخل لقطات لم يراجعها أحد مباشرةً إلى main.
+# الأسلوب هنا: الورشة ترفع اللقطات كأرشيف، ثم تُنزَّل وتُراجَع وتُلتزَم يدوياً.
+# (سابقة تاريخية في هذا المستودع استخدمت `[skip ci]` عند تحديث اللقطات، فلم
+#  يتحقق CI قط من أن اللقطة الجديدة تمرّ فعلاً — لا يُكرَّر ذلك هنا.)
+#
+# متى تُستخدم؟ بعد أي تغيير بصري مقصود يُفشل e2e/visual.spec.js. بعد الالتزام
+# يجب أن يعود خط E2E أخضر من تلقائه — وهذا هو التحقق الفعلي.
+#
+# الحالة التي أُنشئت لأجلها (2026-08-25): لقطة homepage-layout كانت 1304×720
+# بينما المتصفح يرسم 1280×720. الـ24 بكسل الزائدة كانت تجاوزاً أفقياً حقيقياً
+# سبّبه زر المستشار العائم (`.ai-chat-fab` فقد `position: fixed`)؛ أُصلح العيب
+# فصارت اللقطة المرجعية تُخلّد عيباً لم يعد موجوداً، وظلّ الخط أحمر 25 تشغيلاً.
+# ═══════════════════════════════════════════════════════════════════════
+
+name: Update Visual Snapshots (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      browsers:
+        description: 'المتصفحات المطلوب تحديث لقطاتها'
+        required: false
+        default: 'chromium firefox webkit'
+
+jobs:
+  update-snapshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      # --update-snapshots يكتب اللقطات المختلفة ويُبقي المطابقة كما هي.
+      # يُنهي بحالة فشل عند التحديث (سلوك Playwright المتوقَّع)، فـ`|| true`
+      # مقصود هنا: الهدف توليد الملفات لا اجتياز المقارنة.
+      - name: Regenerate visual snapshots
+        run: npx playwright test e2e/visual.spec.js --update-snapshots --project=chromium --project=firefox --project=webkit || true
+        env:
+          CI: true
+          VITE_ALLOW_DEFAULT_SUPABASE_IN_DEV: true
+
+      - name: Show what changed
+        run: |
+          echo "── git status ──"
+          git status --short e2e/visual.spec.js-snapshots/
+          echo "── أبعاد اللقطات الناتجة ──"
+          for f in e2e/visual.spec.js-snapshots/*.png; do
+            printf '%s  ' "$f"
+            python3 -c "import struct,sys; d=open(sys.argv[1],'rb').read(24); print('%dx%d' % struct.unpack('>II', d[16:24]))" "$f"
+          done
+
+      - name: Upload regenerated snapshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-snapshots-linux
+          path: e2e/visual.spec.js-snapshots/
+          retention-days: 7
