@@ -46,6 +46,14 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium firefox webkit
 
+      # تدقيق 2026-08-26: أُضيف e2e/a11y.spec.js (axe-core، وسوم wcag2a/wcag2aa/
+      # wcag21a/wcag21aa فقط — لا best-practice) على landing.html/pricing.html/
+      # help.html. القياس الفعلي وقت الإضافة: صفر مخالفة عبر الصفحات الثلاث (مقابل
+      # اكتشاف يدوي سابق لثغرة واحدة فقط عبر 77 حقلاً — انظر MEMORY). بما أن الصفحة
+      # صفرية فعلاً لا تخمينية، الفحص **حاجب** بلا استثناء — يفشل هذه الخطوة تلقائياً
+      # (a11y.spec.js جزء من مجلد e2e/ أدناه، بلا continue-on-error). أي رفع لهذه
+      # البوابة لاحقاً يحتاج مراجعة موثّقة صريحة مثل هذه (نفس نمط ratchet التغطية
+      # بـvite.config.js)، لا إسكاتاً صامتاً لفشل حقيقي.
       - name: "Run E2E (all projects: Chromium, Firefox, WebKit)"
         run: npm run test:e2e:all-browsers
         env:
