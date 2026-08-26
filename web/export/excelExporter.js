@@ -7,6 +7,7 @@
 
 import { sanitizeSheetName, sanitizeFilename, loadXLSX, formatExportDateTime, exportDateISO, SAFE, formatDscr } from './utils.js';
 import { t, yearColumnLabel } from '../js/i18n/reportStrings.js';
+import { formatRatio } from './ratioUnits.js';
 
 /** معرّفات أوراق المحتوى (بعد ورقة الفهرس) — قابلة للربط مع reportSectionOrder. */
 const EXCEL_SHEET_IDS = [
@@ -583,23 +584,23 @@ export class ExcelExporter {
 
         // النسب المالية — صف لكل نسبة، عمود لكل سنة (نفس نمط عمود-لكل-سنة في قائمة الدخل/التدفقات النقدية)
         const ratios = Array.isArray(this.results?.ratios) ? this.results.ratios : [];
-        const pct = (v) => (v == null || !Number.isFinite(Number(v))) ? '—' : (Number(v) * 100).toFixed(1) + '%';
-        const mult = (v) => (v == null || !Number.isFinite(Number(v))) ? '—' : Number(v).toFixed(2) + 'x';
         data.push(['', '']);
         data.push([t('ratios_section_title', lang), '']);
         if (ratios.length) {
+            // الوحدة (x أم %) تأتي من ratioUnits.js لا من هذا الملف — كانت debtToEquity
+            // تُطبع هنا «185.0%» بينما يطبعها التقرير PDF «1.85x» لنفس الدراسة.
+            const ratioRow = (labelKey, ratioKey) =>
+                data.push([t(labelKey, lang), ...ratios.map((r) => formatRatio(ratioKey, r[ratioKey]))]);
             data.push([t('item_column', lang), ...ratios.map((r) => yearColumnLabel(r.year, lang))]);
-            data.push([t('current_ratio', lang), ...ratios.map((r) => mult(r.currentRatio))]);
-            data.push([t('quick_ratio', lang), ...ratios.map((r) => mult(r.quickRatio))]);
-            data.push([t('cash_ratio', lang), ...ratios.map((r) => mult(r.cashRatio))]);
-            data.push([t('debt_ratio', lang), ...ratios.map((r) => pct(r.debtRatio))]);
-            // مضاعف لا نسبة: ratios.js:55 يقسم إجمالي الخصوم على حقوق الملكية، والتقرير PDF
-            // يطبعه «1.85x» (ReportGenerator.js:777) — كان هنا «185.0%» لنفس الدراسة.
-            data.push([t('debt_to_equity', lang), ...ratios.map((r) => mult(r.debtToEquity))]);
-            data.push([t('asset_turnover', lang), ...ratios.map((r) => mult(r.assetTurnover))]);
-            data.push([t('fixed_asset_turnover', lang), ...ratios.map((r) => mult(r.fixedAssetTurnover))]);
-            data.push([t('roa', lang), ...ratios.map((r) => pct(r.roa))]);
-            data.push([t('roe', lang), ...ratios.map((r) => pct(r.roe))]);
+            ratioRow('current_ratio', 'currentRatio');
+            ratioRow('quick_ratio', 'quickRatio');
+            ratioRow('cash_ratio', 'cashRatio');
+            ratioRow('debt_ratio', 'debtRatio');
+            ratioRow('debt_to_equity', 'debtToEquity');
+            ratioRow('asset_turnover', 'assetTurnover');
+            ratioRow('fixed_asset_turnover', 'fixedAssetTurnover');
+            ratioRow('roa', 'roa');
+            ratioRow('roe', 'roe');
         } else {
             data.push(['—', 'لا توجد بيانات']);
         }

@@ -366,8 +366,7 @@ export class BankReportGenerator {
             ${this._renderFinancingGate(state, results, _fmt)}
             <table class="bank-table">
                 <tr><th>المصدر</th><th>المبلغ (ريال)</th><th>النسبة</th></tr>
-                ${this._renderFinancingRows(financing, cap.total)}
-                <tr class="total-row"><td>الإجمالي</td><td>${_fmt(cap.total || financing.totalInvestment || 0)}</td><td>100%</td></tr>
+                ${this._renderFinancingTable(financing, cap.total, _fmt)}
             </table>
         </div>`;
             case 'collateral':
@@ -506,12 +505,35 @@ export class BankReportGenerator {
         </div>`;
     }
 
+    /**
+     * إجمالي هيكل التمويل: مقام النسب وقيمة صف «الإجمالي» معاً — رقم واحد لا رقمان.
+     * الأولوية لإجمالي المحرك (cap.total)، ثم لقطة المستخدم financing.totalInvestment
+     * (تُثبَّت مرة عند فتح خطوة التمويل وتتقادم متى عُدِّل CAPEX بعدها)، ثم مجموع المصادر.
+     */
+    static _financingTotal(financing, capTotal) {
+        const sources = financing?.sources || {};
+        return (Number(capTotal) > 0 ? Number(capTotal) : 0)
+            || Number(financing?.totalInvestment)
+            || (Number(sources.equity?.amount) || 0) + (Number(sources.bankLoan?.amount) || 0)
+            + (Number(sources.investors?.amount) || 0) + (Number(sources.governmentSupport?.amount) || 0)
+            || 0;
+    }
+
+    /**
+     * جدول هيكل التمويل كاملاً (صفوف المصادر + صف الإجمالي) — المصدِّرات تستدعي هذه
+     * لا `_renderFinancingRows` وحدها، فيستحيل بناءً أن تُقسَم النسب على رقم غير المطبوع.
+     */
+    static _renderFinancingTable(financing, capTotal, fmt) {
+        const total = this._financingTotal(financing, capTotal);
+        return `${this._renderFinancingRows(financing, capTotal)}
+                <tr class="total-row"><td>الإجمالي</td><td>${fmt(total)}</td><td>100%</td></tr>`;
+    }
+
     static _renderFinancingRows(financing, capTotal) {
         const sources = financing.sources || {};
         // النسب تُحسب على نفس الإجمالي المطبوع في صف «الإجمالي» (إجمالي المحرك أولاً) —
         // كانت تُحسب على مدخل المستخدم فتظهر نسب لا تساوي 100% من الرقم المطبوع
-        const total = (Number(capTotal) > 0 ? Number(capTotal) : 0) || financing.totalInvestment ||
-            (sources.equity?.amount || 0) + (sources.bankLoan?.amount || 0) + (sources.investors?.amount || 0) + (sources.governmentSupport?.amount || 0) || 1;
+        const total = this._financingTotal(financing, capTotal);
         const rows = [];
         const map = [
             { key: 'equity', label: 'تمويل ذاتي (رأس المال)', amount: sources.equity?.amount },
@@ -527,8 +549,8 @@ export class BankReportGenerator {
             }
         });
         if (rows.length === 0) {
-            const amt = Number(financing.totalInvestment) || 0;
-            rows.push(`<tr><td>تمويل ذاتي</td><td>${new Intl.NumberFormat('ar-SA').format(amt)}</td><td>100%</td></tr>`);
+            // بلا مصادر مُدخَلة: الصف الوحيد يحمل نفس الإجمالي المطبوع، لا لقطة أقدم منه.
+            rows.push(`<tr><td>تمويل ذاتي</td><td>${new Intl.NumberFormat('ar-SA').format(total)}</td><td>100%</td></tr>`);
         }
         return rows.join('');
     }

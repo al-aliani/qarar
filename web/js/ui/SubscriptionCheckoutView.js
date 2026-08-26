@@ -1,4 +1,4 @@
-import { PRICING_PACKAGES, formatPrice } from '../core/pricing.js';
+import { PRICING_PACKAGES, ADDONS, formatPrice } from '../core/pricing.js';
 import { startCheckout } from '../services/PaymentService.js';
 import { store } from '../core/store.js';
 import { ProjectManager } from '../services/ProjectManager.js';
@@ -6,12 +6,6 @@ import { getBankTransferConfig } from '../config.js';
 import { trackEvent } from '../utils/analytics.js';
 import { monitoring } from '../utils/monitoring.js';
 import { renderBankTransferPanel } from './components/BankTransferPanel.js';
-
-const ADDONS = [
-    { id: 'priority_support', name: 'دعم أولوية', price: 99 },
-    { id: 'extra_review', name: 'مراجعة إضافية', price: 299 },
-    { id: 'result_session', name: 'جلسة شرح النتائج', price: 399 }
-];
 
 export class SubscriptionCheckoutView {
     constructor(container, options = {}) { this.container = container; this.onBack = options.onBack || (() => {}); this.studyId = null; }

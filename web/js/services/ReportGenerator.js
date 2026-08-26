@@ -13,6 +13,7 @@ import { BANK_COMPLIANCE_SENTENCE } from '../config.js';
 import { getOptionLabel } from '../core/fieldOptions.js';
 import { t, yearColumnLabel } from '../i18n/reportStrings.js';
 import { buildFinancingDiagnostics } from '../utils/financingDiagnostics.js';
+import { formatRatio } from '../../export/ratioUnits.js';
 
 /** عناوين الأقسام (لفهرس المحتويات وترتيب التصدير) */
 const REPORT_SECTION_LABELS = {
@@ -762,23 +763,21 @@ export class ReportGenerator {
                 // النسب المالية (results.ratios): إضافة بحتة من المحرك، صف واحد لكل سنة —
                 // نتبع نفس نمط isRow المستخدم في 'income_statement' (closure على مصفوفة السنوات).
                 const kpiRatios = results.ratios || [];
-                const ratioCell = (v, type) => {
-                    if (v == null || !Number.isFinite(v)) return '—';
-                    return type === 'pct' ? (v * 100).toFixed(1) + '%' : v.toFixed(2) + 'x';
-                };
-                const ratioRow = (label, key, type) => `<tr><td>${label}</td>${kpiRatios.map(r => `<td>${ratioCell(r[key], type)}</td>`).join('')}</tr>`;
+                // الوحدة (x أم %) تأتي من ratioUnits.js لا من هذا الملف — مصدر واحد
+                // تشترك فيه ملفات PDF وWord وExcel لنفس الدراسة.
+                const ratioRow = (label, key) => `<tr><td>${label}</td>${kpiRatios.map(r => `<td>${formatRatio(key, r[key])}</td>`).join('')}</tr>`;
                 const ratiosTableHtml = kpiRatios.length === 0 ? '' : `
                             <h4 style="margin-top:16px;">${t('ratios_section_title', lang)}</h4>
                             <table><thead><tr><th>النسبة</th>${kpiRatios.map(r => `<th>${yearColumnLabel(r.year, lang)}</th>`).join('')}</tr></thead><tbody>
-                                ${ratioRow(t('current_ratio', lang), 'currentRatio', 'x')}
-                                ${ratioRow(t('quick_ratio', lang), 'quickRatio', 'x')}
-                                ${ratioRow(t('cash_ratio', lang), 'cashRatio', 'x')}
-                                ${ratioRow(t('debt_ratio', lang), 'debtRatio', 'pct')}
-                                ${ratioRow(t('debt_to_equity', lang), 'debtToEquity', 'x')}
-                                ${ratioRow(t('asset_turnover', lang), 'assetTurnover', 'x')}
-                                ${ratioRow(t('fixed_asset_turnover', lang), 'fixedAssetTurnover', 'x')}
-                                ${ratioRow(t('roa', lang), 'roa', 'pct')}
-                                ${ratioRow(t('roe', lang), 'roe', 'pct')}
+                                ${ratioRow(t('current_ratio', lang), 'currentRatio')}
+                                ${ratioRow(t('quick_ratio', lang), 'quickRatio')}
+                                ${ratioRow(t('cash_ratio', lang), 'cashRatio')}
+                                ${ratioRow(t('debt_ratio', lang), 'debtRatio')}
+                                ${ratioRow(t('debt_to_equity', lang), 'debtToEquity')}
+                                ${ratioRow(t('asset_turnover', lang), 'assetTurnover')}
+                                ${ratioRow(t('fixed_asset_turnover', lang), 'fixedAssetTurnover')}
+                                ${ratioRow(t('roa', lang), 'roa')}
+                                ${ratioRow(t('roe', lang), 'roe')}
                             </tbody></table>`;
                 html = `<div class="section">
                         <h3 class="section-title"><span class="section-number">${num}</span>${t('financial_kpis_title', lang)}</h3>
