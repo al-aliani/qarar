@@ -73,7 +73,16 @@ export class BillingHistoryView {
         let orders = [];
         let blocked = null;
         if (user) {
-            orders = await listOrders();
+            // 2026-08-26: `listOrders` صارت ترمي عند فشل الاستعلام بدل إعادة [] (كانت
+            // تبتلع الخطأ في PaymentService، فجلسة سليمة يفشل استعلامها تسقط في فرع
+            // «لا توجد عمليات دفع حتى الآن»). الرمي وحده لا يكفي: بلا هذه الحراسة
+            // ترفض render() فيلتقطها حارس المسار في app.js ويعرض توستاً **بلا رسم
+            // الصفحة** — أي لا يظهر لوح «تعذّر الوصول» ولا زر إعادة المحاولة أدناه.
+            try {
+                orders = await listOrders();
+            } catch (_) {
+                blocked = 'unreachable';
+            }
         } else {
             blocked = classifyAuthFailure(authError);
         }

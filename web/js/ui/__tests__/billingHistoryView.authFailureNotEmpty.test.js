@@ -91,3 +91,38 @@ describe('BillingHistoryView — فشل الوصول ليس «لا توجد عم
         expect(document.getElementById('billingLoadError')).toBeNull();
     });
 });
+
+/**
+ * إتمام 2026-08-26: `listOrders` صارت ترمي عند فشل الاستعلام (PaymentService) بدل
+ * إعادة قائمة فارغة. لكن الرمي وحده لا يُظهر لوح «تعذّر الوصول» — ذلك اللوح لا
+ * يُبلَّغ إلا من `classifyAuthFailure` أي حين `user === null` فقط. فبلا حراسة هنا
+ * ترفض `render()` ويلتقطها حارس المسار في app.js فيعرض توستاً **بلا رسم الصفحة**.
+ *
+ * هذه الحالة تحديداً — جلسة **سليمة** واستعلام فاشل — كانت خارج تغطية الاختبارات
+ * أعلاه، وهي الحالة الأكثر شيوعاً عملياً (شبكة متقطعة لعميل مسجَّل).
+ */
+describe('BillingHistoryView — جلسة سليمة واستعلام فاشل', () => {
+    it('يعرض لوح «تعذّر الوصول» وزر إعادة المحاولة، لا صفحة فارغة ولا «لا توجد مدفوعات»', async () => {
+        vi.resetModules();
+        vi.doMock('../../../supabaseClient.js', () => ({
+            getAuthUser: async () => ({ user: { id: 'u-1' }, error: null }),
+        }));
+        vi.doMock('../../services/PaymentService.js', () => ({
+            listOrders: async () => { throw new Error('network down'); },
+        }));
+        const { BillingHistoryView } = await import('../BillingHistoryView.js');
+
+        document.body.innerHTML = '<div id="c"></div>';
+        const view = new BillingHistoryView(document.getElementById('c'), {});
+        await view.render();
+
+        const box = document.getElementById('c');
+        expect(box.querySelector('#billingLoadError'),
+            'لوح «تعذّر الوصول» غائب — العميل يرى صفحة بلا تفسير'
+        ).not.toBeNull();
+        expect(box.textContent).not.toContain('لا توجد عمليات دفع حتى الآن');
+        expect(box.querySelector('#btnRetryBilling'),
+            'زر إعادة المحاولة غائب — لا مخرج للعميل'
+        ).not.toBeNull();
+    });
+});

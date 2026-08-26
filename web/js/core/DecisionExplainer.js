@@ -1,3 +1,5 @@
+import { resolveDecisionThresholds } from './engine.js';
+
 const num = (value) => {
     const n = Number(value);
     return Number.isFinite(n) ? n : 0;
@@ -28,13 +30,18 @@ function pushIssue(issues, issue) {
 export function explainDecisionBreakers(study = {}, results = {}) {
     const issues = [];
     const indicators = results.indicators || {};
-    const thresholds = study.assumptions?.thresholds || {};
     const financing = study.financing || {};
     const studyType = study.projectInfo?.studyType || 'bank_financing';
-    const minNPV = num(thresholds.minNPV ?? 0);
-    const minIRR = num(thresholds.minIRR ?? 0.15);
-    const maxPayback = num(thresholds.maxPayback ?? 7);
-    const minROI = num(thresholds.minROI ?? 0.20);
+    // مصدر واحد للعتبات مع computeDecision في engine.js (تدقيق 2026-08-26): كانت هنا
+    // احتياطيات محلية (maxPayback 7 بدل 3.5 الفعلية) فيرفض المحرك دراسة استردادها 5
+    // سنوات بينما لا يذكر المُفسِّر السبب أصلاً. نقرأ العتبات المُطبَّقة فعلياً من نتيجة
+    // المحرك، وإلا نشتقّها من نفس الدالة الموحّدة — لا أرقام احتياطية محلية هنا.
+    const thresholds = results.assumptionsApplied?.thresholds
+        || resolveDecisionThresholds(study.assumptions?.thresholds, financing);
+    const minNPV = num(thresholds.minNPV);
+    const minIRR = num(thresholds.minIRR);
+    const maxPayback = num(thresholds.maxPayback);
+    const minROI = num(thresholds.minROI);
     const fundingGap = num(results.financingCheck?.fundingGap);
     // مرآة لعتبة مادية الفجوة في engine.js (تدقيق ٢٠٢٦-٠٧-٠٩) — بلا هذا، تُصعَّد أي فجوة
     // تقريب عادية بين خطوة التمويل والاستثمار المُعاد حسابه لاحقاً إلى «حرجة» هنا أيضاً.
@@ -43,7 +50,7 @@ export function explainDecisionBreakers(study = {}, results = {}) {
         ?? Math.max(1000, num(results.financingCheck?.totalInvestment) * 0.01)
     );
     const loanAmount = num(financing.sources?.bankLoan?.amount || results.loanSchedule?.loanAmount);
-    const targetDSCR = num(financing.targetDSCR ?? 1.25);
+    const targetDSCR = num(thresholds.targetDSCR);
     const dscr = indicators.dscr;
 
     if (fundingGap > fundingGapThreshold) {
