@@ -1913,8 +1913,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  // سجل الفواتير (2026-07-16) — عرض مغمور بلا شريط جانبي، محمي بالدخول داخل
-  // BillingHistoryView نفسها (نفس مبدأ renderReviewerRoute/renderAdminRoute).
+  // سجل الفواتير (2026-07-16) — عرض مغمور بلا شريط جانبي.
+  // تدقيق 2026-08-26: كانت البوابة الداخلية في BillingHistoryView معطَّلة عمداً
+  // («تم إيقاف فرض تسجيل الدخول مؤقتاً للتجربة»)، فكان هذا المسار يُنفَّذ بلا أي
+  // حماية فعلية. الآن يُستدعى عبر runProtectedRoute في routeToView (نفس مبدأ
+  // home/category/step) — لا تعتمد على حماية داخل الشاشة نفسها.
   const renderBillingRoute = async () => {
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
@@ -1932,8 +1935,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  // مركز التنزيلات (2026-07-16) — عرض مغمور بلا شريط جانبي، محمي بالدخول داخل
-  // DownloadsCenterView نفسها (نفس مبدأ renderBillingRoute).
+  // مركز التنزيلات (2026-07-16) — عرض مغمور بلا شريط جانبي.
+  // تدقيق 2026-08-26: يُستدعى الآن عبر runProtectedRoute في routeToView (نفس
+  // مبدأ renderBillingRoute) بدل الاعتماد على حماية داخل الشاشة نفسها.
   const renderDownloadsRoute = async () => {
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
@@ -1956,8 +1960,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  // الدعم الفني (2026-07-18) — نظام تذاكر داخلي، عرض مغمور بلا شريط جانبي، محمي
-  // بالدخول داخل SupportTicketsView نفسها (نفس مبدأ renderBillingRoute).
+  // الدعم الفني (2026-07-18) — نظام تذاكر داخلي، عرض مغمور بلا شريط جانبي.
+  // تدقيق 2026-08-26: يُستدعى الآن عبر runProtectedRoute في routeToView (نفس
+  // مبدأ renderBillingRoute) بدل الاعتماد على حماية داخل الشاشة نفسها.
   const renderSupportRoute = async () => {
     const sidebarEl = document.querySelector('.sidebar');
     const stepperNavEl = document.getElementById('stepperNav');
@@ -2042,11 +2047,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (route.startsWith('admin')) {
         await renderAdminRoute();
       } else if (route.startsWith('billing')) {
-        await renderBillingRoute();
+        await runProtectedRoute(() => renderBillingRoute());
       } else if (route.startsWith('downloads')) {
-        await renderDownloadsRoute();
+        await runProtectedRoute(() => renderDownloadsRoute());
       } else if (route.startsWith('support')) {
-        await renderSupportRoute();
+        await runProtectedRoute(() => renderSupportRoute());
       } else if (route.startsWith('checkout')) {
         await renderCheckoutRoute();
       } else if (route.startsWith('centers')) {
