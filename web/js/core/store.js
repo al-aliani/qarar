@@ -610,7 +610,18 @@ class StudyStore {
             this.state[section] = defaults[section] || {};
         }
 
-        this.state[section] = { ...this.state[section], ...data };
+        // النشر السطحي كان يعامل أي قيمة كأنها كائن: نصّ مثل id/version يُفكَّك إلى
+        // كائن مفهرس بالأحرف ({"0":"4","1":".",...})، ومصفوفة تُدمج بالفهرس فتبقى
+        // عناصر المصفوفة السابقة في المواضع الزائدة. الدمج مقصود للكائنات العادية
+        // وحدها؛ ما عداها (نص/رقم/بولياني/null/مصفوفة) استبدال كامل.
+        // undefined يبقى بلا أثر كما كان ({ ...obj, ...undefined } نسخة بلا تغيير) —
+        // كي لا يمحو مستدعٍ قسماً كاملاً بلا قصد.
+        const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+        if (isPlainObject(this.state[section]) && isPlainObject(data)) {
+            this.state[section] = { ...this.state[section], ...data };
+        } else if (data !== undefined) {
+            this.state[section] = data;
+        }
 
         // Auto-bridge: If services updated, sync to revenue
         if (section === 'services') {
