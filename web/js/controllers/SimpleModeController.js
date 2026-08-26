@@ -23,7 +23,12 @@ export class SimpleModeController {
 
     setMode(mode) {
         localStorage.setItem('study_mode_preference', mode);
-        this.store.set('appSettings.mode', mode);
+        // 2026-08-26: كان `this.store.set('appSettings.mode', mode)`. و`set(data)` تأخذ
+        // وسيطاً واحداً وتفعل `this.state = data` ثم `save()` — فكان استدعاء واحد يستبدل
+        // حالة الدراسة كلها (41 مفتاحاً) بالنص 'appSettings.mode' ويحفظ المحو. لم يُلاحَظ
+        // لأن المستدعي الوحيد (Sidebar.js:513) داخل شريط جانبي مخفي دائماً بقرار متعمد —
+        // أي أنه لغم صامت ينفجر لحظة إعادة تفعيل الشريط أو استدعاء setMode من أي مكان آخر.
+        this.store.updatePath('appSettings', 'mode', mode);
         this.applyModeToBody();
     }
 
