@@ -175,7 +175,10 @@ describe('(3) معدل خصم 0 الصريح يُحترم في الشاشات ا
         const ia = Object.create(InvestorAnalysis.prototype);
         const ctx = {
             npv: 1, irr: 0.05, payback: 2, maxPayback: 3.5, roi: 0.5, minROI: 0.20,
-            profitMargin: 0.2, hasMarket: true, hasRisks: true, hasProjectInfo: true
+            profitMargin: 0.2, hasMarket: true, hasRisks: true, hasProjectInfo: true,
+            // decision: 'GO' يرفع سقف القرار المُضاف 2026-08-26 (قرار غير GO يسقف الدرجة
+            // تحت 70) — هذا الفحص يقيس مساهمة نقاط IRR الخام لا سقف القرار.
+            decision: 'GO'
         };
 
         const zero = ia.calcInvestabilityScore({ ...ctx, discountRate: 0 });
