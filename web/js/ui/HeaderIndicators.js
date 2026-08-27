@@ -18,6 +18,13 @@ export function initHeaderIndicators() {
                 if (status.location === 'both') {
                     syncText.textContent = 'محفوظ في السحابة';
                     syncIndicator.style.color = 'var(--c-success)';
+                } else if (status.cloudSyncFailed) {
+                    // دفعة 5 (2026-08-27، طبقة Availability): كان يعرض نفس "محفوظ محلياً"
+                    // المحايدة سواء المستخدم غير مسجَّل دخول (طبيعي) أو مسجَّل لكن فشلت
+                    // مزامنته السحابية فعلياً بعد كل محاولات إعادة المحاولة — تعتيم كامل
+                    // لمستخدم قد يعمل ساعات أثناء انقطاع اتصال بلا أي تحذير حقيقي.
+                    syncText.textContent = 'محفوظ محلياً فقط — تعذّرت المزامنة السحابية';
+                    syncIndicator.style.color = 'var(--c-warning)';
                 } else {
                     syncText.textContent = 'محفوظ محلياً';
                     syncIndicator.style.color = 'var(--c-text-muted)';

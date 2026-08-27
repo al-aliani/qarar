@@ -58,6 +58,16 @@ async function decompress(str) {
 const LOCAL_STORAGE_KEY_PREFIX = 'feas_project_';
 const SUPA_TABLE_STUDIES = 'studies';
 
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// دفعة 5 (2026-08-27، طبقة Availability): محاولة واحدة فقط كانت تكفي لتصنيف
+// فشل عابر (مهلة شبكة قصيرة، 503 مؤقت من Supabase) كفشل نهائي — أشيع أنماط
+// الفشل واقعياً transient لا يستدعي تدخلاً يدوياً. 3 محاولات بتأخير تصاعدي
+// بسيط (500ms ثم 1500ms) قبل الاستسلام فعلياً لـcloudSyncFailed.
+const CLOUD_SYNC_RETRY_DELAYS_MS = [500, 1500];
+
 export class PersistenceService {
 
     /**
@@ -86,7 +96,7 @@ export class PersistenceService {
             const { getAuthUser } = await _getSupabase();
             const { user } = await getAuthUser();
             if (user) {
-                await this._saveCloud(id, cleanData, user.id);
+                await this._saveCloudWithRetry(id, cleanData, user.id);
                 try {
                     const { log, ACTIONS } = await _getAuditLogger();
                     log(ACTIONS.SAVE, { id, location: 'both' });
@@ -295,6 +305,27 @@ export class PersistenceService {
     }
 
     // --- Cloud Helpers (Supabase) ---
+
+    /**
+     * دفعة 5 (2026-08-27، طبقة Availability): يعيد محاولة _saveCloud حتى نجاحها
+     * أو استنفاد كل المحاولات — فشل عابر واحد (مهلة شبكة، 503 مؤقت) لم يعد
+     * يُسقِط المزامنة فوراً. يرمي خطأ المحاولة الأخيرة فقط إن فشلت الجميع
+     * (نفس عقد _saveCloud الأصلي — المستدعي save() يلتقطه كما كان).
+     */
+    static async _saveCloudWithRetry(id, data, userId) {
+        let lastError;
+        for (let attempt = 0; attempt <= CLOUD_SYNC_RETRY_DELAYS_MS.length; attempt++) {
+            try {
+                return await this._saveCloud(id, data, userId);
+            } catch (e) {
+                lastError = e;
+                if (attempt < CLOUD_SYNC_RETRY_DELAYS_MS.length) {
+                    await sleep(CLOUD_SYNC_RETRY_DELAYS_MS[attempt]);
+                }
+            }
+        }
+        throw lastError;
+    }
 
     static async _saveCloud(id, data, userId) {
         const { getSupabaseClient } = await _getSupabase();
