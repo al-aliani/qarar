@@ -2018,7 +2018,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const runProtectedRoute = (action) =>
       AuthGuard.protect(action, { message: 'سجّل الدخول أو أنشئ حساباً للمتابعة' }).then((result) => {
         if (result === null && !AuthGuard.isLoggedIn()) {
-          window.location.href = './landing.html';
+          window.location.href = './';
         }
       });
     try {
