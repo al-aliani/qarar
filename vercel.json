@@ -25,6 +25,11 @@
       "continue": true
     },
     {
+      "src": "^/(admin|dashboard|smoke_test|financial_charts)\\.html$",
+      "headers": { "X-Robots-Tag": "noindex" },
+      "continue": true
+    },
+    {
       "src": "^/(.*)\\.(png|jpe?g|gif|svg|webp|avif|ico)$",
       "headers": { "Cache-Control": "public, max-age=604800, stale-while-revalidate=2592000" },
       "continue": true
@@ -82,6 +87,7 @@
     { "src": "^/$", "dest": "/landing.html" },
     { "handle": "filesystem" },
     { "src": "^/assets/.*$", "status": 404, "headers": { "Cache-Control": "no-store" } },
+    { "src": "^/(.*)\\.(html|png|jpe?g|gif|svg|webp|avif|ico|pdf|xlsx|xls|docx|csv|woff2?|ttf|otf|js|css)$", "status": 404, "headers": { "Cache-Control": "no-store" } },
     { "src": "^/(.*)$", "dest": "/index.html" }
   ]
 }

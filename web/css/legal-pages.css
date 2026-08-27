@@ -1,7 +1,38 @@
-/* 
-  Legal Pages Premium Styles 
+/*
+  Legal Pages Premium Styles
   Used for: Terms, Privacy, Disclaimer, Refund, Cookies, Data Retention
 */
+
+/* تدقيق 2026-08-27: رابط "انتقل للمحتوى" كان موجوداً في landing.html فقط
+   (نمط inline محلي هناك) — pricing/help/about/contact كانت بلا أي رابط
+   تخطٍّ، فأول عنصر قابل للتركيز فيها هو شعار الترويسة. نفس نمط landing.html
+   (clip بدل left:-9999px الذي يُضيف تمريراً جانبياً في RTL)، هنا كقاعدة
+   مشتركة بدل تكرارها Inline في كل صفحة.  */
+.skip-link {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background: var(--lp-primary);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 4px;
+  text-decoration: none;
+}
+.skip-link:focus {
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+}
 
 :root {
   --lp-primary: #0e5b44;
@@ -301,7 +332,7 @@ body {
   margin-bottom: 8px;
 }
 
-.lp-card a {
+.lp-card a:not(.btn) {
   color: var(--lp-primary);
   font-weight: 600;
   text-decoration: underline;
@@ -309,7 +340,7 @@ body {
   transition: text-decoration-color 0.2s ease;
 }
 
-.lp-card a:hover {
+.lp-card a:not(.btn):hover {
   text-decoration-color: var(--lp-primary);
 }
 

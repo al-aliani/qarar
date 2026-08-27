@@ -79,7 +79,7 @@ export class PhoneAuthModal {
                         </div>
                     </form>
                     <button type="button" id="phoneAuthSkip" class="btn btn--ghost w-full mt-4">تخطي الآن ومتابعة بدون تسجيل دخول</button>
-                    <a href="./landing.html" class="btn btn--ghost w-full mt-2" style="text-align:center">الرجوع إلى الصفحة الرئيسية</a>
+                    <a href="./" class="btn btn--ghost w-full mt-2" style="text-align:center">الرجوع إلى الصفحة الرئيسية</a>
                 </div>
             </div>`;
         document.body.appendChild(this.overlay);

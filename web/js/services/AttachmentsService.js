@@ -28,6 +28,53 @@ function folderPrefix(userId, studyId) {
     return `${userId}/${studyId}`;
 }
 
+function bytesStartWith(bytes, signature, offset = 0) {
+    if (!bytes || bytes.length < offset + signature.length) return false;
+    return signature.every((b, i) => bytes[offset + i] === b);
+}
+
+// تدقيق 2026-08-27: التحقق كان يعتمد على امتداد اسم الملف وحده — ملف تنفيذي
+// (.exe/.sh) بامتداد ".pdf" كان يمر بلا أي فحص محتوى فعلي. هذه توقيعات
+// البايتات الأولى (magic bytes) الحقيقية لكل صيغة مسموحة؛ csv نص خام بلا
+// بصمة ثابتة، فلا فحص إيجابي لها — فقط رفض التوقيعات الخطرة أدناه.
+const MAGIC_SIGNATURES = {
+    pdf: (b) => bytesStartWith(b, [0x25, 0x50, 0x44, 0x46]), // %PDF
+    png: (b) => bytesStartWith(b, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    jpg: (b) => bytesStartWith(b, [0xff, 0xd8, 0xff]),
+    jpeg: (b) => bytesStartWith(b, [0xff, 0xd8, 0xff]),
+    webp: (b) => bytesStartWith(b, [0x52, 0x49, 0x46, 0x46]) && bytesStartWith(b, [0x57, 0x45, 0x42, 0x50], 8), // RIFF....WEBP
+    docx: (b) => bytesStartWith(b, [0x50, 0x4b, 0x03, 0x04]), // ZIP (Office Open XML)
+    xlsx: (b) => bytesStartWith(b, [0x50, 0x4b, 0x03, 0x04]),
+};
+
+// ملفات تنفيذية/سكربتات شائعة لإعادة التسمية الخبيثة — تُرفض بصرف النظر عن
+// الامتداد المعلن، حتى لصيغ بلا فحص إيجابي (csv).
+const DANGEROUS_SIGNATURES = [
+    [0x4d, 0x5a], // MZ — Windows PE (.exe/.dll)
+    [0x7f, 0x45, 0x4c, 0x46], // \x7fELF — Linux
+    [0x23, 0x21], // #! — shebang سكربت
+];
+
+/**
+ * يفحص البايتات الأولى الفعلية للملف مقابل توقيع صيغته المعلنة — لا يثق
+ * بامتداد اسم الملف وحده. bucket خاص RLS-محمي أصلاً، فهذا دفاع في العمق
+ * إضافي لا بديل عن فحص برمجيات ضارة كامل (خارج نطاق هذا الإصلاح).
+ * @param {File} file
+ * @param {string} ext
+ * @returns {Promise<{ok: boolean, error?: string}>}
+ */
+async function validateFileSignature(file, ext) {
+    const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+    if (DANGEROUS_SIGNATURES.some((sig) => bytesStartWith(header, sig))) {
+        return { ok: false, error: 'محتوى الملف يطابق توقيع ملف تنفيذي أو سكربت — الرفع مرفوض لأسباب أمنية.' };
+    }
+    const checkSignature = MAGIC_SIGNATURES[ext];
+    if (checkSignature && !checkSignature(header)) {
+        return { ok: false, error: `محتوى الملف لا يطابق امتداده المعلن (.${ext}) — تأكد أن الملف سليم وغير معاد تسميته.` };
+    }
+    return { ok: true };
+}
+
 /**
  * رفع ملف مرفق لدراسة معيّنة. يتطلب مستخدماً مسجَّل الدخول.
  * @returns {Promise<{ok:boolean, path?:string, name?:string, error?:string}>}
@@ -42,6 +89,8 @@ export async function uploadAttachment(studyId, file) {
     if (!ALLOWED_EXT.includes(ext)) {
         return { ok: false, error: `امتداد الملف غير مدعوم (${ext || 'بلا امتداد'}). المسموح: ${ALLOWED_EXT.join('، ')}.` };
     }
+    const sigCheck = await validateFileSignature(file, ext);
+    if (!sigCheck.ok) return { ok: false, error: sigCheck.error };
 
     const { user, ok: authOk } = await getAuthUser();
     if (!authOk || !user) {
@@ -122,3 +171,4 @@ export async function deleteAttachment(path) {
 
 export const ATTACHMENTS_MAX_FILE_BYTES = MAX_FILE_BYTES;
 export const ATTACHMENTS_ALLOWED_EXT = ALLOWED_EXT;
+export { validateFileSignature };

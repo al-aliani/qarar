@@ -334,7 +334,7 @@ export class BankReportGenerator {
                 <div class="bank-kpi-card"><div class="label">${L('npv')}</div><div class="value ${(ind.npv || 0) > 0 ? 'positive' : 'negative'}">${_fmt(ind.npv || 0)}</div></div>
                 <div class="bank-kpi-card"><div class="label">${L('irr')}</div><div class="value">${formatIrrPct(ind.irr)}</div></div>
                 <div class="bank-kpi-card"><div class="label">${L('paybackPeriod')}</div><div class="value">${SAFE.payback(ind.paybackPeriod ?? ind.payback)}</div></div>
-                <div class="bank-kpi-card"><div class="label">${L('breakEvenPointValue')}</div><div class="value">${_fmt(ind.breakEvenPointValue || 0)}</div></div>
+                <div class="bank-kpi-card"><div class="label">${L('breakEvenPointValue')}</div><div class="value">${SAFE.breakeven(ind, _fmt)}</div></div>
                 <div class="bank-kpi-card"><div class="label">فجوة التمويل</div><div class="value ${Math.abs(financingGate.fundingGap) > gapThreshold ? 'negative' : 'positive'}">${financingGate.fundingGap > gapThreshold ? _fmt(financingGate.fundingGap) : financingGate.fundingGap < -gapThreshold ? 'فائض ' + _fmt(Math.abs(financingGate.fundingGap)) : 'متوازن'}</div></div>
                 <div class="bank-kpi-card"><div class="label">DSCR السنة الأولى</div><div class="value ${financingGate.dscrBlocked ? 'negative' : 'positive'}">${financingGate.dscr == null ? 'غير قابل للحساب' : Number(financingGate.dscr).toFixed(2) + 'x'}</div></div>
             </div>

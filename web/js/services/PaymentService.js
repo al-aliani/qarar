@@ -131,7 +131,7 @@ export async function listOrders() {
  * أحدث طلب "مراجَع بخبير" لهذه الدراسة فقط (قد تتكرر الدراسة بين عدة طلبات
  * قديمة/ملغاة، فنعرض الأحدث حسب created_at).
  * @param {string} studyId
- * @returns {Promise<{reviewStatus: string, certificateId: string|null, reviewedAt: string|null}|null>}
+ * @returns {Promise<{reviewStatus: string, certificateId: string|null, reviewedAt: string|null, reviewerNotes: string|null}|null>}
  */
 export async function getReviewStatus(studyId) {
     if (!studyId) return null;
@@ -143,7 +143,7 @@ export async function getReviewStatus(studyId) {
 
     const { data, error } = await supabase
         .from('orders')
-        .select('review_status, certificate_id, reviewed_at')
+        .select('review_status, certificate_id, reviewed_at, reviewer_notes')
         .eq('study_id', studyId)
         .eq('tier', 'reviewed')
         .order('created_at', { ascending: false })
@@ -155,5 +155,6 @@ export async function getReviewStatus(studyId) {
         reviewStatus: data.review_status,
         certificateId: data.certificate_id,
         reviewedAt: data.reviewed_at,
+        reviewerNotes: data.reviewer_notes,
     };
 }

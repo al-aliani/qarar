@@ -41,7 +41,7 @@ function printToolReport(section, title, store) {
     const header = document.createElement('div');
     header.className = 'tool-report-print-header';
     header.innerHTML = `
-        <div class="tool-report-print-brand">قرار — محاكي دراسة الجدوى</div>
+        <div class="tool-report-print-brand">قرار — منصة دراسة الجدوى</div>
         <h1 class="tool-report-print-title">${title || 'تقرير الأداة'}</h1>
         <div class="tool-report-print-meta">${projectName(store)} · ${todayLabel()}</div>
     `;

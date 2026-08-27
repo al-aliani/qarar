@@ -17,6 +17,7 @@
   <meta property="og:image" content="https://sahib.sa/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="ar_SA" />
   <meta name="twitter:image" content="https://sahib.sa/og-image.png" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e5b44'/><text x='50' y='72' font-size='62' text-anchor='middle' fill='%23fff' font-family='sans-serif' font-weight='700'>ق</text></svg>" type="image/svg+xml" />
   <link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -1034,7 +1035,7 @@
             <div class="tag">موصى بها</div>
             <div class="name">مراجَع بخبير</div>
             <div class="amount"><span data-price="reviewed">1,999</span> <small>﷼ / دراسة</small></div>
-            <p class="desc">نبني الدراسة ونراجع الافتراضات قبل التسليم.</p>
+            <p class="desc">مراجعة مختص لافتراضاتك وتوصياته قبل التسليم.</p>
             <ul>
               <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>كل مزايا الباقة الذاتية</li>
               <li><span class="chk"><svg class="ic"><use href="#i-check"/></svg></span>مراجعة مختص حسب القطاع</li>
@@ -1293,20 +1294,26 @@
 
   <!-- عدّاد استخدام حقيقي (2026-07-14) — رقم معدود فعلياً من قاعدة البيانات عبر
        get_public_usage_stats (RPC بصلاحية security definer، آمن للقراءة العامة
-       بلا مصادقة). لا رقم مصطنع هنا؛ يظهر حتى لو صفراً، ويختفي بصمت عند أي فشل
-       بدل عرض بيانات فارغة أو خاطئة. -->
+       بلا مصادقة). لا رقم مصطنع هنا؛ كل حقل يظهر بمجرد أن يصبح غير صفري فعلياً،
+       ويختفي بصمت عند أي فشل بدل عرض بيانات فارغة أو خاطئة.
+
+       تدقيق 2026-08-27 (لجنة استشارية 3 خبراء): «0 دراسة مدفوعة» بجانب أزرار
+       شراء بسعر 299-4999 ريالاً دليل اجتماعي سلبي — لا علاقة له بدقة تحليل
+       دراسة عميل (الصدق المُلزَم هناك)، بل هو مؤشر تسويقي عن نضج المنصة نفسها.
+       الإخفاء هنا لكل حقل صفري على حدة تلقائي ودائم (قاعدة value>0 لا استثناء
+       مؤقت)، فيظهر أي حقل بمجرد أن يصبح رقمه الحقيقي غير صفري بلا أي قرار بشري
+       لاحق أو "مهمة مؤجلة" قابلة للنسيان — القسم كله يبقى مخفياً إن كانت كل
+       الحقول صفراً معاً. -->
   <script type="module">
     import { getSupabaseClient } from './supabaseClient.js';
+    import { applyHeroUsageFacts } from './js/utils/heroUsageStats.js';
     (async () => {
       try {
         const { supabase, ok } = await getSupabaseClient();
         if (!ok || !supabase) return;
         const { data, error } = await supabase.rpc('get_public_usage_stats').single();
         if (error || !data) return;
-        document.getElementById('statTotalStudies').textContent = Number(data.total_studies || 0).toLocaleString('ar-SA');
-        document.getElementById('statPaidStudies').textContent = Number(data.paid_studies || 0).toLocaleString('ar-SA');
-        document.getElementById('statCertifiedStudies').textContent = Number(data.certified_studies || 0).toLocaleString('ar-SA');
-        document.getElementById('heroUsageStats').hidden = false;
+        applyHeroUsageFacts(document, data);
       } catch (e) {
         console.warn('[قرار] تعذّر تحميل عدّاد الاستخدام؛ يبقى القسم مخفياً.', e);
       }

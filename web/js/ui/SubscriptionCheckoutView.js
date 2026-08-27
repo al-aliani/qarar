@@ -73,7 +73,7 @@ export class SubscriptionCheckoutView {
         // الدفع الرئيسية القادمة من صفحة التسعير، لا PaywallModal فقط. نص الاسترداد
         // ثابت هنا (لا REFUND_POLICY.shortTitle) بلا استيراد إضافي من config.js.
         const trustHtml = `<p class="text-xs text-muted text-center w-full mt-3">جميع الأسعار شاملة ضريبة القيمة المضافة (15%) — لا رسوم إضافية عند الدفع.</p><p class="text-xs text-muted text-center w-full">ضمان استرداد خلال 15 يوم على الباقات المدفوعة إن لم تُقنعك النتيجة.</p><p class="text-xs text-muted text-center w-full">الأدوات المجانية (JSON، CSV، لوحة المستثمر للمشاركة) تبقى بلا قيود.</p>`;
-        this.container.innerHTML = `<div class="p-6 max-w-3xl mx-auto"><button id="checkoutBack" class="btn btn--ghost mb-4">← رجوع</button><h1 class="text-2xl font-bold mb-2">إكمال الطلب</h1><p class="text-muted mb-5">راجع الباقة والخدمات الإضافية، ثم أرسل طلب الدفع بتحويل بنكي.</p><div class="card p-6" id="checkoutCard"><h2 class="text-sm font-bold mb-2">الباقة</h2><div class="checkout-tiers mb-2">${tiersHtml}</div><p class="text-xs text-muted mb-4" id="checkoutPkgAudience">${pkg.audience} · التسليم: ${pkg.delivery}</p><h2 class="text-sm font-bold mb-2">خدمات إضافية</h2>${ADDONS.map(a => `<label class="flex justify-between items-center py-2"><span><input type="checkbox" data-addon="${a.id}" data-price="${a.price}"> ${a.name}</span><span>${a.price} ريال</span></label>`).join('')}<div class="form-group mt-4"><label class="text-sm">كوبون الخصم</label><input id="checkoutCoupon" class="form-input w-full" dir="ltr" placeholder="أدخل كود الخصم إن وُجد"></div><div class="mt-5" style="border-top:1px solid var(--c-border)"><div class="flex justify-between py-2"><span id="checkoutPkgName">${pkg.name}</span><span id="checkoutPkgPrice">${formatPrice(pkg.price)} ريال</span></div><div class="flex justify-between py-2"><span>الإجمالي (شامل الضريبة)</span><span id="checkoutSubtotal"></span></div><div class="flex justify-between py-2"><span>الخصم المتوقع</span><span id="checkoutDiscount">يُتحقق منه عند الدفع</span></div><div class="flex justify-between py-2 text-muted" style="font-size:.9rem"><span>منها ضريبة القيمة المضافة (15%)</span><span id="checkoutVat"></span></div><div class="flex justify-between py-2 font-bold text-lg"><span>المطلوب دفعه</span><span id="checkoutTotal"></span></div></div><div id="checkoutError" class="text-danger text-sm mt-2" role="alert" style="display:none"></div>${payAction}${trustHtml}</div></div>`;
+        this.container.innerHTML = `<div class="p-6 max-w-3xl mx-auto"><button id="checkoutBack" class="btn btn--ghost mb-4">← رجوع</button><h1 class="text-2xl font-bold mb-2">إكمال الطلب</h1><p class="text-muted mb-5">راجع الباقة والخدمات الإضافية، ثم أرسل طلب الدفع بتحويل بنكي.</p><div class="card p-6" id="checkoutCard"><h2 class="text-sm font-bold mb-2">الباقة</h2><div class="checkout-tiers mb-2">${tiersHtml}</div><p class="text-xs text-muted mb-4" id="checkoutPkgAudience">${pkg.audience} · التسليم: ${pkg.delivery}</p><h2 class="text-sm font-bold mb-2">خدمات إضافية</h2>${ADDONS.map(a => this._addonRowHtml(a, pkg)).join('')}<div class="form-group mt-4"><label class="text-sm">كوبون الخصم</label><input id="checkoutCoupon" class="form-input w-full" dir="ltr" placeholder="أدخل كود الخصم إن وُجد"></div><div class="mt-5" style="border-top:1px solid var(--c-border)"><div class="flex justify-between py-2"><span id="checkoutPkgName">${pkg.name}</span><span id="checkoutPkgPrice">${formatPrice(pkg.price)} ريال</span></div><div class="flex justify-between py-2"><span>الإجمالي (شامل الضريبة)</span><span id="checkoutSubtotal"></span></div><div class="flex justify-between py-2"><span>الخصم المتوقع</span><span id="checkoutDiscount">يُتحقق منه عند الدفع</span></div><div class="flex justify-between py-2 text-muted" style="font-size:.9rem"><span>منها ضريبة القيمة المضافة (15%)</span><span id="checkoutVat"></span></div><div class="flex justify-between py-2 font-bold text-lg"><span>المطلوب دفعه</span><span id="checkoutTotal"></span></div></div><div id="checkoutError" class="text-danger text-sm mt-2" role="alert" style="display:none"></div>${payAction}${trustHtml}</div></div>`;
         this.container.querySelector('#checkoutBack')?.addEventListener('click', () => this.onBack());
         this.container.querySelectorAll('[data-addon]').forEach(el => el.addEventListener('change', () => this.update(this._pkg)));
         this.container.querySelector('#checkoutPayBank')?.addEventListener('click', (e) => this.payBankTransfer(this._pkg, e.currentTarget));
@@ -82,10 +82,41 @@ export class SubscriptionCheckoutView {
     }
 
     /**
+     * إضافة مشمولة أصلاً في الباقة (result_session ضمن full — انظر ADDONS في
+     * core/pricing.js) تُعرض مؤشَّرة ومعطَّلة بدل قابلة للتحديد، فلا تُحتسَب
+     * ضمن «المطلوب دفعه» ولا تُرسَل في addons عند الدفع (selectedAddons أدناه).
+     */
+    _addonRowHtml(a, pkg) {
+        const included = !!a.includedIn?.includes(pkg.id);
+        return `<label class="flex justify-between items-center py-2" data-addon-row="${a.id}"><span><input type="checkbox" data-addon="${a.id}" data-price="${a.price}"${included ? ' checked disabled' : ''}> ${a.name}<span class="text-xs text-muted" data-addon-note style="${included ? '' : 'display:none'}"> (مشمولة في باقتك)</span></span><span>${a.price} ريال</span></label>`;
+    }
+
+    /**
+     * تُستدعى بعد تبديل الباقة (_selectTier) — لا تعيد بناء صفوف الإضافات (لتفادي
+     * فقد اختيار المستخدم الحالي)، بل تُفعّل/تُعطّل كل صف حسب انتماء إضافته
+     * لباقتها الجديدة. تحفظ اختيار المستخدم اليدوي لغير المشمولة عبر التبديلات،
+     * ولا تُصفّر التحديد إلا لإضافة كانت مشمولة إجبارياً في الباقة السابقة.
+     */
+    _syncAddonsForPackage(pkg) {
+        ADDONS.forEach((a) => {
+            const included = !!a.includedIn?.includes(pkg.id);
+            const checkbox = this.container.querySelector(`[data-addon="${a.id}"]`);
+            if (!checkbox) return;
+            const wasForcedByInclusion = checkbox.disabled;
+            if (included) checkbox.checked = true;
+            else if (wasForcedByInclusion) checkbox.checked = false;
+            checkbox.disabled = included;
+            const note = this.container.querySelector(`[data-addon-row="${a.id}"] [data-addon-note]`);
+            if (note) note.style.display = included ? '' : 'none';
+        });
+    }
+
+    /**
      * تحديث DOM مباشر بدل إعادة رسم الصفحة كاملة (this._renderCheckout()) — التبديل
      * بين الباقات كان يعيد بناء الكرت كله (شرائح الأسعار/الإضافات/الكوبون) في كل ضغطة،
      * ما يمسح تركيز المستخدم ويسبب وميضاً بصرياً. لأن DOM لا يُعاد بناؤه هنا، حالة
-     * الخدمات الإضافية المُحدَّدة تبقى كما هي تلقائياً بلا حاجة لحفظ/استعادتها.
+     * الخدمات الإضافية المُحدَّدة تبقى كما هي تلقائياً بلا حاجة لحفظ/استعادتها — عدا
+     * إضافة مشمولة في باقة (_syncAddonsForPackage) التي تُفعَّل/تُعطَّل صراحة.
      */
     _selectTier(tierId) {
         const pkg = PRICING_PACKAGES.find(p => p.id === tierId && p.price > 0);
@@ -102,11 +133,15 @@ export class SubscriptionCheckoutView {
         if (nameEl) nameEl.textContent = pkg.name;
         const priceEl = this.container.querySelector('#checkoutPkgPrice');
         if (priceEl) priceEl.textContent = `${formatPrice(pkg.price)} ريال`;
+        this._syncAddonsForPackage(pkg);
         this.update(pkg);
     }
 
-    selectedAddons(){ return [...this.container.querySelectorAll('[data-addon]:checked')].map(el => el.dataset.addon); }
-    update(pkg){ const subtotal=pkg.price+[...this.container.querySelectorAll('[data-addon]:checked')].reduce((s,e)=>s+Number(e.dataset.price),0); const vat=subtotal - subtotal/1.15; this.container.querySelector('#checkoutSubtotal').textContent=formatPrice(subtotal)+' ريال'; this.container.querySelector('#checkoutVat').textContent=formatPrice(Math.round(vat))+' ريال'; this.container.querySelector('#checkoutTotal').textContent=formatPrice(subtotal)+' ريال'; }
+    // :not(:disabled) يستبعد إضافة مشمولة في الباقة (معطَّلة عمداً في _addonRowHtml) —
+    // بلا هذا الاستبعاد كانت تُحتسَب في الإجمالي المعروض وتُرسَل ضمن addons عند الدفع
+    // رغم كونها مجانية فعلياً ضمن الباقة المختارة.
+    selectedAddons(){ return [...this.container.querySelectorAll('[data-addon]:checked:not(:disabled)')].map(el => el.dataset.addon); }
+    update(pkg){ const subtotal=pkg.price+[...this.container.querySelectorAll('[data-addon]:checked:not(:disabled)')].reduce((s,e)=>s+Number(e.dataset.price),0); const vat=subtotal - subtotal/1.15; this.container.querySelector('#checkoutSubtotal').textContent=formatPrice(subtotal)+' ريال'; this.container.querySelector('#checkoutVat').textContent=formatPrice(Math.round(vat))+' ريال'; this.container.querySelector('#checkoutTotal').textContent=formatPrice(subtotal)+' ريال'; }
 
     /**
      * تحويل بنكي (قناة يدوية وحيدة — قرار مالك 2026-07-22): يُنشئ طلباً pending عبر

@@ -36,6 +36,7 @@ describe('تزامن أسعار الخدمات الإضافية بين العم�
       expect(serverAddon.id).toBe(clientAddon.id);
       expect(serverAddon.price).toBe(clientAddon.price);
       expect(serverAddon.name).toBe(clientAddon.name);
+      expect(serverAddon.includedIn ?? []).toEqual(clientAddon.includedIn ?? []);
     });
   });
 });

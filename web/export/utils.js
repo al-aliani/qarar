@@ -76,8 +76,29 @@ export function safePctText(v, digits = 1) {
     return formatIrrPct(v, digits);
 }
 
-/** {@see safeNum} {@see safePct} {@see safePayback} {@see safePctText} */
-export const SAFE = { num: safeNum, pct: safePct, payback: safePayback, pctText: safePctText };
+/**
+ * نقطة تعادل بالريال للنشر: تفرّق بين صفرَين متعاكسين بعلَمَي المحرك الصريحين
+ * (engine.js) بدل طباعة رقم مبهم — نمط موحّد كان مطبَّقاً في excelExporter.js
+ * فقط (السطور 555-559) بينما تقارير Bank/ProfessionalReview/Monshaat استمرت
+ * تطبع `fmt(ind.breakEvenPointValue || 0)` الساذجة: مشروع يخسر على كل وحدة
+ * (هامش مساهمة سالب، لا نقطة تعادل له أصلاً) كان يظهر «0 ريال» — أفضل قراءة
+ * ممكنة لأسوأ مشروع ممكن.
+ * @param {{breakEvenAchievable?: boolean, breakEvenReason?: string, breakEvenPointValue?: unknown}} ind مؤشرات المحرك
+ * @param {(v: unknown) => string} fmt مُنسِّق العملة الخاص بالتقرير (formatCurrency المُقيَّد بعملته)
+ * @param {() => string} [onMissing] بديل عند غياب breakEvenPointValue فعلياً (لا 0/سالب — غياب حقيقي)؛ الافتراضي fmt(0) كالسلوك السابق
+ * @returns {string}
+ */
+export function formatBreakEvenValue(ind, fmt, onMissing) {
+    if (ind?.breakEvenAchievable === false) return 'غير قابل للتعادل — هامش المساهمة سالب';
+    if (ind?.breakEvenReason === 'covered_by_non_operating') {
+        return 'محقق عند صفر وحدات — الإيراد غير التشغيلي يغطي كل التكاليف الثابتة';
+    }
+    if (ind?.breakEvenPointValue == null) return onMissing ? onMissing() : fmt(0);
+    return fmt(Number(ind.breakEvenPointValue));
+}
+
+/** {@see safeNum} {@see safePct} {@see safePayback} {@see safePctText} {@see formatBreakEvenValue} */
+export const SAFE = { num: safeNum, pct: safePct, payback: safePayback, pctText: safePctText, breakeven: formatBreakEvenValue };
 
 /**
  * @param {unknown} v

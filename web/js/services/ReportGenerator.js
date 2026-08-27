@@ -14,6 +14,7 @@ import { getOptionLabel } from '../core/fieldOptions.js';
 import { t, yearColumnLabel } from '../i18n/reportStrings.js';
 import { buildFinancingDiagnostics } from '../utils/financingDiagnostics.js';
 import { formatRatio } from '../../export/ratioUnits.js';
+import { SAFE } from '../../export/utils.js';
 
 /** عناوين الأقسام (لفهرس المحتويات وترتيب التصدير) */
 const REPORT_SECTION_LABELS = {
@@ -786,7 +787,7 @@ export class ReportGenerator {
                                 <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'npv', 'صافي القيمة الحالية')}</div><div class="kpi-value ${(results.indicators?.npv || 0) > 0 ? 'positive' : 'negative'}">${formatCurrency(results.indicators?.npv || 0)}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'irr', 'معدل العائد الداخلي (IRR)')}</div><div class="kpi-value ${(results.indicators?.irr || 0) > 0.15 ? 'positive' : ''}">${results.indicators?.irr == null ? 'غير محقق' : (results.indicators.irr * 100).toFixed(1) + '%'}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'payback_period', 'فترة الاسترداد')}</div><div class="kpi-value">${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</div></div>
-                                <div class="kpi-card"><div class="kpi-label">نقطة التعادل</div><div class="kpi-value">${results.indicators?.breakEvenPointValue != null ? formatCurrency(results.indicators.breakEvenPointValue) : (results.indicators?.breakevenUnitsPerMonth != null ? Math.round(results.indicators.breakevenUnitsPerMonth) + ' وحدة/شهر' : '—')}</div></div>
+                                <div class="kpi-card"><div class="kpi-label">نقطة التعادل</div><div class="kpi-value">${SAFE.breakeven(results.indicators, formatCurrency, () => (results.indicators?.breakevenUnitsPerMonth != null ? Math.round(results.indicators.breakevenUnitsPerMonth) + ' وحدة/شهر' : '—'))}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">نسبة تغطية خدمة الدين (DSCR)</div><div class="kpi-value">${results.indicators?.dscr != null ? (results.indicators.dscr.toFixed(2) + 'x') : '—'}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">فجوة التمويل</div><div class="kpi-value ${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? 'negative' : 'positive'}">${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? fmt(financingDiagnostics.fundingGap) : financingDiagnostics.fundingGap < -(financingDiagnostics.fundingGapThreshold ?? 1) ? 'فائض ' + fmt(Math.abs(financingDiagnostics.fundingGap)) : 'متوازن'}</div></div>
                             </div>

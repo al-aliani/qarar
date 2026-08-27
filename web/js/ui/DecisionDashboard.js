@@ -654,7 +654,7 @@ export class DecisionDashboard {
         const canPlayConfetti = !/jsdom/i.test(navigator?.userAgent || '') && (() => {
             try { return !!document.createElement('canvas').getContext('2d'); } catch { return false; }
         })();
-        if (canPlayConfetti && (state.projectInfo?.readinessStatus === 'ready' || (results && results.indicators && results.indicators.npv > 0))) {
+        if (canPlayConfetti && this.shouldCelebrateDecision(readiness, financingDiagnostics)) {
             // Give it a brief delay before firing
             setTimeout(async () => {
                 const { default: confetti } = await import('canvas-confetti');
@@ -1115,6 +1115,22 @@ export class DecisionDashboard {
         return buildFinancingDiagnostics(state, results, {
             formatCurrency: (value) => this.formatCurrency(value)
         });
+    }
+
+    /**
+     * تدقيق 2026-08-27: شرط تأثير الاحتفال (confetti) كان
+     * `state.projectInfo?.readinessStatus === 'ready'` — حقل لا يُكتب في أي مكان
+     * بالمستودع (دائماً undefined)، فيسقط الشرط الفعلي دوماً إلى `npv > 0` وحدها،
+     * بلا فحص فجوة تمويل أو DSCR أو توصية محجوبة. الآن يُستخدم
+     * readiness.recommendation.status (go/nogo/review، محسوب من results.decision
+     * أو evaluation.recommendation في calculateReadiness) مع نفس إشارتي الحجب
+     * الفعليتين في renderFinancingGate — لا احتفال فوق قرار «راجع» أو حاجز
+     * تمويل/DSCR حقيقي، حتى لو كانت NPV موجبة رقمياً.
+     */
+    shouldCelebrateDecision(readiness, financingDiagnostics) {
+        return readiness?.recommendation?.status === 'go'
+            && !financingDiagnostics?.hasBlockers
+            && !financingDiagnostics?.dscrBlocked;
     }
 
     renderFinancingGate(financingDiagnostics) {
