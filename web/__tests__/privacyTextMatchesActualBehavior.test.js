@@ -60,6 +60,13 @@ describe('privacy.html / data-retention.html — النص يطابق الواق�
         expect(retentionHtml).toMatch(/لا نضمن حالياً مدة زمنية محددة/);
     });
 
+    it('نفس التصحيح مطبَّق في privacy.html §5 "حقوقك" أيضاً — كانت تحمل نفس الادّعاء الخاطئ بصياغة مستقلة فاتت المراجعة الأولى', () => {
+        expect(privacyHtml).not.toMatch(/التواصل معنا لحذف حسابك ودراساتك والملفات\s*\n?\s*المرتبطة بها من نظامنا السحابي\./);
+        expect(privacyHtml).toMatch(/التواصل معنا لطلب حذف حسابك/);
+        expect(privacyHtml).toMatch(/يُسجَّل طلبك فوراً/);
+        expect(privacyHtml).toMatch(/بلا مدة زمنية مضمونة حالياً/);
+    });
+
     it('لا يعد بحذف ملفات التصدير "بنفسك" — ميزة الحذف الفردي في PR منفصل غير مدموج بعد', () => {
         // ميزة حذف ملف تصدير واحد (export_history + bucket exports) بُنيت في فرع
         // منفصل (fix/export-delete-2026-08-27) لم يُدمَج بعد وقت كتابة هذا النص —
