@@ -192,7 +192,7 @@ export class MonshaatReportGenerator {
                     <div class="monshaat-kpi-card"><div class="label">صافي القيمة الحالية</div><div class="value ${(ind.npv || 0) > 0 ? 'positive' : 'negative'}">${_fmt(ind.npv || 0)}</div></div>
                     <div class="monshaat-kpi-card"><div class="label">معدل العائد الداخلي</div><div class="value">${SAFE.pctText(ind.irr)}</div></div>
                     <div class="monshaat-kpi-card"><div class="label">فترة الاسترداد</div><div class="value">${SAFE.payback(ind.paybackPeriod ?? ind.payback)}</div></div>
-                    <div class="monshaat-kpi-card"><div class="label">نقطة التعادل (ريال)</div><div class="value">${_fmt(ind.breakEvenPointValue || 0)}</div></div>
+                    <div class="monshaat-kpi-card"><div class="label">نقطة التعادل (ريال)</div><div class="value">${SAFE.breakeven(ind, _fmt)}</div></div>
                 </div>
                 <table class="monshaat-table">
                 <tr><th>مصدر التمويل</th><th>المبلغ</th><th>النسبة</th></tr>

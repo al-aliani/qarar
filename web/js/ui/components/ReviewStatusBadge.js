@@ -28,7 +28,15 @@ export async function renderReviewStatusBadge(studyId) {
     if (!meta) return '';
 
     const certText = status.certificateId ? ` — رقم الشهادة ${escapeHtml(status.certificateId)}` : '';
-    return `<span class="${meta.cls}" title="${escapeHtml(meta.text)}${certText}">${escapeHtml(meta.text)}${status.reviewStatus === 'certified' ? certText : ''}</span>`;
+    const badge = `<span class="${meta.cls}" title="${escapeHtml(meta.text)}${certText}">${escapeHtml(meta.text)}${status.reviewStatus === 'certified' ? certText : ''}</span>`;
+
+    // تدقيق 2026-08-27: النص أعلاه يَعِد العميل بـ«ملاحظات» عند rejected، لكن
+    // reviewer_notes (تُكتب فعلياً في reviewer-submit) لم تكن تصل لأي واجهة قط —
+    // العميل يدفع 1,999 ريال ولا يرى سبب إعادة دراسته. تُعرض هنا فقط لهذه الحالة.
+    if (status.reviewStatus === 'rejected' && status.reviewerNotes) {
+        return `<div class="review-badge-wrap">${badge}<p class="review-badge__notes">${escapeHtml(status.reviewerNotes)}</p></div>`;
+    }
+    return badge;
 }
 
 function escapeHtml(value) {

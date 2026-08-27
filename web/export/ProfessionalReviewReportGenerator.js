@@ -187,7 +187,7 @@ export class ProfessionalReviewReportGenerator {
                 <div class="pr-kpi-card"><div class="label">${L('npv')}</div><div class="value">${_fmt(ind.npv || 0)}</div></div>
                 <div class="pr-kpi-card"><div class="label">${L('irr')}</div><div class="value">${SAFE.pctText(ind.irr)}</div></div>
                 <div class="pr-kpi-card"><div class="label">${L('paybackPeriod')}</div><div class="value">${SAFE.payback(ind.paybackPeriod ?? ind.payback)}</div></div>
-                <div class="pr-kpi-card"><div class="label">${L('breakEvenPointValue')}</div><div class="value">${_fmt(ind.breakEvenPointValue || 0)}</div></div>
+                <div class="pr-kpi-card"><div class="label">${L('breakEvenPointValue')}</div><div class="value">${SAFE.breakeven(ind, _fmt)}</div></div>
             </div>
             <p><strong>هيكل التمويل:</strong></p>
             <table class="pr-table">
