@@ -19,7 +19,7 @@
  *    إلزامي قبل العرض (فخّ متكرر موثّق: أنتج سابقاً «عائد داخلي −0.1%» في تقرير ممول).
  */
 import { ProjectManager } from '../services/ProjectManager.js';
-import { calculateStudy } from '../core/engine.js';
+import { calculateStudy, ENGINE_VERSION } from '../core/engine.js';
 import { getOfficialIndicators } from '../core/resultContract.js';
 import { generateExecutiveSummary } from '../services/InternalAIGenerator.js';
 import { calculateStudyCompleteness } from '../utils/studyCompleteness.js';
@@ -132,6 +132,7 @@ export class ProjectOverviewView {
         this.container.innerHTML = `
             <div class="dv po animate-entry">
                 ${this._renderHeader(data, completeness, headerName)}
+                ${this._renderEngineVersionNotice(data)}
                 ${qualityGate.locked ? this._renderQualityBlocked(qualityGate) : (decision ? this._renderDecision(decision, results, data?.appSettings?.mode) : this._renderInsufficient(completeness))}
                 ${this._renderIndicators(indicators)}
                 ${decision ? this._renderSummary(data, results) : ''}
@@ -150,6 +151,24 @@ export class ProjectOverviewView {
                 ${blockers.length ? `<div class="po__reasons"><h3 class="po__reasons-title">ابدأ بهذه الإصلاحات</h3><ul class="po__reasons-list">${blockers.map(item => `<li>${escapeHtml(item.message)}</li>`).join('')}</ul></div>` : ''}
                 <p class="po__block-note">افتح الدراسة لإصلاح البنود؛ ستظهر التوصية تلقائياً بعد اجتياز بوابة الجودة.</p>
             </section>
+        `;
+    }
+
+    /**
+     * قرار لجنة 2026-08-27 (انظر engine.js:ENGINE_VERSION): لا تنبيه لو لم
+     * تُحفَظ الدراسة قط ببصمة إصدار سابقة (لا أساس مقارنة — دراسات قديمة قبل
+     * هذه الميزة)، ولا لو النسخة المحفوظة تطابق الحالية. تنبيه فقط حين نعرف
+     * فعلياً أن المعادلات تغيّرت منذ آخر حفظ لهذه الدراسة تحديداً.
+     */
+    _renderEngineVersionNotice(data) {
+        const savedVersion = data?._meta?.engineVersion;
+        if (!savedVersion || savedVersion === ENGINE_VERSION) return '';
+        return `
+            <div class="po__engine-notice" role="note">
+                تم تحديث معادلات المحرك المالي منذ آخر حفظ لهذه الدراسة — قد تختلف
+                الأرقام المعروضة الآن عمّا رأيته أو صدّرته سابقاً. احفظ الدراسة من
+                جديد لتثبيت النسخة الحالية.
+            </div>
         `;
     }
 
