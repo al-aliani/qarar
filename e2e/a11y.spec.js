@@ -7,6 +7,13 @@
  * landing.html وpricing.html وhelp.html. يقيّد المعايير لـwcag2a/wcag2aa/wcag21a/
  * wcag21aa فقط — لا `best-practice` (كثيرة الإيجابيات الكاذبة، ليست معياراً ملزِماً).
  *
+ * تدقيق 2026-08-27: التغطية اقتصرت على 3 صفحات فقط من أصل 18 صفحة عامة لا تتطلب
+ * تسجيل دخول — البقية (about/contact/why/deliverables/partners/experts/blog/
+ * experiences/suppliers والصفحات القانونية الست) كانت بلا أي فحص آلي رغم إمكان
+ * فحصها دون أي حاجز مصادقة. توسيع التغطية لصفحات التطبيق الداخلية (بعد تسجيل
+ * الدخول) يبقى خارج نطاق هذا الملف — يحتاج حساب اختبار حقيقي على مشروع Supabase
+ * تجريبي (بند مفتوح منفصل، ليس نقص تقني بحت).
+ *
  * الوضع الداكن أُزيل من الموقع بقرار مالك (2026-08-22)، وtheme-init.js يفرض
  * data-theme="light" دوماً بلا شرط على تفضيل النظام — فلا فحوصات لون/تباين هنا يمكن
  * أن تتأثر بمحاكاة نظام داكن خاطئة أصلاً. colorScheme:'light' أدناه توثيق صريح لهذا
@@ -24,6 +31,21 @@ const PAGES = [
     { name: 'landing.html', path: '/landing.html' },
     { name: 'pricing.html', path: '/pricing.html' },
     { name: 'help.html', path: '/help.html' },
+    { name: 'about.html', path: '/about.html' },
+    { name: 'contact.html', path: '/contact.html' },
+    { name: 'why.html', path: '/why.html' },
+    { name: 'deliverables.html', path: '/deliverables.html' },
+    { name: 'partners.html', path: '/partners.html' },
+    { name: 'experts.html', path: '/experts.html' },
+    { name: 'suppliers.html', path: '/suppliers.html' },
+    { name: 'blog.html', path: '/blog.html' },
+    { name: 'experiences.html', path: '/experiences.html' },
+    { name: 'terms.html', path: '/terms.html' },
+    { name: 'privacy.html', path: '/privacy.html' },
+    { name: 'refund-policy.html', path: '/refund-policy.html' },
+    { name: 'disclaimer.html', path: '/disclaimer.html' },
+    { name: 'cookie-policy.html', path: '/cookie-policy.html' },
+    { name: 'data-retention.html', path: '/data-retention.html' },
 ];
 
 /** رسالة فشل مفصَّلة: القاعدة، الوصف، والعناصر المخالِفة — لتشخيص فوري بلا فتح تقرير HTML. */

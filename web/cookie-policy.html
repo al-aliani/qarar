@@ -63,11 +63,24 @@
         </div>
         <div class="lp-card" >
           <h2>إدارة التفضيلات</h2>
-          <p class="text-muted">يمكنك حذف ملفات الارتباط وبيانات الموقع من إعدادات المتصفح. لمزيد من المعلومات عن معالجة البيانات راجع <a href="./privacy.html">سياسة الخصوصية</a>.</p>
+          <p class="text-muted">اخترت "موافق" أو "رفض" مرة واحدة عند أول زيارة، ولا يُعاد عرض الإشعار بعدها. اضغط الزر أدناه لتغيير قرارك — سنعيدك للصفحة الرئيسية حيث يظهر إشعار الكوكيز من جديد فوراً، دون أي أثر على دراساتك المحفوظة. لحذف كل بيانات الموقع من جهازك (بما فيها دراساتك) راجع إعدادات المتصفح مباشرة.</p>
+          <button type="button" id="cookiePrefsReset" class="lp-btn-outline">تغيير تفضيلات الكوكيز</button>
         </div>
-      
+
       </div>
     </main>
     <script src="./js/theme-init.js"></script>
+    <script>
+      // تدقيق 2026-08-27: لا سبيل لسحب موافقة/رفض الكوكيز بعد القرار الأول —
+      // localStorage.getItem(KEY) في public/js/cookie-notice.js يمنع إعادة
+      // عرض الإشعار للأبد. هذا الزر يمسح المفتاح نفسه فقط (لا بيانات الدراسة)
+      // ثم يعيد الزائر للرئيسية — الصفحة الوحيدة مع landing.html التي تُحمِّل
+      // cookie-notice.js فعلياً، فيُعاد حقن الإشعار مباشرة هناك (لا فائدة من
+      // إعادة تحميل هذه الصفحة نفسها، فهي لا تحمّل ذلك السكربت).
+      document.getElementById('cookiePrefsReset')?.addEventListener('click', function () {
+        try { localStorage.removeItem('qarar_cookie_consent'); } catch (_) { /* localStorage غير متاح */ }
+        window.location.href = './';
+      });
+    </script>
   </body>
 </html>
