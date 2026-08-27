@@ -38,7 +38,9 @@ export const PRICING_PACKAGES = [
 export const ADDONS = [
     { id: 'priority_support', name: 'دعم أولوية', price: 99 },
     { id: 'extra_review', name: 'مراجعة إضافية', price: 299 },
-    { id: 'result_session', name: 'جلسة شرح النتائج', price: 399 }
+    // includedIn: باقة «خدمة كاملة» تتضمن جلسة الشرح أصلاً (PRICING_COMPARISON.full.includes
+    // أعلاه) — بلا هذا الحقل كانت شاشة الدفع تبيعها إضافة بـ399 حتى لمن يملكها ضمن باقته.
+    { id: 'result_session', name: 'جلسة شرح النتائج', price: 399, includedIn: ['full'] }
 ];
 
 /**

@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(req, { error: 'study_not_owned' }, 403);
     }
   }
-  const addons = selectedAddons(body.addons);
+  const addons = selectedAddons(body.addons, pkg.id);
   const subtotal = pkg.price + addons.reduce((sum, item) => sum + item.price, 0);
   const couponCode = String(body.coupon || '').trim().toUpperCase();
   let discountPercent = 0;

@@ -301,7 +301,7 @@ body {
   margin-bottom: 8px;
 }
 
-.lp-card a {
+.lp-card a:not(.btn) {
   color: var(--lp-primary);
   font-weight: 600;
   text-decoration: underline;
@@ -309,7 +309,7 @@ body {
   transition: text-decoration-color 0.2s ease;
 }
 
-.lp-card a:hover {
+.lp-card a:not(.btn):hover {
   text-decoration-color: var(--lp-primary);
 }
 
