@@ -1,6 +1,9 @@
 // أداة قياس حجم الحزمة (تدقيق أداء) — تُشغَّل بعد `npm run build`.
 // تطبع: حجم كل حزمة أوّلية خاماً وبـbrotli، وقائمة modulepreload من index.html،
-// والاستيرادات الثابتة لـmain-*.js. للاستعمال اليدوي فقط، ليست جزءاً من البناء.
+// والاستيرادات الثابتة لـmain-*.js.
+// تدقيق 2026-08-26: تقبل الآن `--budget=<بايت>` اختيارياً — إن مُرِّرت وتجاوزها
+// إجمالي brotli للحمولة الأولية، تخرج الأداة برمز 1 (بوابة CI حاجبة). القياس
+// نفسه أعلاه لم يتغيّر؛ انظر .github/workflows/ci.yml للرقم الأساسي والعتبة الموثَّقة.
 import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
@@ -66,3 +69,17 @@ console.log(staticImports.length ? staticImports.join('\n') : '(لا شيء)');
 
 console.log('\n=== عدد ملفات main-*.js في dist (كشف تراكم البناءات) ===');
 console.log(fs.readdirSync(assetsDir).filter((f) => /^main-.*\.js$/.test(f)).length);
+
+// بوابة ميزانية اختيارية — لا تُغيّر القياس أعلاه، فقط تحكم رمز الخروج.
+const budgetArg = process.argv.find((a) => a.startsWith('--budget='));
+if (budgetArg) {
+    const budget = Number(budgetArg.slice('--budget='.length));
+    console.log('\n=== بوابة ميزانية الحمولة الأولية (brotli) ===');
+    if (totalBr > budget) {
+        console.error(
+            `❌ تجاوزت الحمولة الأولية (brotli) الميزانية: ${totalBr} بايت > ${budget} بايت (زيادة ${totalBr - budget} بايت)`,
+        );
+        process.exit(1);
+    }
+    console.log(`✅ ${totalBr} بايت <= الميزانية ${budget} بايت`);
+}

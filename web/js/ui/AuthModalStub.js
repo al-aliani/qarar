@@ -38,6 +38,32 @@ function friendlyRecoveryError(code) {
     return RECOVERY_ERROR_MESSAGES[code] || 'حدث خطأ غير متوقع، حاول مرة أخرى.';
 }
 
+// تدقيق حي 2026-08-25: النافذة كانت تُفتح دائماً على تبويب «دخول» بعنوان «أهلاً بعودتك»،
+// حتى لزائر وصل لتوّه من زر «ابدأ دراستك الآن» أو أحد أزرار الباقات في صفحة التسويق
+// (app.js يحفظ landing_cta/selected_package عند وصوله) — أي إن التطبيق يعرف أنه قادم
+// بنيّة البدء، ثم يحيّيه بـ«أهلاً بعودتك» على نموذج دخول لحساب لا يملكه. العلامة أدناه
+// (تُكتَب عند كل نجاح فعلي في هذه النافذة) هي دليلنا الوحيد على حساب سابق على هذا الجهاز.
+const HAS_ACCOUNT_KEY = 'qarar_has_account';
+
+function hasKnownAccount() {
+    try { return localStorage.getItem(HAS_ACCOUNT_KEY) === '1'; } catch (_) { return false; }
+}
+
+function markHasAccount() {
+    try { localStorage.setItem(HAS_ACCOUNT_KEY, '1'); } catch (_) { /* تجاهل بيئات بلا localStorage */ }
+}
+
+function cameFromLandingFunnel() {
+    try {
+        return !!(sessionStorage.getItem('landing_cta') || sessionStorage.getItem('selected_package'));
+    } catch (_) { return false; }
+}
+
+/** التبويب الافتراضي عند الفتح: إنشاء حساب فقط لقادمٍ من القمع بلا دليل على حساب سابق. */
+function shouldDefaultToSignUp() {
+    return cameFromLandingFunnel() && !hasKnownAccount();
+}
+
 export class AuthModal {
     constructor(containerId, options = {}) {
         this.containerId = containerId;
@@ -218,6 +244,9 @@ export class AuthModal {
         };
         tabSignIn?.addEventListener('click', () => setAuthTab(false));
         tabSignUp?.addEventListener('click', () => setAuthTab(true));
+        // الافتراضي في الـHTML أعلاه هو «دخول» (زائر عائد أو أي حالة أخرى) — لا نحوّل إلا
+        // للقادم من قمع صفحة التسويق بلا حساب معروف على هذا الجهاز.
+        if (shouldDefaultToSignUp()) setAuthTab(true);
 
         const validatePassword = (p) => {
             if (p.length < 8) return 'كلمة المرور 8 أحرف على الأقل';
@@ -416,6 +445,7 @@ export class AuthModal {
                         // تأكيد واضحة، ونحوّله لتبويب الدخول، دون إغلاق النافذة أو استدعاء onSuccess.
                         if (!authResult.data?.session) {
                             trackEvent('signup_awaiting_confirmation', {});
+                            markHasAccount(); // الحساب أُنشئ فعلاً — لا يُعرَض عليه «إنشاء حساب» مجدداً
                             setAuthTab(false);
                             showSuccessNote('تم إنشاء الحساب. أرسلنا رابط تأكيد إلى بريدك — فعّله ثم سجّل الدخول من هنا.');
                             return;
@@ -443,6 +473,7 @@ export class AuthModal {
                         }
                     } catch (_) { /* لا نمنع نجاح الدخول بسبب فشل حفظ الباقة المفضّلة */ }
                     this._succeeded = true;
+                    markHasAccount();
                     trackEvent(isSignUp ? 'signup_complete' : 'login_complete', {});
                     if (this.onSuccess) this.onSuccess({ success: true });
                     this.close();
@@ -497,6 +528,9 @@ export class AuthModal {
                 if (!ok) { showErr('Supabase غير مهيأ. لا يمكن الدخول بـ Google.'); return; }
                 const result = await signInWithOAuth('google');
                 if (result.ok && result.data?.url) {
+                    // لا markHasAccount() هنا: هذا مجرد تحويل لصفحة Google — النجاح الفعلي
+                    // يقع بعد العودة ولا يمرّ بهذه النافذة إطلاقاً (تُدمَّر بالتنقّل). وسم
+                    // النية وحدها سيكذب على كل من ألغى من عند Google.
                     const { log: auditLog, ACTIONS } = await import('../utils/auditLogger.js');
                     auditLog(ACTIONS.OAUTH, { provider: 'google' });
                     window.location.href = result.data.url;

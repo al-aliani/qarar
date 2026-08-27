@@ -7,6 +7,9 @@
 import { getAuthUser, getSupabaseClient } from '../../supabaseClient.js';
 import { listLocalExports } from '../services/LocalExportHistory.js';
 import { escapeHtml } from '../utils/escape.js';
+import { toast } from '../utils/toast.js';
+
+const DOWNLOAD_FAILURE_MESSAGE = 'تعذّر تحضير رابط التنزيل — سجّل الدخول من جديد أو أعد التصدير من دراستك';
 
 const FILE_TYPE_LABEL = { 
     word: 'Word', excel: 'Excel', pptx: 'PowerPoint', csv: 'CSV', json: 'JSON', html: 'HTML', pdf: 'PDF', file: 'ملف', batch_zip: 'حزمة (ZIP)',
@@ -116,7 +119,13 @@ export class DownloadsCenterView {
                 const { supabase: sb, ok: sbOk } = await getSupabaseClient();
                 if (sbOk && sb) {
                     const { data, error } = await sb.storage.from('exports').createSignedUrl(btn.dataset.storagePath, 60);
-                    if (!error && data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener');
+                    if (!error && data?.signedUrl) {
+                        window.open(data.signedUrl, '_blank', 'noopener');
+                    } else {
+                        toast.error(DOWNLOAD_FAILURE_MESSAGE);
+                    }
+                } else {
+                    toast.error(DOWNLOAD_FAILURE_MESSAGE);
                 }
                 btn.disabled = false;
                 btn.textContent = 'تنزيل';

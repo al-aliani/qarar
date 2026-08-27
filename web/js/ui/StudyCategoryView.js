@@ -160,9 +160,18 @@ export class StudyCategoryView {
         // ملاحظة سلامة (تحقّق حي 2026-07-11): استُخدم setTimeout لا requestAnimationFrame
         // للفسحة — rAF لا يُطلَق إطلاقاً في تبويب مخفي (document.hidden)، فيُعلّق الحلقة
         // للأبد ويمنع رسم بقية الخطوات؛ setTimeout مستقل عن الرؤية.
+        // حراسة لكل خطوة: مستدعي render (navigateToCategory في app.js) بلا try/catch،
+        // فرميةٌ واحدة من خطوة واحدة كانت تكسر الحلقة وتترك بقية أقسام التصنيف غير
+        // مرسومة إطلاقاً وبلا أي رسالة. نعزل الفشل داخل قسمه ونُكمل البقية.
         for (const index of stepIndexes) {
             if (options.isCurrent && !options.isCurrent()) return false;
-            await this.renderStepInto(index, options);
+            try {
+                await this.renderStepInto(index, options);
+            } catch (err) {
+                console.error(`Failed to render category step ${index}:`, err);
+                const failed = document.getElementById(`category-step-content-${index}`);
+                if (failed) failed.innerHTML = '<div class="alert alert--danger" role="alert">تعذّر عرض هذا القسم. حدّث الصفحة لإعادة المحاولة.</div>';
+            }
             await new Promise(resolve => setTimeout(resolve, 0));
         }
         if (options.isCurrent && !options.isCurrent()) return false;

@@ -3,6 +3,7 @@
  * Impact of changes in Revenue, Costs, and Prices
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
+import { hasMinimumRevenueData, hasMinimumFinancialData } from '../utils/dataSufficiency.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -15,6 +16,38 @@ export class SensitivityAnalysis {
 
     render() {
         const state = this.store.getState();
+
+        // بوابة كفاية البيانات — نفس المزدوجة المعتمدة في لوحة القرار
+        // (DecisionDashboard.js:54-56) ولوحة المؤشرات المالية. بدونها كان المحرك
+        // يُعوّض الغائب بصفر: calculateStudy(دراسة فارغة) تُعيد npv = 0 عدداً (لا null
+        // ولا NaN) فيفلت من حارس baseNPV أدناه، وformatCurrency(0) تطبع «٠ ر.س.»،
+        // و_npvClass(0) تُعيد text-success — فتظهر 20+ خانة خضراء تحت لافتة «تحليل
+        // الحساسية إلزامي»، تُقرأ كتحليل أُجري ونتيجته «المشروع لا يتأثر بـ±20%».
+        // والأسوأ: بإيراد بلا تكاليف تصبح كل الخانات موجبة كبيرة وخضراء.
+        const hasRevenueData = hasMinimumRevenueData(state);
+        const hasFinancialData = hasMinimumFinancialData(state);
+        if (!hasRevenueData || !hasFinancialData) {
+            const warningHeading = hasRevenueData
+                ? 'لا توجد بيانات تكلفة (رأسمالية أو تشغيلية أو تمويل).'
+                : 'لا توجد بيانات إيرادات.';
+            this.container.innerHTML = `
+                <div class="sensitivity-analysis">
+                    <h2 class="section-title">تحليل الحساسية</h2>
+                    <div class="card glass-card">
+                        <div class="alert alert--warning" role="alert">
+                            <p><strong>${icon('i-warning')} ${warningHeading} لا يمكن حساب الحساسية قبل إدخال الإيرادات والتكاليف.</strong></p>
+                            <p class="text-sm mt-2">تحليل الحساسية يقيس تأثّر صافي القيمة الحالية بتغيّر الإيرادات والتكاليف — وبلا أرقام فعلية تكون كل خانات المصفوفة أصفاراً لا تعني «المشروع غير حسّاس». أكمل:</p>
+                            <ul class="text-sm mt-2" style="list-style: disc; padding-right: 20px;">
+                                <li>مصادر الإيرادات (خطوة "مصادر الإيرادات")</li>
+                                <li>التكاليف الرأسمالية (خطوة "الدراسة الفنية")</li>
+                                <li>التكاليف التشغيلية (خطوات "الموارد البشرية" و"اللوجستية" و"الإدارية")</li>
+                                <li>هيكل التمويل (خطوة "مصادر وهيكلة التمويل")</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>`;
+            return;
+        }
 
         // ذاكرة تخزين مؤقت لهذه الدورة فقط: تُنشأ من جديد في بداية كل render() كي
         // لا تُسرّب نتائج قديمة بعد تغيّر البيانات. المفتاح = تمثيل JSON ثابت

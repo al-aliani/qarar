@@ -2080,9 +2080,15 @@ textarea.input {
     font-family: var(--font-mono);
 }
 
+/* repeat(3, 1fr) = repeat(3, minmax(auto, 1fr)): الأعمدة لا تنكمش دون min-content،
+   فعلى جوال 375px (عمود محتوى ~293px) كانت بطاقة «إجمالي الأقساط» تخرج خارج الشاشة
+   كلياً — صفر بكسل مرئي — والرقم الأهم في جدول التمويل يختفي. لا نُخفي الفائض
+   (overflow-x: hidden يقتطع بصمت في RTL)، بل نلتفّ: نفس نمط .indicators-grid أعلاه
+   الذي يحمل بطاقات .kpi-card نفسها، مع min(100%, …) كي لا يعود الفيضان لو ضاق الأب
+   دون العتبة. */
 .schedule-summary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
     gap: var(--s-2);
     margin-bottom: var(--s-3);
 }

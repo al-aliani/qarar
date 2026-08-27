@@ -15,8 +15,12 @@ function fakeStore(state) {
     return { getState: () => state, get: () => state };
 }
 
-// دراسة تُنتج استرداداً ~3.6 سنة (بين 3.5 الفعلية و7 القديمة الخاطئة) وIRR~13.6%
+// دراسة تُنتج استرداداً ~4.06 سنة (بين 3.5 الفعلية و7 القديمة الخاطئة) وIRR~13.6%
 // (بين 5% القديمة و15% الفعلية) — بالضبط منطقة التناقض التي وثّقها التدقيق.
+// معايرة 2026-08-26: الإيجار 17,000 ⟶ 18,000. سببه أن استرداد رأس المال العامل في
+// السنة الأخيرة صار يعمل للدراسات بلا سياسة دورة نقدية أيضاً (engine.js: nwcRecapture)،
+// فارتفع IRR هذه الحالة إلى 17.66% وخرجت من النافذة المقصودة. أُعيدت المعايرة ولم
+// يُوسَّع أي توكيد — النافذة (5%، 15%) هي جوهر ما يحرسه الاختبار.
 function createBorderlineRevisedStudy() {
     return {
         [SECTIONS.PROJECT_INFO]: { businessModel: 'Independent' },
@@ -24,7 +28,7 @@ function createBorderlineRevisedStudy() {
         [SECTIONS.TECHNICAL]: { equipment: [{ price: 250000, quantity: 1 }], buildings: [], furniture: [], establishmentCosts: [], capacityUtilization: [] },
         [SECTIONS.HR]: { positions: [] },
         [SECTIONS.LOGISTICS]: { logistics: [] },
-        [SECTIONS.ADMINISTRATIVE]: { administrative: [{ name: 'إيجار', monthly: 17000 }] },
+        [SECTIONS.ADMINISTRATIVE]: { administrative: [{ name: 'إيجار', monthly: 18000 }] },
         [SECTIONS.MARKETING]: { campaigns: [] },
         [SECTIONS.REVENUE]: { streams: [{ type: 'operating', customersPerMonth: 400, avgPrice: 100, variableCostRate: 0.30, growthRate: 0 }] },
         [SECTIONS.SERVICES]: { items: [] },
@@ -57,7 +61,7 @@ describe('FinancialDashboard — عتبات IRR/ROI الموحّدة', () => {
     beforeEach(() => { document.body.innerHTML = `<div id="c"></div>`; });
     afterEach(() => { document.body.innerHTML = ''; });
 
-    it('بطاقة IRR تُصنَّف kpi-negative (لا kpi-positive) لمشروع IRR~10.5% بين 5% القديمة و15% الفعلية', () => {
+    it('بطاقة IRR تُصنَّف kpi-negative (لا kpi-positive) لمشروع IRR~13.6% بين 5% القديمة و15% الفعلية', () => {
         const dashboard = new FinancialDashboard('c', fakeStore(createBorderlineRevisedStudy()));
         dashboard.render();
         expect(dashboard.results.indicators.irr).toBeGreaterThan(0.05);

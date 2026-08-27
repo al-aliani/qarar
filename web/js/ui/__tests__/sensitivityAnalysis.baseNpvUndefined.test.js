@@ -24,6 +24,16 @@ function fakeStore(state) {
     return { getState: () => state };
 }
 
+// أقلّ حالة تجتاز بوابة كفاية البيانات في SensitivityAnalysis (مصدر إيراد + أصل
+// رأسمالي، أُضيفت 2026-08-26). المحرك مُقلَّد هنا، فمحتوى الحالة لا يؤثر في أي رقم
+// معروض — دورها الوحيد فتح البوابة كي يبقى هذا الملف يختبر ما بُني له فعلاً.
+function sufficientState() {
+    return {
+        revenue: { streams: [{ type: 'operating', customersPerMonth: 100, avgPrice: 50 }] },
+        technical: { equipment: [{ price: 100000, quantity: 1 }] }
+    };
+}
+
 function operatingLevelTable() {
     const title = [...document.querySelectorAll('.card-title')].find(h => h.textContent.includes('مستويات التشغيل'));
     return title.closest('.card');
@@ -42,7 +52,7 @@ describe('SensitivityAnalysis — baseNPV غير معرَّف: لا يُحوَّ
     });
 
     it('بطاقة الحساسية: نقطة "الأساسي" تعرض "--" محايدة (text-muted) لا "ر.س. 0" أخضر', () => {
-        const view = new SensitivityAnalysis('c', fakeStore({}));
+        const view = new SensitivityAnalysis('c', fakeStore(sufficientState()));
         view.render();
 
         const basePoint = document.querySelector('.sensitivity-item-card .range-point.base');
@@ -54,7 +64,7 @@ describe('SensitivityAnalysis — baseNPV غير معرَّف: لا يُحوَّ
     });
 
     it('مصفوفة التأثير: عمود "الأساسي" لصف الإيرادات يعرض "--" محايدة لا صفراً أخضر', () => {
-        const view = new SensitivityAnalysis('c', fakeStore({}));
+        const view = new SensitivityAnalysis('c', fakeStore(sufficientState()));
         view.render();
 
         const row = [...document.querySelectorAll('.data-table tbody tr')].find(r => r.querySelector('td').textContent === 'الإيرادات');
@@ -65,7 +75,7 @@ describe('SensitivityAnalysis — baseNPV غير معرَّف: لا يُحوَّ
     });
 
     it('جدول مستويات التشغيل: صف "100% (أساسي)" يعرض "--" محايدة لا "ر.س. 0" أخضر', () => {
-        const view = new SensitivityAnalysis('c', fakeStore({}));
+        const view = new SensitivityAnalysis('c', fakeStore(sufficientState()));
         view.render();
 
         const table = operatingLevelTable();

@@ -9,7 +9,40 @@ import { MERCHANT_INFO } from '../config.js';
 import { escapeHtml } from './escape.js';
 import { buildZatcaTlvBase64 } from './zatcaTlv.js';
 
-const TIER_LABELS = { self: 'الباقة الذاتية', reviewed: 'مراجَعة بخبير', full: 'الخدمة الكاملة' };
+/**
+ * جدول الترجمة الوحيد لكل رمز برمجي (enum) يصل إلى ورق الفاتورة النظامية. المفاتيح تطابق
+ * قيود قاعدة البيانات حرفياً: orders_provider_check (20260721150000_bank_transfer.sql) و
+ * Tier في _shared/pricing.ts. أي رمز جديد يُضاف هنا وحده — لا سلسلة if ولا مصفوفة ثانية.
+ * (حالة الطلب `orders.status` لا تُطبع على الفاتورة أصلاً، فلا مدخل لها هنا.)
+ */
+const CODE_LABELS = {
+    provider: {
+        bank_transfer: 'تحويل بنكي',
+        moyasar: 'بطاقة مدى/ائتمان (ميسر)',
+        stripe: 'بطاقة ائتمان (Stripe)',
+        tamara: 'تقسيط (تمارا)',
+    },
+    tier: {
+        free: 'الباقة المجانية',
+        self: 'الباقة الذاتية',
+        reviewed: 'مراجَعة بخبير',
+        full: 'الخدمة الكاملة',
+    },
+};
+
+/**
+ * يترجم رمزاً إلى نصّه العربي. الرمز غير المعروف لا يُطبع خاماً على مستند نظامي عربي —
+ * يُستبدل بالبديل المحايد، فالفاتورة تبقى مقروءة بلا تسريب اسم برمجي.
+ */
+// القراءة بالأقواس على كائن حرفي تصل إلى مفاتيح Object.prototype الموروثة، ودالة موروثة
+// قيمة صادقة فتُعاد بدل الفالباك: code='constructor' كان يطبع «function Object() { [native
+// code] }» على مستند نظامي. `Object.hasOwn` يقصر البحث على مفاتيح الجدول نفسه.
+// غير قابل للوصول اليوم (قيود القاعدة تحصر القيم)، لكن مستند ضريبي لا يُترك على شرط خارجي.
+const label = (kind, code, fallback) => {
+    const key = String(code ?? '');
+    const table = CODE_LABELS[kind];
+    return (table && Object.hasOwn(table, key)) ? table[key] : fallback;
+};
 const money = (n) => Number(n || 0).toFixed(2);
 
 function formatDateTime(iso) {
@@ -32,7 +65,7 @@ export function renderInvoiceHtml(order, merchant, qrDataUrl) {
     const ts = order.paid_at || order.created_at || '';
     const items = (Array.isArray(order.items) && order.items.length)
         ? order.items
-        : [{ name: TIER_LABELS[order.tier] || order.tier, price: total }];
+        : [{ name: label('tier', order.tier, 'خدمة دراسة جدوى'), price: total }];
     const rows = items.map((it) =>
         `<tr><td>${escapeHtml(it.name || '')}</td><td class="ltr">${money(it.price)}</td></tr>`
     ).join('');
@@ -78,7 +111,7 @@ export function renderInvoiceHtml(order, merchant, qrDataUrl) {
         <div class="lbl">الفاتورة</div>
         <div>رقم: <span class="ltr">${escapeHtml(String(order.id || '').slice(0, 8))}</span></div>
         <div>التاريخ: <span class="ltr">${escapeHtml(formatDateTime(ts))}</span></div>
-        <div>طريقة الدفع: ${escapeHtml(order.provider || '—')}</div>
+        <div>طريقة الدفع: ${escapeHtml(label('provider', order.provider, '—'))}</div>
       </div>
     </div>
     <table><thead><tr><th>البند</th><th class="ltr">المبلغ (شامل الضريبة)</th></tr></thead><tbody>${rows}</tbody></table>

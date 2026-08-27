@@ -6,7 +6,7 @@
 // (بلا زكاة، خصم 5%) فتعرض NPV/IRR مختلفة عن التقرير المُصدَّر لنفس الدراسة.
 // الآن كل الشاشات والمصدّرات تقرأ من engine.js حصراً.
 import { calculateStudy as runFullModel } from '../core/engine.js';
-import { hasMinimumRevenueData } from '../utils/dataSufficiency.js';
+import { hasMinimumRevenueData, hasMinimumFinancialData } from '../utils/dataSufficiency.js';
 import { DEFAULT_SCENARIOS, SECTIONS } from '../core/schema.js';
 import { stepIndexById } from '../core/wizardSteps.js';
 import { SmartAdvisor } from '../services/SmartAdvisor.js';
@@ -97,21 +97,31 @@ export class FinancialDashboard {
         // Run the full financial model
         const studyData = this.store.get ? this.store.get() : this.store.getState();
 
-        // بلا إيرادات لا معنى للوحة: المحرك يعيد NPV/ROI سالبة مضللة لمشروع لم تُدخل
-        // بياناته بعد — نعرض حالة «لا بيانات» إرشادية بدل بطاقات بأرقام سالبة.
-        if (!hasMinimumRevenueData(studyData)) {
+        // بلا إيرادات — أو بلا أي بيانات تكلفة/تمويل — لا معنى للوحة: المحرك يُعوّض
+        // الغائب بصفر فيُخرِج NPV واسترداداً يبدوان «حقيقيين» (مصدر إيراد وحيد بلا أي
+        // أصل: NPV ≈ 193 ألف واسترداد 0.1 سنة) لمشروع لم تُدخَل بياناته بعد.
+        // البوابة المزدوجة هي نفسها المعتمدة في لوحة القرار (DecisionDashboard.js:54-56)؛
+        // كانت هذه اللوحة وحدها باقية على hasMinimumRevenueData الموثَّق في
+        // dataSufficiency.js:20-28 أنها غير كافية لهذه الحالة بالذات.
+        const hasRevenueData = hasMinimumRevenueData(studyData);
+        const hasFinancialData = hasMinimumFinancialData(studyData);
+        if (!hasRevenueData || !hasFinancialData) {
+            const warningHeading = hasRevenueData
+                ? 'لا توجد بيانات تكلفة (رأسمالية أو تشغيلية أو تمويل). يرجى إكمال أحد البنود أدناه.'
+                : 'لا توجد بيانات إيرادات. يرجى إضافة مصادر الإيرادات في خطوة "مصادر الإيرادات".';
             this.container.innerHTML = `
                 <div class="card glass-card">
                     <h2 class="card-title">لوحة المؤشرات المالية</h2>
                     <div class="alert alert--warning" role="alert">
-                        <p><strong><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> لا توجد بيانات إيرادات. يرجى إضافة مصادر الإيرادات في خطوة "مصادر الإيرادات".</strong></p>
+                        <p><strong><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> ${warningHeading}</strong></p>
                         <p class="text-sm mt-2">لعرض المؤشرات المالية (صافي القيمة الحالية، العائد، التعادل) أكمل:</p>
                         <ul class="text-sm mt-2" style="list-style: disc; padding-right: 20px;">
                             <li>مصادر الإيرادات (خطوة "مصادر الإيرادات")</li>
                             <li>التكاليف الرأسمالية (خطوة "الدراسة الفنية")</li>
                             <li>التكاليف التشغيلية (خطوات "الموارد البشرية" و"اللوجستية" و"الإدارية")</li>
+                            <li>هيكل التمويل (خطوة "مصادر وهيكلة التمويل")</li>
                         </ul>
-                        <button type="button" id="btnGoRevenueStep" class="btn btn--primary btn--sm mt-3">الانتقال إلى خطوة مصادر الإيرادات</button>
+                        ${hasRevenueData ? '' : '<button type="button" id="btnGoRevenueStep" class="btn btn--primary btn--sm mt-3">الانتقال إلى خطوة مصادر الإيرادات</button>'}
                     </div>
                 </div>`;
             this.container.querySelector('#btnGoRevenueStep')?.addEventListener('click', () => {
@@ -121,7 +131,7 @@ export class FinancialDashboard {
                 }
             });
             // خطأ يمنع الحساب أصلاً — assertive لا polite.
-            announce('تعذّر حساب المؤشرات المالية: لا توجد بيانات إيرادات. أضف مصادر الإيرادات أولاً.', { assertive: true });
+            announce(`تعذّر حساب المؤشرات المالية. ${warningHeading}`, { assertive: true });
             return;
         }
 
@@ -155,6 +165,33 @@ export class FinancialDashboard {
             : (Number.isFinite(indicators.breakEvenUnits) ? indicators.breakEvenUnits / 12 : null);
         const breakevenDisplay = breakevenMonthly != null ? Math.round(breakevenMonthly) : '—';
 
+        // بوابة الجودة الرسمية (qaChecks.js: NO_REVENUE) تُصدر خطأً حرجاً حين يكون إيراد
+        // السنة الأولى صفراً، فتحجب لوحة القرار ونظرة المشروع الحكمَ («القرار محجوب
+        // مؤقتاً»). هذه اللوحة متزامنة (stepComponentRegistry تستدعي render() بلا await)
+        // فلا تستطيع await runQAChecks — فتقرأ نفس الحقيقة من نفس المصدر: revenue السنة
+        // الأولى. بدونها كانت تُصدر «المشروع غير مجدٍ» بالأحمر على دراسة إيرادها صفر
+        // بينما بقية الشاشات تحجب — حكم قاطع على لا شيء.
+        const canJudge = revY1 > 0;
+
+        // ملخص التكاليف الرأسمالية — ثلاثة عيوب في جدول واحد (تدقيق 2026-08-26):
+        // (1) تسمية كاذبة: كان يعرض capex.subtotal تحت اسم «التجهيزات والمعدات» بينما
+        //     subtotal مجموع كل بنود capexBreakdown (مبانٍ، أثاث، مركبات، موارد تقنية،
+        //     تأسيس، تراخيص، تسويق ما قبل الافتتاح…) — 223,000 معروضة كـ«معدات» والمعدات
+        //     الفعلية 200,000.
+        // (2) فجوة توازن: كان البند الأخير يقرأ capex.workingCapital، ورأس المال العامل
+        //     ليس كل ما بين subtotal والإجمالي — المخزون الافتتاحي بند رأسمالي مستقل خارج
+        //     capexBreakdown عمداً (engine.js: totalInvestment = totalCapex +
+        //     openingInventory + workingCapital)، فتجمع صفوف الجدول 354,340 تحت إجمالي
+        //     مطبوع 414,340. الآن البند المتبقي **يُشتقّ من الإجمالي** فيتوازن الجدول
+        //     بحكم البناء لا بتصحيح رقم واحد: أي بند رأسمالي جديد يضيفه المحرك مستقبلاً
+        //     يدخل هذا الصف تلقائياً بدل أن يتبخّر.
+        // (3) صف ميت: capex.contingency مثبَّت صفراً في المحرك (engine.js:1408) فكان صف
+        //     «احتياطي طوارئ (10%)» يعرض ٠ دائماً — يُعرض الآن شرطياً عند وجود قيمة، وبلا
+        //     نسبة 10% المزعومة (القيمة ليست نسبة من شيء).
+        const capexSubtotal = Number(capex.subtotal) || 0;
+        const capexContingency = Number(capex.contingency) || 0;
+        const capexRemainder = (Number(capex.total) || 0) - capexSubtotal - capexContingency;
+
         // النسب المالية (سيولة/ملاءة/ربحية) — إضافة إضافية بحتة من engine.js (result.ratios)،
         // سنة أولى فقط لهذه اللوحة؛ null تعني «غير قابلة للحساب» فتُعرض كشرطة لا صفر/رقم منفجر.
         const ratiosY1 = this.results.ratios?.[0] || {};
@@ -175,8 +212,8 @@ export class FinancialDashboard {
         this.container.innerHTML = `
             <h2 class="section-title">لوحة المؤشرات المالية</h2>
             <!-- Decision Banner: قرار ثلاثي GO / REVISE / NO-GO (لا يُختزل إلى ثنائي) -->
-            <div class="decision-banner ${decision === 'GO' ? 'is-go' : (decision === 'REVISE' ? 'is-revise' : 'is-nogo')}">
-                <div class="decision-label">${decision === 'GO' ? 'المشروع مجدٍ' : (decision === 'REVISE' ? 'المشروع يحتاج مراجعة' : 'المشروع غير مجدٍ')}</div>
+            <div class="decision-banner ${!canJudge ? 'is-revise' : (decision === 'GO' ? 'is-go' : (decision === 'REVISE' ? 'is-revise' : 'is-nogo'))}">
+                <div class="decision-label">${!canJudge ? 'القرار محجوب مؤقتاً' : (decision === 'GO' ? 'المشروع مجدٍ' : (decision === 'REVISE' ? 'المشروع يحتاج مراجعة' : 'المشروع غير مجدٍ'))}</div>
                 <div class="flex gap-2 items-center">
                     <button type="button" id="btnSimpleViewToggle" class="btn btn--sm ${isSimpleView ? 'btn--primary' : 'btn--ghost'}" title="${isSimpleView ? 'الرجوع للعرض الكامل (NPV، IRR)' : 'عرض مبسّط: هل ربح؟ متى استرداد؟ حد التعادل؟'}">${isSimpleView ? 'عرض كامل' : 'عرض مبسّط'}</button>
                     <button id="btnPresentationMode" class="btn btn--secondary btn--sm">
@@ -184,6 +221,7 @@ export class FinancialDashboard {
                     </button>
                 </div>
             </div>
+            ${canJudge ? '' : '<p class="text-sm text-muted mt-2" id="decisionWithheldNote">إيراد السنة الأولى = صفر، فلا يصح إعلان «مجدٍ» ولا «غير مجدٍ». أدخل مصادر الإيرادات وتوقعات المبيعات، ثم تظهر التوصية هنا.</p>'}
 
             <!-- عرض مبسّط (Brixx/StratPad) — هل المشروع ربح؟ متى يسترد؟ ما حد التعادل؟ -->
             <div id="simpleViewPanel" class="card glass-card mt-4 ${isSimpleView ? '' : 'hidden'}" aria-label="عرض مبسّط للمؤشرات">
@@ -346,9 +384,9 @@ export class FinancialDashboard {
             <div class="card mt-4">
                 <h3 class="text-gold">ملخص التكاليف الرأسمالية</h3>
                 <table class="summary-table">
-                    <tr><td>التجهيزات والمعدات</td><td class="text-mono">${this.formatCurrency(capex.subtotal)}</td></tr>
-                    <tr><td>احتياطي طوارئ (10%)</td><td class="text-mono">${this.formatCurrency(capex.contingency)}</td></tr>
-                    <tr><td>رأس المال العامل</td><td class="text-mono">${this.formatCurrency(capex.workingCapital)}</td></tr>
+                    <tr><td>التكاليف الرأسمالية (أصول ثابتة ومصاريف تأسيس)</td><td class="text-mono">${this.formatCurrency(capexSubtotal)}</td></tr>
+                    ${capexContingency > 0 ? `<tr><td>احتياطي طوارئ</td><td class="text-mono">${this.formatCurrency(capexContingency)}</td></tr>` : ''}
+                    <tr><td>رأس المال العامل والمخزون الافتتاحي</td><td class="text-mono">${this.formatCurrency(capexRemainder)}</td></tr>
                     <tr class="total-row"><td><strong>إجمالي الاستثمار المطلوب (شامل رأس المال العامل)</strong></td><td class="text-mono text-gold">${this.formatCurrency(capex.total)}</td></tr>
                 </table>
             </div>

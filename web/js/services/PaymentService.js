@@ -118,10 +118,10 @@ export async function listOrders() {
         .select('id, tier, amount_sar, subtotal_sar, discount_sar, vat_sar, total_sar, amount_paid_sar, amount_due_sar, coupon_code, items, currency, status, study_id, created_at, paid_at')
         .order('created_at', { ascending: false });
 
-    if (error) {
-        console.warn('[PaymentService] فشل جلب سجل الطلبات:', error.message);
-        return [];
-    }
+    // تدقيق 2026-08-26: كان يُبتلَع ويُعاد [] — فجلسة سليمة يفشل استعلامها تسقط في فرع
+    // «لا توجد عمليات دفع حتى الآن»، أي فشلُ وصولٍ يُقدَّم للعميل كحقيقة عن حسابه. نرمي
+    // الآن كما تفعل getOrderStatus أعلاه ليفرّق المستدعي بين «فارغ» و«تعذّر الوصول».
+    if (error) throw new Error(error.message || 'تعذّر جلب سجل الطلبات');
     return Array.isArray(data) ? data : [];
 }
 

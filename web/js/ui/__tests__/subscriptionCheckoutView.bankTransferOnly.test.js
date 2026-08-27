@@ -105,3 +105,18 @@ describe('SubscriptionCheckoutView — تحويل بنكي فقط (قرار ما
         expect(errEl.textContent).toContain('network down');
     });
 });
+
+describe('SubscriptionCheckoutView — placeholder كوبون الخصم لا يُسرّب كوداً حقيقياً', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        sessionStorage.setItem('selected_package', 'self');
+        getBankTransferConfigMock.mockReturnValue({ beneficiaryName: 'شركة شفق الأعمال التجارية', bankName: 'بنك البلاد', iban: 'SA5815000900142467710006' });
+    });
+
+    it('placeholder حقل الكوبون نص إرشادي محايد، لا كود خصم حقيقي (WELCOME10) مذكور حرفياً', async () => {
+        const { container } = await mountView();
+        const input = container.querySelector('#checkoutCoupon');
+        expect(input).not.toBeNull();
+        expect(input.getAttribute('placeholder')).not.toMatch(/WELCOME10/i);
+    });
+});

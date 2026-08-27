@@ -23,6 +23,16 @@ function fakeStore(state) {
     return { getState: () => state };
 }
 
+// أقلّ حالة تجتاز بوابة كفاية البيانات في SensitivityAnalysis (مصدر إيراد + أصل
+// رأسمالي، أُضيفت 2026-08-26). المحرك مُقلَّد هنا، فمحتوى الحالة لا يؤثر في أي رقم
+// معروض — دورها الوحيد فتح البوابة كي يبقى هذا الملف يختبر ما بُني له فعلاً.
+function sufficientState() {
+    return {
+        revenue: { streams: [{ type: 'operating', customersPerMonth: 100, avgPrice: 50 }] },
+        technical: { equipment: [{ price: 100000, quantity: 1 }] }
+    };
+}
+
 function operatingLevelTable() {
     const title = [...document.querySelectorAll('.card-title')].find(h => h.textContent.includes('مستويات التشغيل'));
     return title.closest('.card');
@@ -41,7 +51,7 @@ describe('SensitivityAnalysis — جدول مستويات التشغيل: تنا
             return { indicators: { npv: 400000 } };
         });
 
-        const view = new SensitivityAnalysis('c', fakeStore({}));
+        const view = new SensitivityAnalysis('c', fakeStore(sufficientState()));
         view.render();
 
         const table = operatingLevelTable();
@@ -61,7 +71,7 @@ describe('SensitivityAnalysis — جدول مستويات التشغيل: تنا
             return { indicators: { npv: 400000 } };
         });
 
-        const view = new SensitivityAnalysis('c', fakeStore({}));
+        const view = new SensitivityAnalysis('c', fakeStore(sufficientState()));
         view.render();
 
         const table = operatingLevelTable();
@@ -79,7 +89,7 @@ describe('SensitivityAnalysis — جدول مستويات التشغيل: تنا
             return { indicators: { npv: 400000 } };
         });
 
-        const view = new SensitivityAnalysis('c', fakeStore({}));
+        const view = new SensitivityAnalysis('c', fakeStore(sufficientState()));
         view.render();
 
         const table = operatingLevelTable();
@@ -96,7 +106,7 @@ describe('SensitivityAnalysis — جدول مستويات التشغيل: تنا
             return { indicators: { npv: 400000 } };
         });
 
-        const view = new SensitivityAnalysis('c', fakeStore({}));
+        const view = new SensitivityAnalysis('c', fakeStore(sufficientState()));
         view.render();
 
         const scenarioCalls = calculateStudyMock.mock.calls.filter(([, params]) => params && 'revenueChange' in params && [-0.10, -0.20, -0.30].includes(params.revenueChange));
@@ -120,7 +130,7 @@ describe('SensitivityAnalysis — جدول مستويات التشغيل: تنا
             return { indicators: { npv: 100000 } };
         });
 
-        const view = new SensitivityAnalysis('c', fakeStore({}));
+        const view = new SensitivityAnalysis('c', fakeStore(sufficientState()));
         view.render();
 
         expect(document.getElementById('c').innerHTML).toContain('حدث خطأ في حساب النموذج المالي');

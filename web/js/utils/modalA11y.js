@@ -154,6 +154,7 @@ export function attachModalA11y({
         : null;
 
     let released = false;
+    let focusTimer = null;
 
     const handle = {
         getDialog,
@@ -161,6 +162,9 @@ export function attachModalA11y({
         release(options = {}) {
             if (released) return;
             released = true;
+            // قبل أي خروج مبكر: نافذة أُغلقت خلال focusDelay كان مؤقّتها يبقى حياً
+            // فيخطف التركيز إلى حوار مُزال بعد أن أعادته release لموضعه الصحيح.
+            clearTimeout(focusTimer);
             document.removeEventListener('keydown', onKeyDown, true);
             const index = openStack.indexOf(handle);
             if (index !== -1) openStack.splice(index, 1);
@@ -221,7 +225,7 @@ export function attachModalA11y({
     // الالتقاط (capture) كي نرى المفتاح أياً كان موضع التركيز، حتى لو خرج عن الحاوية.
     document.addEventListener('keydown', onKeyDown, true);
 
-    if (focusDelay > 0) setTimeout(focusInitial, focusDelay);
+    if (focusDelay > 0) focusTimer = setTimeout(focusInitial, focusDelay);
     else focusInitial();
 
     return handle;

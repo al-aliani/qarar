@@ -45,17 +45,56 @@ class StudyStore {
         // Listen for changes in other tabs
         if (typeof window !== 'undefined') {
             window.addEventListener('storage', async (e) => {
-                if (e.key === STORAGE_KEY) {
-                    console.log('State updated from another tab, reloading...');
-                    await this.load();
-                    this.notify();
+                if (e.key !== STORAGE_KEY) return;
+                // تبويب آخر كتب المسودة. الاستبدال غير المشروط كان يمحو عمل هذا التبويب:
+                // فتحُ دراسة أخرى من لوحة التحكم في تبويب B يُطلق هذا الحدث في تبويب A،
+                // فتُستبدل حالته بالكامل بينما نموذج الويزارد ما زال يعرض الدراسة القديمة
+                // (لا مشترك في subscribe يعيد رسم الخطوة) — فيُكتب أول تعديل تالٍ داخل
+                // الدراسة الأخرى. لا يُستبدل عمل المستخدم بناءً على إشارة تبويب آخر:
+                // نتبنّى القادم فقط إن كان **نفس الدراسة** ولا توجد تعديلات غير محفوظة هنا.
+                const incomingId = await this._peekStoredProjectId(e.newValue);
+                const currentId = this.state?.projectInfo?.id ?? null;
+                if (this._dirty || !incomingId || incomingId !== currentId) {
+                    console.warn('[Store] تجاهُل تحديث من تبويب آخر (دراسة مختلفة أو تعديلات غير محفوظة هنا)');
+                    monitoring.addBreadcrumb('Cross-tab update ignored', 'storage', 'warning', {
+                        incomingId, currentId, dirty: this._dirty
+                    });
+                    return;
                 }
+                console.log('State updated from another tab, reloading...');
+                await this.load();
+                this.notify();
             });
 
             // Flush pending saves before closing
             window.addEventListener('beforeunload', async () => {
                 await this.flush();
             });
+        }
+    }
+
+    /**
+     * هوية الدراسة داخل حمولة المسودة كما هي في التخزين — قراءة فقط، بلا ترطيب ولا
+     * تعديل للحالة. الحمولات الكبيرة موطنها IndexedDB فيصل حدث storage بـnewValue = null،
+     * فنقرأ عبر storageManager. تعذُّر القراءة أو التحليل يُعيد null = «هوية مجهولة»،
+     * وهي ليست إذناً بالاستبدال.
+     * @param {string|null} rawValue - قيمة الحدث الجديدة إن وُجدت
+     * @returns {Promise<string|null>}
+     */
+    async _peekStoredProjectId(rawValue) {
+        let raw = rawValue;
+        if (typeof raw !== 'string' || !raw) {
+            try {
+                raw = await storageManager.getItem(STORAGE_KEY);
+            } catch (_) {
+                return null;
+            }
+        }
+        try {
+            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            return parsed?.projectInfo?.id ?? null;
+        } catch (_) {
+            return null;
         }
     }
 
@@ -117,10 +156,17 @@ class StudyStore {
                     } catch (backupErr) {
                         console.error('Backup corrupted:', backupErr);
                         monitoring.captureException(backupErr, { source: 'store.load', step: 'backup_parse_missing_main' });
-                        await this.reset();
+                        this._startEmptyWithoutOverwriting('backup_parse_missing_main');
                     }
                 } else {
-                    await this.reset();
+                    // لا مسودة ولا نسخة احتياطية: إما مستخدم جديد (فراغ حقيقي فيُبذَر
+                    // التخزين) وإما فشل قراءة — storageManager يُعيد null عمداً حين يكون
+                    // موطن المفتاح IndexedDB وهي غير متاحة. الفشل ليس دليلاً على الفراغ.
+                    if (this._localDraftHomeUnreachable()) {
+                        this._startEmptyWithoutOverwriting('storage_unreadable');
+                    } else {
+                        await this.reset();
+                    }
                 }
             }
 
@@ -157,8 +203,44 @@ class StudyStore {
         } catch (e) {
             console.error('Failed to load study:', e);
             monitoring.captureException(e, { source: 'store.load', operation: 'load' });
-            await this.reset();
+            this._startEmptyWithoutOverwriting('load_failed');
         }
+    }
+
+    /**
+     * علامة storageManager: «موطن قيمة هذا المفتاح هو IndexedDB». وجودها مع قراءة
+     * أعادت null يعني أن هناك بيانات تعذّرت قراءتها — لا أن التخزين فارغ.
+     * (تُقرأ العلامة مباشرة لأن storageManager لا يكشف سبب الـnull.)
+     */
+    _localDraftHomeUnreachable() {
+        if (typeof localStorage === 'undefined') return false;
+        try {
+            return localStorage.getItem(`${STORAGE_KEY}_ref`) === 'indexeddb'
+                || localStorage.getItem(`${STORAGE_KEY_BACKUP}_ref`) === 'indexeddb';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    /**
+     * مسار فشل القراءة: نبدأ بحالة فارغة **في الذاكرة فقط** — بلا saveLocal.
+     * reset() كانت تُستدعى هنا فتكتب الدراسة الفارغة فوق mac_blash_study_v2 ونسختها
+     * الاحتياطية وتزيل علامة _ref، فتُظلَّل نسخة IndexedDB السليمة نهائياً: عمل
+     * المستخدم يُدمَّر بسبب فشل قراءة قد يكون عابراً. لا كتابة قبل أن يقرر المستخدم
+     * (الحفظ التلقائي لا يكتب ما لم يُرفع _dirty بتعديل فعلي منه).
+     */
+    _startEmptyWithoutOverwriting(reason) {
+        this.state = createEmptyStudy();
+        monitoring.addBreadcrumb('Draft unreadable — started empty without overwriting', 'storage', 'error', { reason });
+        if (typeof window !== 'undefined') {
+            import('../utils/toast.js')
+                .then(({ toast }) => toast.error(
+                    'تعذّر قراءة مسودتك المحفوظة على هذا الجهاز. لم نكتب فوقها — افتح دراسة من لوحة التحكم أو استورد نسخة احتياطية.',
+                    12000
+                ))
+                .catch(() => { });
+        }
+        this.notify();
     }
 
     /**
@@ -528,7 +610,18 @@ class StudyStore {
             this.state[section] = defaults[section] || {};
         }
 
-        this.state[section] = { ...this.state[section], ...data };
+        // النشر السطحي كان يعامل أي قيمة كأنها كائن: نصّ مثل id/version يُفكَّك إلى
+        // كائن مفهرس بالأحرف ({"0":"4","1":".",...})، ومصفوفة تُدمج بالفهرس فتبقى
+        // عناصر المصفوفة السابقة في المواضع الزائدة. الدمج مقصود للكائنات العادية
+        // وحدها؛ ما عداها (نص/رقم/بولياني/null/مصفوفة) استبدال كامل.
+        // undefined يبقى بلا أثر كما كان ({ ...obj, ...undefined } نسخة بلا تغيير) —
+        // كي لا يمحو مستدعٍ قسماً كاملاً بلا قصد.
+        const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+        if (isPlainObject(this.state[section]) && isPlainObject(data)) {
+            this.state[section] = { ...this.state[section], ...data };
+        } else if (data !== undefined) {
+            this.state[section] = data;
+        }
 
         // Auto-bridge: If services updated, sync to revenue
         if (section === 'services') {

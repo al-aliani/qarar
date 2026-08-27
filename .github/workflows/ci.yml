@@ -26,3 +26,19 @@ jobs:
         
       - name: Run Tests
         run: npm run test
+
+      # تدقيق 2026-08-26: `scripts/measure-bundle.mjs` كان يحسب الحمولة الأولية الحقيقية
+      # (المدخل + كل استيراد ثابت متعدٍّ + modulepreload) بحجمها الخام وbrotli، لكنه أداة
+      # يدوية فقط — لا ميزانية مفروضة تمنع تضخّم الحزمة صامتاً. كما أن `npm run build` نفسها
+      # لم تكن تُشغَّل في أي CI أصلاً (لا هنا، ولا بـe2e.yml الذي يشغّل خادم dev مباشرة عبر
+      # Playwright webServer بلا بناء إنتاجي). أُضيفت خطوة Build هنا لأول مرة، وبعدها بوابة
+      # الميزانية. القياس الفعلي بهذا التاريخ عبر بناء نظيف: إجمالي brotli للحمولة الأولية
+      # (main-*.js + استيراداته الثابتة المتعدّية + modulepreload) = 276888 بايت. العتبة
+      # أدناه 307200 بايت (300 KiB) — هامش ~11% فوق القياس الفعلي، بنفس نمط ratchet التغطية
+      # في vite.config.js. تُرفع العتبة فقط مع تضخّم متعمَّد موثَّق (ميزة جديدة تستحق الوزن)،
+      # ولا تُخفَّض أبداً بتجاهل فشلها.
+      - name: Build
+        run: npm run build
+
+      - name: Bundle size budget (initial payload, brotli)
+        run: node scripts/measure-bundle.mjs --budget=307200

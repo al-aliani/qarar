@@ -5,7 +5,7 @@
  * في 14 نافذة فسقطت بنود منه: 8 نوافذ لم تُعِد التركيز للزر الفاتح، و6 بلا حبس
  * تركيز، و2 بلا role="dialog". هذه الاختبارات تحرس المساعد الموحّد الذي حلّ محلها.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { attachModalA11y } from '../modalA11y.js';
 
 function buildPage() {
@@ -295,5 +295,86 @@ describe('attachModalA11y — إعادة التركيز عند الإغلاق', 
         pressEscape();
 
         expect(onEscape).not.toHaveBeenCalled();
+    });
+});
+
+describe('attachModalA11y — مؤقّت focusDelay', () => {
+    beforeEach(() => {
+        document.body.innerHTML = '';
+        vi.useFakeTimers();
+    });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('release قبل انقضاء focusDelay يُلغي المؤقّت فلا يُستدعى focus بعده إطلاقاً', () => {
+        const page = buildPage();
+        page.opener.focus();
+        const handle = attachModalA11y({
+            container: page.overlay,
+            dialog: '.modal-card',
+            initialFocus: '#field',
+            focusDelay: 30
+        });
+        const fieldFocus = vi.spyOn(page.field, 'focus');
+        const closeFocus = vi.spyOn(page.close, 'focus');
+
+        handle.release();
+        vi.advanceTimersByTime(200);
+
+        expect(fieldFocus).not.toHaveBeenCalled();
+        expect(closeFocus).not.toHaveBeenCalled();
+    });
+
+    it('release({restoreFocus:false}) يُلغي المؤقّت أيضاً رغم خروجه المبكر', () => {
+        const page = buildPage();
+        page.opener.focus();
+        const handle = attachModalA11y({
+            container: page.overlay,
+            dialog: '.modal-card',
+            initialFocus: '#field',
+            focusDelay: 30
+        });
+        const fieldFocus = vi.spyOn(page.field, 'focus');
+
+        handle.release({ restoreFocus: false });
+        vi.advanceTimersByTime(200);
+
+        expect(fieldFocus).not.toHaveBeenCalled();
+        expect(document.activeElement).toBe(page.opener);
+    });
+
+    it('بلا release مبكر: التركيز الأولي يقع بعد انقضاء focusDelay لا قبله', () => {
+        const page = buildPage();
+        page.opener.focus();
+        const handle = attachModalA11y({
+            container: page.overlay,
+            dialog: '.modal-card',
+            initialFocus: '#field',
+            focusDelay: 30
+        });
+
+        expect(document.activeElement).toBe(page.opener);
+        vi.advanceTimersByTime(30);
+        expect(document.activeElement).toBe(page.field);
+
+        handle.release();
+    });
+
+    it('ترتيب الاستعادة: release يُعيد التركيز للفاتح ولا يخطفه المؤقّت بعدها', () => {
+        const page = buildPage();
+        page.opener.focus();
+        const handle = attachModalA11y({
+            container: page.overlay,
+            dialog: '.modal-card',
+            initialFocus: '#field',
+            focusDelay: 30
+        });
+
+        // النافذة تبقى في DOM لحظة الإغلاق (حركة الاختفاء)، فالمؤقّت المتسرّب
+        // قادر فعلاً على خطف التركيز إليها بعد أن أعادته release للفاتح.
+        handle.release();
+        expect(document.activeElement).toBe(page.opener);
+
+        vi.advanceTimersByTime(200);
+        expect(document.activeElement).toBe(page.opener);
     });
 });

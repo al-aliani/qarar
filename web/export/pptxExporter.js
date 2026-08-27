@@ -9,6 +9,7 @@ import pptxgen from 'pptxgenjs';
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { calculateProjectScore } from '../js/core/scoring.js';
 import { SAFE, getExportMetadata } from './utils.js';
+import { netMarginText } from './netMargin.js';
 
 /** معرّفات شرائح المحتوى (بعد الغلاف) — قابلة للربط مع reportSectionOrder. */
 const PPT_SLIDE_IDS = [
@@ -165,14 +166,17 @@ export class PPTXExporter {
     }
 
     addSlideMarket() {
-        const slide = this.pptx.addSlide();
         const market = this.state.marketSizing || {};
-
-        this.addSlideTitle(slide, 'حجم السوق');
 
         const tam = market.tam?.value ?? 0;
         const sam = market.sam?.value ?? 0;
         const som = market.som?.value ?? 0;
+
+        // لا نطبع شريحة سوق بقيم صفرية — نفس حارس wordExporter.js:108 (قسم 'market').
+        if (![tam, sam, som].some(v => Number(v) > 0)) return;
+
+        const slide = this.pptx.addSlide();
+        this.addSlideTitle(slide, 'حجم السوق');
 
         const rows = [
             [{ text: 'المؤشر', options: { bold: true, fill: this.colors.lightGray } }, { text: 'القيمة', options: { bold: true, fill: this.colors.lightGray } }, { text: 'الوصف', options: { bold: true, fill: this.colors.lightGray } }],
@@ -215,7 +219,6 @@ export class PPTXExporter {
     addSlideKPIs() {
         const slide = this.pptx.addSlide();
         const ind = this.results?.indicators || {};
-        const inc = this.results?.incomeStatement?.[0] || {};
 
         this.addSlideTitle(slide, 'أبرز المؤشرات');
 
@@ -223,7 +226,7 @@ export class PPTXExporter {
             { label: 'NPV', value: formatCurrency(ind.npv), color: (ind.npv ?? 0) >= 0 ? this.colors.success : this.colors.danger },
             { label: 'IRR', value: SAFE.pctText(ind.irr), color: this.colors.primary },
             { label: 'الاسترداد', value: SAFE.payback(ind.paybackPeriod ?? ind.payback), color: this.colors.secondary },
-            { label: 'هامش الربح', value: `${(((inc.netIncome || 0) / (inc.revenue || 1)) * 100).toFixed(1)}%`, color: this.colors.warning }
+            { label: 'هامش الربح', value: netMarginText(this.results), color: this.colors.warning }
         ];
 
         kpis.forEach((kpi, i) => {

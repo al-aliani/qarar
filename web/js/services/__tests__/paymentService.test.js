@@ -160,4 +160,12 @@ describe('listOrders', () => {
         expect(await listOrders()).toEqual([]);
         expect(rpcMock).not.toHaveBeenCalled();
     });
+
+    it('فشل استعلام السجل ⇒ يُرمى بدل [] (فارغ ≠ تعذّر الوصول)', async () => {
+        // تدقيق 2026-08-26: كان يُعيد [] لجلسة سليمة فشل استعلامها، فتطبع الواجهة
+        // «لا توجد عمليات دفع حتى الآن» — حكمٌ عن حساب العميل مبنيّ على عطل شبكة/خادم.
+        selectChain.order.mockResolvedValue({ data: null, error: { message: 'network error' } });
+        const { listOrders } = await import('../PaymentService.js');
+        await expect(listOrders()).rejects.toThrow('network error');
+    });
 });

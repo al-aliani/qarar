@@ -7,6 +7,7 @@
 
 import { sanitizeSheetName, sanitizeFilename, loadXLSX, formatExportDateTime, exportDateISO, SAFE, formatDscr } from './utils.js';
 import { t, yearColumnLabel } from '../js/i18n/reportStrings.js';
+import { formatRatio } from './ratioUnits.js';
 
 /** معرّفات أوراق المحتوى (بعد ورقة الفهرس) — قابلة للربط مع reportSectionOrder. */
 const EXCEL_SHEET_IDS = [
@@ -326,20 +327,37 @@ export class ExcelExporter {
             ['الإيرادات', '', ...totals],
         ];
 
-        // ملاحظة: الكود السابق كان يعتمد على `this.results.revenueProjection`، وهو مفتاح
-        // لا يُنتجه calculateStudy() أبداً (تم التأكد تجريبياً)، ما جعل قسم تفصيل
-        // الإيرادات حسب كل مصدر ميتاً بالكامل ولا يُنفَّذ إطلاقاً في الإنتاج.
-        // البديل الصحيح هو قراءة بيانات الإدخال الخام لكل مصدر إيراد من `this.data.revenue.streams`
-        // (تماماً كما يفعل excel.js). نعرض هنا إيراد السنة الأولى فقط لكل مصدر لأن محرك
-        // التمويل لا يحسب توقعاً مستقلاً متعدد السنوات لكل مصدر على حدة — النمو يُطبَّق على
-        // إجمالي الإيرادات ككل وليس على كل مصدر منفرد، فتفادينا اختلاق أرقام سنوات لاحقة لكل مصدر.
-        const streams = this.data?.revenue?.streams || [];
-        if (streams.length) {
-            streams.forEach((stream, idx) => {
-                const label = stream.name || stream.service || `مصدر إيراد ${idx + 1}`;
-                const year1Revenue = (Number(stream.customersPerMonth) || 0) * 12 * (Number(stream.avgPrice) || 0);
-                data.push([label, '', SAFE.num(year1Revenue)]);
-            });
+        // تفصيل مصادر السنة الأولى — مقفول بنيوياً على رقم قائمة الدخل المطبوع فوقه،
+        // فلا يمكن للعمودين أن يتناقضا (تدقيق 2026-08-26):
+        // (1) المصادر المسرودة هي المصادر التي عدّها المحرك فعلاً: وجود خدمات في
+        //     «تحليل الخدمات» يُلغي صفوف revenue.streams التشغيلية كلياً
+        //     (financial/revenue.js:38)، فسردها معاً كان يطبع مصدراً لم يساهم بريال
+        //     واحد ويُخفي الخدمة التي ولّدت الإيراد فعلاً.
+        // (2) إيراد السنة الأولى في القوائم مضروب بمعامل التصاعد واستغلال الطاقة، بينما
+        //     صفوف التفصيل خطة سنة كاملة — صفّ التسوية يمتصّ الفارق صراحةً كي يتصالح
+        //     الرقمان أمام القارئ (تصاعد 6 أشهر: 1,320,000 خطة ⟵ 1,045,000 في القوائم).
+        // الإجمالي المطبوع هو رقم المحرك نفسه، والتسوية مشتقة كباقٍ — فأي عامل يضيفه
+        // المحرك لاحقاً يُمتصّ تلقائياً بدل أن يظهر كخطأ حسابي في ملف العميل.
+        const serviceItems = Array.isArray(this.data?.services?.items) ? this.data.services.items : [];
+        const streams = Array.isArray(this.data?.revenue?.streams) ? this.data.revenue.streams : [];
+        const counted = [
+            ...serviceItems.map((item, idx) => ({
+                label: item.name || `خدمة ${idx + 1}`,
+                year1: (Number(item.customersPerMonth) || 0) * 12 * (Number(item.pricePerUnit) || 0),
+            })),
+            ...streams
+                .filter((stream) => !(serviceItems.length && (stream.type || 'operating') === 'operating'))
+                .map((stream, idx) => ({
+                    label: stream.name || stream.service || `مصدر إيراد ${idx + 1}`,
+                    year1: (Number(stream.customersPerMonth) || 0) * 12 * (Number(stream.avgPrice) || 0),
+                })),
+        ];
+        if (counted.length) {
+            const engineYear1 = SAFE.num(totals[0]);
+            const planTotal = counted.reduce((a, r) => a + r.year1, 0);
+            counted.forEach((r) => data.push([r.label, '', SAFE.num(r.year1)]));
+            data.push(['تسوية التصاعد واستغلال الطاقة (السنة 1)', '', engineYear1 - planTotal]);
+            data.push(['إجمالي مصادر السنة 1 (كما في قائمة الدخل)', '', engineYear1]);
         }
 
         const ws = XLSX.utils.aoa_to_sheet(data);
@@ -414,12 +432,39 @@ export class ExcelExporter {
             return cumulative;
         });
 
+        // مكوّنات التدفق تُشتقّ كلها من صفوف المحرك نفسها، والصفّ الأخير قبل «صافي التدفق»
+        // باقٍ محسوب — فالعمود يجمع إلى صافي التدفق المطبوع بحكم البناء (تدقيق 2026-08-26).
+        // كانت الورقة تطبع صافي الربح و«(+) الإهلاك» ثم صافي تدفق لا يساويهما: سداد أصل
+        // القرض وتكلفة الإحلال والاستثمار ودخول القرض بلا صفوف إطلاقاً، فيقرأ محلل التمويل
+        // علامة `(+)` الصريحة كخطأ حسابي في الدراسة (مخبز بقرض 500,000: 428,342 + 99,000
+        // ≠ 442,622 المطبوع، والفارق 84,720 هو أصل القرض المسدَّد بلا صفّ).
+        const component = (c, key) => SAFE.num(c[key]);
+        const residual = (c) => SAFE.num(c.cashFlow) - (
+            component(c, 'netIncome') + component(c, 'depreciation')
+            + component(c, 'investment') + component(c, 'loanInflow')
+            - component(c, 'loanPrincipalPaid') - component(c, 'replacementCost')
+        );
+        // صفّ يُطبع فقط متى حمل قيمة فعلية في سنة واحدة على الأقل — لا بنود صفرية
+        // بجانب إجمالي غير صفري (نفس قاعدة صفوف قائمة الدخل الشرطية أعلاه).
+        const rowIfAny = (label, valueOf) => {
+            const values = list.map(valueOf);
+            return values.some((v) => v !== 0) ? [[label, ...values]] : [];
+        };
+
         const headers = [t('item_column', lang), ...list.map((c) => yearColumnLabel(c.year, lang))];
         const data = [
             [t('cash_flow_title', lang)],
             headers,
             [t('net_income', lang), ...list.map((c) => SAFE.num(c.netIncome))],
             [`(+) ${t('depreciation', lang)}`, ...list.map((c) => SAFE.num(c.depreciation))],
+            ...rowIfAny(`(-) ${t('capex_investment', lang)}`, (c) => component(c, 'investment')),
+            ...rowIfAny(`(+) ${t('loan_inflow', lang)}`, (c) => component(c, 'loanInflow')),
+            ...rowIfAny(`(-) ${t('loan_principal_paid', lang)}`, (c) => -component(c, 'loanPrincipalPaid')),
+            ...rowIfAny(`(-) ${t('asset_replacement_cost', lang)}`, (c) => -component(c, 'replacementCost')),
+            ...rowIfAny(
+                lang === 'en' ? '(+/-) Working Capital & Other Adjustments' : '(±) تغيّر رأس المال العامل وتسويات أخرى',
+                residual
+            ),
             [t('net_cash_flow', lang), ...list.map((c) => SAFE.num(c.cashFlow))],
             [t('cumulative_cash_flow', lang), ...cum],
         ];
@@ -502,6 +547,16 @@ export class ExcelExporter {
         const breakevenMonthly = Number.isFinite(Number(ind.breakevenUnitsPerMonth))
             ? Number(ind.breakevenUnitsPerMonth)
             : (Number.isFinite(Number(ind.breakEvenUnits)) ? Number(ind.breakEvenUnits) / 12 : 0);
+        // «0 وحدة/شهر» أفضل قراءة ممكنة لأسوأ مشروع ممكن: مشروع يخسر على كل وحدة
+        // (هامش مساهمة سالب) لا نقطة تعادل له أصلاً، فالصفر يقرؤه محلل الائتمان
+        // «يتعادل من أول وحدة». المحرك يميّز صفرَي التعادل المتعاكسين بعلَمين صريحين
+        // أُنشئا لهذا الغرض (engine.js:1487-1495) — نقرأهما بدل طباعة الرقم المبهم،
+        // كما تفعل الشاشة أصلاً (BreakEvenAnalysis.js / DecisionDashboard.js).
+        const breakevenCell = ind.breakEvenAchievable === false
+            ? 'غير قابل للتعادل — هامش المساهمة سالب'
+            : (ind.breakEvenReason === 'covered_by_non_operating'
+                ? 'محقق عند صفر وحدات — الإيراد غير التشغيلي يغطي كل التكاليف الثابتة'
+                : Math.round(breakevenMonthly));
 
         const data = [
             [t('financial_kpis_title', lang)],
@@ -512,7 +567,7 @@ export class ExcelExporter {
             [t('payback_period', lang), SAFE.payback(ind.paybackPeriod ?? ind.payback)],
             [t('roi', lang), SAFE.pctText(ind.roi)],
             ['هامش الربح الصافي', marginVal.toFixed(1) + '%'],
-            ['نقطة التعادل (وحدات/شهر)', Math.round(breakevenMonthly)],
+            ['نقطة التعادل (وحدات/شهر)', breakevenCell],
             ['', ''],
             ['تكلفة رأس المال المرجح', ''],
             ['وزن حقوق الملكية', formatWaccPct(wacc.equityWeight)],
@@ -529,21 +584,23 @@ export class ExcelExporter {
 
         // النسب المالية — صف لكل نسبة، عمود لكل سنة (نفس نمط عمود-لكل-سنة في قائمة الدخل/التدفقات النقدية)
         const ratios = Array.isArray(this.results?.ratios) ? this.results.ratios : [];
-        const pct = (v) => (v == null || !Number.isFinite(Number(v))) ? '—' : (Number(v) * 100).toFixed(1) + '%';
-        const mult = (v) => (v == null || !Number.isFinite(Number(v))) ? '—' : Number(v).toFixed(2) + 'x';
         data.push(['', '']);
         data.push([t('ratios_section_title', lang), '']);
         if (ratios.length) {
+            // الوحدة (x أم %) تأتي من ratioUnits.js لا من هذا الملف — كانت debtToEquity
+            // تُطبع هنا «185.0%» بينما يطبعها التقرير PDF «1.85x» لنفس الدراسة.
+            const ratioRow = (labelKey, ratioKey) =>
+                data.push([t(labelKey, lang), ...ratios.map((r) => formatRatio(ratioKey, r[ratioKey]))]);
             data.push([t('item_column', lang), ...ratios.map((r) => yearColumnLabel(r.year, lang))]);
-            data.push([t('current_ratio', lang), ...ratios.map((r) => mult(r.currentRatio))]);
-            data.push([t('quick_ratio', lang), ...ratios.map((r) => mult(r.quickRatio))]);
-            data.push([t('cash_ratio', lang), ...ratios.map((r) => mult(r.cashRatio))]);
-            data.push([t('debt_ratio', lang), ...ratios.map((r) => pct(r.debtRatio))]);
-            data.push([t('debt_to_equity', lang), ...ratios.map((r) => pct(r.debtToEquity))]);
-            data.push([t('asset_turnover', lang), ...ratios.map((r) => mult(r.assetTurnover))]);
-            data.push([t('fixed_asset_turnover', lang), ...ratios.map((r) => mult(r.fixedAssetTurnover))]);
-            data.push([t('roa', lang), ...ratios.map((r) => pct(r.roa))]);
-            data.push([t('roe', lang), ...ratios.map((r) => pct(r.roe))]);
+            ratioRow('current_ratio', 'currentRatio');
+            ratioRow('quick_ratio', 'quickRatio');
+            ratioRow('cash_ratio', 'cashRatio');
+            ratioRow('debt_ratio', 'debtRatio');
+            ratioRow('debt_to_equity', 'debtToEquity');
+            ratioRow('asset_turnover', 'assetTurnover');
+            ratioRow('fixed_asset_turnover', 'fixedAssetTurnover');
+            ratioRow('roa', 'roa');
+            ratioRow('roe', 'roe');
         } else {
             data.push(['—', 'لا توجد بيانات']);
         }
@@ -839,22 +896,45 @@ export class ExcelExporter {
     }
 
     addSensitivitySheet(workbook) {
-        const sen = this.data?.scenarios?.sensitivity || {};
-        const vars = Array.isArray(sen.variables) ? sen.variables : ['revenue', 'costs', 'price', 'volume'];
-        const range = Array.isArray(sen.range) ? sen.range : [-0.3, 0.3];
+        // كانت تقرأ this.data.scenarios.sensitivity — إعدادات إدخال فقط (schema.js:628)،
+        // فتُصدَّر الورقة بلا رقم واحد: أربعة مفاتيح إنجليزية (revenue/costs/price/volume)
+        // بخانات قيمة فارغة حرفياً، بينما المحرك حسب Tornado كاملاً ورسمه التقرير PDF
+        // لنفس الدراسة. نفس عيب addScenariosSheet المُصلَح أعلاه ولم تُشمَل به الورقة
+        // المجاورة. المصدر الصحيح هو ناتج المحرك، والورقة تُحذف إن لم يوجد ناتج أصلاً
+        // بدل طباعة قائمة نائبة تبدو مأهولة.
+        const tornado = Array.isArray(this.results?.tornado) ? this.results.tornado : [];
+        const sensitivity = Array.isArray(this.results?.sensitivity) ? this.results.sensitivity : [];
+        if (!tornado.length && !sensitivity.length) return;
 
-        const data = [
-            ['تحليل الحساسية'],
-            ['', ''],
-            ['المتغير المختار', (sen.selectedVariable || '—').toString()],
-            ['نطاق التحليل', `${(SAFE.num(range[0]) * 100).toFixed(0)}% .. ${(SAFE.num(range[1]) * 100).toFixed(0)}%`],
-            ['', ''],
-            ['المتغيرات المدعومة', ''],
-            ...vars.map((v) => [typeof v === 'string' ? v : (v?.key ?? v), '']),
-        ];
+        const data = [['تحليل الحساسية'], ['', '']];
+
+        if (tornado.length) {
+            data.push(['أثر تغيّر ±10% في كل متغير على صافي القيمة الحالية', '', '', '']);
+            data.push(['المتغير', 'NPV عند −10%', 'NPV عند +10%', 'مدى التأرجح']);
+            tornado.forEach((row) => data.push([
+                String(row.variable ?? row.key ?? ''),
+                SAFE.num(row.npvLow),
+                SAFE.num(row.npvHigh),
+                SAFE.num(row.swing),
+            ]));
+            data.push(['', '']);
+        }
+
+        if (sensitivity.length) {
+            data.push(['حساسية المؤشرات لكل بُعد', '', '', '']);
+            data.push(['البُعد', 'الحالة', 'NPV', 'IRR']);
+            sensitivity.forEach((dim) => {
+                (Array.isArray(dim.cases) ? dim.cases : []).forEach((c) => data.push([
+                    String(dim.dim ?? ''),
+                    String(c.value ?? ''),
+                    SAFE.num(c.kpis?.npv),
+                    SAFE.pctText(c.kpis?.irr),
+                ]));
+            });
+        }
 
         const ws = XLSX.utils.aoa_to_sheet(data);
-        ws['!cols'] = [{ wch: 24 }, { wch: 20 }];
+        ws['!cols'] = [{ wch: 26 }, { wch: 18 }, { wch: 18 }, { wch: 16 }];
         XLSX.utils.book_append_sheet(workbook, ws, sanitizeSheetName('الحساسية'));
     }
 }

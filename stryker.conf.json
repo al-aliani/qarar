@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "اختبار طفرات محصور بأخطر ملفات الحساب المالي (المحرّك + المخزن) — انظر CLAUDE.md/طلب المهمة. لا يشمل بقية الـ65 ألف سطر عمداً.",
+  "packageManager": "npm",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vite.config.js"
+  },
+  "mutate": [
+    "web/js/core/engine.js",
+    "web/js/core/financial/*.js",
+    "lib/calc/*.js",
+    "web/js/core/store.js"
+  ],
+  "ignorePatterns_comment": "استبعاد مجلدات ضخمة/غير ذات صلة فقط (لا يقرأ Stryker .gitignore تلقائياً): worktrees أخرى (8.4GB)، بيانات دراسات فعلية (520MB)، ناتج بناء (290MB) — تفادياً لنسخها بالكامل إلى الصندوق الرملي عند كل تشغيل.",
+  "ignorePatterns": [
+    ".claude",
+    "درسات جدوى",
+    "ملفات قواعد البيانات",
+    "لقطات_الموقع",
+    "figma_screenshots",
+    "web/dist",
+    "tmp",
+    "output",
+    ".vercel"
+  ],
+  "coverageAnalysis": "perTest",
+  "ignoreStatic": true,
+  "reporters": ["html", "clear-text", "progress"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": true
+}

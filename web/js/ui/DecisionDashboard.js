@@ -827,11 +827,16 @@ export class DecisionDashboard {
                         // We need to load the imported project into the store
                         const loaded = await ProjectManager.loadProject(result.id);
                         if (loaded?.data) {
-                            // Update store and rerender
-                            Object.entries(loaded.data).forEach(([key, value]) => {
-                                this.store.update(key, value, true); // true for silent
-                            });
-                            this.store.notify(); // trigger UI updates
+                            // استبدال كامل للحالة، لا حلقة مفتاح-بمفتاح: الحلقة القديمة
+                            // (Object.entries → store.update) كانت تدمج الملف المستورَد
+                            // *داخل* الدراسة المفتوحة، فيبقى كل ما لا يذكره الملف من
+                            // الدراسة السابقة داخل المستورَدة.
+                            // mergeWithDefaults أولاً لأن set() لا تمرّ بالمخطط: تبدأ من
+                            // createEmptyStudy() جديدة (فلا بقايا ممكنة أصلاً) وتضمن في
+                            // الوقت نفسه ألا تترك حمولة ناقصة الحالةَ بلا أقسام — وهو
+                            // الضمان الوحيد الذي كانت الحلقة توفّره بالمصادفة.
+                            // set() يسجّل تراجعاً واحداً ويحفظ ويُشعر المشتركين بنفسه.
+                            this.store.set(this.store.mergeWithDefaults(loaded.data));
                             this.render();
                         }
                     } else {

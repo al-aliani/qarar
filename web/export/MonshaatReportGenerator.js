@@ -7,6 +7,7 @@ import { formatCurrency } from '../js/utils/formatters.js';
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { validateStudy } from '../js/utils/validation.js';
 import { SAFE } from './utils.js';
+import { BankReportGenerator } from './BankReportGenerator.js';
 
 /** أقسام تقرير منشآت (معرّفات قابلة للربط مع reportSectionOrder). */
 const MONSHAAT_SECTION_IDS = [
@@ -180,14 +181,12 @@ export class MonshaatReportGenerator {
                 </table>`);
             }
             case 'financial_kpis': {
-                const sources = financing.sources || {};
-                const total = financing.totalInvestment || (sources.equity?.amount || 0) + (sources.bankLoan?.amount || 0) + (sources.investors?.amount || 0) + (sources.governmentSupport?.amount || 0) || 1;
-                const rows = [
-                    { key: 'equity', label: 'تمويل ذاتي', amount: sources.equity?.amount },
-                    { key: 'bankLoan', label: 'قرض بنكي', amount: sources.bankLoan?.amount },
-                    { key: 'investors', label: 'مستثمرون', amount: sources.investors?.amount },
-                    { key: 'governmentSupport', label: 'دعم حكومي', amount: sources.governmentSupport?.amount }
-                ].filter(r => r.amount > 0).map(r => `<tr><td>${r.label}</td><td>${_fmt(r.amount)}</td><td>${total ? ((r.amount / total) * 100).toFixed(1) : '0'}%</td></tr>`).join('');
+                // كان هذا المصدِّر يحسب مقام النسب محلياً من financing.totalInvestment بينما
+                // يطبع صف الإجمالي بـ`cap.total || total` — فتظهر نسب لا تساوي 100% من الرقم
+                // المطبوع فوقها. وأسوأ: نفس الدراسة تُنتج 29.7% هنا و18.5% في التقرير البنكي.
+                // الآن يستدعي الجدول المشترك في BankReportGenerator (صفوف + إجمالي من رقم
+                // واحد)، فيستحيل التناقض بناءً — داخل هذا المصدِّر وبينه وبين شقيقه معاً.
+                const financingTableHtml = BankReportGenerator._renderFinancingTable(financing, cap.total, _fmt);
                 return wrap(`
                 <div class="monshaat-kpi">
                     <div class="monshaat-kpi-card"><div class="label">صافي القيمة الحالية</div><div class="value ${(ind.npv || 0) > 0 ? 'positive' : 'negative'}">${_fmt(ind.npv || 0)}</div></div>
@@ -197,8 +196,7 @@ export class MonshaatReportGenerator {
                 </div>
                 <table class="monshaat-table">
                 <tr><th>مصدر التمويل</th><th>المبلغ</th><th>النسبة</th></tr>
-                ${rows}
-                <tr class="total-row"><td>الإجمالي</td><td>${_fmt(cap.total || total)}</td><td>100%</td></tr>
+                ${financingTableHtml}
                 </table>`);
             }
             case 'risks':

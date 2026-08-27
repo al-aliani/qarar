@@ -192,8 +192,7 @@ export class ProfessionalReviewReportGenerator {
             <p><strong>هيكل التمويل:</strong></p>
             <table class="pr-table">
                 <tr><th>المصدر</th><th>المبلغ (ريال)</th><th>النسبة</th></tr>
-                ${BankReportGenerator._renderFinancingRows(financing)}
-                <tr class="total-row"><td>الإجمالي</td><td>${_fmt(cap.total || financing.totalInvestment || 0)}</td><td>100%</td></tr>
+                ${BankReportGenerator._renderFinancingTable(financing, cap.total, _fmt)}
             </table>
             ${incomeY1 ? `
             <p style="margin-top:16px;"><strong>قائمة الدخل (السنة الأولى):</strong></p>

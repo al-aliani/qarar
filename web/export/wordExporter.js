@@ -18,6 +18,7 @@ import { formatPayback } from '../js/utils/formatters.js';
 import { formatIrrPct } from '../js/utils/indicatorFormat.js';
 import { t } from '../js/i18n/reportStrings.js';
 import { getExportMetadata } from './utils.js';
+import { formatRatio } from './ratioUnits.js';
 
 /** أقسام تقرير Word (معرّفات قابلة للربط مع reportSectionOrder). */
 const WORD_SECTION_IDS = ['executive_summary', 'market', 'revenue_breakdown', 'financial_kpis', 'income_statement', 'cash_flow', 'balance_sheet', 'competitors', 'asset_schedule', 'working_capital', 'payroll_growth', 'marketing_growth', 'recommendation'];
@@ -42,12 +43,7 @@ function hasText(s) {
     return String(s || '').trim().length > 0;
 }
 
-/** نسبة كمضاعف (Nx) — نسب السيولة/دوران؛ null/غير محقَّق يبقى «—» لا 0 */
-function formatRatioMultiple(v) {
-    return (v === null || v === undefined || !Number.isFinite(Number(v))) ? '—' : `${Number(v).toFixed(2)}x`;
-}
-
-/** نسبة كنسبة مئوية — الدين/العائد على الأصول والملكية؛ null/غير محقَّق يبقى «—» لا 0 */
+/** نسبة كنسبة مئوية — معدّل نمو مُطبَّق؛ null/غير محقَّق يبقى «—» لا 0 */
 function formatRatioPercent(v) {
     return (v === null || v === undefined || !Number.isFinite(Number(v))) ? '—' : `${(Number(v) * 100).toFixed(1)}%`;
 }
@@ -387,6 +383,10 @@ export class WordExporter {
         // داخل احتساب EBITDA نفسه في engine.js).
         const hasFranchiseFees = rows.some((r) => (r.franchiseFees || 0) > 0);
         const hasBuilderFee = rows.some((r) => (r.builderSuccessFee || 0) > 0);
+        // الزكاة والضريبة صفان منفصلان — كان صف الزكاة وحده، فضريبة حصة الأجانب
+        // (assumptions.foreignOwnershipRate) تُخصم من صافي الربح بلا بند يفسّرها
+        // فلا يُجمَع العمود أمام محلل الائتمان. نفس إصلاح excelExporter.js:375-377.
+        const hasTax = rows.some((r) => (r.tax || 0) > 0);
         const lineItems = [
             [t('revenue', lang), 'revenue'],
             [t('variable_costs', lang), 'variableCosts'],
@@ -398,6 +398,7 @@ export class WordExporter {
             [t('depreciation', lang), 'depreciation'],
             [t('interest', lang), 'interest'],
             [t('zakat', lang), 'zakat'],
+            ...(hasTax ? [[`${t('tax', lang)}${lang === 'en' ? ' (Non-Saudi Share)' : ' (حصة الأجانب)'}`, 'tax']] : []),
             [t('net_income', lang), 'netIncome']
         ];
         const tableRows = [this.createTableRow(header, true)];
@@ -474,20 +475,22 @@ export class WordExporter {
         const rows = this.results?.ratios || [];
         const lang = this.lang;
         const header = [t('item_column', lang), ...rows.map(r => `${t('year_prefix', lang)} ${r.year}`)];
+        // الوحدة (x أم %) تأتي من ratioUnits.js لا من هذا الملف — كانت debtToEquity
+        // تُطبع هنا «185.0%» بينما يطبعها التقرير PDF «1.85x» لنفس الدراسة.
         const lineItems = [
-            [t('current_ratio', lang), r => r.currentRatio, formatRatioMultiple],
-            [t('quick_ratio', lang), r => r.quickRatio, formatRatioMultiple],
-            [t('cash_ratio', lang), r => r.cashRatio, formatRatioMultiple],
-            [t('debt_ratio', lang), r => r.debtRatio, formatRatioPercent],
-            [t('debt_to_equity', lang), r => r.debtToEquity, formatRatioPercent],
-            [t('asset_turnover', lang), r => r.assetTurnover, formatRatioMultiple],
-            [t('fixed_asset_turnover', lang), r => r.fixedAssetTurnover, formatRatioMultiple],
-            [t('roa', lang), r => r.roa, formatRatioPercent],
-            [t('roe', lang), r => r.roe, formatRatioPercent]
+            [t('current_ratio', lang), 'currentRatio'],
+            [t('quick_ratio', lang), 'quickRatio'],
+            [t('cash_ratio', lang), 'cashRatio'],
+            [t('debt_ratio', lang), 'debtRatio'],
+            [t('debt_to_equity', lang), 'debtToEquity'],
+            [t('asset_turnover', lang), 'assetTurnover'],
+            [t('fixed_asset_turnover', lang), 'fixedAssetTurnover'],
+            [t('roa', lang), 'roa'],
+            [t('roe', lang), 'roe']
         ];
         const tableRows = [this.createTableRow(header, true)];
-        lineItems.forEach(([label, getter, fmt]) => {
-            tableRows.push(this.createTableRow([label, ...rows.map(r => fmt(getter(r)))]));
+        lineItems.forEach(([label, key]) => {
+            tableRows.push(this.createTableRow([label, ...rows.map(r => formatRatio(key, r[key]))]));
         });
         return new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },

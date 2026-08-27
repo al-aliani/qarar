@@ -15,10 +15,14 @@ function injectStyles() {
     style.textContent = `
         /* تدقيق 2026-07-11: الألوان كانت احتياطيات Tailwind ثابتة (--border-color/--bg-secondary
            غير موجودة في نظام التصميم) فتُطبَّق دائماً وتكسر الوضع الداكن. الآن توكنز --c-* الحقيقية
-           التي تتبدّل مع الثيم. وكُبّر الزر 20→22px وخط البوب أب 12.5→13.5px لسهولة أعلى. */
+           التي تتبدّل مع الثيم. وكُبّر الزر 20→22px وخط البوب أب 12.5→13.5px لسهولة أعلى.
+           قياس 2026-08-26 على منفذ 375px: هذا الزر وحده كان 72 من أصل 83 هدفاً يفشل
+           WCAG 2.2 §2.5.8 (AA) الذي يشترط 24×24 بكسل CSS — وهو موجود بجانب كل حقل في
+           الأربعين خطوة، فالفشل يتكرر عبر المنتج كله. كُبّر 22→24px: يعبر العتبة تماماً
+           ويُكمل نفس نية التكبير السابقة. */
         .field-help { position: relative; display: inline-flex; vertical-align: middle; margin-inline-start: 6px; }
         .field-help-btn {
-            width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--c-border, #cbd5e1);
+            width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--c-border, #cbd5e1);
             background: var(--c-surface-2, #f1f5f9); color: var(--c-text-muted, #64748b);
             font-size: 13.5px; font-weight: 700; line-height: 1; cursor: help; padding: 0;
             display: inline-flex; align-items: center; justify-content: center;

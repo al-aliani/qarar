@@ -41,6 +41,17 @@ function orderRef(order) {
     return String(order.id || '').slice(0, 8);
 }
 
+// getAuthUser() تُعيد نصّ سبب مع user=null، وهذا النص يفرّق بين حالتين مختلفتين
+// تماماً في نظر العميل: (أ) لا جلسة — خرج أو انتهت صلاحية الرمز، والعلاج تسجيل
+// دخول؛ (ب) لم نصل إلى الخادم أصلاً — شبكة أو تهيئة ناقصة، والعلاج إعادة محاولة.
+// أياً كانت الحالة فليست «لا توجد عمليات دفع»: تلك جملة عن حساب العميل لا عن شبكته.
+const SESSION_ERROR_RE = /not authenticated|session|jwt|token|logged/i;
+
+function classifyAuthFailure(error) {
+    const message = String(error || '');
+    return !message || SESSION_ERROR_RE.test(message) ? 'signin' : 'unreachable';
+}
+
 export class BillingHistoryView {
     /**
      * @param {HTMLElement} container
@@ -54,11 +65,26 @@ export class BillingHistoryView {
     async render() {
         if (!this.container) return;
 
-        const { user } = await getAuthUser();
-        // تم إيقاف فرض تسجيل الدخول مؤقتاً للتجربة
+        const { user, error: authError } = await getAuthUser();
+        // بلا مستخدم لا نعرف شيئاً عن مدفوعات العميل — فلا نُصدر حكماً عنها. كان
+        // الفرع الغائب هنا يترك orders=[] فتُطبع «لا توجد عمليات دفع حتى الآن» لعميل
+        // دافع لمجرد أن جلسته انتهت أو أن الشبكة سقطت (نفس صنف عيب قائمة الدراسات
+        // السحابية، d214838): فشلُ وصولٍ يُقدَّم كحقيقة عن الحساب.
         let orders = [];
+        let blocked = null;
         if (user) {
-            orders = await listOrders();
+            // 2026-08-26: `listOrders` صارت ترمي عند فشل الاستعلام بدل إعادة [] (كانت
+            // تبتلع الخطأ في PaymentService، فجلسة سليمة يفشل استعلامها تسقط في فرع
+            // «لا توجد عمليات دفع حتى الآن»). الرمي وحده لا يكفي: بلا هذه الحراسة
+            // ترفض render() فيلتقطها حارس المسار في app.js ويعرض توستاً **بلا رسم
+            // الصفحة** — أي لا يظهر لوح «تعذّر الوصول» ولا زر إعادة المحاولة أدناه.
+            try {
+                orders = await listOrders();
+            } catch (_) {
+                blocked = 'unreachable';
+            }
+        } else {
+            blocked = classifyAuthFailure(authError);
         }
 
         this.container.innerHTML = `
@@ -70,7 +96,17 @@ export class BillingHistoryView {
                 <div class="card p-6">
                     <h2 class="text-xl font-bold mb-4" style="border-bottom: 1px solid var(--c-border); padding-bottom: var(--s-2);">الطلبات والفواتير</h2>
 
-                    ${orders.length === 0 ? `
+                    ${blocked === 'signin' ? `
+                        <div class="alert alert--warning" role="alert" id="billingSignInRequired">
+                            <p>انتهت جلستك أو لم تسجّل الدخول بعد، فلا يمكننا عرض طلباتك وفواتيرك. سجّل الدخول لعرضها — هذه ليست حالة «لا توجد مدفوعات».</p>
+                            <button type="button" class="btn btn--primary btn--sm mt-2" id="btnBillingSignIn">تسجيل الدخول</button>
+                        </div>
+                    ` : blocked === 'unreachable' ? `
+                        <div class="alert alert--danger" role="alert" id="billingLoadError">
+                            <p>تعذّر الوصول إلى سجل طلباتك — تحقق من الاتصال وأعد المحاولة. هذه ليست حالة «لا توجد مدفوعات».</p>
+                            <button type="button" class="btn btn--secondary btn--sm mt-2" id="btnRetryBilling">إعادة المحاولة</button>
+                        </div>
+                    ` : orders.length === 0 ? `
                         <p class="text-muted">لا توجد عمليات دفع حتى الآن.</p>
                         <a href="#/home" id="billingEmptyPricingLink" class="btn btn--secondary mt-2">عرض الباقات</a>
                     ` : `
@@ -106,6 +142,15 @@ export class BillingHistoryView {
         `;
 
         this.container.querySelector('#btnBillingBack')?.addEventListener('click', () => this.onBack());
+
+        // نفس نمط زر «إعادة المحاولة» في StudyComparison.js: يعيد الجلب فعلاً لا يكتفي
+        // بإخبار العميل أن شيئاً فشل.
+        this.container.querySelector('#btnRetryBilling')?.addEventListener('click', () => {
+            this.render();
+        });
+        this.container.querySelector('#btnBillingSignIn')?.addEventListener('click', () => {
+            AuthGuard.showAuthPrompt(() => this.render());
+        });
         // تدقيق 2026-07-17: href="#/home" وحده لا يكفي إن كان المستخدم أصلاً على #/home —
         // المتصفح لا يُطلق حدث hashchange حين لا تتغيّر قيمة الهاش، فلا يحدث شيء عند النقر.
         // نستدعي onBack() مباشرة (نفس تعريف #btnBillingBack) بدل الاعتماد فقط على href.
