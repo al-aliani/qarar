@@ -5,6 +5,11 @@ const downloadIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3
 const fileIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>';
 const searchIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>';
 
+// بطاقة الدراسة تعرض شارة مصدر صريحة حين لا يكون البلد "SA" — قرار لجنة
+// استشارية ثلاثية (امتثال قانوني/محتوى/ثقة عميل): التنويه العام أعلى الصفحة
+// وحده لا يكفي لأن حقل country نفسه كان كذباً حقلياً صريحاً لـ97+ دراسة.
+const SOURCE_COUNTRY_LABELS = { JO: 'الأردن', EG: 'مصر', UNSPECIFIED: 'غير محدد' };
+
 export class ReadyStudiesView {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -230,12 +235,16 @@ export class ReadyStudiesView {
     renderCard(study) {
         const tags = (study.tags || []).slice(0, 4).map((tag) => `<span class="rs-tag">${escapeHtml(tag)}</span>`).join('');
         const excerpt = study.excerpt || 'دراسة جدوى جاهزة للاطلاع والتحميل.';
+        const sourceCountryBadge = (study.country && study.country !== 'SA')
+            ? `<span class="rs-card__source-badge">مصدر: ${escapeHtml(SOURCE_COUNTRY_LABELS[study.country] || study.country)}</span>`
+            : '';
         return `
             <article class="rs-card">
                 <div class="rs-card__meta">
                     <span class="rs-card__category">${escapeHtml(study.categoryLabel)}</span>
                     <span class="rs-card__format">${escapeHtml(study.format)} · ${escapeHtml(study.sizeLabel)}</span>
                 </div>
+                ${sourceCountryBadge}
                 <h3 class="rs-card__title">${escapeHtml(study.title)}</h3>
                 <p class="rs-card__excerpt">${escapeHtml(excerpt)}</p>
                 <div class="rs-card__tags">${tags}</div>
