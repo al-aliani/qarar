@@ -9,6 +9,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { verifyTamaraNotificationToken } from '../_shared/webhookVerify.ts';
 import { parseTamaraWebhookStatus } from '../_shared/providers/tamara.ts';
 import { sendAlert } from '../_shared/alerting.ts';
+import { insertNotification } from '../_shared/notify.ts';
 
 Deno.serve(async (req: Request) => {
   const sentryDsn = Deno.env.get('SENTRY_DSN');
@@ -58,7 +59,7 @@ Deno.serve(async (req: Request) => {
     .eq('provider', 'tamara')
     .eq('provider_ref', providerRef)
     .eq('status', prevStatus)
-    .select('id');
+    .select('id, user_id, study_id');
 
   if (error) {
     // يعني عميلاً دفع فعلياً (Tamara أكّدت الحدث) لكن سجلّ الطلب لم يُحدَّث — طلب
@@ -82,6 +83,21 @@ Deno.serve(async (req: Request) => {
       .in('id', data.map((row: { id: string }) => row.id))
       .eq('tier', 'reviewed')
       .eq('review_status', 'none');
+
+    // إعلام العميل بنجاح الدفع — لا يُسقط استجابة الـwebhook إن فشل (انظر notify.ts).
+    for (const row of data as Array<{ id: string; user_id: string; study_id: string | null }>) {
+      await insertNotification(
+        adminClient,
+        {
+          userId: row.user_id,
+          type: 'payment',
+          title: 'تم تأكيد دفعتك',
+          body: 'وصلتنا دفعتك بنجاح، ويمكنك الآن تنزيل دراستك.',
+          studyId: row.study_id,
+        },
+        'webhook-tamara'
+      );
+    }
   }
 
   return new Response('ok', { status: 200 });
