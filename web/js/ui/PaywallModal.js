@@ -13,6 +13,7 @@ import { PRICING_PACKAGES, formatPrice } from '../core/pricing.js';
 import { REFUND_POLICY, getBankTransferConfig } from '../config.js';
 import { startCheckout } from '../services/PaymentService.js';
 import { getExperimentVariant, trackEvent } from '../utils/analytics.js';
+import { monitoring } from '../utils/monitoring.js';
 import { attachModalA11y } from '../utils/modalA11y.js';
 import { renderBankTransferPanel } from './components/BankTransferPanel.js';
 
@@ -217,6 +218,10 @@ export class PaywallModal {
         }
         showErr(result.error || 'تعذّر إنشاء طلب التحويل البنكي. حاول لاحقاً.');
         trackEvent('payment_error', { tier, provider: 'bank_transfer', message: result.error || 'bank_transfer_failed' });
+        // دفعة 6 (2026-08-27، اتساق المراقبة): نفس نمط SubscriptionCheckoutView.js —
+        // هذه النافذة (بوابة الدفع الأخرى) كانت تعرض الخطأ للعميل فقط بلا أي أثر
+        // يراه الأدمن عبر Sentry، رغم أن المسارين يمرّان بنفس startCheckout().
+        monitoring.captureMessage(`Payment error: bank_transfer checkout failed (tier ${tier})`, 'warning', { tier, provider: 'bank_transfer', studyId: this.studyId, message: result.error || 'bank_transfer_failed' });
         btn.disabled = false;
         btn.textContent = orig;
     }

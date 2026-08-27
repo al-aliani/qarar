@@ -67,6 +67,12 @@ export class PaymentReturnView {
             // console مميَّز) — كان يظهر للعميل فقط بصفحة العودة، بلا أي أثر يراه الأدمن.
             monitoring.captureMessage(`Payment ${state}: order ${this.orderId}`, 'warning', { orderId: this.orderId, status: state });
         }
+        if (state === 'still_pending') {
+            // دفعة 6 (2026-08-27، اتساق المراقبة): طلب عالق بعد ~20 ثانية استطلاع
+            // غالباً يعني أن الـwebhook تأخّر أو فشل فعلياً — نفس أهمية failed/refunded
+            // لرصد الأدمن، لكنه كان الحالة الوحيدة من الأربع بلا أي استدعاء مراقبة.
+            monitoring.captureMessage(`Payment still_pending after polling timeout: order ${this.orderId}`, 'warning', { orderId: this.orderId, status: state });
+        }
         const messages = {
             loading: { icon: 'i-reset', title: 'جاري تأكيد الدفع...', body: 'لحظات فقط بينما نتحقق من نجاح عملية الدفع.', showContinue: false, showWhatsApp: false },
             paid: { icon: 'i-check', title: 'تم الدفع بنجاح', body: 'تم تفعيل الوصول لتصدير التقرير النهائي لهذه الدراسة.', showContinue: true, showWhatsApp: false },
