@@ -599,6 +599,20 @@
     font-size: .62rem;
 }
 
+.rs-card__source-badge {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    padding: 2px 8px;
+    border: 1px solid var(--c-gold-border);
+    border-radius: var(--r-pill);
+    background: var(--c-gold-subtle);
+    color: var(--c-gold-500);
+    font-size: .62rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 .rs-card__title {
     min-block-size: 2.8em;
     margin: 0;

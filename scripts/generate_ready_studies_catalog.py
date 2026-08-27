@@ -344,6 +344,106 @@ def extract_first_page(path: Path) -> tuple[str, int]:
         return "", 0
 
 
+# تدقيق 2026-08-27: كل الدراسات الـ301 كانت تحمل country="SA" يدوياً بلا
+# استثناء (كوميت aa96ff1) رغم أن نص عشرات الملفات المصدرية يذكر صراحة مؤشرات
+# مالية/جغرافية أردنية أو مصرية. detect_country() تفحص أول 15 صفحة بحثاً عن
+# عملة (دينار/جنيه) أو اسم دولة/محافظة صريح، فتمنع تكرار نفس الادعاء الكاذب
+# عند أي إعادة توليد مستقبلية للفهرس. راجع web/__tests__/readyStudiesCatalog.countryMatchesSourceText.test.js
+# للأدلة النصية الكاملة وراء كل تصحيح.
+COUNTRY_DETECTION_PAGE_LIMIT = 15
+COUNTRY_CONFIDENCE_MIN = 2
+COUNTRY_DOMINANCE_RATIO = 3.0
+
+JO_CURRENCY_RE = re.compile(r"دينار|دنانير")
+JO_COMPOUND_NAME_RE = re.compile(r"المملكة\s+الأردنية|المملكة\s+الاردنية")
+JO_BARE_NAME_RE = re.compile(r"الأردن\b|الاردن\b|\bJordan\b", re.IGNORECASE)
+# ملاحظة: "عمّان/عمان" استُبعدت عمداً — كثيراً ما تعني "سلطنة عُمان" لا
+# العاصمة الأردنية، وكل حالة أردنية حقيقية رصدناها مدعومة بأدلة أخرى أصلاً.
+JO_CITY_RE = re.compile(
+    r"\b(?:الزرقاء|إربد|اربد|السلط|مادبا|الكرك|معان|الطفيلة|عجلون|جرش|"
+    r"العقبة|المفرق|البلقاء|الرصيفة|الأزرق|الازرق|الرمثا|ذيبان)\b"
+)
+
+EG_CURRENCY_RE = re.compile(r"جنيه")
+EG_COMPOUND_NAME_RE = re.compile(r"جمهورية\s+مصر|مصر\s+العربية")
+EG_BARE_NAME_RE = re.compile(r"\bEgypt\b", re.IGNORECASE)
+# ملاحظة: "الغربية/الشرقية" استُبعدتا — صفتان عامتان (غربي/شرقي) قبل أن
+# تكونا محافظتين مصريتين، وكلمة "مصر" المجرّدة استُبعدت من الاحتساب لأنها
+# غالباً سياق عابر (استيراد/خلفية تاريخية) لا يدل على موقع المشروع الفعلي.
+EG_CITY_RE = re.compile(
+    r"\b(?:القاهرة|الإسكندرية|الاسكندرية|الجيزة|المنصورة|الدقهلية|أسيوط|اسيوط|"
+    r"بورسعيد|الإسماعيلية|الاسماعيلية|دمياط|سوهاج|أسوان|اسوان|الفيوم|"
+    r"بني\s*سويف|المنيا|كفر\s*الشيخ|طنطا|الزقازيق|دمنهور|شبين\s*الكوم)\b"
+)
+
+# 4 دراسات تجاوز دليلها نافذة الـ15 صفحة القياسية أو اعتمد على صياغة لا يمكن
+# تعميمها بأمان كقاعدة عامة (كلمة "مصر" المجرّدة وحدها مصدر إنذارات كاذبة في
+# معظم الدراسات الأخرى) — صُنِّفت يدوياً بعد قراءة كامل الملف:
+COUNTRY_OVERRIDES = {
+    # "خطـوات تأسـيس مشـروع مركـز الخـدمات الطلابيـة فـ مصر" — تصريح مباشر
+    # بأن المشروع نفسه في مصر.
+    "40e9c2a12b16": "EG",  # mpdf.pdf
+    # "جنيه مصري" صريحة ضمن حساب أرباح المشروع؛ لا ذكر لكلمة "ريال" إطلاقاً
+    # في كامل الملف (10 صفحات).
+    "57ac8e6be45f": "EG",  # مغسلة السيارات.pdf
+    # "من أهم المزايا التي ترجح هذا المشروع في مصر: توفر المواد الخام في
+    # مصر" — تكرر 4 مرات كمبرر مباشر لموقع المشروع.
+    "5ecbd1f29531": "EG",  # تصنيع الآيس كريم.pdf
+    # كلمة "مصر" تتكرر 31 مرة عبر كامل الملف (26 صفحة) في قسم مواصفات وحجم
+    # سوق المياه المعدنية — أبعد من نافذة الـ15 صفحة القياسية.
+    "cf4974f602fe": "EG",  # مصنع انتاج میاه معدنیة.pdf
+}
+
+
+def detect_country(text: str) -> str:
+    """يفحص نص أول صفحات الملف بحثاً عن مؤشرات مالية/جغرافية أردنية أو مصرية
+    واضحة (عملة أو اسم محافظة/دولة). يستخدم اختباراً بمعدل هيمنة (3×) كي لا
+    يفرض ذِكر عابر واحد للدولة الأخرى (كجدول مقارنة إقليمي) تصنيفاً متضارباً.
+    يعيد "SA" افتراضياً حين لا يظهر أي مؤشر واضح — لا نغيّر الافتراض إلا بدليل.
+    """
+    jo_total = (
+        3 * len(JO_CURRENCY_RE.findall(text))
+        + 3 * len(JO_COMPOUND_NAME_RE.findall(text))
+        + len(JO_BARE_NAME_RE.findall(text))
+        + 2 * len(set(JO_CITY_RE.findall(text)))
+    )
+    eg_total = (
+        3 * len(EG_CURRENCY_RE.findall(text))
+        + 3 * len(EG_COMPOUND_NAME_RE.findall(text))
+        + len(EG_BARE_NAME_RE.findall(text))
+        + 2 * len(set(EG_CITY_RE.findall(text)))
+    )
+
+    if jo_total >= COUNTRY_CONFIDENCE_MIN and eg_total == 0:
+        return "JO"
+    if eg_total >= COUNTRY_CONFIDENCE_MIN and jo_total == 0:
+        return "EG"
+    if jo_total > 0 and eg_total > 0:
+        if jo_total >= COUNTRY_DOMINANCE_RATIO * eg_total and jo_total >= COUNTRY_CONFIDENCE_MIN:
+            return "JO"
+        if eg_total >= COUNTRY_DOMINANCE_RATIO * jo_total and eg_total >= COUNTRY_CONFIDENCE_MIN:
+            return "EG"
+    return "SA"
+
+
+def extract_country(path: Path, record_id: str, page_limit: int = COUNTRY_DETECTION_PAGE_LIMIT) -> str:
+    if record_id in COUNTRY_OVERRIDES:
+        return COUNTRY_OVERRIDES[record_id]
+    if path.suffix.lower() != ".pdf" or PdfReader is None:
+        return "SA"
+    try:
+        reader = PdfReader(str(path), strict=False)
+        parts = []
+        for page in reader.pages[:page_limit]:
+            try:
+                parts.append(normalize_pdf_arabic(page.extract_text() or ""))
+            except Exception:
+                continue
+        return detect_country("\n".join(parts))
+    except Exception:
+        return "SA"
+
+
 def language_for(name_and_excerpt: str) -> str:
     has_arabic = bool(re.search(r"[\u0600-\u06ff]", name_and_excerpt))
     has_latin = bool(re.search(r"[A-Za-z]", name_and_excerpt))
@@ -446,8 +546,9 @@ def build_catalog() -> dict:
         content_for_tags = f"{path.name} {excerpt}"
         tags = make_tags(folder, path.name, content_for_tags, page_count)
         language = language_for(content_for_tags)
+        record_id = hashlib.sha1(relative.encode("utf-8")).hexdigest()[:12]
         record = {
-            "id": hashlib.sha1(relative.encode("utf-8")).hexdigest()[:12],
+            "id": record_id,
             "title": title,
             "filename": path.name,
             "category": category_id,
@@ -462,6 +563,7 @@ def build_catalog() -> dict:
             "pages": page_count,
             "language": language,
             "excerpt": display_excerpt,
+            "country": extract_country(path, record_id),
         }
         studies.append(record)
         category_counts[category_id] += 1
