@@ -8,7 +8,7 @@ const searchIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8
 // بطاقة الدراسة تعرض شارة مصدر صريحة حين لا يكون البلد "SA" — قرار لجنة
 // استشارية ثلاثية (امتثال قانوني/محتوى/ثقة عميل): التنويه العام أعلى الصفحة
 // وحده لا يكفي لأن حقل country نفسه كان كذباً حقلياً صريحاً لـ97+ دراسة.
-const SOURCE_COUNTRY_LABELS = { JO: 'الأردن', EG: 'مصر', UNSPECIFIED: 'غير محدد' };
+const SOURCE_COUNTRY_LABELS = { JO: 'الأردن', EG: 'مصر', IQ: 'العراق', UNSPECIFIED: 'غير محدد' };
 
 export class ReadyStudiesView {
     constructor(containerId) {
