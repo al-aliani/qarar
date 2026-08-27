@@ -11,6 +11,7 @@ import { verifyStripeSignature } from '../_shared/webhookVerify.ts';
 import { parseStripeWebhookStatus, getStripeSessionId, getStripePaymentIntent } from '../_shared/providers/stripe.ts';
 import { sendAlert } from '../_shared/alerting.ts';
 import { insertNotification } from '../_shared/notify.ts';
+import { verifyOrderAmount } from '../_shared/amountGuard.ts';
 
 Deno.serve(async (req: Request) => {
   const sentryDsn = Deno.env.get('SENTRY_DSN');
@@ -68,6 +69,24 @@ Deno.serve(async (req: Request) => {
       // نحفظ payment_intent الآن ليتيح ربط أي استرداد لاحق (charge.refunded) بهذا الطلب.
       const paymentIntent = getStripePaymentIntent(event);
       if (paymentIntent) updateFields.provider_payment_intent = paymentIntent;
+
+      // دفاع بالعمق (انظر amountGuard.ts): amount_total من Stripe بأصغر وحدة عملة (هللة).
+      const amountHalalas = Number(event?.data?.object?.amount_total);
+      const confirmedAmountSar = Number.isFinite(amountHalalas) ? amountHalalas / 100 : null;
+      const amountCheck = await verifyOrderAmount(adminClient, {
+        provider: 'stripe',
+        providerRef: sessionId,
+        confirmedAmountSar,
+      });
+      if (!amountCheck.ok) {
+        console.error(`[webhook-stripe] amount mismatch (provider_ref=${sessionId}, expected=${amountCheck.expectedAmountSar}, confirmed=${confirmedAmountSar})`);
+        await sendAlert(sentryDsn, {
+          message: `[webhook-stripe] amount mismatch (provider_ref=${sessionId}, expected=${amountCheck.expectedAmountSar}, confirmed=${confirmedAmountSar})`,
+          level: 'error',
+          tags: { source: 'webhook-stripe', kind: 'amount_mismatch' },
+        });
+        return new Response('amount_mismatch', { status: 400 });
+      }
     }
     matcher = matcher.eq('provider_ref', sessionId).eq('status', 'pending');
   }
