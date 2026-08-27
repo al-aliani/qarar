@@ -8,6 +8,7 @@ import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { validateStudy } from '../js/utils/validation.js';
 import { SAFE } from './utils.js';
 import { BankReportGenerator } from './BankReportGenerator.js';
+import { escapeHtml } from '../js/utils/escape.js';
 
 /** أقسام تقرير منشآت (معرّفات قابلة للربط مع reportSectionOrder). */
 const MONSHAAT_SECTION_IDS = [
@@ -52,7 +53,7 @@ export class MonshaatReportGenerator {
 
         const v = validateStudy(state);
         const validationNotice = !v.valid && v.errors?.length
-            ? `<div class="monshaat-notice" style="background:#fef5e7;border:1px solid #f59e0b;border-radius:6px;padding:12px 20px;margin:0 20px 20px;font-size:10pt;color:#92400e;"><strong>تنبيه:</strong> يفضّل مراجعة البيانات قبل الاعتماد. ${v.errors.slice(0, 2).join('؛ ')}</div>`
+            ? `<div class="monshaat-notice" style="background:#fef5e7;border:1px solid #f59e0b;border-radius:6px;padding:12px 20px;margin:0 20px 20px;font-size:10pt;color:#92400e;"><strong>تنبيه:</strong> يفضّل مراجعة البيانات قبل الاعتماد. ${escapeHtml(v.errors.slice(0, 2).join('؛ '))}</div>`
             : '';
 
         const currency = state.assumptions?.currency || 'SAR';
@@ -73,7 +74,7 @@ export class MonshaatReportGenerator {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>دراسة جدوى — ${info.name || 'مشروع مقترح'} — هيكل متوافق مع متطلبات منشآت</title>
+    <title>دراسة جدوى — ${escapeHtml(info.name || 'مشروع مقترح')} — هيكل متوافق مع متطلبات منشآت</title>
     <link href="/fonts/fonts.css" rel="stylesheet">
     <style>
         :root { --gold: #C9A227; --dark: #1a365d; --blue: #2c5282; --green: #276749; --red: #c53030; }
@@ -108,7 +109,7 @@ export class MonshaatReportGenerator {
     <div class="monshaat-container">
         <div class="monshaat-header">
             <h1>دراسة جدوى — هيكل متوافق مع متطلبات منشآت</h1>
-            <h2>${info.name || 'مشروع مقترح'}</h2>
+            <h2>${escapeHtml(info.name || 'مشروع مقترح')}</h2>
             <p style="margin-top:12px;font-size:10pt;color:#718096;">أقسام وعناوين مطابقة قدر الإمكان للنموذج الاسترشادي | ${date}</p>
         </div>
         ${validationNotice}
@@ -158,15 +159,20 @@ export class MonshaatReportGenerator {
         const wrap = (html) => `<div class="monshaat-section"><div class="monshaat-section-title">${arNum}. ${title}</div>${html}</div>`;
 
         switch (id) {
-            case 'executive_summary':
-                return wrap(`<p>${state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText || `يهدف مشروع «${info.name || 'المشروع'}» إلى ${info.concept || 'تنفيذ نشاط تجاري'} في ${info.city || 'الموقع المحدد'}. تم إعداد هذه الدراسة بهيكل متوافق مع متطلبات منشآت قدر الإمكان.`}</p>`);
+            case 'executive_summary': {
+                const overviewText = state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText;
+                const summary = overviewText
+                    ? escapeHtml(overviewText)
+                    : `يهدف مشروع «${escapeHtml(info.name || 'المشروع')}» إلى ${escapeHtml(info.concept || 'تنفيذ نشاط تجاري')} في ${escapeHtml(info.city || 'الموقع المحدد')}. تم إعداد هذه الدراسة بهيكل متوافق مع متطلبات منشآت قدر الإمكان.`;
+                return wrap(`<p>${summary}</p>`);
+            }
             case 'market': {
                 const ma = state.marketing?.marketAnalysis || {};
                 const text = ma.summary || ma.description || state.marketSizing?.tam?.description || state.marketSizing?.targetDistrict || '';
                 // لا بيانات سوق = لا قسم — أربع كلمات حشو («يُحدد حسب النشاط والمنطقة»)
                 // في تقرير موسوم بتوافق منشآت أسوأ من غياب القسم
                 if (!String(text).trim()) return '';
-                return wrap(`<p>${text}</p>`);
+                return wrap(`<p>${escapeHtml(text)}</p>`);
             }
             case 'technical': {
                 const tech = state.technical || {};
@@ -174,9 +180,9 @@ export class MonshaatReportGenerator {
                 const timeline = info.timeline?.constructionMonths ?? tech.constructionMonths ?? '—';
                 return wrap(`<table class="monshaat-table">
                 <tr><th>البند</th><th>القيمة</th></tr>
-                <tr><td>المساحة / الحجم</td><td>${area}</td></tr>
-                <tr><td>مدة الإنشاء (شهر)</td><td>${timeline}</td></tr>
-                <tr><td>بدء التشغيل</td><td>${info.timeline?.operationStart || '—'}</td></tr>
+                <tr><td>المساحة / الحجم</td><td>${escapeHtml(area)}</td></tr>
+                <tr><td>مدة الإنشاء (شهر)</td><td>${escapeHtml(timeline)}</td></tr>
+                <tr><td>بدء التشغيل</td><td>${escapeHtml(info.timeline?.operationStart || '—')}</td></tr>
                 ${results?.saudization?.totalHeads > 0 ? `<tr><td>الوظائف ونسبة التوطين</td><td>${results.saudization.totalHeads} وظيفة — توطين ${Math.round((results.saudization.rate || 0) * 100)}% (${results.saudization.saudiHeads} سعودي)</td></tr>` : ''}
                 </table>`);
             }
@@ -205,10 +211,10 @@ export class MonshaatReportGenerator {
                 <tr><th>المخاطر</th><th>الاحتمالية</th><th>التأثير</th><th>خطة المواجهة</th></tr>
                 ${(state.riskAnalysis.risks || []).slice(0, 6).map(r => `
                 <tr>
-                    <td>${(r.name || r.risk || r.description || '—')}</td>
-                    <td>${r.probability || '—'}</td>
-                    <td>${r.impact || '—'}</td>
-                    <td>${(r.mitigation || '—').toString().slice(0, 80)}${(r.mitigation || '').length > 80 ? '...' : ''}</td>
+                    <td>${escapeHtml(r.name || r.risk || r.description || '—')}</td>
+                    <td>${escapeHtml(r.probability || '—')}</td>
+                    <td>${escapeHtml(r.impact || '—')}</td>
+                    <td>${escapeHtml((r.mitigation || '—').toString().slice(0, 80))}${(r.mitigation || '').length > 80 ? '...' : ''}</td>
                 </tr>
                 `).join('')}
                 </table>`);
@@ -222,7 +228,7 @@ export class MonshaatReportGenerator {
     static _renderRecommendation(results) {
         const decision = results.decision || 'REVISE';
         const reasons = results.decisionReasons || [];
-        const reasonStr = Array.isArray(reasons) && reasons.length ? reasons.slice(0, 2).map(r => typeof r === 'string' ? r : (r?.text || r?.reason || '')).filter(Boolean).join('؛ ') : '';
+        const reasonStr = Array.isArray(reasons) && reasons.length ? escapeHtml(reasons.slice(0, 2).map(r => typeof r === 'string' ? r : (r?.text || r?.reason || '')).filter(Boolean).join('؛ ')) : '';
         const cls = decision === 'GO' ? '' : decision === 'NO-GO' ? 'no-go' : 'revise';
         const msg = decision === 'GO'
             ? `بناءً على التحليل المالي، المشروع يحقق مؤشرات إيجابية. يُوصى بالمضي قدماً مع مراعاة المخاطر.`

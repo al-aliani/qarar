@@ -54,7 +54,8 @@ function bankEsc(value) {
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 export class BankReportGenerator {
@@ -137,7 +138,7 @@ export class BankReportGenerator {
 
         const v = validateStudy(state);
         const validationNotice = !v.valid && v.errors?.length
-            ? `<div class="bank-notice" style="background:#fef5e7;border:1px solid #f59e0b;border-radius:6px;padding:12px 20px;margin:0 20px 20px;font-size:10pt;color:#92400e;"><strong>تنبيه:</strong> يفضّل مراجعة البيانات قبل التقديم. ${v.errors.slice(0, 2).join('؛ ')}</div>`
+            ? `<div class="bank-notice" style="background:#fef5e7;border:1px solid #f59e0b;border-radius:6px;padding:12px 20px;margin:0 20px 20px;font-size:10pt;color:#92400e;"><strong>تنبيه:</strong> يفضّل مراجعة البيانات قبل التقديم. ${bankEsc(v.errors.slice(0, 2).join('؛ '))}</div>`
             : '';
 
         const currency = state.assumptions?.currency || 'SAR';
