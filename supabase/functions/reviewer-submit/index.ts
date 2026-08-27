@@ -8,6 +8,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { verifyReviewer } from '../_shared/reviewerAuth.ts';
 import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
+import { insertNotification } from '../_shared/notify.ts';
 
 function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -75,7 +76,7 @@ Deno.serve(async (req: Request) => {
     .eq('id', body.orderId)
     .eq('reviewer_id', auth.reviewerId)
     .eq('review_status', 'in_review')
-    .select('id');
+    .select('id, user_id, study_id');
 
   if (error) {
     console.error('[reviewer-submit] update failed:', error);
@@ -84,6 +85,24 @@ Deno.serve(async (req: Request) => {
   if (!data || data.length === 0) {
     return jsonResponse(req, { error: 'not_your_claim_or_not_in_review' }, 409);
   }
+
+  // إعلام العميل بانتهاء المراجعة — لا يُسقط استجابة submit إن فشل (انظر notify.ts).
+  // نص الرفض يشير إلى ReviewStatusBadge/ExportMenu.js التي تعرض reviewer_notes فعلياً.
+  const notifyBody =
+    body.decision === 'certified'
+      ? `حصلت دراستك على شهادة اعتماد رقم ${certificateId} من مراجع خبير.`
+      : 'أعاد المراجع دراستك مع ملاحظات — راجعها الآن في صفحة تصدير الدراسة.';
+  await insertNotification(
+    adminClient,
+    {
+      userId: data[0].user_id,
+      type: 'review',
+      title: body.decision === 'certified' ? 'اعتُمدت دراستك من مراجع خبير' : 'أعاد المراجع دراستك مع ملاحظات',
+      body: notifyBody,
+      studyId: data[0].study_id,
+    },
+    'reviewer-submit'
+  );
 
   return jsonResponse(req, { orderId: body.orderId, reviewStatus: body.decision, certificateId });
 });

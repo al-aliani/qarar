@@ -8,6 +8,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { verifyReviewer } from '../_shared/reviewerAuth.ts';
 import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
+import { insertNotification } from '../_shared/notify.ts';
 
 function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -51,7 +52,7 @@ Deno.serve(async (req: Request) => {
     .eq('tier', 'reviewed')
     .eq('status', 'paid')
     .eq('review_status', 'queued')
-    .select('id');
+    .select('id, user_id, study_id');
 
   if (error) {
     console.error('[reviewer-claim] update failed:', error);
@@ -60,6 +61,19 @@ Deno.serve(async (req: Request) => {
   if (!data || data.length === 0) {
     return jsonResponse(req, { error: 'already_claimed_or_not_found' }, 409);
   }
+
+  // إعلام العميل ببدء المراجعة — لا يُسقط استجابة claim إن فشل (انظر notify.ts).
+  await insertNotification(
+    adminClient,
+    {
+      userId: data[0].user_id,
+      type: 'review',
+      title: 'بدأت مراجعة دراستك',
+      body: 'بدأ أحد خبرائنا مراجعة دراستك المدفوعة، وستصلك النتيجة قريباً.',
+      studyId: data[0].study_id,
+    },
+    'reviewer-claim'
+  );
 
   return jsonResponse(req, { orderId: body.orderId, reviewStatus: 'in_review' });
 });
