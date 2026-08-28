@@ -92,7 +92,7 @@ export function createEmptyStudy() {
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        version: "4.0.0",
+        version: "4.0.0", // شكل/بنية كائن الدراسة (schema) — لا علاقة له بـENGINE_VERSION في engine.js (منطق الحساب نفسه)
 
         // الدراسة المبدئية (اختيارية): 3–5 أسئلة قبل التفصيل
         preliminaryCheck: {

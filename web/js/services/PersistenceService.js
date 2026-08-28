@@ -7,6 +7,10 @@ async function _getAuditLogger() {
     const m = await import('../utils/auditLogger.js');
     return { log: m.log, ACTIONS: m.ACTIONS };
 }
+async function _getEngineVersion() {
+    const m = await import('../core/engine.js');
+    return m.ENGINE_VERSION;
+}
 
 const COMPRESS_PREFIX = 'LZ:';
 // lz-string تبعية محلية مُجمَّعة عبر Vite (optimizeDeps.include). لا CDN.
@@ -74,8 +78,13 @@ export class PersistenceService {
             // Clean data before saving (remove circular refs, ensure proper types)
             const cleanData = this._sanitize(data);
 
-            // إضافة updated_at لحل التعارضات
-            const dataWithMeta = { ...cleanData, _meta: { ...(cleanData._meta || {}), updatedAt: new Date().toISOString() } };
+            // إضافة updated_at لحل التعارضات + بصمة إصدار المحرك (قرار لجنة
+            // 2026-08-27، انظر engine.js:ENGINE_VERSION) — تُقارَن عند فتح
+            // الدراسة لاحقاً (ProjectOverviewView) لتنبيه العميل إن تغيّرت
+            // معادلات المحرك منذ آخر حفظ.
+            let engineVersion = null;
+            try { engineVersion = await _getEngineVersion(); } catch (_) { /* لا تمنع الحفظ لفشل الاستيراد */ }
+            const dataWithMeta = { ...cleanData, _meta: { ...(cleanData._meta || {}), updatedAt: new Date().toISOString(), ...(engineVersion ? { engineVersion } : {}) } };
             await this._saveLocal(id, dataWithMeta);
             try {
                 const { log, ACTIONS } = await _getAuditLogger();
@@ -83,10 +92,18 @@ export class PersistenceService {
             } catch (_) { }
 
             // 2. Cloud Save (offline: نجاح محلي فقط)
+            // ملاحظة: _meta.updatedAt عمداً لا يُرفع هنا — العمود المستقل
+            // updated_at في _saveCloud (نفسه المستخدم في حل التعارضات) هو
+            // مصدر الحقيقة للسحابة، وتكراره داخل JSON زائد لا فائدة منه. أما
+            // engineVersion فبلا عمود مستقل — يجب أن يصل ضمن JSON نفسه وإلا
+            // اختفى تماماً للمستخدمين المسجَّلين (الأغلبية) رغم نجاحه محلياً.
+            const cloudData = engineVersion
+                ? { ...cleanData, _meta: { ...(cleanData._meta || {}), engineVersion } }
+                : cleanData;
             const { getAuthUser } = await _getSupabase();
             const { user } = await getAuthUser();
             if (user) {
-                await this._saveCloud(id, cleanData, user.id);
+                await this._saveCloud(id, cloudData, user.id);
                 try {
                     const { log, ACTIONS } = await _getAuditLogger();
                     log(ACTIONS.SAVE, { id, location: 'both' });
