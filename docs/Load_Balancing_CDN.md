@@ -39,7 +39,7 @@ server {
 - **Vercel / Netlify**: توزيع تلقائي حسب المنطقة (Edge).
 - **AWS**: Application Load Balancer (ALB) أمام EC2 أو ECS.
 - **GCP**: Load Balancer أمام Cloud Run أو GKE.
-- **Supabase**: استخدام Connection Pooler (PgBouncer) للقاعدة؛ الواجهة تُوزَّع عبر الاستضافة (Vercel/Netlify).
+- **Supabase**: استخدام Connection Pooler (PgBouncer) للقاعدة؛ الواجهة تُوزَّع عبر الاستضافة (Vercel حالياً؛ لا نشر فعلي عبر Netlify — netlify.toml أُزيل 2026-07-22).
 
 ### معايير اختيار الاستراتيجية
 - **عدد الزيارات المتوقع**: إذا منخفض، قد يكفي خادم واحد + CDN.
