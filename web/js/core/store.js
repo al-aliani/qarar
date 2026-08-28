@@ -768,6 +768,16 @@ class StudyStore {
      * Sync to cloud using PersistenceService (non-blocking)
      */
     async _syncToCloud(data) {
+        // مراجعة عدائية 2026-08-27 وجدت عطلاً حقيقياً: بلا هذا الحارس، تحرير
+        // مستمر أثناء انقطاع فعلي يُنتج نداءات _syncToCloud متراكبة (كل واحد حتى
+        // 3 محاولات إعادة اتصال) — تضخيم ×3 لحمل الشبكة/الخادم أثناء عطل حقيقي
+        // بدل حمايته. الحل: تزامن واحد فقط في الرحلة، وتجميع (coalesce) أي طلب
+        // وصل أثناءه إلى أحدث نسخة بيانات فقط — لا طابور لكل تغيير وسيط.
+        if (this._cloudSyncInFlight) {
+            this._pendingCloudSyncData = data;
+            return { success: true, location: 'local', coalesced: true };
+        }
+        this._cloudSyncInFlight = true;
         try {
             this._notifySaveStatus({ saving: true });
             const { PersistenceService } = await import('../services/PersistenceService.js');
@@ -780,10 +790,16 @@ class StudyStore {
 
             const result = await PersistenceService.save(projectId, data);
 
+            // دفعة 5 (2026-08-27، طبقة Availability): result.cloudSyncFailed لم يكن
+            // يُقرأ هنا إطلاقاً — PersistenceService.save() يُرجعه صراحة عند فشل كل
+            // محاولات المزامنة السحابية (بعد إعادة المحاولة)، لكن success!==false
+            // كان يظل true (الحفظ المحلي نجح فعلاً)، فتختفي حالة "مسجَّل دخول لكن
+            // فشلت المزامنة" تماماً خلف نفس حالة "غير مسجَّل دخول" المحايدة.
             this._lastSaveStatus = {
                 location: result.location || 'local',
                 success: result.success !== false,
-                error: result.error
+                error: result.error,
+                cloudSyncFailed: Boolean(result.cloudSyncFailed)
             };
             this._notifySaveStatus(this._lastSaveStatus);
 
@@ -793,6 +809,17 @@ class StudyStore {
                 console.debug(`[Store] Saved to local only (not authenticated, project: ${projectId})`);
             }
 
+            if (result.cloudSyncFailed) {
+                this._scheduleCloudSyncRetryOnReconnect(data);
+            } else {
+                // مراجعة عدائية 2026-08-27 وجدت عطلاً حرجاً: مستمع 'online' من فشل
+                // سابق لم يكن يُزال أبداً بعد نجاح لاحق عادي — يبقى معلَّقاً بلا داعٍ،
+                // وأي حدث 'online' لاحق غير ذي صلة (استيقاظ الجهاز، إعادة اتصال واي
+                // فاي عرضية) كان يعيد إرسال بيانات **قديمة** من الفشل الأصلي فيكتب
+                // فوق مزامنة أحدث ناجحة بالفعل. أي نجاح يُبطِل أي إعادة محاولة معلَّقة.
+                this._clearPendingCloudSyncRetry();
+            }
+
             return result;
         } catch (err) {
             // Non-critical: cloud save failed, but local save succeeded
@@ -800,12 +827,64 @@ class StudyStore {
             this._lastSaveStatus = {
                 location: 'local',
                 success: true,
-                error: err.message
+                error: err.message,
+                cloudSyncFailed: true
             };
             this._notifySaveStatus(this._lastSaveStatus);
+            this._scheduleCloudSyncRetryOnReconnect(data);
             // Don't throw - local save succeeded, cloud is optional
             return { success: false, location: 'local', error: err.message };
+        } finally {
+            this._cloudSyncInFlight = false;
+            if (this._pendingCloudSyncData) {
+                const nextData = this._pendingCloudSyncData;
+                this._pendingCloudSyncData = null;
+                // بلا await عمداً: لا نُطيل نداء المزامنة الحالي المنتهي فعلاً؛
+                // يعمل التالي في الخلفية بنفس منطق المعالجة والإبلاغ عن الحالة.
+                this._syncToCloud(nextData);
+            }
         }
+    }
+
+    /**
+     * دفعة 5 (2026-08-27، طبقة Availability): عند فشل كل محاولات المزامنة
+     * (PersistenceService._saveCloudWithRetry استنفدت محاولاتها فعلياً — عادة
+     * انقطاع اتصال حقيقي لا خللاً عابراً)، نستمع لحدث 'online' مرة واحدة
+     * لإطلاق محاولة مزامنة فورية إضافية بمجرد عودة الاتصال، بدل انتظار
+     * تعديل آخر يدوي من المستخدم ليُطلِق حفظاً جديداً بالصدفة.
+     *
+     * مستمع واحد فقط يبقى حياً طوال فترة الانقطاع — كل فشل جديد أثناءها
+     * يُحدِّث `_pendingOnlineSyncData` (لا يُنشئ مستمعاً إضافياً ولا يُتجاهَل)،
+     * فتُرسَل أحدث نسخة بيانات فعلياً عند عودة الاتصال، لا أقدم لقطة فاشلة.
+     */
+    _scheduleCloudSyncRetryOnReconnect(data) {
+        this._pendingOnlineSyncData = data;
+        if (this._onlineRetryListenerAttached || typeof window === 'undefined') return;
+        this._onlineRetryListenerAttached = true;
+        this._pendingOnlineHandler = () => {
+            this._onlineRetryListenerAttached = false;
+            window.removeEventListener('online', this._pendingOnlineHandler);
+            this._pendingOnlineHandler = null;
+            const latestData = this._pendingOnlineSyncData;
+            this._pendingOnlineSyncData = null;
+            this._syncToCloud(latestData).catch(() => { /* نفس معالجة الفشل القائمة في _syncToCloud نفسها */ });
+        };
+        window.addEventListener('online', this._pendingOnlineHandler);
+    }
+
+    /**
+     * تُبطِل أي إعادة محاولة معلَّقة بعد نجاح مزامنة لاحق — بلا هذا، مستمع من
+     * فشل سابق يبقى حياً بلا داعٍ ويُعيد بيانات قديمة عند أي اتصال لاحق غير
+     * ذي صلة (استيقاظ الجهاز، إعادة اتصال واي فاي عرضية) فيكتب فوق نجاح لاحق.
+     */
+    _clearPendingCloudSyncRetry() {
+        if (!this._onlineRetryListenerAttached) return;
+        this._onlineRetryListenerAttached = false;
+        this._pendingOnlineSyncData = null;
+        if (typeof window !== 'undefined' && this._pendingOnlineHandler) {
+            window.removeEventListener('online', this._pendingOnlineHandler);
+        }
+        this._pendingOnlineHandler = null;
     }
 
     /**
