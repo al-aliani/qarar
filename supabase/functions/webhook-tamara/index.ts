@@ -51,7 +51,19 @@ Deno.serve(async (req: Request) => {
   // فقط؛ والاسترداد يحدّث طلباً paid فقط ويحافظ على paid_at الأصلي. تحويل الحالة إلى
   // 'refunded' يسحب الوصول تلقائياً (hasActivePayment يشترط status='paid').
   const prevStatus = status === 'refunded' ? 'paid' : 'pending';
-  const updateFields: Record<string, unknown> = { status, metadata: payload };
+  // تدقيق أمني 2026-08-28 (اتساق مع webhook-moyasar، انظر تعليقه): لا سرّ مضمَّن في
+  // جسم حدث تمارا (تحقّقه رأس Authorization منفصل عن الجسم)، لكن تخزين payload
+  // كاملاً لا داعي له. قائمة بيضاء أوسع قليلاً من مثيلاتها (شكل حمولة تمارا الحيّ
+  // غير مؤكَّد 100% — انظر تحفّظ providers/tamara.ts وamountCheck أدناه) تحافظ على
+  // كل حقل يعتمد عليه الكود فعلياً بالفعل (order_id، المبلغ) دون تخزين الجسم الخام.
+  const safeMetadata = {
+    order_id: payload?.order_id ?? payload?.data?.order_id,
+    order_status: payload?.order_status ?? payload?.status ?? payload?.data?.status,
+    event_type: payload?.event_type ?? payload?.type,
+    total_amount: payload?.total_amount,
+    amount: payload?.amount,
+  };
+  const updateFields: Record<string, unknown> = { status, metadata: safeMetadata };
   if (status === 'paid') updateFields.paid_at = new Date().toISOString();
 
   if (status === 'paid') {

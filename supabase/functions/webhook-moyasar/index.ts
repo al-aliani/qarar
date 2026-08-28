@@ -53,7 +53,23 @@ Deno.serve(async (req: Request) => {
   // paid_at الأصلي للسجل المحاسبي. تحويل الحالة إلى 'refunded' يسحب الوصول تلقائياً
   // (PaymentService.hasActivePayment يشترط status='paid').
   const prevStatus = status === 'refunded' ? 'paid' : 'pending';
-  const updateFields: Record<string, unknown> = { status, metadata: payload };
+  // تدقيق أمني 2026-08-28: كانت metadata تخزّن payload الخام كاملاً — بما فيه
+  // secret_token (نفس السرّ المشترك الذي تحقّق منه verifyMoyasarSecretToken أعلاه،
+  // انظر webhookVerify.ts). سياسة orders_select_own تقيّد الصفوف لا الأعمدة، فصاحب
+  // الطلب يقرأ عمود metadata كاملاً عبر supabase.from('orders').select() — أي عميل
+  // دفع مرة واحدة يستخرج السرّ ثم يزوّر أحداث "مدفوع" لطلباته الخاصة مستقبلاً. لا
+  // مستهلك حقيقي يقرأ metadata حالياً (تحقّق: grep شامل صفر نتائج) — قائمة بيضاء
+  // صريحة بدل حذف الحقل كلياً، للاحتفاظ بأثر تدقيق آمن دون أي حقل حسّاس.
+  const safeMetadata = {
+    type: payload?.type,
+    status: payload?.data?.status,
+    id: payload?.data?.id,
+    amount: payload?.data?.amount,
+    currency: payload?.data?.currency,
+    fee: payload?.data?.fee,
+    source_type: payload?.data?.source?.type,
+  };
+  const updateFields: Record<string, unknown> = { status, metadata: safeMetadata };
   if (status === 'paid') updateFields.paid_at = new Date().toISOString();
 
   if (status === 'paid') {
