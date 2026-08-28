@@ -10,6 +10,7 @@ import { verifyMoyasarSecretToken } from '../_shared/webhookVerify.ts';
 import { parseMoyasarWebhookStatus } from '../_shared/providers/moyasar.ts';
 import { sendAlert } from '../_shared/alerting.ts';
 import { insertNotification } from '../_shared/notify.ts';
+import { verifyOrderAmount } from '../_shared/amountGuard.ts';
 
 Deno.serve(async (req: Request) => {
   const sentryDsn = Deno.env.get('SENTRY_DSN');
@@ -54,6 +55,26 @@ Deno.serve(async (req: Request) => {
   const prevStatus = status === 'refunded' ? 'paid' : 'pending';
   const updateFields: Record<string, unknown> = { status, metadata: payload };
   if (status === 'paid') updateFields.paid_at = new Date().toISOString();
+
+  if (status === 'paid') {
+    // دفاع بالعمق (انظر amountGuard.ts): المبلغ من Moyasar بالهللة.
+    const amountHalalas = Number(payload?.data?.amount);
+    const confirmedAmountSar = Number.isFinite(amountHalalas) ? amountHalalas / 100 : null;
+    const amountCheck = await verifyOrderAmount(adminClient, {
+      provider: 'moyasar',
+      providerRef,
+      confirmedAmountSar,
+    });
+    if (!amountCheck.ok) {
+      console.error(`[webhook-moyasar] amount mismatch (provider_ref=${providerRef}, expected=${amountCheck.expectedAmountSar}, confirmed=${confirmedAmountSar})`);
+      await sendAlert(sentryDsn, {
+        message: `[webhook-moyasar] amount mismatch (provider_ref=${providerRef}, expected=${amountCheck.expectedAmountSar}, confirmed=${confirmedAmountSar})`,
+        level: 'error',
+        tags: { source: 'webhook-moyasar', kind: 'amount_mismatch' },
+      });
+      return new Response('amount_mismatch', { status: 400 });
+    }
+  }
 
   const { data, error } = await adminClient
     .from('orders')
