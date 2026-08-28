@@ -968,7 +968,7 @@ export class DashboardView {
         const isFiltered = !!(this.searchQuery || this.selectedFolderId);
         if (isFiltered) {
             const reason = this.searchQuery
-                ? `لا توجد دراسة باسم «${(this.searchQuery || '').replace(/</g, '&lt;')}»`
+                ? `لا توجد دراسة باسم «${escapeHtml(this.searchQuery || '')}»`
                 : 'لا توجد دراسات في هذا المجلد بعد';
             return `
                 <div class="empty-state dv-empty dvh-empty dvh-empty--filtered">
@@ -1698,6 +1698,25 @@ export class DashboardView {
         document.body.appendChild(loadingOverlay);
 
         try {
+            // تدقيق 2026-08-28: كان يُعاد التحميل من التخزين دائماً حتى لو كان المشروع
+            // نفسه محمَّلاً في الذاكرة بالفعل — PersistenceService.load() يقارن نسخة
+            // القرص المحلية بالسحابة فقط، ولا يعلم شيئاً عن نسخة الجلسة الحيّة في
+            // store.state التي قد تحمل تعديلاً لم يكتمل حفظه المؤجَّل بعد (حتى ثانيتين
+            // تقريباً). فتح نفس الدراسة من لوحة التحكم خلال هذه النافذة كان يستبدل
+            // التعديل الطازج بنسخة أقدم من القرص — بعد ظهور إشعار «محفوظ» فعلاً.
+            // الإصلاح: إن كان المشروع المطلوب هو ذاته المحمَّل حالياً، لا نُعيد القراءة
+            // من التخزين إطلاقاً — نُفرّغ أي حفظ مؤجَّل أولاً (احتياطاً) ثم نتابع بنسخة
+            // الذاكرة نفسها، الأحدث بالضرورة.
+            const currentId = this.store.getState()?.projectInfo?.id;
+            if (currentId && currentId === id) {
+                await this.store.flush();
+                this.store.notify();
+                if (this.onProjectSelect) this.onProjectSelect(id);
+                toast.success('تم تحميل المشروع بنجاح');
+                if (typeof enterWorkspaceMode === 'function') enterWorkspaceMode();
+                return;
+            }
+
             // Try loading from cloud first, then local
             const result = await ProjectManager.loadProject(id);
 

@@ -200,8 +200,8 @@ export class BankReportGenerator {
         <div class="bank-header">
             <h1>طلب تمويل — دراسة جدوى اقتصادية</h1>
             <h2>${bankEsc(info.name || 'مشروع مقترح')}</h2>
-            ${(info.clientName || '').trim() ? `<p style="margin-top:8px;font-size:12pt;">أُعدت هذه الدراسة لصالح: <strong>${String(info.clientName).replace(/</g, '&lt;')}</strong></p>` : ''}
-            ${(info.preparedBy || '').trim() ? `<p style="margin-top:2px;font-size:10pt;color:#718096;">إعداد: ${String(info.preparedBy).replace(/</g, '&lt;')}</p>` : ''}
+            ${(info.clientName || '').trim() ? `<p style="margin-top:8px;font-size:12pt;">أُعدت هذه الدراسة لصالح: <strong>${bankEsc(info.clientName)}</strong></p>` : ''}
+            ${(info.preparedBy || '').trim() ? `<p style="margin-top:2px;font-size:10pt;color:#718096;">إعداد: ${bankEsc(info.preparedBy)}</p>` : ''}
             <p style="margin-top:8px;font-size:10pt;color:#4a5568;">نوع الدراسة: <strong>${studyTypeLabel || 'غير محدد'}</strong> | لمن تُعد: <strong>${studyRecipientLabel || 'غير محدد'}</strong></p>
             <p style="margin-top:12px;font-size:10pt;color:#718096;">أُعدّ باتباع الهيكل الاسترشادي لجهات التمويل المحلية (${bankLabel}، منشآت) | ${date}</p>
             <p style="margin-top:6px;font-size:9pt;color:#4a5568;">بنية التقرير مناسبة للإقراض: ملخص تنفيذي، استخدام التمويل، القوائم المالية، الضمانات.</p>

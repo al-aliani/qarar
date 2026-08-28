@@ -7,6 +7,7 @@
 import { getAuthUser } from '../../supabaseClient.js';
 import { submitTicket, listMyTickets, getTicketWithMessages, addMessage } from '../services/TicketService.js';
 import { toast } from '../utils/toast.js';
+import { escapeHtml } from '../utils/escape.js';
 import { trackEvent } from '../utils/analytics.js';
 
 const STATUS_META = {
@@ -27,10 +28,6 @@ const PRIORITY_OPTIONS = [
     { value: 'normal', label: 'عادية' },
     { value: 'urgent', label: 'عاجلة' },
 ];
-
-function escapeHtml(value) {
-    return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
 
 function formatDate(iso) {
     if (!iso) return '—';

@@ -6,6 +6,7 @@
  * أو بطاقة الدراسة في DashboardView.js).
  */
 import { getReviewStatus } from '../../services/PaymentService.js';
+import { escapeHtml } from '../../utils/escape.js';
 
 const STATUS_LABELS = {
     none: null, // لا يوجد طلب "مراجَع بخبير" لهذه الدراسة أصلاً — لا نعرض شيئاً
@@ -37,8 +38,4 @@ export async function renderReviewStatusBadge(studyId) {
         return `<div class="review-badge-wrap">${badge}<p class="review-badge__notes">${escapeHtml(status.reviewerNotes)}</p></div>`;
     }
     return badge;
-}
-
-function escapeHtml(value) {
-    return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

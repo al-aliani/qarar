@@ -18,6 +18,7 @@ import * as TicketService from '../services/TicketService.js';
 import { renderStarsHtml } from '../utils/starRating.js';
 import { toast } from '../utils/toast.js';
 import { formatCurrency, formatNumber, formatPercent } from '../utils/formatters.js';
+import { escapeHtml } from '../utils/escape.js';
 import { ADMIN_FEATURE_CATALOG } from '../data/adminFeatureCatalog.js';
 import Swal from 'sweetalert2';
 
@@ -108,7 +109,10 @@ export class AdminDashboardView {
     }
 
     _esc(value) {
-        return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        // دفعة توحيد التهريب (2026-08-28): كانت هذه النسخة المحلية لا تهرّب علامتي
+        // التنصيص (" ') رغم استخدامها في سياق سمات (value="…") في عدة مواضع بالملف —
+        // فجوة حقن حقيقية. الآن تفويض كامل للدالة الكنسية الموحّدة.
+        return escapeHtml(value);
     }
 
     _renderShell() {

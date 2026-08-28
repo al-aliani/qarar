@@ -2,6 +2,7 @@
 import Swal from 'sweetalert2';
 import { ProjectManager } from '../services/ProjectManager.js';
 import { toast } from '../utils/toast.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class TrashView {
     constructor() {
@@ -63,14 +64,14 @@ export class TrashView {
                         </div>
                     </div>
                     
-                    <h3 class="font-bold text-lg mb-2 text-gray-800">${project.name}</h3>
+                    <h3 class="font-bold text-lg mb-2 text-gray-800">${escapeHtml(project.name)}</h3>
                     <p class="text-xs text-gray-500 mb-4">آخر تعديل: ${new Date(project.lastModified).toLocaleDateString('ar-SA-u-nu-latn')}</p>
                     
                     <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
                         <button class="btn-restore btn btn-sm btn-outline-primary flex-1 py-1" data-id="${project.id}">
                             <svg class="ic" aria-hidden="true"><use href="#i-reset"/></svg> استعادة
                         </button>
-                        <button class="btn-permanent-delete btn btn-sm btn-outline-danger flex-1 py-1 text-red-600 hover:bg-red-50" data-id="${project.id}" data-name="${String(project.name || '').replace(/"/g, '&quot;')}">
+                        <button class="btn-permanent-delete btn btn-sm btn-outline-danger flex-1 py-1 text-red-600 hover:bg-red-50" data-id="${project.id}" data-name="${escapeHtml(project.name)}">
                             <svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> حذف نهائي
                         </button>
                     </div>

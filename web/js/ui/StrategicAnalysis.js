@@ -199,7 +199,7 @@ export class StrategicAnalysis {
     }
 
     renderTOWS(tows) {
-        const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const esc = escapeHtml;
         const quadrants = [
             { key: 'so', title: 'هجومية (SO)', hint: 'قوة + فرص: استغل نقاط قوتك لاقتناص الفرص. مثال: أطلق منتجاً مميزاً في الحي عالي الطلب.', cls: 'swot-strengths' },
             { key: 'wo', title: 'تطويرية (WO)', hint: 'ضعف + فرص: عالج ضعفك لتلتقط الفرصة. مثال: وظّف خبير تسويق لاستثمار نمو الطلب.', cls: 'swot-opportunities' },

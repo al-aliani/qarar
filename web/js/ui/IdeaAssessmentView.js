@@ -8,6 +8,7 @@ import { IDEA_ASSESSMENT_HINTS } from '../config.js';
 import { SECTIONS } from '../core/schema.js';
 import { STEPS } from '../core/wizardSteps.js';
 import { toast } from '../utils/toast.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class IdeaAssessmentView {
     constructor(containerId, store, options = {}) {
@@ -62,7 +63,7 @@ export class IdeaAssessmentView {
                             return `
                         <div class="idea-field">
                             <label class="block font-medium mb-2">${f.label}</label>
-                            <p class="input w-full mb-1" style="min-height: 44px;">${(f.value || '').replace(/</g, '&lt;')}</p>
+                            <p class="input w-full mb-1" style="min-height: 44px;">${escapeHtml(f.value || '')}</p>
                             <div class="idea-hint text-xs mt-1 text-muted">القيم مأخوذة من أرقام الدراسة السوقية (TAM/SAM) — عدّلها هناك لتنعكس هنا.</div>
                             <button type="button" class="btn btn--ghost btn-sm mt-2 btn-goto-market">تعديل في الدراسة السوقية ←</button>
                         </div>`;
@@ -70,7 +71,7 @@ export class IdeaAssessmentView {
                         return `
                         <div class="idea-field">
                             <label class="block font-medium mb-2">${f.label}</label>
-                            <textarea name="${f.key}" class="input w-full min-h-[80px]" placeholder="${f.placeholder}" data-key="${f.key}">${(f.value || '').replace(/</g, '&lt;')}</textarea>
+                            <textarea name="${f.key}" class="input w-full min-h-[80px]" placeholder="${f.placeholder}" data-key="${f.key}">${escapeHtml(f.value || '')}</textarea>
                             <div class="idea-hint text-xs mt-1 ${ok ? 'text-success' : 'text-muted'}" data-key="${f.key}">${tip}</div>
                         </div>`;
                     }).join('')}

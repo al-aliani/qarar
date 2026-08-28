@@ -7,6 +7,7 @@
 import { formatCurrency, formatPercent } from '../js/utils/formatters.js';
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { ReportGenerator } from '../js/services/ReportGenerator.js';
+import { escapeHtml } from '../js/utils/escape.js';
 
 /** أقسام ملخص خطة العمل (معرّفات قابلة للربط مع reportSectionOrder). */
 const BP_SUMMARY_SECTION_IDS = ['vision', 'goals', 'product', 'market', 'financial_summary', 'request'];
@@ -21,7 +22,7 @@ const REPORT_SECTION_TO_BP_SUMMARY = {
 
 function esc(s) {
     if (s == null || s === '') return '—';
-    return String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return escapeHtml(s);
 }
 
 export class BusinessPlanFeasibilityExporter {

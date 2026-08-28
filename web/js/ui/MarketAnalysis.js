@@ -19,6 +19,7 @@ import { toast } from '../utils/toast.js';
 import { SAUDI_REGIONS } from '../data/SaudiCityStats.js';
 import { fieldHelp } from './components/FieldHelp.js';
 import { deriveRevenueFromStreams } from '../core/engine.js';
+import { escapeHtml } from '../utils/escape.js';
 
 // أيقونات من الـsprite الموحّد (index.html) بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id, cls = '') => `<svg class="ic${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -29,13 +30,6 @@ const COMMON_NEIGHBORHOODS = [
     'الروضة', 'الشاطئ', 'السلامة', 'الحمراء',
     'العقربية', 'الراكة', 'العزيزية', 'الششة', 'قباء', 'العوالي'
 ];
-
-function escapeHtml(s) {
-    if (s == null) return '';
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
-}
 
 export class MarketAnalysis {
     constructor(containerId, store, onNavigate) {
@@ -87,7 +81,7 @@ export class MarketAnalysis {
                         </div>
                         <div class="form-group">
                             <label for="target-neighborhood">الحي/الموقع المحدد</label>
-                            <input type="text" id="target-neighborhood" class="input" list="dl-target-neighborhood" autocomplete="off" placeholder="مثال: حي النخيل، العليا" value="${(marketSizing.targetNeighborhood || '').replace(/</g, '&lt;')}">
+                            <input type="text" id="target-neighborhood" class="input" list="dl-target-neighborhood" autocomplete="off" placeholder="مثال: حي النخيل، العليا" value="${escapeHtml(marketSizing.targetNeighborhood || '')}">
                             <datalist id="dl-target-neighborhood">${COMMON_NEIGHBORHOODS.map(n => `<option value="${escapeHtml(n)}"></option>`).join('')}</datalist>
                         </div>
                     </div>
@@ -104,27 +98,27 @@ export class MarketAnalysis {
                         </div>
                         <div class="form-group">
                             <label for="pop-year">سنة التعداد</label>
-                            <input type="text" id="pop-year" class="input" placeholder="مثال: 2022" value="${(marketSizing.populationDemographics?.year || '').replace(/</g, '&lt;')}">
+                            <input type="text" id="pop-year" class="input" placeholder="مثال: 2022" value="${escapeHtml(marketSizing.populationDemographics?.year || '')}">
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="pop-source">المصدر (هيئة الإحصاء، إلخ)</label>
-                        <input type="text" id="pop-source" class="input" placeholder="الهيئة العامة للإحصاء" value="${(marketSizing.populationDemographics?.source || '').replace(/</g, '&lt;')}">
+                        <input type="text" id="pop-source" class="input" placeholder="الهيئة العامة للإحصاء" value="${escapeHtml(marketSizing.populationDemographics?.source || '')}">
                         <small class="text-muted">مصادر مقترحة: <a href="https://www.stats.gov.sa" target="_blank" rel="noopener">الهيئة العامة للإحصاء</a>، الغرفة التجارية، الغرفة الصناعية، معهد الإدارة العامة</small>
                     </div>
                     <div class="form-row form-row--2">
                         <div class="form-group">
                             <label for="pop-youth">نسبة الشباب (%)</label>
-                            <input type="text" id="pop-youth" class="input" placeholder="الفئة المستهدفة" value="${(marketSizing.populationDemographics?.youthPercentage || '').replace(/</g, '&lt;')}">
+                            <input type="text" id="pop-youth" class="input" placeholder="الفئة المستهدفة" value="${escapeHtml(marketSizing.populationDemographics?.youthPercentage || '')}">
                         </div>
                         <div class="form-group">
                             <label for="pop-target">حجم الشريحة المستهدفة</label>
-                            <input type="text" id="pop-target" class="input" placeholder="عدد أو نسبة" value="${(marketSizing.populationDemographics?.targetSegmentSize || '').replace(/</g, '&lt;')}">
+                            <input type="text" id="pop-target" class="input" placeholder="عدد أو نسبة" value="${escapeHtml(marketSizing.populationDemographics?.targetSegmentSize || '')}">
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="pop-notes">ملاحظات</label>
-                        <textarea id="pop-notes" class="input" rows="2" placeholder="تفاصيل ديموغرافية إضافية">${(marketSizing.populationDemographics?.notes || '').replace(/</g, '&lt;')}</textarea>
+                        <textarea id="pop-notes" class="input" rows="2" placeholder="تفاصيل ديموغرافية إضافية">${escapeHtml(marketSizing.populationDemographics?.notes || '')}</textarea>
                     </div>
                 </div>
 
@@ -137,11 +131,11 @@ export class MarketAnalysis {
                     <small class="text-muted d-block mb-2">المصدر المقترح: الغرفة التجارية، الغرفة الصناعية، معهد الإدارة العامة</small>
                     <div class="form-group">
                         <label for="sector-analysis">تحليل القطاع</label>
-                        <textarea id="sector-analysis" class="input" rows="2" placeholder="خصائص القطاع المستهدف، الحجم، النمو...">${(marketSizing.sectorAnalysis || '').replace(/</g, '&lt;')}</textarea>
+                        <textarea id="sector-analysis" class="input" rows="2" placeholder="خصائص القطاع المستهدف، الحجم، النمو...">${escapeHtml(marketSizing.sectorAnalysis || '')}</textarea>
                     </div>
                     <div class="form-group">
                         <label for="industry-analysis">تحليل الصناعة</label>
-                        <textarea id="industry-analysis" class="input" rows="2" placeholder="هيكل الصناعة، اللاعبون الرئيسيون، الاتجاهات...">${(marketSizing.industryAnalysis || '').replace(/</g, '&lt;')}</textarea>
+                        <textarea id="industry-analysis" class="input" rows="2" placeholder="هيكل الصناعة، اللاعبون الرئيسيون، الاتجاهات...">${escapeHtml(marketSizing.industryAnalysis || '')}</textarea>
                     </div>
                 </div>
 
@@ -156,21 +150,21 @@ export class MarketAnalysis {
                     </div>
                     <div class="form-group">
                         <label for="mix-product">المنتج (Product)</label>
-                        <textarea id="mix-product" class="input" rows="2" placeholder="المواصفات، الجودة، العلامة التجارية...">${(marketing.marketingMix?.product || '').replace(/</g, '&lt;')}</textarea>
+                        <textarea id="mix-product" class="input" rows="2" placeholder="المواصفات، الجودة، العلامة التجارية...">${escapeHtml(marketing.marketingMix?.product || '')}</textarea>
                         <small class="text-muted" style="display:block; margin-top:4px;">ركّز على القيمة كما يدركها العميل، لا المواصفات الفنية وحدها.</small>
                     </div>
                     <div class="form-group">
                         <label for="mix-price">السعر (Price)</label>
-                        <input type="text" id="mix-price" class="input" placeholder="استراتيجية التسعير، الخصومات، الدفع..." value="${(marketing.marketingMix?.price || '').replace(/</g, '&lt;')}">
+                        <input type="text" id="mix-price" class="input" placeholder="استراتيجية التسعير، الخصومات، الدفع..." value="${escapeHtml(marketing.marketingMix?.price || '')}">
                         <small class="text-muted" style="display:block; margin-top:4px;">قارن بالتكلفة وأسعار المنافسين وقدرة عملائك — وتجنّب حرب الأسعار.</small>
                     </div>
                     <div class="form-group">
                         <label for="mix-place">المكان (Place)</label>
-                        <input type="text" id="mix-place" class="input" placeholder="قنوات التوزيع، المواقع، المنافذ..." value="${(marketing.marketingMix?.place || '').replace(/</g, '&lt;')}">
+                        <input type="text" id="mix-place" class="input" placeholder="قنوات التوزيع، المواقع، المنافذ..." value="${escapeHtml(marketing.marketingMix?.place || '')}">
                     </div>
                     <div class="form-group">
                         <label for="mix-promotion">الترويج (Promotion)</label>
-                        <textarea id="mix-promotion" class="input" rows="2" placeholder="الإعلان، العلاقات العامة، الحملات...">${(marketing.marketingMix?.promotion || '').replace(/</g, '&lt;')}</textarea>
+                        <textarea id="mix-promotion" class="input" rows="2" placeholder="الإعلان، العلاقات العامة، الحملات...">${escapeHtml(marketing.marketingMix?.promotion || '')}</textarea>
                         <small class="text-muted" style="display:block; margin-top:4px;">وجّه الحملة للشريحة المستهدفة، لا للجميع.</small>
                     </div>
                 </div>
@@ -272,38 +266,38 @@ export class MarketAnalysis {
                                 <label for="vision2030-alignment">ربط المشروع برؤية 2030</label>
                                 <button type="button" class="btn-xs btn-magic btn-ai-field" data-target="vision2030-alignment">${icon('i-sparkle')} ولّد</button>
                             </div>
-                            <textarea id="vision2030-alignment" class="input" rows="2" placeholder="وصف ارتباط المشروع بالرؤية (مثال: دعم قطاع الترفيه، توطين الصناعة...)">${(marketSizing.vision2030?.alignment || '').replace(/</g, '&lt;')}</textarea>
+                            <textarea id="vision2030-alignment" class="input" rows="2" placeholder="وصف ارتباط المشروع بالرؤية (مثال: دعم قطاع الترفيه، توطين الصناعة...)">${escapeHtml(marketSizing.vision2030?.alignment || '')}</textarea>
                         </div>
                         <div class="form-group">
                             <label for="vision2030-programs">البرامج ذات الصلة</label>
-                            <input type="text" id="vision2030-programs" class="input" placeholder="برامج رفع المحتوى المحلي، منشآت، كفالة..." value="${(marketSizing.vision2030?.relevantPrograms || '').replace(/</g, '&lt;')}">
+                            <input type="text" id="vision2030-programs" class="input" placeholder="برامج رفع المحتوى المحلي، منشآت، كفالة..." value="${escapeHtml(marketSizing.vision2030?.relevantPrograms || '')}">
                         </div>
                         <div class="form-group">
                             <div class="flex-between mb-1">
                                 <label for="vision2030-impact">الأثر المتوقع على أهداف الرؤية</label>
                                 <button type="button" class="btn-xs btn-magic btn-ai-field" data-target="vision2030-impact">${icon('i-sparkle')} ولّد</button>
                             </div>
-                            <textarea id="vision2030-impact" class="input" rows="2" placeholder="مساهمة في التوظيف، التنويع الاقتصادي...">${(marketSizing.vision2030?.impact || '').replace(/</g, '&lt;')}</textarea>
+                            <textarea id="vision2030-impact" class="input" rows="2" placeholder="مساهمة في التوظيف، التنويع الاقتصادي...">${escapeHtml(marketSizing.vision2030?.impact || '')}</textarea>
                         </div>
                         <h3 class="card-title mt-4">دراسة اقتصاد الدولة</h3>
                         <div class="form-group">
                             <label for="economy-gdp">معدل النمو والاتجاه الاقتصادي</label>
-                            <input type="text" id="economy-gdp" class="input" placeholder="نمو الناتج المحلي، التضخم، اتجاهات القطاع..." value="${(marketSizing.nationalEconomy?.gdpGrowth || '').replace(/</g, '&lt;')}">
+                            <input type="text" id="economy-gdp" class="input" placeholder="نمو الناتج المحلي، التضخم، اتجاهات القطاع..." value="${escapeHtml(marketSizing.nationalEconomy?.gdpGrowth || '')}">
                         </div>
                         <div class="form-group">
                             <label for="economy-sector">نمو القطاع المستهدف</label>
-                            <input type="text" id="economy-sector" class="input" placeholder="اتجاهات نمو القطاع..." value="${(marketSizing.nationalEconomy?.sectorGrowth || '').replace(/</g, '&lt;')}">
+                            <input type="text" id="economy-sector" class="input" placeholder="اتجاهات نمو القطاع..." value="${escapeHtml(marketSizing.nationalEconomy?.sectorGrowth || '')}">
                         </div>
                         <div class="form-group">
                             <label for="economy-indicators">مؤشرات وطنية ذات صلة</label>
-                            <input type="text" id="economy-indicators" class="input" placeholder="مؤشرات الاستثمار، الاستهلاك، السياحة..." value="${(marketSizing.nationalEconomy?.keyIndicators || '').replace(/</g, '&lt;')}">
+                            <input type="text" id="economy-indicators" class="input" placeholder="مؤشرات الاستثمار، الاستهلاك، السياحة..." value="${escapeHtml(marketSizing.nationalEconomy?.keyIndicators || '')}">
                         </div>
                         <div class="form-group">
                             <div class="flex-between mb-1">
                                 <label for="economy-trends">الاتجاهات الاقتصادية المؤثرة</label>
                                 <button type="button" class="btn-xs btn-magic btn-ai-field" data-target="economy-trends">${icon('i-sparkle')} ولّد</button>
                             </div>
-                            <textarea id="economy-trends" class="input" rows="2" placeholder="التوجهات التي تؤثر على فرص المشروع...">${(marketSizing.nationalEconomy?.trends || '').replace(/</g, '&lt;')}</textarea>
+                            <textarea id="economy-trends" class="input" rows="2" placeholder="التوجهات التي تؤثر على فرص المشروع...">${escapeHtml(marketSizing.nationalEconomy?.trends || '')}</textarea>
                         </div>
                     </div>
                 </details>
@@ -435,7 +429,7 @@ export class MarketAnalysis {
                         <input type="number" id="market-tam" class="input tam-value" data-field="tam" 
                                value="${tam.value || 0}" placeholder="بالريال">
                         <input type="text" class="input input--sm" data-field="tam" data-subfield="description" aria-label="وصف السوق الكلي"
-                               value="${tam.description || ''}" placeholder="وصف السوق الكلي...">
+                               value="${escapeHtml(tam.description || '')}" placeholder="وصف السوق الكلي...">
                     </div>
                     <div class="market-input-group">
                         <label class="input-label" for="market-sam">
@@ -447,7 +441,7 @@ export class MarketAnalysis {
                         <input type="number" id="market-sam" class="input sam-value" data-field="sam" 
                                value="${sam.value || 0}" placeholder="بالريال">
                         <input type="text" class="input input--sm" data-field="sam" data-subfield="description" aria-label="وصف السوق المتاح"
-                               value="${sam.description || ''}" placeholder="وصف السوق المتاح...">
+                               value="${escapeHtml(sam.description || '')}" placeholder="وصف السوق المتاح...">
                     </div>
                     <div class="market-input-group">
                         <label class="input-label" for="market-som">
@@ -459,7 +453,7 @@ export class MarketAnalysis {
                         <input type="number" id="market-som" class="input som-value" data-field="som"
                                value="${som.value || 0}" placeholder="بالريال">
                         <input type="text" class="input input--sm" data-field="som" data-subfield="description" aria-label="وصف الحصة المستهدفة"
-                               value="${som.description || ''}" placeholder="وصف الحصة المستهدفة...">
+                               value="${escapeHtml(som.description || '')}" placeholder="وصف الحصة المستهدفة...">
                         <p class="text-xs som-revenue-hint mt-1" id="som-revenue-hint" data-year1-revenue="${Math.round(this._derivedRevenue?.year1Revenue || 0)}">
                             ${this._renderSomRevenueHintText(som.value)}
                         </p>
@@ -586,11 +580,11 @@ export class MarketAnalysis {
                     <tbody id="competitorsBody">
                         ${competitors.map((comp, idx) => `
                             <tr data-idx="${idx}">
-                                <td><input type="text" class="input input--sm competitor-field" data-field="name" value="${comp.name || ''}"></td>
+                                <td><input type="text" class="input input--sm competitor-field" data-field="name" value="${escapeHtml(comp.name || '')}"></td>
                                 <td><input type="number" class="input input--sm competitor-field" data-field="marketShare" value="${comp.marketShare || 0}" min="0" max="100">%</td>
-                                <td><input type="text" class="input input--sm competitor-field" data-field="strengths" value="${comp.strengths || ''}"></td>
-                                <td><input type="text" class="input input--sm competitor-field" data-field="weaknesses" value="${comp.weaknesses || ''}"></td>
-                                <td><input type="text" class="input input--sm competitor-field" data-field="advantage" value="${comp.advantage || ''}"></td>
+                                <td><input type="text" class="input input--sm competitor-field" data-field="strengths" value="${escapeHtml(comp.strengths || '')}"></td>
+                                <td><input type="text" class="input input--sm competitor-field" data-field="weaknesses" value="${escapeHtml(comp.weaknesses || '')}"></td>
+                                <td><input type="text" class="input input--sm competitor-field" data-field="advantage" value="${escapeHtml(comp.advantage || '')}"></td>
                                 <td><input type="number" class="input input--sm competitor-field" data-field="estimatedDailyCustomers" value="${comp.estimatedDailyCustomers || 0}" placeholder="للمقارنة"></td>
                                 <td><input type="number" class="input input--sm competitor-field" data-field="estimatedAvgTicket" value="${comp.estimatedAvgTicket || 0}" placeholder="عدد × متوسط = مبيعات يومية"></td>
                                 <td><button class="btn-icon btn-remove-competitor" data-idx="${idx}" aria-label="حذف المنافس">${icon('i-trash')}</button></td>

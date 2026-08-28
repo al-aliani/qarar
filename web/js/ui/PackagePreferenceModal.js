@@ -10,11 +10,7 @@ import { PRICING_PACKAGES, formatPrice, CURRENCY_SYMBOL } from '../core/pricing.
 import { updateUserProfile } from '../../supabaseClient.js';
 import { trackEvent } from '../utils/analytics.js';
 import { attachModalA11y } from '../utils/modalA11y.js';
-
-function escapeHtml(str) {
-    if (str == null) return '';
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
+import { escapeHtml } from '../utils/escape.js';
 
 export class PackagePreferenceModal {
     constructor(options = {}) {

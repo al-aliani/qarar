@@ -5,6 +5,7 @@
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { calculateProjectScore } from '../core/scoring.js';
 import { formatIrrPct } from '../utils/indicatorFormat.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class PresentationView {
     constructor(store) {
@@ -82,10 +83,10 @@ export class PresentationView {
                     <div class="h-full flex flex-col items-center justify-center text-center p-12 bg-gradient-to-br from-indigo-900 to-black">
                         <svg class="ic text-6xl mb-6" aria-hidden="true"><use href="#i-rocket"/></svg>
                         <h1 class="text-6xl font-black mb-4 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
-                            ${project.name || 'مشروع جديد'}
+                            ${escapeHtml(project.name) || 'مشروع جديد'}
                         </h1>
                         <p class="text-2xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-                            ${project.description || 'فرصة استثمارية واعدة'}
+                            ${escapeHtml(project.description) || 'فرصة استثمارية واعدة'}
                         </p>
                         <div class="mt-12 text-sm text-gray-500">
                             ${new Date().toLocaleDateString('ar-SA')} | عرض تقديمي للمستثمرين
@@ -102,7 +103,7 @@ export class PresentationView {
                     <div class="p-8 bg-red-900/20 rounded-2xl border border-red-500/20 h-full">
                         <h2 class="text-3xl font-bold text-red-400 mb-6"><svg class="ic" aria-hidden="true"><use href="#i-hand-stop"/></svg> المشكلة</h2>
                         <p class="text-xl leading-relaxed text-gray-200">
-                            ${exec.problemStatement || 'لم يتم تحديد المشكلة بعد...'}
+                            ${escapeHtml(exec.problemStatement) || 'لم يتم تحديد المشكلة بعد...'}
                         </p>
                     </div>
                 `,
@@ -110,11 +111,11 @@ export class PresentationView {
                     <div class="p-8 bg-green-900/20 rounded-2xl border border-green-500/20 h-full">
                         <h2 class="text-3xl font-bold text-green-400 mb-6"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> الحل المقترح</h2>
                         <p class="text-xl leading-relaxed text-gray-200">
-                            ${project.concept || exec.solutionStatement || 'لم يتم تحديد الحل...'}
+                            ${escapeHtml(project.concept) || escapeHtml(exec.solutionStatement) || 'لم يتم تحديد الحل...'}
                         </p>
                         <div class="mt-6 pt-6 border-t border-white/10">
                             <h4 class="text-green-300 font-bold mb-2"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg> القيمة المميزة:</h4>
-                            <p>${exec.uniqueValueProposition || ''}</p>
+                            <p>${escapeHtml(exec.uniqueValueProposition)}</p>
                         </div>
                     </div>
                 `

@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import { DEFAULT_REPORT_SECTION_ORDER } from '../core/schema.js';
 import { AIConnector } from '../services/AIConnector.js';
 import { toast } from '../utils/toast.js';
+import { escapeHtml as escapeHtmlShared } from '../utils/escape.js';
 
 const REPORT_SECTION_LABELS = {
     executive_summary: 'الملخص التنفيذي',
@@ -108,12 +109,7 @@ export class ReportBuilderView {
     }
 
     escapeHtml(value) {
-        return String(value ?? '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
+        return escapeHtmlShared(value);
     }
 
     showAIPreview(title, text) {

@@ -14,6 +14,7 @@ import {
 import { STEPS, isStepVisibleInStudyMode, STEPS_ABSORBED_IN_CATEGORY_VIEW } from '../core/wizardSteps.js';
 import { trackEvent } from '../utils/analytics.js';
 import { attachModalA11y } from '../utils/modalA11y.js';
+import { escapeHtml } from '../utils/escape.js';
 
 // عدد خطوات كل وضع — محسوب من مصدر الحقيقة الوحيد (wizardSteps.js) لا رقماً مُخمَّناً،
 // ومطابق لما يراه المستخدم فعلياً في صفحة الفئات: يستبعد الخطوات المستوعَبة بصرياً داخل
@@ -28,9 +29,6 @@ const STUDY_MODES = [
     { id: 'simple', icon: 'clipboard', name: 'بسيط', desc: `الأقسام الأساسية للدراسة دون التحليلات المتقدمة (حساسية، سيناريوهات، مونت كارلو، تقييم…) — ${modeStepCount('simple')} خطوة تقريباً.` },
     { id: 'advanced', icon: 'chart', name: 'مفصل', desc: `الدراسة الكاملة بكل الأقسام والتحليلات — جاهزة للبنك والمستثمر (${modeStepCount('advanced')} خطوة).`, badge: 'موصى به لبنك/مستثمر' }
 ];
-
-const escapeAttribute = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-const escapeHtml = (value) => escapeAttribute(value).replace(/>/g, '&gt;');
 
 function parseProductNames(value) {
     const normalized = String(value || '')
@@ -401,7 +399,7 @@ export class TemplateGallery {
                 <p class="text-sm text-muted mb-3">اختر ما يناسب خبرتك ووقتك؛ يمكنك تغييره لاحقاً في أي وقت.</p>
                 <div class="mode-cards" role="radiogroup" aria-label="مستوى تفصيل الدراسة">
                     ${STUDY_MODES.map(m => `
-                        <button type="button" class="mode-card ${m.id === currentMode ? 'active' : ''}" data-mode="${m.id}" role="radio" aria-checked="${m.id === currentMode}" aria-label="${escapeAttribute(m.name)}: ${escapeAttribute(m.desc)}${m.badge ? ' — ' + escapeAttribute(m.badge) : ''}">
+                        <button type="button" class="mode-card ${m.id === currentMode ? 'active' : ''}" data-mode="${m.id}" role="radio" aria-checked="${m.id === currentMode}" aria-label="${escapeHtml(m.name)}: ${escapeHtml(m.desc)}${m.badge ? ' — ' + escapeHtml(m.badge) : ''}">
                             ${m.badge ? `<span class="mode-card__badge" style="display:block;font-size:.7rem;font-weight:700;color:var(--c-primary,#0f5132);margin-bottom:4px;">${m.badge}</span>` : ''}
                             <span class="mode-card__icon" aria-hidden="true" style="font-size:1.5rem;"><svg class="ic" aria-hidden="true"><use href="#i-${m.icon}"/></svg></span>
                             <span class="mode-card__name" style="display:block;font-weight:700;font-size:1.05rem;margin-top:4px;">${m.name}</span>
@@ -488,7 +486,7 @@ export class TemplateGallery {
                 return `
                     <div class="form-group mb-3">
                         <label>اسم المشروع</label>
-                        <input type="text" id="fw_projectName" class="input" placeholder="مثال: مقهى الشروق" value="${escapeAttribute(this.wizardData.projectName)}" autofocus>
+                        <input type="text" id="fw_projectName" class="input" placeholder="مثال: مقهى الشروق" value="${escapeHtml(this.wizardData.projectName)}" autofocus>
                     </div>
                     <div class="form-group mb-3">
                         <label>وصف الفكرة بإيجاز</label>
@@ -496,7 +494,7 @@ export class TemplateGallery {
                     </div>
                     <div class="form-group mb-4">
                         <label>القطاع (مجال العمل)</label>
-                        <input type="text" id="fw_industry" class="input" placeholder="مثال: الأغذية والمشروبات" value="${escapeAttribute(this.wizardData.industry)}">
+                        <input type="text" id="fw_industry" class="input" placeholder="مثال: الأغذية والمشروبات" value="${escapeHtml(this.wizardData.industry)}">
                     </div>
                     <div class="form-group mb-4">
                         <label for="fw_projectType">نوع المشروع</label>
@@ -522,7 +520,7 @@ export class TemplateGallery {
                     <div class="form-group mb-4">
                         <label>رأس المال التقديري المتوفر (اختياري)</label>
                         <p class="text-sm text-muted mb-2">كم المبلغ التقريبي الذي تخطط لاستثماره لتأسيس هذا المشروع؟</p>
-                        <input type="number" id="fw_initialCapital" class="input" placeholder="مثال: 150000" value="${escapeAttribute(this.wizardData.initialCapital)}">
+                        <input type="number" id="fw_initialCapital" class="input" placeholder="مثال: 150000" value="${escapeHtml(this.wizardData.initialCapital)}">
                     </div>
                 `;
             }

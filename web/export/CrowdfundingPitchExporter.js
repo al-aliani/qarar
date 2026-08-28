@@ -5,6 +5,7 @@
 import { formatCurrency } from '../js/utils/formatters.js';
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { SECTIONS } from '../js/core/schema.js';
+import { escapeHtml } from '../js/utils/escape.js';
 
 export class CrowdfundingPitchExporter {
 
@@ -29,13 +30,13 @@ export class CrowdfundingPitchExporter {
         const projTimeline = info.timeline || {};
         const currency = state.assumptions?.currency || 'SAR';
 
-        const esc = (s) => (s == null ? '' : String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+        const esc = escapeHtml;
         const summaryLine = (exec.projectOverview || exec.problemStatement || info.concept || info.description || '—').toString().slice(0, 200);
         const problemLine = (exec.problemStatement || info.startupHypothesis?.problem || '—').toString().slice(0, 100);
         const solutionLine = (exec.solutionStatement || info.startupHypothesis?.solution || '—').toString().slice(0, 100);
 
         const askAmount = financing.totalInvestment || capex.total || (financing.sources?.equity?.amount || 0) + (financing.sources?.bankLoan?.amount || 0);
-        const useOfFunds = (financing.useOfFunds || 'استثمار وتشغيل المشروع (تجهيزات، رأس مال عامل، تسويق).').toString().replace(/</g, '&lt;');
+        const useOfFunds = escapeHtml(financing.useOfFunds || 'استثمار وتشغيل المشروع (تجهيزات، رأس مال عامل، تسويق).');
 
         // لا بيانات = لا قسم — «يُضاف يدوياً» داخل ملف موسوم «جاهز للرفع» يفضح عدم الاكتمال
         const timelineText = activities.length > 0
@@ -46,7 +47,7 @@ export class CrowdfundingPitchExporter {
 
         const rewardsRaw = financing.investorBenefits || financing.rewards || exec.keyMilestones || '';
         const rewardsText = rewardsRaw.toString().trim()
-            ? rewardsRaw.toString().replace(/</g, '&lt;')
+            ? escapeHtml(rewardsRaw)
             : '';
         const ind = results.indicators || {};
         const paybackStr = ind.paybackPeriod != null ? (ind.paybackPeriod.toFixed(1) + ' سنة') : '—';

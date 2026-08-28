@@ -3,6 +3,7 @@ import { toast } from '../utils/toast.js';
 import { calculateStudyCompleteness } from '../utils/studyCompleteness.js';
 import { calculateIdeaScore } from '../core/calculateIdeaScore.js';
 import { SIDEBAR_SECTIONS } from '../core/wizardSteps.js';
+import { escapeHtml } from '../utils/escape.js';
 import { SimpleModeController } from '../controllers/SimpleModeController.js';
 
 export class Sidebar {
@@ -128,10 +129,10 @@ export class Sidebar {
             </div>
             <div class="studies-list-items">
                 ${sorted.map(p => `
-                    <div class="step-item studies-load-item flex items-center gap-1 justify-between" data-id="${p.id}" data-name="${(p.name || '').replace(/"/g, '&quot;')}" role="button" tabindex="0" style="padding: 6px 8px; font-size: 12px; border-radius: 4px; margin-bottom: 2px;">
+                    <div class="step-item studies-load-item flex items-center gap-1 justify-between" data-id="${p.id}" data-name="${escapeHtml(p.name)}" role="button" tabindex="0" style="padding: 6px 8px; font-size: 12px; border-radius: 4px; margin-bottom: 2px;">
                         <div class="flex-1 min-w-0 flex items-center gap-1" data-action="open">
                             <span class="step-icon"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg></span>
-                            <span class="step-label truncate">${(p.name || 'بدون اسم').substring(0, 24)}</span>
+                            <span class="step-label truncate">${escapeHtml((p.name || 'بدون اسم').substring(0, 24))}</span>
                             <span class="text-muted text-[10px]">${this._formatStudyDate(p.lastModified)}</span>
                         </div>
                         <button type="button" class="studies-delete-btn p-0.5 rounded opacity-70 hover:opacity-100" data-id="${p.id}" title="حذف الدراسة" aria-label="حذف"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></button>
@@ -293,7 +294,7 @@ export class Sidebar {
             const colorClass = idea.color === 'green' ? 'idea-score--green' : idea.color === 'yellow' ? 'idea-score--yellow' : 'idea-score--red';
             // صف رفيع داخل بطاقة الحالة المدمجة (.sidebar-status) — التفاصيل تبقى في title/aria
             ideaScoreHTML = `
-                <div class="status-row status-row--score ${colorClass}" role="status" aria-label="نتيجة الفكرة ${score} من 100: ${idea.message}" title="${idea.message}">
+                <div class="status-row status-row--score ${colorClass}" role="status" aria-label="نتيجة الفكرة ${score} من 100: ${escapeHtml(idea.message)}" title="${escapeHtml(idea.message)}">
                     <span class="status-label">نتيجة الفكرة</span>
                     <span class="status-track" aria-hidden="true"><span class="status-fill" style="width:${score}%"></span></span>
                     <span class="status-value">${score}</span>

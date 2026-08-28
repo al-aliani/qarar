@@ -10,6 +10,7 @@ import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { calculateProjectScore } from '../js/core/scoring.js';
 import { SAFE } from './utils.js';
 import { netMarginText } from './netMargin.js';
+import { escapeHtml } from '../js/utils/escape.js';
 
 /** معرّفات شرائح المحتوى (بعد الغلاف وقبل شريحة الختام) — قابلة للربط مع reportSectionOrder. */
 const PITCH_CONTENT_SLIDE_IDS = ['executive_summary', 'market', 'financial_kpis', 'recommendation'];
@@ -21,7 +22,7 @@ function formatCurrency(n) {
 }
 
 function safe(s) {
-    return (s || '').toString().replace(/</g, '&lt;');
+    return escapeHtml(s || '');
 }
 
 export class PitchDeckExporter {
@@ -160,7 +161,7 @@ export class PitchDeckExporter {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pitch Deck — ${(project.name || 'المشروع').replace(/</g, '&lt;')}</title>
+    <title>Pitch Deck — ${escapeHtml(project.name || 'المشروع')}</title>
     <link href="/fonts/fonts.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
