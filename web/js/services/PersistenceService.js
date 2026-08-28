@@ -168,6 +168,13 @@ export class PersistenceService {
                 cloudTs = res?.updatedAt ? new Date(res.updatedAt).getTime() : 0;
             } catch (e) {
                 console.warn("Cloud load failed, falling back to local:", e);
+                // دفعة 6 (2026-08-27، اتساق المراقبة): نفس فجوة save() المُصلَحة سابقاً
+                // (بلوكر #43) — فشل هنا كان يظهر بconsole فقط رغم أن التراجع للنسخة
+                // المحلية قد يُخفي بيانات سحابية أحدث حقيقية عن العميل بصمت تام.
+                try {
+                    const { monitoring } = await import('../utils/monitoring.js');
+                    monitoring.captureException(e, { source: 'PersistenceService.load', studyId: id });
+                } catch (_) { /* لا نمنع التراجع للنسخة المحلية بسبب فشل الإبلاغ نفسه */ }
             }
         }
 
@@ -215,6 +222,13 @@ export class PersistenceService {
                 cloud = await this._listCloudHeaders(user.id);
             } catch (e) {
                 console.warn("Cloud list failed:", e);
+                // دفعة 6 (2026-08-27، اتساق المراقبة): نفس فجوة save()/load() — فشل هنا
+                // بلا مراقبة يعني أن هذا الخطأ الحقيقي (الذي قد يحرم عميلاً مدفوعاً من
+                // رؤية دراساته) لا يترك أي أثر يراه الأدمن عبر Sentry.
+                try {
+                    const { monitoring } = await import('../utils/monitoring.js');
+                    monitoring.captureException(e, { source: 'PersistenceService.listHeaders' });
+                } catch (_) { /* لا نمنع التراجع للقائمة المحلية بسبب فشل الإبلاغ نفسه */ }
                 // فشل الجلب كان يُبتلع فتُرجَع قائمة محلية فارغة على جهاز جديد،
                 // فتعرضها لوحة التحكم كـ«لا توجد دراسات محفوظة بعد» لعميل دراساته في
                 // السحابة. الثابت: قائمة فارغة من هنا تعني فراغاً حقيقياً لا فشل قراءة —

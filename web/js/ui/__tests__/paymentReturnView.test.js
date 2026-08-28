@@ -112,6 +112,24 @@ describe('PaymentReturnView', () => {
         }
     });
 
+    it('دفعة 6 (اتساق المراقبة): still_pending بعد استنفاد الاستطلاع يُبلَّغ للمراقبة، لا يبقى صامتاً كالثلاث الأخريات', async () => {
+        // كان still_pending الحالة الوحيدة من أربع حالات (paid/failed/refunded/still_pending)
+        // بلا أي استدعاء مراقبة — رغم أنها تعني غالباً أن الـwebhook تأخّر أو فشل فعلياً.
+        vi.useFakeTimers();
+        try {
+            getOrderStatusMock.mockResolvedValue('pending');
+            const { PaymentReturnView } = await import('../PaymentReturnView.js');
+            const view = new PaymentReturnView('root', { orderId: 'order-stuck' });
+            const renderPromise = view.render();
+            await vi.advanceTimersByTimeAsync(2000 * 10);
+            await renderPromise;
+            expect(captureMessageMock).toHaveBeenCalledTimes(1);
+            expect(captureMessageMock).toHaveBeenCalledWith(expect.stringContaining('order-stuck'), 'warning', { orderId: 'order-stuck', status: 'still_pending' });
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('destroy() يوقف الاستطلاع فوراً (لا يستمر بعد مغادرة المستخدم للصفحة)', async () => {
         let callCount = 0;
         getOrderStatusMock.mockImplementation(async () => { callCount++; return 'pending'; });
