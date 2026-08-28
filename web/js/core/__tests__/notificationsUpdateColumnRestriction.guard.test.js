@@ -13,7 +13,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '../../../../');
-const MIGRATION_PATH = resolve(REPO_ROOT, 'supabase/migrations/20260827020000_notifications_restrict_update_to_read_at.sql');
+const MIGRATION_PATH = resolve(REPO_ROOT, 'supabase/migrations/20260828000000_notifications_restrict_update_to_read_at.sql');
 const ORIGINAL_POLICY_PATH = resolve(REPO_ROOT, 'supabase/migrations/20260716000002_dashboard_experience.sql');
 
 /** يستخرج أسماء أعمدة public.notifications من تعريف CREATE TABLE الحقيقي — لا قائمة
