@@ -9,6 +9,7 @@ import { WebhookService, WEBHOOK_EVENTS, WEBHOOK_CONSENT_TEXT } from '../service
 import { isCaptchaConfigured } from '../utils/captcha.js';
 import { toast } from '../utils/toast.js';
 import { AuthGuard } from '../middleware/AuthGuard.js';
+import { escapeHtml } from '../utils/escape.js';
 
 const LS_KEYS = {
   supabaseUrl: 'SUPABASE_URL',
@@ -129,9 +130,9 @@ export class IntegrationsView {
           <div id="webhooksListContainer" class="space-y-2">
             ${webhooksList.length === 0 ? '<p class="text-xs text-muted">لا توجد روابط. أضف رابطاً ثم استخدمه في Zapier أو Slack.</p>' : webhooksList.map(wh => `
               <div class="flex items-center justify-between gap-2 p-2 rounded" style="background: var(--c-bg-app);">
-                <span class="text-xs truncate flex-1" title="${(wh.url || '').replace(/"/g, '&quot;')}">${(wh.url || '').replace(/</g, '&lt;')}</span>
-                <button type="button" class="btn-webhook-test btn-xs btn--ghost text-sm" data-url="${(wh.url || '').replace(/"/g, '&quot;')}" title="إرسال اختبار">اختبار</button>
-                <button type="button" class="btn-webhook-remove btn-xs btn--ghost text-danger text-sm" data-url="${(wh.url || '').replace(/"/g, '&quot;')}">حذف</button>
+                <span class="text-xs truncate flex-1" title="${escapeHtml(wh.url || '')}">${escapeHtml(wh.url || '')}</span>
+                <button type="button" class="btn-webhook-test btn-xs btn--ghost text-sm" data-url="${escapeHtml(wh.url || '')}" title="إرسال اختبار">اختبار</button>
+                <button type="button" class="btn-webhook-remove btn-xs btn--ghost text-danger text-sm" data-url="${escapeHtml(wh.url || '')}">حذف</button>
               </div>
             `).join('')}
           </div>

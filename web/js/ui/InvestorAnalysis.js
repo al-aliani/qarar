@@ -6,11 +6,10 @@
  */
 import { calculateStudy as runFullModel, rateOrDefault } from '../core/engine.js';
 import { hasMinimumRevenueData, hasMinimumFinancialData } from '../utils/dataSufficiency.js';
+import { escapeHtml as esc } from '../utils/escape.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
-
-const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // عرض عتبة/قيمة كاسر المحرك رقمياً كما هي — الوحدة يوضّحها نص الشرح المرافق (من المحرك
 // نفسه)، فلا نخمّن وحدة رقم لا نملك تعريفها هنا (ريال؟ مرة؟ عميل/شهر؟).

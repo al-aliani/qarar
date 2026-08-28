@@ -20,15 +20,12 @@ import { BankReportGenerator } from '../../export/BankReportGenerator.js';
 import { getCertificationForStudy } from '../services/ReviewerService.js';
 import { downloadBlob } from '../../export/utils.js';
 import { submitTicket } from '../services/TicketService.js';
+import { escapeHtml } from '../utils/escape.js';
 
 const ROLES = [
     { value: 'editor', label: 'محرر', desc: 'يمكن التعديل والحفظ' },
     { value: 'viewer', label: 'مشاهد', desc: 'عرض فقط بدون تعديل' }
 ];
-
-function escapeHtml(value) {
-    return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
 
 /** نمط DocSend: "فُتح X مرة، آخرها كذا" — سلاح تفاوضي فعلي (رقم مشاهدات حقيقي لا افتراض). */
 function formatShareViewStat(share) {
@@ -159,7 +156,7 @@ export class ShareStudyView {
                     <button type="button" class="btn-close" aria-label="إغلاق">×</button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-sm text-muted mb-3">${studyName}</p>
+                    <p class="text-sm text-muted mb-3">${escapeHtml(studyName)}</p>
                     ${!user
                 ? `<p class="text-sm text-warning mb-4">سجّل الدخول لإنشاء روابط مشاركة متقدمة لهذه الدراسة.</p>`
                 : `

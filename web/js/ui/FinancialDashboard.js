@@ -13,6 +13,7 @@ import { SmartAdvisor } from '../services/SmartAdvisor.js';
 import { aiConnector } from '../services/AIConnector.js';
 import { indicatorHelp } from '../utils/glossary.js';
 import { ScenarioSwitcher } from './ScenarioSwitcher.js';
+import { escapeHtml } from '../utils/escape.js';
 import { PresentationView } from './PresentationView.js';
 import { renderBenchmarkingSection } from './BenchmarkingView.js'; // المهمة 4 — هل أرقامي منطقية؟
 import { announce } from '../utils/ui.js';
@@ -609,8 +610,8 @@ export class FinancialDashboard {
                     ${insights.map((item, i) => `
                         <li class="flex gap-3 items-start p-3 rounded-lg" style="background:var(--c-surface-2); border-left: 4px solid ${this.getColorForType(item.type)};">
                             <div class="flex-grow">
-                                <div class="font-medium text-sm">${(item.message || '').toString().replace(/</g, '&lt;')}</div>
-                                <div class="text-xs text-gold mt-1"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> ${(item.action || '').toString().replace(/</g, '&lt;')}</div>
+                                <div class="font-medium text-sm">${escapeHtml(item.message || '')}</div>
+                                <div class="text-xs text-gold mt-1"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> ${escapeHtml(item.action || '')}</div>
                             </div>
                             <button type="button" class="btn btn--sm btn--ghost btn-apply-improvement flex-shrink-0" data-insight-index="${i}" data-action="${(item.action || '').toString().replace(/"/g, '&quot;').replace(/`/g, '&#96;').slice(0, 100)}">تطبيق الاقتراح</button>
                         </li>
@@ -759,7 +760,7 @@ export class FinancialDashboard {
                     });
                     const answerText = typeof directAnswer === 'string' ? directAnswer : directAnswer?.content;
                     if (answerText) {
-                        askAnswer.innerHTML = `<strong>إجابة عن سؤالك:</strong><br><span style="white-space:pre-line;">${String(answerText).replace(/</g, '&lt;')}</span>`;
+                        askAnswer.innerHTML = `<strong>إجابة عن سؤالك:</strong><br><span style="white-space:pre-line;">${escapeHtml(answerText)}</span>`;
                         return;
                     }
                 } catch (err) {

@@ -2,6 +2,7 @@
  * TimelineChart.js — خارطة الطريق المرئية (Visual Roadmap)
  * خط زمني أفقي أنيق: مراحل كدوائر متصلة بخط، مع سحب وإفلات لتعديل التواريخ.
  */
+import { escapeHtml, escapeAttr } from '../utils/escape.js';
 
 const MONTHS = 12;
 const CATEGORY_LABELS = {
@@ -161,18 +162,3 @@ export class TimelineChart {
     }
 }
 
-function escapeHtml(s) {
-    if (s == null) return '';
-    const div = document.createElement('div');
-    div.textContent = s;
-    return div.innerHTML;
-}
-
-function escapeAttr(s) {
-    if (s == null) return '';
-    return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}

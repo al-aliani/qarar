@@ -4,6 +4,7 @@
  * تحسب لكل فكرة: فترة الاسترداد والعائد على التكلفة، وترشّح الأفضل تلقائياً (مع مراعاة المخاطرة).
  */
 import { stepIndexById } from '../core/wizardSteps.js';
+import { escapeHtml } from '../utils/escape.js';
 import Sortable from 'sortablejs';
 import Swal from 'sweetalert2';
 import Cleave from 'cleave.js';
@@ -92,7 +93,6 @@ export class ProjectAlternativesView {
         const pa = state.projectAlternatives || {};
         const ideas = pa.ideas || [];
         const selectedIndex = pa.selectedIndex ?? 0;
-        const esc = (s) => (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
         const hasIdeas = ideas.length > 0;
         const { metrics, bestIdx } = this._computeMetrics(ideas);
         const validCount = metrics.filter(m => m.valid).length;
@@ -169,7 +169,7 @@ export class ProjectAlternativesView {
                                             <input type="radio" name="selectedAlt" ${selectedIndex === i ? 'checked' : ''} value="${i}" aria-label="اختيار الفكرة ${i + 1}">
                                             ${i === bestIdx ? `<span class="pa-trophy" title="الأفضل حسب الأرقام">${icon('i-trophy')}</span>` : ''}
                                         </td>
-                                        <td><input type="text" class="input input--sm alt-field" data-field="name" placeholder="اسم الفكرة" aria-label="اسم الفكرة" value="${esc(idea.name)}"></td>
+                                        <td><input type="text" class="input input--sm alt-field" data-field="name" placeholder="اسم الفكرة" aria-label="اسم الفكرة" value="${escapeHtml(idea.name)}"></td>
                                         <td>
                                             <input type="text" inputmode="numeric" class="input input--sm alt-field alt-num cleave-num" data-field="estimatedCost" placeholder="0" aria-label="تكلفة تقريبية" value="${idea.estimatedCost ? fmtNum(idea.estimatedCost) : ''}">
                                             <div class="pa-cost-actions">
@@ -181,7 +181,7 @@ export class ProjectAlternativesView {
                                         <td>${riskSelect(i, idea.risk)}</td>
                                         <td class="pa-calc">${paybackCell(metrics[i])}</td>
                                         <td class="pa-calc">${rocCell(metrics[i])}</td>
-                                        <td><input type="text" class="input input--sm alt-field" data-field="notes" placeholder="ملاحظة" aria-label="ملاحظة" value="${esc(idea.notes)}"></td>
+                                        <td><input type="text" class="input input--sm alt-field" data-field="notes" placeholder="ملاحظة" aria-label="ملاحظة" value="${escapeHtml(idea.notes)}"></td>
                                         <td><button type="button" class="btn-icon btn-remove-alt pa-remove" data-idx="${i}" aria-label="حذف الفكرة ${i + 1}"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></button></td>
                                     </tr>
                                 `).join('')}
@@ -275,14 +275,12 @@ export class ProjectAlternativesView {
 
     _pickBestButtonHtml(ideas, bestIdx, validCount) {
         if (!(validCount >= 2 && bestIdx >= 0)) return '';
-        const esc = (s) => (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-        return `<button type="button" class="btn btn--ghost btn-sm" id="btnPickBest">${icon('i-trophy')} اختر الأفضل (${esc(ideas[bestIdx].name) || 'الفكرة ' + (bestIdx + 1)})</button>`;
+        return `<button type="button" class="btn btn--ghost btn-sm" id="btnPickBest">${icon('i-trophy')} اختر الأفضل (${escapeHtml(ideas[bestIdx].name) || 'الفكرة ' + (bestIdx + 1)})</button>`;
     }
 
     _bestHintHtml(ideas, bestIdx, validCount) {
         if (!(validCount >= 2 && bestIdx >= 0)) return '';
-        const esc = (s) => (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-        return `الأفضل حسب الأرقام: <strong>${esc(ideas[bestIdx].name) || 'الفكرة ' + (bestIdx + 1)}</strong> — أقصر فترة استرداد بعد موازنة المخاطرة. القرار النهائي لك.`;
+        return `الأفضل حسب الأرقام: <strong>${escapeHtml(ideas[bestIdx].name) || 'الفكرة ' + (bestIdx + 1)}</strong> — أقصر فترة استرداد بعد موازنة المخاطرة. القرار النهائي لك.`;
     }
 
     // تحديث الأعمدة المحسوبة والترشيح في مكانها — دون إعادة رسم (يمنع فقدان الصفوف وقفز المؤشر)

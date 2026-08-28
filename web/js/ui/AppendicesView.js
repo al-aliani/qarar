@@ -79,13 +79,13 @@ export class AppendicesView {
                 <div class="card analysis-card">
                     <h3 class="card-title">الاستطلاعات والاستبيانات</h3>
                     <p class="text-muted text-sm mb-3">نتائج الاستبيانات أو الاستطلاعات المستخدمة في الدراسة</p>
-                    <textarea id="appendices-surveys" class="input" rows="3" placeholder="وصف أو نتائج الاستبيانات...">${(appendices.surveys && Array.isArray(appendices.surveys) ? appendices.surveys.join('\n') : (appendices.surveys || '')).replace(/</g, '&lt;')}</textarea>
+                    <textarea id="appendices-surveys" class="input" rows="3" placeholder="وصف أو نتائج الاستبيانات...">${escapeHtml(appendices.surveys && Array.isArray(appendices.surveys) ? appendices.surveys.join('\n') : (appendices.surveys || ''))}</textarea>
                 </div>
 
                 <div class="card analysis-card">
                     <h3 class="card-title">عروض الأسعار والتقارير الفنية</h3>
                     <p class="text-muted text-sm mb-3">عروض أسعار الموردين أو التقارير الفنية المرفقة</p>
-                    <textarea id="appendices-priceQuotes" class="input" rows="3" placeholder="ملخص عروض الأسعار أو المراجع...">${(appendices.priceQuotes && Array.isArray(appendices.priceQuotes) ? appendices.priceQuotes.join('\n') : (appendices.priceQuotes || '')).replace(/</g, '&lt;')}</textarea>
+                    <textarea id="appendices-priceQuotes" class="input" rows="3" placeholder="ملخص عروض الأسعار أو المراجع...">${escapeHtml(appendices.priceQuotes && Array.isArray(appendices.priceQuotes) ? appendices.priceQuotes.join('\n') : (appendices.priceQuotes || ''))}</textarea>
                 </div>
 
                 <div class="wizard-nav margin-top-lg">

@@ -7,6 +7,7 @@
 import { stepIndexById } from '../core/wizardSteps.js';
 import { fieldHelp } from './components/FieldHelp.js';
 import { calculateIdeaScore } from '../core/calculateIdeaScore.js';
+import { escapeHtml as esc } from '../utils/escape.js';
 
 import Typed from 'typed.js';
 import VanillaTilt from 'vanilla-tilt';
@@ -32,8 +33,6 @@ const TRI_CHOICES = [
     { value: 'unsure', label: 'غير متأكد' },
     { value: 'no', label: 'لا' }
 ];
-
-const esc = (s) => (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
 // أيقونات هيرو داخلية بنفس لغة النظام (24×24، stroke، currentColor) — بديل الإيموجي
 const HERO_ICONS = {

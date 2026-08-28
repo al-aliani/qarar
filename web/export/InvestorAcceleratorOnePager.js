@@ -4,6 +4,7 @@
  */
 import { formatCurrency } from '../js/utils/formatters.js';
 import { calculateStudy as runFullModel } from '../js/core/engine.js';
+import { escapeHtml } from '../js/utils/escape.js';
 
 /** @typedef {'investor'|'accelerator'|'incubator'} AudienceType */
 
@@ -37,19 +38,21 @@ export class InvestorAcceleratorOnePager {
         const risks = (state.riskAnalysis?.risks || []).filter(r => r.name || r.description);
         const keyPeople = (state.keyPeople?.keyPeople || []).slice(0, 1);
 
-        const problemLine = (exec.problemStatement || info.startupHypothesis?.problem || '—').toString().replace(/</g, '&lt;').slice(0, 120);
-        const solutionLine = (exec.solutionStatement || info.concept || info.startupHypothesis?.solution || '—').toString().replace(/</g, '&lt;').slice(0, 120);
+        // ملاحظة: القص (slice) قبل التهريب لا بعده — تهريب ثم قص قد يقطع كيان HTML
+        // بمنتصفه (مثال: "&lt;" تصير "&l") وينتج نصاً مشوَّهاً معروضاً حرفياً.
+        const problemLine = escapeHtml((exec.problemStatement || info.startupHypothesis?.problem || '—').toString().slice(0, 120));
+        const solutionLine = escapeHtml((exec.solutionStatement || info.concept || info.startupHypothesis?.solution || '—').toString().slice(0, 120));
 
         const currency = state.assumptions?.currency || 'SAR';
         const askAmount = financing.totalInvestment || capex.total || (financing.sources?.equity?.amount || 0) + (financing.sources?.bankLoan?.amount || 0);
-        const useOfFunds = (financing.useOfFunds || 'استثمار وتشغيل المشروع (تجهيزات، رأس مال عامل، تسويق).').toString().replace(/</g, '&lt;');
+        const useOfFunds = escapeHtml(financing.useOfFunds || 'استثمار وتشغيل المشروع (تجهيزات، رأس مال عامل، تسويق).');
 
         const topRisks = risks
             .sort((a, b) => { const h = (x) => (x.impact === 'high' ? 2 : x.impact === 'medium' ? 1 : 0) + (x.probability === 'high' ? 2 : x.probability === 'medium' ? 1 : 0); return h(b) - h(a); })
             .slice(0, 2);
 
         const contactLine = keyPeople.length && (keyPeople[0].name || keyPeople[0].email)
-            ? `${(keyPeople[0].name || '').replace(/</g, '&lt;')}${keyPeople[0].email ? ' — ' + String(keyPeople[0].email).replace(/</g, '&lt;') : ''}`
+            ? `${escapeHtml(keyPeople[0].name || '')}${keyPeople[0].email ? ' — ' + escapeHtml(keyPeople[0].email) : ''}`
             : 'جهة اتصال: يُضاف يدوياً';
 
         const npvStr = ind.npv != null ? formatCurrency(ind.npv, currency) : '—';
@@ -61,7 +64,7 @@ export class InvestorAcceleratorOnePager {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${label.title} — ${(info.name || 'المشروع').replace(/</g, '&lt;')}</title>
+    <title>${label.title} — ${escapeHtml(info.name || 'المشروع')}</title>
     <link href="/fonts/fonts.css" rel="stylesheet">
     <style>
         :root { --gold: #C9A227; --dark: #1a202c; --blue: #2c5282; }
@@ -84,7 +87,7 @@ export class InvestorAcceleratorOnePager {
     </style>
 </head>
 <body>
-    <h1>${label.title}: ${(info.name || 'عرض المشروع').replace(/</g, '&lt;')}</h1>
+    <h1>${label.title}: ${escapeHtml(info.name || 'عرض المشروع')}</h1>
 
     <div class="row">
         <div class="block">
@@ -115,8 +118,8 @@ export class InvestorAcceleratorOnePager {
     <h3 style="font-size: 11pt; color: var(--blue); margin: 20px 0 10px;">أبرز مخاطرين وإجراء التخفيف</h3>
     ${topRisks.length ? topRisks.map(r => `
     <div class="risk-item">
-        <strong>${(r.name || r.description || '—').toString().replace(/</g, '&lt;')}</strong>
-        <span>${(r.mitigation || '—').toString().replace(/</g, '&lt;')}</span>
+        <strong>${escapeHtml(r.name || r.description || '—')}</strong>
+        <span>${escapeHtml(r.mitigation || '—')}</span>
     </div>
     `).join('') : '<p class="text-muted">لم تُدرج مخاطر بعد. يُوصى بإكمال تحليل المخاطر في الدراسة.</p>'}
 

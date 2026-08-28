@@ -16,11 +16,7 @@ import { getExperimentVariant, trackEvent } from '../utils/analytics.js';
 import { monitoring } from '../utils/monitoring.js';
 import { attachModalA11y } from '../utils/modalA11y.js';
 import { renderBankTransferPanel } from './components/BankTransferPanel.js';
-
-function escapeHtml(str) {
-    if (str == null) return '';
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+import { escapeHtml } from '../utils/escape.js';
 
 // المحرّك قد يحفظ NO-GO افتراضياً عندما تكون كل المؤشرات أصفاراً. لا نعرض
 // هذه النتيجة للمستخدم كقرار فعلي داخل بوابة الدفع قبل وجود نموذج مالي حقيقي.

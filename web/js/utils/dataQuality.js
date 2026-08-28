@@ -7,6 +7,7 @@
  * فيحسب المحرّك الاستثمار على رأس المال العامل فقط (≈ بضعة آلاف) وتخرج مؤشرات لا معنى لها
  * (NPV مبالغ، IRR 850% أو 0%). لا يجب أن نفبرك أصولاً؛ بل ننبّه المستخدم بوضوح ليُدرجها.
  */
+import { escapeHtml } from './escape.js';
 
 function sumFinancingSources(state) {
     const s = state?.financing?.sources || {};
@@ -107,7 +108,7 @@ export function productCatalogWarning(state) {
  */
 export function investmentDataWarningHtml(warn) {
     if (!warn) return '';
-    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const esc = escapeHtml;
     const cls = warn.level === 'critical' ? 'alert--danger' : 'alert--warning';
     const icon = warn.level === 'critical' ? '⛔' : '⚠️';
     return `

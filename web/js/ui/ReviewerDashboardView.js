@@ -13,6 +13,7 @@ import { AuthGuard } from '../middleware/AuthGuard.js';
 import { getSupabaseClient } from '../../supabaseClient.js';
 import { fetchQueue, claimOrder, submitReview } from '../services/ReviewerService.js';
 import { toast } from '../utils/toast.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class ReviewerDashboardView {
     constructor(containerId) {
@@ -44,7 +45,7 @@ export class ReviewerDashboardView {
     }
 
     _esc(value) {
-        return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return escapeHtml(value);
     }
 
     _renderQueueItem(item) {

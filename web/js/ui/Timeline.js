@@ -19,18 +19,12 @@ import {
 import { calculateDelayedLaunchImpact } from '../core/engine.js';
 import { buildIcsCalendar } from '../utils/icsExport.js';
 import { loadXLSX } from '../../export/utils.js';
+import { escapeHtml } from '../utils/escape.js';
 
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
 
 const RESPONSIBLE_PARTY_LABELS = { owner: 'المالك', supplier: 'مورّد', government: 'جهة حكومية' };
 const CATEGORY_LABELS = { legal: 'قانوني / إداري', technical: 'فني / إنشائي', hr: 'موارد بشرية', marketing: 'تسويق', launch: 'افتتاح' };
-
-function escapeHtml(s) {
-    if (s == null) return '';
-    const div = document.createElement('div');
-    div.textContent = s;
-    return div.innerHTML;
-}
 
 export class Timeline {
     constructor(containerId, store) {
