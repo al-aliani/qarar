@@ -15,6 +15,7 @@ import { t, yearColumnLabel } from '../i18n/reportStrings.js';
 import { buildFinancingDiagnostics } from '../utils/financingDiagnostics.js';
 import { formatRatio } from '../../export/ratioUnits.js';
 import { SAFE } from '../../export/utils.js';
+import { escapeHtml } from '../utils/escape.js';
 
 /** عناوين الأقسام (لفهرس المحتويات وترتيب التصدير) */
 const REPORT_SECTION_LABELS = {
@@ -45,14 +46,6 @@ const REPORT_SECTION_LABELS = {
     sensitivity: 'تحليل الحساسية',
     recommendation: 'التوصية النهائية والقرار الاستثماري'
 };
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
 
 export class ReportGenerator {
 
@@ -127,7 +120,7 @@ export class ReportGenerator {
 
         const v = validateStudy(state);
         const validationNotice = !v.valid && v.errors?.length
-            ? `<div class="validation-notice" style="background:#fef5e7;border:1px solid #f59e0b;border-radius:6px;padding:12px 20px;margin:0 20px 20px;font-size:10pt;color:#92400e;"><strong>تحذير:</strong> توجد أخطاء في صحة البيانات قد تؤثر على دقة النتائج. يُفضّل مراجعتها قبل الاعتماد على هذا التقرير.<ul style="margin:8px 0 0 20px;">${v.errors.slice(0, 3).map(e => '<li>' + e + '</li>').join('')}</ul></div>`
+            ? `<div class="validation-notice" style="background:#fef5e7;border:1px solid #f59e0b;border-radius:6px;padding:12px 20px;margin:0 20px 20px;font-size:10pt;color:#92400e;"><strong>تحذير:</strong> توجد أخطاء في صحة البيانات قد تؤثر على دقة النتائج. يُفضّل مراجعتها قبل الاعتماد على هذا التقرير.<ul style="margin:8px 0 0 20px;">${v.errors.slice(0, 3).map(e => '<li>' + escapeHtml(e) + '</li>').join('')}</ul></div>`
             : '';
 
         const body = this._renderBodyWithOrder(state, results, info, lang);
@@ -546,7 +539,7 @@ export class ReportGenerator {
                         <div class="logo">⚡ محاكي الجدوى</div>
                         <p>تم إنشاء هذا التقرير بواسطة منصة الجدوى الذكية | جميع الحقوق محفوظة © ${new Date().getFullYear()}</p>
                         <p style="margin-top: 8px; font-size: 9pt; color: var(--primary-gold); font-weight: 500;">✓ ${BANK_COMPLIANCE_SENTENCE}</p>
-                        ${(state.consultationBookingUrl || '').trim() ? `<p style="margin-top: 8px; font-size: 9pt;"><a href="${String(state.consultationBookingUrl).replace(/"/g, '&quot;')}" target="_blank" rel="noopener">📞 احجز استشارة مع خبير</a></p>` : ''}
+                        ${/^https?:\/\//i.test((state.consultationBookingUrl || '').trim()) ? `<p style="margin-top: 8px; font-size: 9pt;"><a href="${escapeHtml(state.consultationBookingUrl.trim())}" target="_blank" rel="noopener">📞 احجز استشارة مع خبير</a></p>` : ''}
                         <p style="margin-top: 10px; font-size: 8pt; color: #a0aec0;">
                             هذا التقرير معد لأغراض التخطيط الداخلي. الأرقام الفعلية قد تختلف بناءً على ظروف السوق والتنفيذ.
                         </p>
@@ -638,7 +631,7 @@ export class ReportGenerator {
                         <div class="section-content">
                             ${exHighlights}
                             ${exFootnotesHtml}
-                            <p>${state.executiveSummary?.projectOverview || state.executiveSummary?.aiGeneratedText || `يعرض هذا التقرير دراسة جدوى مشروع «${escapeHtml(info.name || 'المشروع')}»${info.city ? ' في ' + escapeHtml(info.city) : ''}، شاملةً الجوانب الفنية والتسويقية والمالية، مع تحليل حساسية وسيناريوهات وقرار استثماري مبني على مؤشرات مالية محسوبة من مدخلات الدراسة.`}</p>
+                            <p>${state.executiveSummary?.projectOverview ? escapeHtml(state.executiveSummary.projectOverview) : (state.executiveSummary?.aiGeneratedText ? escapeHtml(state.executiveSummary.aiGeneratedText) : `يعرض هذا التقرير دراسة جدوى مشروع «${escapeHtml(info.name || 'المشروع')}»${info.city ? ' في ' + escapeHtml(info.city) : ''}، شاملةً الجوانب الفنية والتسويقية والمالية، مع تحليل حساسية وسيناريوهات وقرار استثماري مبني على مؤشرات مالية محسوبة من مدخلات الدراسة.`)}</p>
                         </div>
                     </div>`;
                 break;

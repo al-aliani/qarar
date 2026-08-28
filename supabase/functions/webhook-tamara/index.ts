@@ -10,6 +10,7 @@ import { verifyTamaraNotificationToken } from '../_shared/webhookVerify.ts';
 import { parseTamaraWebhookStatus } from '../_shared/providers/tamara.ts';
 import { sendAlert } from '../_shared/alerting.ts';
 import { insertNotification } from '../_shared/notify.ts';
+import { verifyOrderAmount } from '../_shared/amountGuard.ts';
 
 Deno.serve(async (req: Request) => {
   const sentryDsn = Deno.env.get('SENTRY_DSN');
@@ -52,6 +53,28 @@ Deno.serve(async (req: Request) => {
   const prevStatus = status === 'refunded' ? 'paid' : 'pending';
   const updateFields: Record<string, unknown> = { status, metadata: payload };
   if (status === 'paid') updateFields.paid_at = new Date().toISOString();
+
+  if (status === 'paid') {
+    // دفاع بالعمق (انظر amountGuard.ts): حمولة تمارا (شكلها الحيّ غير مؤكَّد 100% —
+    // انظر تحفّظ providers/tamara.ts) — نجرّب حقلي total_amount.amount وamount
+    // المحتملين؛ فشل التفسير يُسقِط الفحص بأمان (fail-open) لا يرفض الدفع.
+    const rawAmount = payload?.total_amount?.amount ?? payload?.amount;
+    const confirmedAmountSar = rawAmount != null && !Number.isNaN(Number(rawAmount)) ? Number(rawAmount) : null;
+    const amountCheck = await verifyOrderAmount(adminClient, {
+      provider: 'tamara',
+      providerRef,
+      confirmedAmountSar,
+    });
+    if (!amountCheck.ok) {
+      console.error(`[webhook-tamara] amount mismatch (provider_ref=${providerRef}, expected=${amountCheck.expectedAmountSar}, confirmed=${confirmedAmountSar})`);
+      await sendAlert(sentryDsn, {
+        message: `[webhook-tamara] amount mismatch (provider_ref=${providerRef}, expected=${amountCheck.expectedAmountSar}, confirmed=${confirmedAmountSar})`,
+        level: 'error',
+        tags: { source: 'webhook-tamara', kind: 'amount_mismatch' },
+      });
+      return new Response('amount_mismatch', { status: 400 });
+    }
+  }
 
   const { data, error } = await adminClient
     .from('orders')

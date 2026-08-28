@@ -10,6 +10,8 @@ import { escapeHtml } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
 
 const DOWNLOAD_FAILURE_MESSAGE = 'تعذّر تحضير رابط التنزيل — سجّل الدخول من جديد أو أعد التصدير من دراستك';
+const DELETE_FAILURE_MESSAGE = 'تعذّر حذف الملف — حاول مرة أخرى';
+const DELETE_CONFIRM_MESSAGE = 'حذف هذا الملف نهائياً من مركز التنزيلات؟ لا يمكن التراجع.';
 
 const FILE_TYPE_LABEL = { 
     word: 'Word', excel: 'Excel', pptx: 'PowerPoint', csv: 'CSV', json: 'JSON', html: 'HTML', pdf: 'PDF', file: 'ملف', batch_zip: 'حزمة (ZIP)',
@@ -85,7 +87,10 @@ export class DownloadsCenterView {
                                         <div class="font-bold">${escapeHtml(it.study_name || 'دراسة')} <span class="badge badge--neutral">${FILE_TYPE_LABEL[it.file_type] || it.file_type}</span></div>
                                         <div class="text-xs text-muted mt-1">${formatDate(it.created_at)}</div>
                                     </div>
-                                    ${it.storage_path ? `<button type="button" class="btn btn--sm btn--secondary dv-download-item" data-storage-path="${it.storage_path}">تنزيل</button>` : `<button type="button" class="btn btn--sm btn--secondary dv-regenerate-export">إعادة التصدير</button>`}
+                                    <div style="display:flex;gap:8px;">
+                                        ${it.storage_path ? `<button type="button" class="btn btn--sm btn--secondary dv-download-item" data-storage-path="${it.storage_path}">تنزيل</button>` : `<button type="button" class="btn btn--sm btn--secondary dv-regenerate-export">إعادة التصدير</button>`}
+                                        ${it.storage_path ? `<button type="button" class="btn btn--sm btn--ghost dv-delete-item" data-id="${it.id}" data-storage-path="${it.storage_path}">حذف</button>` : ''}
+                                    </div>
                                 </div>
                             `).join('')}
                         </div>
@@ -133,6 +138,31 @@ export class DownloadsCenterView {
         });
         this.container.querySelectorAll('.dv-regenerate-export').forEach(btn => {
             btn.addEventListener('click', () => this.onRegenerate());
+        });
+        this.container.querySelectorAll('.dv-delete-item').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!window.confirm(DELETE_CONFIRM_MESSAGE)) return;
+                btn.disabled = true;
+                btn.textContent = 'جاري الحذف...';
+                const { supabase: sb, ok: sbOk } = await getSupabaseClient();
+                if (sbOk && sb) {
+                    // ترتيب مقصود: حذف ملف Storage أولاً، والصف بعده فقط عند
+                    // نجاحه — يمنع حالة يُحذف فيها سجل السجل بينما يبقى الملف
+                    // الفعلي (أو العكس) دون أن تعكس الواجهة ذلك بصدق.
+                    const { error: storageError } = await sb.storage.from('exports').remove([btn.dataset.storagePath]);
+                    const { error: rowError } = storageError
+                        ? { error: null }
+                        : await sb.from('export_history').delete().eq('id', btn.dataset.id);
+                    if (!storageError && !rowError) {
+                        btn.closest('.card')?.remove();
+                        toast.success('تم حذف الملف');
+                        return;
+                    }
+                }
+                toast.error(DELETE_FAILURE_MESSAGE);
+                btn.disabled = false;
+                btn.textContent = 'حذف';
+            });
         });
     }
 }

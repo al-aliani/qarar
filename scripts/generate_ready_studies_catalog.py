@@ -31,6 +31,10 @@ OUTPUT = ROOT / "web" / "public" / "data" / "ready-studies.json"
 # تجاري يفيد عميلاً سعودياً (أوراق أكاديمية/بحثية، تقارير حكومية أجنبية عامة،
 # أو مواد نظرية عامة). تُستبعد من الفهرس دون حذفها من المصدر.
 SKIP_FILES = {
+    # تدقيق 2026-08-27: نفس ملف PDF بالضبط (نفس الحجم وعدد الصفحات) موجود مرتين
+    # في مجلدين مختلفين ("الحي" و"مصنع") فيظهر للعميل كبطاقتين منفصلتين لدراسة
+    # واحدة حرفياً. أُبقيت نسخة "الحي" (سبقتها أبجدياً) وحُذفت نسخة "مصنع" هنا.
+    "مصنع/مشغل خياطة ثياب نسائية.pdf",
     # ورقة بحث أكاديمية عن اختبار ذكاء للأطفال العُمانيين، وليست دراسة مشروع
     "الحي/A Feasibility Study for Developing a Computerized Adaptive Form of Raven_s Colored Progressive Matrices Test for Omani Children Based on the Item Response Theory.pdf",
     # دراسة جدوى سكن طلابي لكلية أمريكية (Bellevue College) — غير ذات صلة
@@ -294,8 +298,10 @@ def arabic_title(path: Path, filename_title: str, category_label: str) -> str:
 
 def arabic_excerpt(excerpt: str, category_label: str) -> str:
     # بعض ملفات PDF تحتوي على نص لاتيني أو بريد إلكتروني في الصفحة الأولى؛
-    # نستبدله بوصف عربي ثابت حتى لا يتسرب أي نص إنجليزي إلى البطاقة.
-    if not excerpt or re.search(r"[A-Za-z]", excerpt):
+    # نستبدله بوصف عربي ثابت حتى لا يتسرب أي نص إنجليزي إلى البطاقة. نفس
+    # المعيار (is_junk_excerpt) يغطي حالة نادرة: كل الصفحات الممسوحة في
+    # extract_first_page غير صالحة (قالب غلاف فارغ عبر عدة صفحات متتالية).
+    if not excerpt or re.search(r"[A-Za-z]", excerpt) or is_junk_excerpt(excerpt):
         return f"دراسة جدوى جاهزة ضمن تصنيف {category_label}."
     return excerpt
 
@@ -330,7 +336,27 @@ def derive_numeric_title(filename_title: str, excerpt: str) -> str:
     return filename_title
 
 
-def extract_first_page(path: Path) -> tuple[str, int]:
+# تدقيق 2026-08-27: extract_first_page كانت تكتفي بالصفحة الأولى دوماً — 12 من
+# 14 نبذة "مهملة" رُصدت لاحقاً مصدرها قالب واحد شائع (عدة دراسات من "مكتب
+# ابتكار القيمة للاستشارات"، مثال: web/__tests__/readyStudiesCatalog.
+# excerptSkipsJunkCoverPage.test.js) صفحته الأولى غلاف شبه فارغ نصّه الكامل
+# "رقم الدراسة" — المحتوى الفعلي (عنوان المشروع، خطاب تنبيه المكتب) يبدأ من
+# الصفحة الثانية. النتيجة كانت نبذة بلا أي معنى تُعرض حرفياً على بطاقة العميل.
+EXCERPT_MIN_LENGTH = 25
+JUNK_EXCERPT_RES = (
+    re.compile(r"^رقم\s+الدراسة$"),
+    re.compile(r"^[٠-٩0-9\s]+$"),
+)
+
+
+def is_junk_excerpt(text: str) -> bool:
+    stripped = (text or "").strip()
+    if len(stripped) < EXCERPT_MIN_LENGTH:
+        return True
+    return any(pattern.match(stripped) for pattern in JUNK_EXCERPT_RES)
+
+
+def extract_first_page(path: Path, page_scan_limit: int = 4) -> tuple[str, int]:
     if path.suffix.lower() != ".pdf":
         return "", 0
     if PdfReader is None:
@@ -338,8 +364,19 @@ def extract_first_page(path: Path) -> tuple[str, int]:
     try:
         reader = PdfReader(str(path), strict=False)
         page_count = len(reader.pages)
-        text = reader.pages[0].extract_text() if reader.pages else ""
-        return clean_excerpt(normalize_pdf_arabic(text or "")), page_count
+        fallback = ""
+        for page in reader.pages[:page_scan_limit]:
+            try:
+                candidate = clean_excerpt(normalize_pdf_arabic(page.extract_text() or ""))
+            except Exception:
+                continue
+            if not fallback:
+                fallback = candidate
+            if not is_junk_excerpt(candidate):
+                return candidate, page_count
+        # كل الصفحات الممسوحة غير صالحة (نادر) — نُعيد أفضل ما وُجد بدل سلسلة
+        # فارغة؛ arabic_excerpt/الفهرس يسقط لاحقاً إلى نص التصنيف النائب.
+        return fallback, page_count
     except Exception:
         return "", 0
 
@@ -354,6 +391,16 @@ COUNTRY_DETECTION_PAGE_LIMIT = 15
 COUNTRY_CONFIDENCE_MIN = 2
 COUNTRY_DOMINANCE_RATIO = 3.0
 
+# قرار متعمد ومقبول (2026-08-27، بعد اكتشاف حالتي pdf.pdf/محلات تجارية.pdf
+# العراقيتين): "دينار" وحدها ليست حصرية للأردن — يشاركها العراق والكويت
+# والبحرين وتونس والجزائر وليبيا، فقد تصنَّف دراسة من أحد هذه الدول "JO" رغم
+# غياب أي مدينة/دولة أردنية فعلية (jo_total يعبر COUNTRY_CONFIDENCE_MIN من
+# العملة وحدها). لم يُبنَ كاشف دول إضافي (IQ/KW/BH/TN/DZ/LY) لأن الفهرس
+# الحالي (300 دراسة) لا يحوي إلا حالتين من هذا النوع، وكلاهما تم التحقق منه
+# يدوياً وتصحيحه عبر COUNTRY_OVERRIDES أعلاه — آلية موجودة أصلاً لهذا الغرض
+# بالضبط. عند أي إعادة توليد مستقبلية تضيف ملفات جديدة، افحص يدوياً أي دراسة
+# جديدة تُصنَّف "JO" اعتماداً على العملة فقط (بلا مدينة/اسم دولة مرافق) قبل
+# الوثوق بها.
 JO_CURRENCY_RE = re.compile(r"دينار|دنانير")
 JO_COMPOUND_NAME_RE = re.compile(r"المملكة\s+الأردنية|المملكة\s+الاردنية")
 JO_BARE_NAME_RE = re.compile(r"الأردن\b|الاردن\b|\bJordan\b", re.IGNORECASE)
@@ -392,6 +439,33 @@ COUNTRY_OVERRIDES = {
     # كلمة "مصر" تتكرر 31 مرة عبر كامل الملف (26 صفحة) في قسم مواصفات وحجم
     # سوق المياه المعدنية — أبعد من نافذة الـ15 صفحة القياسية.
     "cf4974f602fe": "EG",  # مصنع انتاج میاه معدنیة.pdf
+    # تصحيح 2026-08-27 (اكتُشف أثناء عمل لاحق): detect_country صنّفتها "JO"
+    # تلقائياً لأن "دينار" وحدها (بلا اسم مدينة/دولة أردنية مرافق) عملة مشتركة
+    # بين الأردن والعراق (والكويت والبحرين وتونس والجزائر وليبيا) — إشارة غير
+    # حاسمة انفرادياً. المحتوى الفعلي هنا لا لبس فيه: "محافظة المثنى"،
+    # "مدينة السماوة"، "جامعة المثنى"، وفي pdf.pdf تحديداً "قانون الاستثمار
+    # العراقي رقم 13 لسنة 2006" — دراستان عراقيتان لنفس المؤلف الأكاديمي.
+    "4c157def8d0b": "IQ",  # pdf.pdf — عمارة تجارية سكنية في مدينة السماوة، العراق
+    "49ed45450eaa": "IQ",  # محلات تجارية .pdf — محلات تجارية في محافظة المثنى، العراق
+}
+
+# تدقيق 2026-08-27: عناوين مشتقة آلياً من اسم ملف تقني بلا معنى (mpdf.pdf،
+# pdf.pdf) أو من ملف حرفياً اسمه "دراسة جدوى.pdf" — تنتج عنواناً عاماً
+# "دراسة جدوى" بلا أي دلالة على موضوع الدراسة رغم توفر محتوى فعلي يكشفه.
+# عناوين مصحَّحة يدوياً من قراءة أول صفحتين من كل ملف مصدري.
+TITLE_OVERRIDES = {
+    # المحتوى: "خطوات تأسيس مشروع مركز الخدمات الطلابية فـ مصر".
+    "40e9c2a12b16": "دراسة جدوى لمشروع مركز خدمات طلابية متكامل",
+    # المحتوى (عراقي — انظر COUNTRY_OVERRIDES أعلاه): "دراسة جدوى مشروع إنشاء
+    # عمارة تجارية سكنية في مدينة السماوة" — جامعة المثنى، 2010.
+    "4c157def8d0b": "دراسة جدوى لمشروع إنشاء عمارة تجارية سكنية",
+    # المحتوى: دليل عام لإعداد دراسات الجدوى للمشاريع الصغيرة، من دائرة
+    # التنمية الاقتصادية في رأس الخيمة (rak.ae) — ليس دراسة لمشروع محدد، بل
+    # كتيّب منهجية. العنوان يعكس طبيعته الفعلية بدل الإيحاء بدراسة مشروع.
+    "87e372350e23": "دليل إعداد دراسات الجدوى الاقتصادية للمشاريع الصغيرة",
+    # اسم الملف المصدري نفسه تالف جزئياً ("ة كوفي شوب ب.pdf") — المحتوى
+    # الفعلي (صفحة 2، بعد غلاف شبه فارغ): "دراسة جدوى اقتصادية-مقهى مكة".
+    "df6a2ece59eb": "دراسة جدوى لمشروع مقهى في مكة المكرمة",
 }
 
 
@@ -536,17 +610,20 @@ def build_catalog() -> dict:
         if relative_parts.as_posix() in SKIP_FILES:
             continue
         category_id, category_label, category_description = CATEGORY_META[folder]
-        excerpt, page_count = extract_first_page(path)
-        filename_title = readable_filename(path)
-        title = derive_numeric_title(filename_title, excerpt)
-        title = arabic_title(path, title, category_label)
-        display_excerpt = arabic_excerpt(excerpt, category_label)
         relative = path.relative_to(SOURCE_ROOT).as_posix()
+        record_id = hashlib.sha1(relative.encode("utf-8")).hexdigest()[:12]
+        excerpt, page_count = extract_first_page(path)
+        if record_id in TITLE_OVERRIDES:
+            title = TITLE_OVERRIDES[record_id]
+        else:
+            filename_title = readable_filename(path)
+            title = derive_numeric_title(filename_title, excerpt)
+            title = arabic_title(path, title, category_label)
+        display_excerpt = arabic_excerpt(excerpt, category_label)
         encoded_url = "/studies/" + "/".join(quote(part, safe="") for part in relative.split("/"))
         content_for_tags = f"{path.name} {excerpt}"
         tags = make_tags(folder, path.name, content_for_tags, page_count)
         language = language_for(content_for_tags)
-        record_id = hashlib.sha1(relative.encode("utf-8")).hexdigest()[:12]
         record = {
             "id": record_id,
             "title": title,

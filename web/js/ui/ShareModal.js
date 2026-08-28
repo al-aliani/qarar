@@ -7,10 +7,7 @@ import { createShareLink, listShares, revokeShare } from '../services/ShareServi
 import { toast } from '../utils/toast.js';
 import { attachModalA11y } from '../utils/modalA11y.js';
 import { trackEvent } from '../utils/analytics.js';
-
-function escapeHtml(str) {
-    return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
+import { escapeHtml } from '../utils/escape.js';
 
 export function buildShareUrl(token) {
     return `${window.location.origin}${window.location.pathname}#/share/${token}`;

@@ -114,6 +114,16 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase functions deploy check-name-availability
 
+      # تدقيق 2026-08-27 (دفعة 3، طبقة Rate limiting): تحل محل الإدراج المباشر من
+      # المتصفح إلى public_applications (بلا Edge Function وسيطة سابقاً، بلا حدّ
+      # معدّل). JWT افتراضي (مفتاح anon نفسه صالح) — لا --no-verify-jwt، فالحماية
+      # الحقيقية حدّ المعدّل بـIP + honeypot خادمي داخل الدالة نفسها.
+      - name: "Deploy submit-application (نموذج انضمام خبير/مورّد العام — حدّ معدّل بـIP)"
+        if: steps.check_link_secrets.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: npx supabase functions deploy submit-application
+
       - name: "Deploy places-nearby (JWT مستخدم حقيقي، يتطلب GOOGLE_PLACES_API_KEY)"
         if: steps.check_link_secrets.outputs.configured == 'true'
         env:

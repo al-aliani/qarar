@@ -6,6 +6,7 @@ import { APP_CONFIG } from '../config.js';
 import { toast } from '../utils/toast.js';
 import { trackEvent } from '../utils/analytics.js';
 import { attachModalA11y } from '../utils/modalA11y.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class ConsultationModal {
     constructor(overlayId, store) {
@@ -130,7 +131,3 @@ export class ConsultationModal {
     }
 }
 
-function escapeHtml(str) {
-    if (str == null) return '';
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}

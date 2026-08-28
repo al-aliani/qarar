@@ -125,17 +125,23 @@ describe('فهرس الدراسات الجاهزة — حقل country يطابق
         expect(wrong, `دراسات غُيِّرت رغم عدم وجود دليل حقيقي:\n  ${wrong.join('\n  ')}`).toEqual([]);
     });
 
-    it('التصحيح اقتصر على 155 دراسة (74 أردنية + 81 مصرية)، والبقية 146 بقيت "SA"', () => {
+    it('التصحيح اقتصر على 155 دراسة (72 أردنية + 81 مصرية + 2 عراقية)، والبقية 145 بقيت "SA"', () => {
+        // تدقيق لاحق (نفس اليوم): من الـ74 المصنَّفة "JO" آلياً، 2 اعتمدتا على
+        // "دينار" وحدها بلا اسم مدينة/دولة أردنية مرافق — عملة مشتركة بين
+        // الأردن والعراق (والكويت والبحرين وتونس والجزائر وليبيا)، والمحتوى
+        // الفعلي عراقي بلا لبس (انظر COUNTRY_OVERRIDES في السكربت المولِّد).
+        // إجمالي المصحَّح يبقى 155 دراسة، فقط توزيعه الآن أدق (74→72 أردنية
+        // + 2 عراقية جديدة بدل خطأ سابق).
         const catalog = loadCatalog();
-        const counts = { SA: 0, JO: 0, EG: 0 };
+        const counts = { SA: 0, JO: 0, EG: 0, IQ: 0 };
         for (const s of catalog.studies) counts[s.country] = (counts[s.country] || 0) + 1;
-        expect(counts).toEqual({ SA: 146, JO: 74, EG: 81 });
+        expect(counts).toEqual({ SA: 145, JO: 72, EG: 81, IQ: 2 });
     });
 
-    it('العدد الكلي 301 وباقي حقول الدراسات المصحَّحة (العنوان/التصنيف/الوسوم) لم تتأثر', () => {
+    it('العدد الكلي 300 (301 ناقص دراسة مكرَّرة حُذفت) وباقي حقول الدراسات المصحَّحة لم تتأثر', () => {
         const catalog = loadCatalog();
-        expect(catalog.total).toBe(301);
-        expect(catalog.studies).toHaveLength(301);
+        expect(catalog.total).toBe(300);
+        expect(catalog.studies).toHaveLength(300);
 
         const byId = new Map(catalog.studies.map((s) => [s.id, s]));
         const stoneProject = byId.get('61920e00e232');

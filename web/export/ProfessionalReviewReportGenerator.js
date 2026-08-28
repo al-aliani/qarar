@@ -8,6 +8,7 @@ import { calculateStudy as runFullModel } from '../js/core/engine.js';
 import { getLabelSDB } from '../js/core/regulatoryLabels.js';
 import { BankReportGenerator } from './BankReportGenerator.js';
 import { SAFE } from './utils.js';
+import { escapeHtml } from '../js/utils/escape.js';
 
 function L(key) {
     try { return getLabelSDB(key) || key; } catch (_) { return key; }
@@ -70,7 +71,7 @@ export class ProfessionalReviewReportGenerator {
         const appendixRows = [];
         if (state.keyPeople?.keyPeople?.length) {
             state.keyPeople.keyPeople.slice(0, 3).forEach((p, i) => {
-                appendixRows.push(`<tr><td>${i + 1}</td><td>${(p.name || '—').toString().replace(/</g, '&lt;')}</td><td>${(p.role || '—').toString().replace(/</g, '&lt;')}</td><td>${(p.email || '—').toString().replace(/</g, '&lt;')}</td></tr>`);
+                appendixRows.push(`<tr><td>${i + 1}</td><td>${escapeHtml(p.name || '—')}</td><td>${escapeHtml(p.role || '—')}</td><td>${escapeHtml(p.email || '—')}</td></tr>`);
             });
         }
         const appendixTable = appendixRows.length
@@ -87,7 +88,7 @@ export class ProfessionalReviewReportGenerator {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نسخة للمراجعة — ${(info.name || 'مشروع مقترح').toString().replace(/</g, '&lt;')} — دراسة جدوى</title>
+    <title>نسخة للمراجعة — ${escapeHtml(info.name || 'مشروع مقترح')} — دراسة جدوى</title>
     <link href="/fonts/fonts.css" rel="stylesheet">
     <style>
         :root { --gold: #C9A227; --dark: #1a365d; --blue: #2c5282; --green: #276749; --red: #c53030; }
@@ -126,7 +127,7 @@ export class ProfessionalReviewReportGenerator {
     <div class="pr-container">
         <div class="pr-header">
             <h1>نسخة احترافية للمراجعة</h1>
-            <h2>${(info.name || 'مشروع مقترح').toString().replace(/</g, '&lt;')}</h2>
+            <h2>${escapeHtml(info.name || 'مشروع مقترح')}</h2>
             <p style="margin-top:10px;font-size:10pt;color:#718096;">دراسة جدوى اقتصادية | ${date}</p>
         </div>
 
@@ -170,14 +171,14 @@ export class ProfessionalReviewReportGenerator {
                     || `يهدف مشروع «${info.name || 'المشروع'}» إلى ${info.concept || 'تنفيذ نشاط تجاري'} في ${info.city || 'الموقع المحدد'}. تم إعداد هذه الدراسة وفق منهجيات احترافية قابلة للمراجعة من قبل جهة مستقلة.`;
                 return `<section class="pr-section" id="${secId}">
             <div class="pr-section-title">${n}. ${title}</div>
-            <p>${(execText || '').toString().replace(/</g, '&lt;')}</p>
+            <p>${escapeHtml(execText || '')}</p>
         </section>`;
             }
             case 'methodology': {
                 const methodologyText = `اعتمدت الدراسة على: (أ) افتراضات مالية من مقدم الطلب ومراجع داخلية، (ب) معايير تقييم استثمارية (صافي القيمة الحالية، معدل العائد الداخلي، فترة الاسترداد، نقطة التعادل)، (ج) نطاق الدراسة يشمل الجانب المالي والتشغيلي والمخاطر. هذه المسودة قابلة للمراجعة والتدقيق من قبل جهة مستقلة.`;
                 return `<section class="pr-section" id="${secId}">
             <div class="pr-section-title">${n}. ${title}</div>
-            <p>${(methodologyText || '').toString().replace(/</g, '&lt;')}</p>
+            <p>${escapeHtml(methodologyText || '')}</p>
         </section>`;
             }
             case 'financial':
@@ -213,10 +214,10 @@ export class ProfessionalReviewReportGenerator {
                 <tr><th>المخاطر</th><th>الاحتمالية</th><th>التأثير</th><th>خطة المواجهة</th></tr>
                 ${risks.map(r => `
                 <tr>
-                    <td>${(r.name || r.risk || r.description || '—').toString().replace(/</g, '&lt;')}</td>
-                    <td>${(r.probability || '—').toString().replace(/</g, '&lt;')}</td>
-                    <td>${(r.impact || '—').toString().replace(/</g, '&lt;')}</td>
-                    <td>${(r.mitigation || '—').toString().replace(/</g, '&lt;').slice(0, 100)}${(r.mitigation || '').length > 100 ? '...' : ''}</td>
+                    <td>${escapeHtml(r.name || r.risk || r.description || '—')}</td>
+                    <td>${escapeHtml(r.probability || '—')}</td>
+                    <td>${escapeHtml(r.impact || '—')}</td>
+                    <td>${escapeHtml((r.mitigation || '—').toString().slice(0, 100))}${(r.mitigation || '').length > 100 ? '...' : ''}</td>
                 </tr>
                 `).join('')}
             </table>

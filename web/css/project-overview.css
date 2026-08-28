@@ -61,6 +61,19 @@
     color: var(--c-text-muted);
 }
 
+/* تنبيه بصمة إصدار المحرك (قرار لجنة 2026-08-27) — لون تحذيري خفيف، ليس
+   خطأ ولا قرار GO/REVISE/NO-GO، فلا يستخدم .decision-banner عمداً. */
+.po__engine-notice {
+    margin-bottom: var(--s-4);
+    padding: var(--s-3) var(--s-4);
+    border: 1px solid var(--c-warning-subtle);
+    border-radius: var(--r-md);
+    background: var(--c-warning-subtle);
+    color: var(--c-warning-text);
+    font-size: 0.85rem;
+    line-height: 1.8;
+}
+
 .po__reasons {
     margin-top: var(--s-4);
     padding: var(--s-4);
