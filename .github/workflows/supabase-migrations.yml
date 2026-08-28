@@ -44,4 +44,13 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           npx supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" -p "${{ secrets.SUPABASE_DB_PASSWORD }}"
-          npx supabase db push
+          # 2026-08-28: --include-all مطلوب فعلياً — عطل حي وُجد أول مرة اليوم عبر
+          # https://github.com/al-aliani/qarar/actions/runs/33147806030. عدة فروع
+          # ترحيل مستقلة (مطوَّرة بالتوازي بنفس اليوم) تحمل أختاماً زمنية لا تتسلسل
+          # بترتيب الدمج الفعلي — CLI supabase يرفض بأمان أي ترحيل أقدم من آخر
+          # ترحيل مُسجَّل على القاعدة الحية، حتى لو كان محتواه آمناً كلياً للتطبيق
+          # خارج الترتيب. كل ترحيل في هذا المستودع idempotent بامتداد (IF NOT
+          # EXISTS/DROP...IF EXISTS ثم CREATE) بالفعل — تُحقَّق منه مراجعة عدائية
+          # قبل كل دمج (انظر PR #36 مثالاً) — فتجاوز هذا الحارس هنا آمن، لا يُخفي
+          # فشلاً حقيقياً في المحتوى نفسه.
+          npx supabase db push --include-all
