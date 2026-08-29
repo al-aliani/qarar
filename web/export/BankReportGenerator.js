@@ -112,11 +112,14 @@ export class BankReportGenerator {
         const bankVariant = options.bankVariant || state.financing?.sources?.bankLoan?.bank || 'other';
         const bankLabel = BANK_VARIANT_LABELS[bankVariant] || BANK_VARIANT_LABELS.other;
 
+        // updateSectionInMemory لا update() العادية (بلوكر بانر إصدار المحرك، 2026-08-29):
+        // نفس علّة ReportGenerator.js — update() كانت تُفعِّل سلسلة الحفظ الكاملة فتمحو
+        // صمتاً وسم _meta.engineVersion الذي يُبنى عليه تنبيه تغيّر إصدار المحرك.
         let results;
         try {
             results = this.calculateResults(state);
-            if (store && typeof store.update === 'function') {
-                store.update('results', results);
+            if (store && typeof store.updateSectionInMemory === 'function') {
+                store.updateSectionInMemory('results', results);
             }
         } catch {
             results = state.results || {};

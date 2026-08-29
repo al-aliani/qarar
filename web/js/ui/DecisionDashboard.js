@@ -20,6 +20,7 @@ import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQ
 import { hasMinimumRevenueData, hasMinimumFinancialData } from '../utils/dataSufficiency.js';
 import { toast } from '../utils/toast.js';
 import { trackEvent } from '../utils/analytics.js';
+import { renderEngineVersionNotice } from '../utils/engineVersionNotice.js';
 import 'gridstack/dist/gridstack.min.css';
 
 export class DecisionDashboard {
@@ -86,9 +87,14 @@ export class DecisionDashboard {
         } catch (e) {
             console.error('Financial Model Error:', e);
         }
-        // نفس نمط ExportMenu.js:513 — نُبقي results.decision (GO/REVISE/NO-GO) بمخزن الحالة
+        // نفس نمط ExportMenu.js — نُبقي results.decision (GO/REVISE/NO-GO) بمخزن الحالة
         // المشترك بعد زيارة لوحة القرار، كي تستطيع شاشات لاحقة (مثل PaywallModal) قراءته.
-        if (results && this.store?.update) this.store.update('results', results);
+        // updateSectionInMemory لا update() العادية (بلوكر بانر إصدار المحرك، 2026-08-29):
+        // render() هنا يُستدعى بمجرّد *زيارة* خطوة لوحة القرار — بلا أي تعديل فعلي من
+        // المستخدم — و update() العادية كانت تُفعِّل سلسلة الحفظ الكاملة فتُعيد وسم
+        // _meta.engineVersion صامتاً (نفس صنف خلل ProjectOverviewView.store.set الأصلي،
+        // لكن هنا المسبِّب مجرّد فتح هذه الخطوة في الويزارد لا صفحة الخلاصة).
+        if (results && this.store?.updateSectionInMemory) this.store.updateSectionInMemory('results', results);
 
         const evaluation = calculateProjectScore(state, results);
         const readiness = this.calculateReadiness(state, results, evaluation);
@@ -166,6 +172,7 @@ export class DecisionDashboard {
 
         this.container.innerHTML = `
             <div class="decision-dashboard animate-entry">
+                ${renderEngineVersionNotice(state)}
                 ${investmentDataWarningHtml(investmentDataWarning(state, results))}
                 ${this.renderFinancingGate(financingDiagnostics)}
                 <div class="dd-verdict${evaluation.recommendation === 'revise' ? ' dd-verdict--revise' : evaluation.recommendation === 'nogo' ? ' dd-verdict--nogo' : ''}">

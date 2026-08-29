@@ -160,18 +160,32 @@ describe('ProjectOverviewView — التحميل والأزرار', () => {
         vi.clearAllMocks();
     });
 
-    it('يحمّل الدراسة في المخزن المشترك قبل الرسم — وإلا فتح زر التعديل دراسةً أخرى', async () => {
+    it('لا تحمِّل الدراسة في المخزن المشترك لمجرّد العرض (بلوكر بانر إصدار المحرك، 2026-08-29)', async () => {
+        // كان store.set(data) يُستدعى هنا مباشرة داخل render() — بلا أي تفاعل من
+        // المستخدم — و set() يستدعي save() داخلياً فيُطلق سلسلة حفظ (1000ms+800ms)
+        // تُعيد وسم _meta.engineVersion صامتاً بمجرد *زيارة* هذه الصفحة، فيختفي تنبيه
+        // تغيّر إصدار المحرك قبل أن يُقرأ أصلاً. تحميل الدراسة في المخزن يبقى صحيحاً
+        // فقط عند نيّة تعديل فعلية (انظر الاختبار التالي).
         const { store } = await renderWith({ results: { decision: 'GO', indicators: { npv: 1 } } });
         expect(loadProjectMock).toHaveBeenCalledWith('p1');
-        expect(store.set).toHaveBeenCalledWith(FULL_STUDY);
+        expect(store.set).not.toHaveBeenCalled();
     });
 
-    it('زر «تعديل وتغيير» يستدعي onEdit بمعرّف المشروع', async () => {
-        const onEdit = vi.fn();
-        await renderWith({ results: { decision: 'GO', indicators: { npv: 1 } }, options: { onEdit } });
+    it('زر «تعديل وتغيير» يحمّل الدراسة في المخزن ثم يستدعي onEdit — بهذا الترتيب', async () => {
+        // زر التعديل ينقل للويزارد الذي يقرأ من المخزن، فبدون store.set هنا يفتح
+        // الويزارد على دراسة أخرى (أو فارغة) — هذا هو الخلل التاريخي الذي حرست منه
+        // هذه الشاشة أصلاً. الفرق عن التصميم القديم: التحميل الآن يحدث عند الضغط
+        // الفعلي على التعديل لا عند مجرّد العرض، وقبل onEdit مباشرة — لا بعده.
+        const calls = [];
+        const onEdit = vi.fn(() => calls.push('onEdit'));
+        const { store } = await renderWith({ results: { decision: 'GO', indicators: { npv: 1 } }, options: { onEdit } });
+        store.set.mockImplementation(() => calls.push('store.set'));
 
         document.querySelector('.po__edit').click();
+
+        expect(store.set).toHaveBeenCalledWith(FULL_STUDY);
         expect(onEdit).toHaveBeenCalledWith('p1');
+        expect(calls).toEqual(['store.set', 'onEdit']);
     });
 
     it('يعرض حالة «غير موجودة» بلا انهيار حين يفشل التحميل', async () => {

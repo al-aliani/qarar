@@ -601,8 +601,12 @@ class StudyStore {
         this._redoStack = [];
     }
 
-    updateSection(section, data) {
-        this._recordUndo();
+    /**
+     * الجزء النقي من تعديل الحالة (بلا تسجيل تراجع ولا حفظ) — استُخرج من updateSection
+     * (بلوكر بانر إصدار المحرك، 2026-08-29) كي تشترك فيه updateSection نفسها ودالة
+     * updateSectionInMemory أدناه بلا تكرار منطق الدمج/المزامنة الحسّاس هذا.
+     */
+    _applySectionData(section, data) {
         // Auto-initialize if missing (migration for old saves)
         if (!this.state[section]) {
             console.warn(`Section ${section} missing, initializing from schema...`);
@@ -633,7 +637,11 @@ class StudyStore {
         }
 
         this._syncSwot(section);
+    }
 
+    updateSection(section, data) {
+        this._recordUndo();
+        this._applySectionData(section, data);
         this._dirty = true;
         this.save();
         this.notify(section);
@@ -641,6 +649,23 @@ class StudyStore {
 
     update(section, data) {
         this.updateSection(section, data);
+    }
+
+    /**
+     * تحديث قسم في الذاكرة فقط — بلا تسجيل تراجع وبلا استدعاء save() (لا PersistenceService،
+     * لا localStorage/سحابة). بلوكر بانر إصدار المحرك (2026-08-29): عرض/تصدير الدراسة كان
+     * يستخدم updateSection العادية لتحديث state.results بنتائج محرك مُعادة الحساب، فتُفعِّل
+     * سلسلة الحفظ (save→saveLocalDebounced→_syncToCloud→PersistenceService.save) التي تُعيد
+     * وسم _meta.engineVersion بالإصدار الحالي — أي أن مجرّد *عرض* لوحة القرار أو *تصدير*
+     * تقرير كان يمحو صمتاً الدليل الذي يُبنى عليه تنبيه تغيّر إصدار المحرك (نفس صنف خلل
+     * ProjectOverviewView.store.set لكن بمسار مختلف). النتائج المُعادة حسابها لا تزال تحتاج
+     * أن تصل فوراً لمستهلكين يقرؤون state.results مباشرة بلا إعادة حساب خاصة بهم (مثال:
+     * PaywallModal.js وReportPreviewModal.js) — هذه الدالة تُحدِّث الحالة وتُبلّغ المستمعين
+     * (notify) فقط، بلا لمس أي شيء يشبه "حفظاً فعلياً من المستخدم".
+     */
+    updateSectionInMemory(section, data) {
+        this._applySectionData(section, data);
+        this.notify(section);
     }
 
     /**

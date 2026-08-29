@@ -6,7 +6,7 @@
  */
 
 import { formatCurrency } from '../utils/formatters.js';
-import { calculateStudy as runFullModel } from '../core/engine.js';
+import { calculateStudy as runFullModel, ENGINE_VERSION } from '../core/engine.js';
 import { validateStudy } from '../utils/validation.js';
 import { DEFAULT_REPORT_SECTION_ORDER } from '../core/schema.js';
 import { BANK_COMPLIANCE_SENTENCE } from '../config.js';
@@ -98,12 +98,20 @@ export class ReportGenerator {
         const studyTypeLabel = getOptionLabel('studyType', info.studyType);
         const studyRecipientLabel = getOptionLabel('studyRecipientType', info.studyRecipientType);
 
-        // تحديث state.results دائماً من runFullModel قبل إنشاء التقرير
+        // تحديث state.results دائماً من runFullModel قبل إنشاء التقرير — بلا حفظ فعلي
+        // (بلوكر بانر إصدار المحرك، 2026-08-29): كان يستخدم store.update() العادية، التي
+        // تُفعِّل سلسلة الحفظ الكاملة (localStorage + مزامنة سحابية) فتُعيد وسم
+        // _meta.engineVersion بالإصدار الحالي — أي أن *تصدير* تقرير كان هو نفسه ما يمحو
+        // الدليل الذي يُبنى عليه تنبيه تغيّر إصدار المحرك في ProjectOverviewView. النتائج
+        // المُعادة حسابها هنا لا تزال تصل فوراً لمن يقرأ store.getState().results مباشرة
+        // بلا إعادة حساب خاصة به (PaywallModal.js، ReportPreviewModal.js) عبر
+        // updateSectionInMemory — التي تُحدِّث الحالة وتُبلّغ المستمعين فقط، بلا لمس أي
+        // شيء يشبه "حفظاً فعلياً من المستخدم" (انظر store.js:updateSectionInMemory).
         let results;
         try {
             results = this.calculateResults(state);
-            if (store && typeof store.update === 'function') {
-                store.update('results', results);
+            if (store && typeof store.updateSectionInMemory === 'function') {
+                store.updateSectionInMemory('results', results);
             }
         } catch (e) {
             console.warn('Could not calculate fresh results for report:', e);
@@ -115,7 +123,14 @@ export class ReportGenerator {
             day: 'numeric'
         });
         const exportVersion = '1.0';
-        const studyVersion = String(state.version || '4.0.0');
+        // بند 3 (بانر إصدار المحرك، 2026-08-29): «رقم إصدار الدراسة» المطبوع تحت هذا
+        // العنوان يصف منطق الحساب الذي أنتج هذا التقرير تحديداً — لا شكل/بنية كائن
+        // الدراسة (state.version، مصدره schema.js — رقم شبه ثابت لا علاقة له بالنتائج
+        // المالية، انظر تعليق schema.js:95 وengine.js:172-174). التصدير يعيد الحساب حياً
+        // دائماً (تعليق الوحدة أعلى الملف)، فالرقم الصحيح هو ENGINE_VERSION الحالي وقت
+        // التصدير — قبل هذا الإصلاح كان تقريران بنفس "الإصدار" 4.0.0 قد يحملان NPV
+        // مختلفاً تماماً بسبب تغيّر معادلات المحرك بينهما، بلا أي أثر في المطبوع.
+        const studyVersion = ENGINE_VERSION;
         const exportDateTime = new Date().toLocaleString('ar-SA');
 
         const v = validateStudy(state);

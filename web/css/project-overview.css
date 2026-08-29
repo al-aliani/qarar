@@ -61,18 +61,8 @@
     color: var(--c-text-muted);
 }
 
-/* تنبيه بصمة إصدار المحرك (قرار لجنة 2026-08-27) — لون تحذيري خفيف، ليس
-   خطأ ولا قرار GO/REVISE/NO-GO، فلا يستخدم .decision-banner عمداً. */
-.po__engine-notice {
-    margin-bottom: var(--s-4);
-    padding: var(--s-3) var(--s-4);
-    border: 1px solid var(--c-warning-subtle);
-    border-radius: var(--r-md);
-    background: var(--c-warning-subtle);
-    color: var(--c-warning-text);
-    font-size: 0.85rem;
-    line-height: 1.8;
-}
+/* تنبيه بصمة إصدار المحرك: صار .engine-version-notice في components.css (2026-08-29)
+   — مصدر تنسيق مشترك بعد توسيع الميزة لأكثر من سطح واحد (انظر utils/engineVersionNotice.js). */
 
 .po__reasons {
     margin-top: var(--s-4);

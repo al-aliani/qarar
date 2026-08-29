@@ -14,6 +14,7 @@ import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
 import { indicatorHelp } from '../utils/glossary.js';
+import { renderEngineVersionNotice } from '../utils/engineVersionNotice.js';
 import Typed from 'typed.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
@@ -50,6 +51,7 @@ export class ExecutiveSummary {
         this.container.innerHTML = `
             <div class="executive-summary">
                 <h2 class="section-title">${compact ? 'مؤشرات التقييم المالي (نظرة مبكرة)' : 'الملخص التنفيذي'}</h2>
+                ${renderEngineVersionNotice(state)}
                 ${investmentDataWarningHtml(investmentDataWarning(state, financialResults))}
                 ${this.renderAuditorBanner(state, financialResults)}
 
