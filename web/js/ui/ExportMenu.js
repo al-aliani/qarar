@@ -12,6 +12,7 @@ import { runQAChecks } from '../utils/qaChecks.js';
 import { resolveQaStepIndex } from '../utils/qaStepMapper.js';
 import { escapeHtml } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
+import { monitoring } from '../utils/monitoring.js';
 import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
 import { trackEvent } from '../utils/analytics.js';
 import { attachModalA11y } from '../utils/modalA11y.js';
@@ -99,7 +100,11 @@ export class ExportMenu {
 
         const state = this.store.getState();
         let results = null;
-        try { results = runFullModel(state); } catch (_) { }
+        try { results = runFullModel(state); } catch (e) {
+            // كان يُبتلَع بصمت كلياً (لا حتى toast) — فشل المحرك هنا يعني بادج فحص الجودة
+            // وبطاقة الموثوقية تُبنى على results=null بلا أي أثر يصل لمن يراقب الإنتاج.
+            monitoring.captureException(e, { source: 'ExportMenu.open', studyId: state.projectInfo?.id || state.id || null });
+        }
         const qa = await runQAChecks(state, results);
         this._lastQa = qa;
         const el = this.overlay?.querySelector('#export-qa-badge');
@@ -110,7 +115,10 @@ export class ExportMenu {
         if (reviewEl && studyId) {
             try {
                 reviewEl.innerHTML = await renderReviewStatusBadge(studyId);
-            } catch (_) { /* لا داعٍ لإيقاف بقية القائمة إن فشلت الشارة */ }
+            } catch (e) {
+                // لا داعٍ لإيقاف بقية القائمة إن فشلت الشارة — لكن الفشل يستحق مراقبة.
+                monitoring.captureException(e, { source: 'ExportMenu.open', studyId });
+            }
         }
     }
 
@@ -455,6 +463,7 @@ export class ExportMenu {
                     toast.success('تم توليد النصوص تلقائياً. راجع الأقسام أو صدّر التقرير.');
                 } catch (err) {
                     console.error('Auto-generate text failed:', err);
+                    monitoring.captureException(err, { source: 'ExportMenu.autoGenerateText', studyId: state.projectInfo?.id || state.id || null });
                     toast.error('فشل التوليد: ' + (err?.message || 'خطأ'));
                 } finally {
                     btnAutoText.disabled = false;
@@ -632,7 +641,10 @@ export class ExportMenu {
 
         // احسب نتائج النموذج مرة واحدة (تُستخدم في بوابة الجودة وفي التصدير)
         let results = null;
-        try { results = runFullModel(state); } catch (e) { }
+        try { results = runFullModel(state); } catch (e) {
+            // فشل صامت هنا يعني تصديراً كاملاً يمضي بـresults=null بلا أي أثر يصل للمراقبة.
+            monitoring.captureException(e, { source: 'ExportMenu.handleExport', type, studyId: state.projectInfo?.id || state.id || null });
+        }
         // updateSectionInMemory لا update() العادية (بلوكر بانر إصدار المحرك، 2026-08-29):
         // هذا الاستدعاء يسبق كل تصدير (أي زر في هذه القائمة)، فكان يُفعِّل سلسلة الحفظ
         // الكاملة قبل أن يبدأ التصدير الفعلي أصلاً فيُعيد وسم _meta.engineVersion — أي أن
@@ -649,7 +661,10 @@ export class ExportMenu {
         const RAW_EXPORTS = new Set(['json', 'csv', 'folder_json', 'investor_dashboard', 'gsheets']);
         if (!RAW_EXPORTS.has(type)) {
             let qa = null;
-            try { qa = await runQAChecks(state, results); } catch (e) { console.warn('QA gate error:', e); }
+            try { qa = await runQAChecks(state, results); } catch (e) {
+                console.warn('QA gate error:', e);
+                monitoring.captureException(e, { source: 'ExportMenu.handleExport.qaGate', type });
+            }
             if (qa) {
                 const hasHard = (qa.hardErrors || []).length > 0;
                 const hasSoft = (qa.softWarnings || []).length > 0
@@ -1060,6 +1075,9 @@ export class ExportMenu {
             auditLog(ACTIONS.EXPORT, { type });
         } catch (error) {
             console.error('Export failed:', error);
+            // البوابة الوحيدة التي تغطي كل صيغ التصدير (PDF/Word/Excel/PPTX/batch_zip/gsheets...) —
+            // فشل هنا كان يصل toast عام للعميل بلا أي أثر يراه الأدمن عبر المراقبة.
+            monitoring.captureException(error, { source: 'ExportMenu.handleExport', type, studyId: state.projectInfo?.id || state.id || null });
             const msg = error?.message && /تحميل|Excel|load|فشل|مهلة/.test(String(error.message))
                 ? 'فشل تحميل مكتبة التصدير أو اكتمال البيانات. تحقق من الاتصال وحاول مجدداً.'
                 : 'حدث خطأ أثناء التصدير. إن استمر تحقق من اكتمال البيانات.';

@@ -17,7 +17,7 @@
  * migration 20260709120000_create_orders_payments.sql — قبل الوصول لأي منطق حساب
  * أو إنشاء صف orders.
  *
- * دفعة إصلاح مهلات مزوّدي الدفع 2026-08-29 (هذه الدفعة): fetch لدى Moyasar/Stripe/
+ * دفعة إصلاح مهلات مزوّدي الدفع 2026-08-29 (#54): fetch لدى Moyasar/Stripe/
  * Tamara (supabase/functions/_shared/providers/*.ts) كان بلا أي مهلة — تعليق شبكي
  * حقيقي هناك (لا استجابة، لا رفض) كان يُعلّق create-checkout نفسه للأبد، تاركاً
  * العميل أمام واجهة دفع متجمّدة بلا أي ملاحظة. الوصف السفلي يحقن رفض AbortError/
@@ -26,6 +26,13 @@
  * لـsignal مُختبَر توصيلاً في providers/__tests__/*.test.js) ليثبت أن create-checkout
  * يتعامل مع هذا الرفض بوضوح: تحديث الطلب لحالة failed، تنبيه عبر sendAlert،
  * واستجابة 502 واضحة — لا تعليق أبدي ولا استثناء غير مُعالَج يهرب من المعالج.
+ *
+ * بلوكر مراقبة 2026-08-29 (دفعة منفصلة، آخر مجموعة اختبارات أدناه): create-checkout
+ * هي الدالة المسؤولة فعلياً عن إنشاء صف orders المدفوع — كانت الوحيدة بين دوال
+ * الدفع (بخلاف webhook-moyasar/stripe/tamara) التي تكتفي بـconsole.error بلا أي
+ * أثر يصل لأي مراقبة إنتاجية عند فشل *إدراج* الطلب تحديداً (فشل إنشاء جلسة
+ * المزوّد نفسه صار مُغطّى فعلياً ضمن دفعة #54 أعلاه — مجموعة الاختبارات الأخيرة هنا
+ * تغطي فقط فجوة الإدراج المتبقية، عبر حقن فشل قابل للتحكم عبر nextInsertError).
  *
  * نمط الاختبار مطابق لـwebhook-moyasar: تمويه globalThis.Deno + التقاط المعالج
  * الحقيقي عبر Deno.serve، مع استخدام pricing.ts/catalog.ts/cors.ts/rateLimit.ts
@@ -41,13 +48,18 @@ let capturedHandler = null;
 let authState = null; // { data: { user }, error }
 let ordersState = null; // آخر صف orders أُنشئ (يُحدَّث بنفس مرجع الكائن كما تفعل القاعدة الحقيقية)
 let orderIdSeq = 0;
-const sendAlertMock = vi.fn();
+let nextInsertError = null; // حقن فشل إدراج لاختبار واحد فقط — يُستهلك ويُعاد null تلقائياً
 
 function buildOrdersTable() {
     return {
         insert: (row) => ({
             select: () => ({
                 single: async () => {
+                    if (nextInsertError) {
+                        const err = nextInsertError;
+                        nextInsertError = null;
+                        return { data: null, error: err };
+                    }
                     orderIdSeq += 1;
                     const id = `order-${orderIdSeq}`;
                     ordersState = { id, ...row };
@@ -120,6 +132,8 @@ const createTamaraCheckout = vi.fn(async () => ({ checkoutUrl: 'https://tamara.e
 vi.mock('../../_shared/providers/moyasar.ts', () => ({ createMoyasarCheckout: (...a) => createMoyasarCheckout(...a) }));
 vi.mock('../../_shared/providers/stripe.ts', () => ({ createStripeCheckout: (...a) => createStripeCheckout(...a) }));
 vi.mock('../../_shared/providers/tamara.ts', () => ({ createTamaraCheckout: (...a) => createTamaraCheckout(...a) }));
+
+const sendAlertMock = vi.fn();
 vi.mock('../../_shared/alerting.ts', () => ({ sendAlert: (...a) => sendAlertMock(...a) }));
 
 function makeRequest(body, { origin = 'https://sahib.sa' } = {}) {
@@ -134,6 +148,7 @@ beforeEach(async () => {
     authState = { data: { user: { id: 'user-1' } }, error: null };
     ordersState = null;
     orderIdSeq = 0;
+    nextInsertError = null;
     capturedHandler = null;
     createMoyasarCheckout.mockClear();
     createStripeCheckout.mockClear();
@@ -151,6 +166,7 @@ beforeEach(async () => {
                 STRIPE_SECRET_KEY: 'sk_test_stripe',
                 TAMARA_API_TOKEN: 'tamara_token',
                 APP_ORIGIN: 'https://sahib.sa',
+                SENTRY_DSN: 'https://public@o1.ingest.sentry.io/1',
             }[key]),
         },
     };
@@ -260,6 +276,31 @@ describe('create-checkout/index.ts — تعليق/مهلة مزوّد الدفع
         expect(body.checkoutUrl).toBe('https://tamara.example/pay/abc');
         expect(body.orderId).toBeTruthy();
         expect(ordersState.status).not.toBe('failed');
+        expect(sendAlertMock).not.toHaveBeenCalled();
+    });
+});
+
+describe('create-checkout/index.ts — تنبيه المراقبة عند فشل إدراج صف orders (بلوكر مراقبة 2026-08-29)', () => {
+    it('فشل إدراج صف orders ⇒ sendAlert يُستدعى بسياق واضح، مع بقاء استجابة order_creation_failed/500 كما كانت', async () => {
+        nextInsertError = { message: 'insert failed: db down' };
+
+        const res = await capturedHandler(makeRequest({ tier: 'self', provider: 'moyasar' }));
+
+        expect(res.status).toBe(500);
+        expect(await res.json()).toEqual({ error: 'order_creation_failed' });
+        expect(ordersState).toBeNull();
+        expect(sendAlertMock).toHaveBeenCalledTimes(1);
+        const [dsn, ctx] = sendAlertMock.mock.calls[0];
+        expect(dsn).toBe('https://public@o1.ingest.sentry.io/1');
+        expect(ctx.level).toBe('error');
+        expect(ctx.tags).toEqual({ source: 'create-checkout', kind: 'order_insert_failed' });
+        expect(ctx.message).toContain('insert failed: db down');
+    });
+
+    it('نجاح كامل ⇒ لا يُستدعى sendAlert إطلاقاً', async () => {
+        const res = await capturedHandler(makeRequest({ tier: 'self', provider: 'moyasar' }));
+
+        expect(res.status).toBe(200);
         expect(sendAlertMock).not.toHaveBeenCalled();
     });
 });

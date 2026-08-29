@@ -5,6 +5,7 @@
  * إنشاء طلب دفع يمر عبر Edge Function create-checkout (السعر يُشتقّ خادمياً).
  */
 import { getSupabaseClient, getAuthUser } from '../../supabaseClient.js';
+import { monitoring } from '../utils/monitoring.js';
 
 // تدقيق أمني 2026-08-29: الباقات المدفوعة فعلياً فقط — يجب أن تطابق حرفياً
 // PAYABLE_TIERS في supabase/functions/create-checkout/index.ts وقيد orders_tier_check
@@ -39,6 +40,9 @@ export async function hasActivePayment(studyId) {
 
     if (error) {
         console.warn('[PaymentService] فشل التحقق من حالة الدفع:', error.message);
+        // فشل آمن (يبقى false — لا يفتح بوابة التصدير خطأً)، لكن دون هذا كان الفشل
+        // نفسه لا يصل لأي مراقبة — قد يعني حجب تصدير مدفوع فعلاً عن عميل بصمت.
+        monitoring.captureException(new Error(error.message || 'فشل التحقق من حالة الدفع'), { source: 'PaymentService.hasActivePayment', studyId });
         return false;
     }
     return Array.isArray(data) && data.length > 0;
@@ -72,6 +76,9 @@ export async function startCheckout({ tier, studyId, provider, addons = [], coup
         if (!data?.checkoutUrl) return { ok: false, error: 'لم يُعِد الخادم رابط دفع صالحاً' };
         return { ok: true, checkoutUrl: data.checkoutUrl, orderId: data.orderId };
     } catch (e) {
+        // استثناء اتصال حقيقي (لا رفض منطقي من create-checkout، ذاك يُعاد أعلاه كـerror
+        // عادي) — كان يُعاد للمستدعي بلا أي أثر يصل لأي مراقبة.
+        monitoring.captureException(e, { source: 'PaymentService.startCheckout', studyId, tier, provider });
         return { ok: false, error: e?.message || 'خطأ في الاتصال بخادم الدفع' };
     }
 }
@@ -131,7 +138,14 @@ export async function listOrders() {
     // تدقيق 2026-08-26: كان يُبتلَع ويُعاد [] — فجلسة سليمة يفشل استعلامها تسقط في فرع
     // «لا توجد عمليات دفع حتى الآن»، أي فشلُ وصولٍ يُقدَّم للعميل كحقيقة عن حسابه. نرمي
     // الآن كما تفعل getOrderStatus أعلاه ليفرّق المستدعي بين «فارغ» و«تعذّر الوصول».
-    if (error) throw new Error(error.message || 'تعذّر جلب سجل الطلبات');
+    if (error) {
+        // بخلاف getOrderStatus (مستدعيها PaymentReturnView.js يُبلِّغ المراقبة فعلياً عند
+        // الرمي)، لا مستدعٍ حالي لـlistOrders (BillingHistoryView.js/DashboardView.js)
+        // يستدعي المراقبة عند التقاط هذا الرمي — فنُبلِّغ هنا كي لا يبقى الفشل بلا أثر.
+        const e = new Error(error.message || 'تعذّر جلب سجل الطلبات');
+        monitoring.captureException(e, { source: 'PaymentService.listOrders' });
+        throw e;
+    }
     return Array.isArray(data) ? data : [];
 }
 
