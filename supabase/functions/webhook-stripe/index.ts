@@ -50,7 +50,20 @@ Deno.serve(async (req: Request) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-  const updateFields: Record<string, unknown> = { status, metadata: event };
+  // تدقيق أمني 2026-08-28 (اتساق مع webhook-moyasar/tamara، انظر تعليقهما): لا سرّ
+  // مضمَّن في جسم حدث Stripe (توقيعه رأس Stripe-Signature منفصل عن الجسم)، لكن
+  // تخزين event كاملاً لا داعي له — قد يحمل بيانات عميل (بريد/اسم) لا يقرأها أي
+  // كود حالياً. قائمة بيضاء صريحة بدل الجسم الخام، دفاعاً بالعمق واتساقاً.
+  const safeMetadata = {
+    id: event?.id,
+    type: event?.type,
+    object_id: event?.data?.object?.id,
+    amount_total: event?.data?.object?.amount_total,
+    currency: event?.data?.object?.currency,
+    payment_status: event?.data?.object?.payment_status,
+    payment_intent: event?.data?.object?.payment_intent,
+  };
+  const updateFields: Record<string, unknown> = { status, metadata: safeMetadata };
   let matcher = adminClient.from('orders').update(updateFields).eq('provider', 'stripe');
 
   if (status === 'refunded') {

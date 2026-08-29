@@ -103,3 +103,44 @@ describe('webhook-moyasar/index.ts — تكامل حقيقي لفحص المبل
         expect(dbState.status).toBe('pending');
     });
 });
+
+describe('webhook-moyasar/index.ts — تدقيق أمني 2026-08-28: secret_token لا يصل orders.metadata إطلاقاً', () => {
+    it('metadata المخزَّنة لا تحوي secret_token رغم وجوده في الحمولة الواردة فعلياً', async () => {
+        await capturedHandler(makeRequest({
+            type: 'invoice_paid',
+            secret_token: SECRET,
+            data: { id: 'inv_ok', status: 'paid', amount: 199900, currency: 'SAR', fee: 500, source: { type: 'creditcard' } },
+        }));
+
+        expect(dbState.status).toBe('paid');
+        expect(dbState.metadata).toBeDefined();
+        expect(dbState.metadata.secret_token).toBeUndefined();
+        expect(JSON.stringify(dbState.metadata)).not.toContain(SECRET);
+    });
+
+    it('metadata تحتفظ بحقول تدقيق آمنة فعلية (نوع الحدث، الحالة، المبلغ) — ليست فارغة كلياً', async () => {
+        await capturedHandler(makeRequest({
+            type: 'invoice_paid',
+            secret_token: SECRET,
+            data: { id: 'inv_ok', status: 'paid', amount: 199900, currency: 'SAR' },
+        }));
+
+        expect(dbState.metadata).toMatchObject({ type: 'invoice_paid', status: 'paid', id: 'inv_ok', amount: 199900, currency: 'SAR' });
+    });
+
+    it('حتى لو حمولة مستقبلية وضعت secret_token في مكان آخر غير المتوقَّع (data.secret_token)، القائمة البيضاء لا تلتقطه لأنها بناء صريح لا نسخ جزئي', async () => {
+        await capturedHandler(makeRequest({
+            type: 'invoice_paid',
+            secret_token: SECRET,
+            data: { id: 'inv_ok', status: 'paid', amount: 199900, secret_token: 'sneaky-nested-secret' },
+        }));
+
+        expect(JSON.stringify(dbState.metadata)).not.toContain('sneaky-nested-secret');
+    });
+
+    it('[إثبات الحارس] العطل الأصلي: تخزين payload الخام كاملاً كان يضع secret_token مباشرة في العمود المقروء من صاحب الطلب', () => {
+        const rawPayload = { type: 'invoice_paid', secret_token: SECRET, data: { id: 'inv_ok', status: 'paid', amount: 199900 } };
+        const oldUpdateFields = { status: 'paid', metadata: rawPayload }; // السطر المحذوف: metadata: payload
+        expect(oldUpdateFields.metadata.secret_token).toBe(SECRET); // العطل: السرّ حرفياً في العمود المخزَّن
+    });
+});

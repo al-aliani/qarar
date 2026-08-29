@@ -99,3 +99,29 @@ describe('webhook-tamara/index.ts — تكامل حقيقي لفحص المبل�
         expect(dbState.status).toBe('pending');
     });
 });
+
+describe('webhook-tamara/index.ts — تدقيق أمني 2026-08-28 (اتساق مع webhook-moyasar): metadata قائمة بيضاء لا جسم خام', () => {
+    it('metadata المخزَّنة لا تحوي حقولاً حسّاسة محتملة (بيانات عميل) رغم وجودها في الحمولة الخام', async () => {
+        const res = await capturedHandler(makeRequest({
+            order_id: 'order_ok', order_status: 'captured', total_amount: { amount: '1999.00', currency: 'SAR' },
+            consumer: { email: 'customer@example.com', phone_number: '0500000000' },
+        }));
+        expect(res.status).toBe(200);
+        expect(dbState.status).toBe('paid');
+        expect(JSON.stringify(dbState.metadata)).not.toContain('customer@example.com');
+        expect(JSON.stringify(dbState.metadata)).not.toContain('0500000000');
+    });
+
+    it('metadata تحتفظ بحقول تدقيق آمنة فعلية (معرّف الطلب، الحالة، المبلغ) — ليست فارغة كلياً', async () => {
+        await capturedHandler(makeRequest({
+            order_id: 'order_ok', order_status: 'captured', total_amount: { amount: '1999.00', currency: 'SAR' },
+        }));
+        expect(dbState.metadata).toMatchObject({ order_id: 'order_ok', order_status: 'captured', total_amount: { amount: '1999.00', currency: 'SAR' } });
+    });
+
+    it('[إثبات الحارس] العطل الأصلي: تخزين payload كاملاً كان يضع بيانات العميل الحسّاسة مباشرة في العمود المقروء من صاحب الطلب', () => {
+        const rawPayload = { order_id: 'order_x', consumer: { email: 'leak@example.com' } };
+        const oldUpdateFields = { status: 'paid', metadata: rawPayload }; // السطر المحذوف: metadata: payload
+        expect(oldUpdateFields.metadata.consumer.email).toBe('leak@example.com');
+    });
+});

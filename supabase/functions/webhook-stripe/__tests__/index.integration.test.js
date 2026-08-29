@@ -97,3 +97,33 @@ describe('webhook-stripe/index.ts — تكامل حقيقي لفحص المبل�
         expect(dbState.status).toBe('pending');
     });
 });
+
+describe('webhook-stripe/index.ts — تدقيق أمني 2026-08-28 (اتساق مع webhook-moyasar): metadata قائمة بيضاء لا جسم خام', () => {
+    it('metadata المخزَّنة لا تحوي حقولاً حسّاسة محتملة (بريد/اسم عميل) رغم وجودها في حدث Stripe الخام', async () => {
+        const req = await makeSignedRequest({
+            id: 'evt_4', type: 'checkout.session.completed',
+            data: { object: { id: 'cs_ok', payment_status: 'paid', amount_total: 199900, currency: 'sar', customer_details: { email: 'customer@example.com', name: 'عميل حقيقي' } } },
+        });
+        await capturedHandler(req);
+
+        expect(dbState.status).toBe('paid');
+        expect(JSON.stringify(dbState.metadata)).not.toContain('customer@example.com');
+        expect(JSON.stringify(dbState.metadata)).not.toContain('عميل حقيقي');
+    });
+
+    it('metadata تحتفظ بحقول تدقيق آمنة فعلية (معرّف الحدث، النوع، المبلغ) — ليست فارغة كلياً', async () => {
+        const req = await makeSignedRequest({
+            id: 'evt_5', type: 'checkout.session.completed',
+            data: { object: { id: 'cs_ok', payment_status: 'paid', amount_total: 199900, currency: 'sar' } },
+        });
+        await capturedHandler(req);
+
+        expect(dbState.metadata).toMatchObject({ id: 'evt_5', type: 'checkout.session.completed', object_id: 'cs_ok', amount_total: 199900, currency: 'sar', payment_status: 'paid' });
+    });
+
+    it('[إثبات الحارس] العطل الأصلي: تخزين event كاملاً كان يضع أي حقل عميل حسّاس مباشرة في العمود المقروء من صاحب الطلب', () => {
+        const rawEvent = { id: 'evt_x', data: { object: { customer_details: { email: 'leak@example.com' } } } };
+        const oldUpdateFields = { status: 'paid', metadata: rawEvent }; // السطر المحذوف: metadata: event
+        expect(oldUpdateFields.metadata.data.object.customer_details.email).toBe('leak@example.com');
+    });
+});
