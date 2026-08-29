@@ -29,6 +29,13 @@
 #     رموز الاسترداد طويلة العمر بخلاف رموز OTP قصيرة العمر، فلا يجوز مشاركة نفس
 #     السرّ بينهما؛ ولّده بنفسك، مثال: openssl rand -hex 32)
 #
+# مطلوبة لتفعيل Supabase Send SMS Hook فعلياً (توقيع الطلبات الواردة من خدمة
+# Supabase Auth نفسها إلى send-sms-hook، 2026-08-29):
+#   - SEND_SMS_HOOK_SECRET (يُنسخ من لوحة تحكم Supabase عند الربط —
+#     Authentication → Hooks → Send SMS → أشر إلى send-sms-hook وانسخ السرّ الظاهر
+#     بصيغة "v1,whsec_..."؛ بلا هذا السرّ ترفض الدالة كل طلب بـinvalid_signature
+#     حتى لو كانت منشورة فعلاً)
+#
 # مطلوبة لتفعيل موصّل Google Places (منافسون بدقّة — تسويق، 2026-07-17):
 #   - GOOGLE_PLACES_API_KEY (Google Cloud Console → APIs & Services → Credentials؛
 #     فعّل Places API. المفتاح يبقى على الخادم فقط — places-nearby/index.ts لا
@@ -179,6 +186,21 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase functions deploy health --no-verify-jwt
 
+      # تدقيق 2026-08-29: مبنيّة بالكود منذ 2026-07-17 (تسليم رمز الدخول عبر واتساب
+      # لـSupabase Send SMS Hook — انظر تعليق الدالة) لكن غائبة عن هذه الورشة كلياً،
+      # أي أن تفعيل الـhook من لوحة تحكم Supabase كان سيُبقي كل تسجيل دخول معطّلاً
+      # (404 حيّ) رغم وجود الكود في المستودع. --no-verify-jwt هنا (نفس نمط
+      # webhook-moyasar/webhook-stripe/webhook-tamara أعلاه لا نمط create-checkout):
+      # المستدعي الفعلي خدمة Supabase Auth (GoTrue) نفسها لا متصفح مستخدم مسجَّل —
+      # لا يصل أي JWT مستخدم إطلاقاً، والتحقق الحقيقي هو توقيع Standard Webhooks عبر
+      # SEND_SMS_HOOK_SECRET (verifyStandardWebhookSignature، مُختبَر في
+      # sendSmsHookVerify.test.js).
+      - name: "Deploy send-sms-hook (بلا تحقق JWT منصّة — المستدعي خدمة Supabase Auth نفسها، التحقق عبر توقيع Standard Webhooks)"
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: npx supabase functions deploy send-sms-hook --no-verify-jwt
+
       - name: Push payment provider secrets to Supabase (skips any missing one safely)
         if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
@@ -202,6 +224,7 @@ jobs:
             [WHATSAPP_TEMPLATE_LANG]="${{ secrets.WHATSAPP_TEMPLATE_LANG }}"
             [OTP_HASH_SECRET]="${{ secrets.OTP_HASH_SECRET }}"
             [RECOVERY_CODE_HASH_SECRET]="${{ secrets.RECOVERY_CODE_HASH_SECRET }}"
+            [SEND_SMS_HOOK_SECRET]="${{ secrets.SEND_SMS_HOOK_SECRET }}"
             [GOOGLE_PLACES_API_KEY]="${{ secrets.GOOGLE_PLACES_API_KEY }}"
           )
           MISSING=""
