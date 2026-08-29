@@ -77,9 +77,14 @@ describe('verifyOrderAmount — دفاع بالعمق ضد تلاعب مبلغ �
         expect(result.reason).toBe('no_matching_order');
     });
 
-    it('[إثبات الحارس] بلا هذا الفحص، أي مبلغ (بما فيه 1 ريال) كان سيُمنَح دون رفض', async () => {
-        // محاكاة السلوك القديم: لا مقارنة إطلاقاً بين المبلغ المؤكَّد والمستحق.
-        const noCheckAtAll = (confirmedAmountSar) => ({ ok: true });
-        expect(noCheckAtAll(1).ok).toBe(true); // كان سينجح حتى لو الطلب يستحق 1999
+    it('[إثبات الحارس] استدعاء مباشر لـ verifyOrderAmount الحقيقية: مبلغ 1 ريال لطلب يستحق 1999 يُرفض فعلياً', async () => {
+        const adminClient = makeAdminClient({ amount_sar: 1999 });
+        const result = await verifyOrderAmount(adminClient, {
+            provider: 'moyasar',
+            providerRef: 'inv_low',
+            confirmedAmountSar: 1,
+        });
+        expect(result.ok).toBe(false);
+        expect(result.reason).toBe('mismatch');
     });
 });

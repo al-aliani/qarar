@@ -8,6 +8,12 @@
  * الفشل: يظهر الخطأ للعميل فقط، بلا أي أثر يراه الأدمن عبر Sentry.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PAYWALL_MODAL_PATH = resolve(__dirname, '../PaywallModal.js');
 
 const startCheckoutMock = vi.fn();
 vi.mock('../../services/PaymentService.js', () => ({
@@ -68,15 +74,22 @@ describe('PaywallModal._handleBankTransfer — فشل إنشاء الطلب يُ
         expect(captureMessageMock).not.toHaveBeenCalled();
     });
 
-    it('[إثبات الحارس] العطل الأصلي: فشل الدفع كان يُعرَض للعميل فقط بلا أي استدعاء مراقبة', async () => {
-        const oldHandleBankTransfer = async (result, trackEventFn) => {
-            if (!(result.ok && result.bankTransfer)) {
-                trackEventFn('payment_error', { message: result.error });
-                return 'shown_to_user_only';
-            }
-        };
-        const outcome = await oldHandleBankTransfer({ ok: false, error: 'x' }, () => {});
-        expect(outcome).toBe('shown_to_user_only');
-        expect(captureMessageMock).not.toHaveBeenCalled(); // لا أثر مراقبة إطلاقاً في السلوك الأصلي
+    it('[إثبات الحارس] قراءة المصدر الفعلي: استدعاء monitoring.captureMessage موجود في مسار الفشل بعد showErr/trackEvent القديمين، لا بديلاً عنهما', () => {
+        // العطل الأصلي (قبل إصلاح 3db2be4، دفعة 6): مسار الفشل كان ينتهي عند
+        // trackEvent('payment_error', ...) — بلا أي سطر captureMessage بعده إطلاقاً.
+        const src = readFileSync(PAYWALL_MODAL_PATH, 'utf8');
+        const methodMatch = src.match(/async _handleBankTransfer\([^)]*\)\s*\{[\s\S]*?\n    \}/);
+        expect(methodMatch).not.toBeNull();
+        const body = methodMatch[0];
+
+        const showErrIdx = body.indexOf("showErr(result.error");
+        const trackEventIdx = body.indexOf("trackEvent('payment_error'");
+        const captureIdx = body.indexOf('monitoring.captureMessage(');
+        // السلوك القديم (showErr + trackEvent لمسار الفشل) ما زال موجوداً — الإصلاح
+        // أضاف عليه، لم يستبدله.
+        expect(showErrIdx).toBeGreaterThan(-1);
+        expect(trackEventIdx).toBeGreaterThan(showErrIdx);
+        // العطل الأصلي المُصلَح: لا وجود لاستدعاء المراقبة في مسار الفشل أصلاً.
+        expect(captureIdx).toBeGreaterThan(trackEventIdx);
     });
 });

@@ -69,12 +69,13 @@ describe('applyHeroUsageFacts — التطبيق على DOM فعلي', () => {
         expect(doc.getElementById('heroUsageStats').hidden).toBe(true);
     });
 
-    it('[إثبات الحارس] النمط القديم (إظهار/إخفاء القسم كله معاً) كان سيُظهر "0 دراسة مدفوعة" بجانب "55"', () => {
-        // محاكاة السلوك القديم: hidden=false على القسم كله متى وُجدت أي بيانات،
-        // بلا فحص كل حقل على حدة — وهو بالضبط ما كان يعرض "0 دراسة مدفوعة فعلياً".
+    it('[إثبات الحارس] استدعاء مباشر لـ applyHeroUsageFacts الحقيقية: كل صف يُخفى وفق قيمته الخاصة لا وفق حالة القسم ككل', () => {
+        // لو رجع الكود لنمط "إظهار/إخفاء القسم كله معاً" (فحص واحد على anyVisible
+        // بلا فحص كل حقل)، سيبقى صف "0 مدفوعة" ظاهراً بمجرد أن يظهر القسم بسبب
+        // total_studies — وهذا بالضبط ما كان يعرض "0 دراسة مدفوعة فعلياً".
         const doc = buildDom();
-        const oldBehaviorContainer = doc.getElementById('heroUsageStats');
-        oldBehaviorContainer.hidden = false; // ما كان يحدث سابقاً بلا شرط لكل حقل
-        expect(doc.getElementById('statPaidStudies').closest('.hero-fact').hidden).toBe(false); // العيب: صف "0 مدفوعة" ظاهر
+        applyHeroUsageFacts(doc, { total_studies: 55, paid_studies: 0, certified_studies: 0 });
+        expect(doc.getElementById('heroUsageStats').hidden).toBe(false);
+        expect(doc.getElementById('statPaidStudies').closest('.hero-fact').hidden).toBe(true);
     });
 });

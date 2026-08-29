@@ -69,8 +69,8 @@ describe('OG/Twitter — كل صفحة عامة قابلة للمشاركة تح
         expect(existsSync(resolve(WEB_DIR, 'public/og-image.png'))).toBe(true);
     });
 
-    it('[إثبات الحارس] صفحة بلا أي وسم OG (محاكاة الحالة الأصلية) تُفشل الفحص', () => {
-        const bareHtml = '<!doctype html><html><head><title>صفحة بلا وسوم</title></head><body></body></html>';
-        expect(extractMeta(bareHtml, 'property', 'og:image')).toBeNull();
+    it('[إثبات الحارس] صفحة حقيقية بعد حذف og:image (الحالة الأصلية قبل الإصلاح) تُفشل الفحص', () => {
+        const withoutOgImage = read('pricing.html').replace(/<meta property="og:image"[^>]*>\s*/, '');
+        expect(extractMeta(withoutOgImage, 'property', 'og:image')).toBeNull();
     });
 });

@@ -44,14 +44,16 @@ describe('PersistenceService.save — إعادة محاولة المزامنة �
         expect(result.cloudSyncFailed).toBe(true);
     }, 10000);
 
-    it('[إثبات الحارس] العطل الأصلي: محاولة واحدة فقط كانت تُسقِط فشلاً عابراً فوراً بلا أي إعادة محاولة', async () => {
-        const attemptOnce = async (fn) => {
-            try { return await fn(); } catch (e) { return { failed: true }; }
-        };
-        let calls = 0;
-        const flakyOnce = async () => { calls++; if (calls === 1) throw new Error('transient'); return 'ok'; };
-        const result = await attemptOnce(flakyOnce);
-        expect(result.failed).toBe(true); // فشل عابر واحد يُسقِط العملية كاملة بلا إعادة محاولة
-        expect(calls).toBe(1);
+    it('[إثبات الحارس] العطل الأصلي: save() كان يستدعي _saveCloud مباشرة بلا غلاف إعادة محاولة', async () => {
+        const saveCloudWithRetrySpy = vi.spyOn(PersistenceService, '_saveCloudWithRetry');
+        vi.spyOn(PersistenceService, '_saveCloud').mockResolvedValue(undefined);
+
+        await PersistenceService.save('study-3', { projectInfo: { id: 'study-3' } });
+
+        // العطل الأصلي: save() كان يستدعي this._saveCloud(...) مباشرة (بلا غلاف
+        // إعادة المحاولة) — فلا معنى لوجود CLOUD_SYNC_RETRY_DELAYS_MS إن لم يمرّ
+        // المسار الحقيقي عبر _saveCloudWithRetry. لو أُعيد استدعاء _saveCloud
+        // مباشرة كما كانت الحال، هذا الجاسوس على الدالة الحقيقية لن يُستدعى إطلاقاً.
+        expect(saveCloudWithRetrySpy).toHaveBeenCalledTimes(1);
     });
 });

@@ -34,13 +34,14 @@ describe('توثيق النشر لا يدّعي وجود netlify.toml بعد ح�
         expect(content).not.toContain('(Vercel/Netlify)'.normalize('NFC'));
     });
 
-    it('[إثبات الحارس] العطل الأصلي: الجداول كانت تدّعي صراحة أن netlify.toml قابل للاستخدام كملف نشر فعلي', () => {
-        // نصوص الادّعاء الزائف الحرفية التي كانت قائمة قبل هذا الإصلاح (من كلا
-        // الجدولين: ملفات النشر الجاهزة، وملخص المعايير) — تثبت أن الفحوصات أعلاه
-        // فعلاً كانت ستفشل على النص القديم، لا اختباراً صحيحاً بالمصادفة.
+    it('[إثبات الحارس] العطل الأصلي: لو عاد أي من الصفّين الحرفيين القديمين فعلياً إلى docs/النشر_والتوزيع.md، هذا يفشل', () => {
+        // نصوص الادّعاء الزائف الحرفية التي كانت قائمة فعلاً قبل هذا الإصلاح (من كلا
+        // الجدولين: ملفات النشر الجاهزة، وملخص المعايير). الفحص هنا ليس خاصية للنص
+        // نفسه، بل تحقّق فعلي من غيابه في الملف الحقيقي على القرص الآن.
         const oldSection1Row = '| `netlify.toml` | Netlify | ربط المستودع من لوحة Netlify |';
         const oldSummaryRow = '| netlify.toml | ✅ | `netlify.toml` في جذر المشروع |';
-        expect(oldSection1Row).toMatch(/`netlify\.toml`\s*\|\s*Netlify/);
-        expect(oldSummaryRow).toMatch(/netlify\.toml.*✅.*في جذر المشروع/);
+        const content = readFileSync(resolve(REPO_ROOT, 'docs/النشر_والتوزيع.md'), 'utf8');
+        expect(content).not.toContain(oldSection1Row);
+        expect(content).not.toContain(oldSummaryRow);
     });
 });
