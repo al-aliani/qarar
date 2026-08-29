@@ -248,8 +248,8 @@ export class DashboardView {
                 class="dv-toolrow${tool.compact === false ? '' : ' dv-toolrow--compact'}">
                 <span class="dv-toolrow__ic">${inlineIcon(tool.icon || 'list')}</span>
                 <span class="dv-toolrow__body">
-                    <span class="dv-toolrow__name">${tool.name}${tool.engine ? '<span class="dv-tag-engine">محرّك</span>' : ''}${tool.tag ? `<span class="dv-tag-source" title="${tool.sourceUrl ? 'رابط خارجي — يفتح موقع المصدر في تبويب جديد، وليس سحباً آلياً للبيانات' : ''}">${tool.tag}</span>` : ''}</span>
-                    <span class="dv-toolrow__desc">${tool.desc}</span>
+                    <span class="dv-toolrow__name">${escapeHtml(tool.name)}${tool.engine ? '<span class="dv-tag-engine">محرّك</span>' : ''}${tool.tag ? `<span class="dv-tag-source" title="${tool.sourceUrl ? 'رابط خارجي — يفتح موقع المصدر في تبويب جديد، وليس سحباً آلياً للبيانات' : ''}">${tool.tag}</span>` : ''}</span>
+                    <span class="dv-toolrow__desc">${escapeHtml(tool.desc)}</span>
                 </span>
                 <span class="dv-toolrow__go">${inlineIcon('chev')}</span>
             </button>
@@ -383,8 +383,8 @@ export class DashboardView {
         const toolkitHtml = toolkitGroups.map(group => `
             <details class="dv-toolkit">
                 <summary class="dv-toolkit__head">
-                    <h3 class="dv-toolkit__title">${group.title}</h3>
-                    <span class="dv-toolkit__note">${group.note}</span>
+                    <h3 class="dv-toolkit__title">${escapeHtml(group.title)}</h3>
+                    <span class="dv-toolkit__note">${escapeHtml(group.note)}</span>
                 </summary>
                 <div class="dv-toolkit__items">
                     ${group.tools.map(toolButton).join('')}
@@ -746,18 +746,18 @@ export class DashboardView {
     // ظهور اللوحة نفسها (كانت هذه الانتظارات المتسلسلة سبب تأخير ظهور زر «حسابي»
     // نفسه محسوسًا، واكتشف اختبار dashboardView.userProfileButton.test.js هذا فعلياً).
     async hydrateAccountTiles() {
-        // safe(): يلتقط الرفض غير المتزامن (promise rejection) والاستثناء المتزامن
+        // safeAwait(): يلتقط الرفض غير المتزامن (promise rejection) والاستثناء المتزامن
         // (مثلاً الدالة نفسها undefined في سياق اختبار لا يُموِّهها) بنفس الآلية —
         // استدعاء fn() داخل try بدل الاعتماد على .catch() وحده (لا يلتقط استثناء
         // متزامناً يقع قبل إرجاع أي Promise أصلاً).
-        const safe = async (fn, fallback) => {
+        const safeAwait = async (fn, fallback) => {
             try { return await fn(); } catch (_) { return fallback; }
         };
         const [profileResult, orders, notifCount, shareLinks] = await Promise.all([
-            safe(() => getUserProfile(), { ok: false }),
-            safe(() => listOrders(), []),
-            safe(() => unreadCount(), 0),
-            safe(async () => (await import('../services/ShareService.js')).listAllMyShares(), []),
+            safeAwait(() => getUserProfile(), { ok: false }),
+            safeAwait(() => listOrders(), []),
+            safeAwait(() => unreadCount(), 0),
+            safeAwait(async () => (await import('../services/ShareService.js')).listAllMyShares(), []),
         ]);
 
         const subTile = this.container.querySelector('#dvTileSubscription');

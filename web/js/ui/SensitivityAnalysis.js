@@ -4,6 +4,7 @@
  */
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { hasMinimumRevenueData, hasMinimumFinancialData } from '../utils/dataSufficiency.js';
+import { escapeHtml } from '../utils/escape.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -154,7 +155,7 @@ export class SensitivityAnalysis {
                             <tr>
                                 <td>${row.label}</td>
                                 <td class="${this._npvClass(row.npv)}">${this.formatCurrency(row.npv)}</td>
-                                <td>${row.note}</td>
+                                <td>${escapeHtml(row.note)}</td>
                             </tr>`).join('')}
                         </tbody>
                     </table>

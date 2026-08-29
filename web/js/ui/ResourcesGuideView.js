@@ -3,6 +3,7 @@
  * ربط المستخدم بالجهات المفيدة دون التعهد بخدمات طرف ثالث. نبرة مساعدة ومحايدة.
  */
 import { RESOURCES_GUIDANCE_LINKS } from '../config.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class ResourcesGuideView {
     constructor(containerId, options = {}) {
@@ -23,8 +24,8 @@ export class ResourcesGuideView {
                 <div class="space-y-4 mb-8">
                     ${(RESOURCES_GUIDANCE_LINKS || []).map(item => `
                         <div class="card card-hover p-4">
-                            <a href="${item.url || '#'}" target="_blank" rel="noopener noreferrer" class="text-gold font-bold block mb-2">${item.name}</a>
-                            <p class="text-sm text-muted">${item.description || ''}</p>
+                            <a href="${escapeHtml(item.url || '#')}" target="_blank" rel="noopener noreferrer" class="text-gold font-bold block mb-2">${escapeHtml(item.name)}</a>
+                            <p class="text-sm text-muted">${escapeHtml(item.description || '')}</p>
                             ${item.name === 'منشآت' ? '<p class="text-xs text-muted mt-2">للاطلاع على النموذج الاسترشادي الرسمي لدراسة الجدوى وتحديثاته، استخدم الرابط أعلاه.</p>' : ''}
                         </div>
                     `).join('')}

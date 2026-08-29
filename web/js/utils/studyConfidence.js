@@ -1,10 +1,6 @@
+import { escapeHtml } from './escape.js';
+
 const finite = (value) => Number.isFinite(Number(value));
-const escapeHtml = (value) => String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 
 const assumptionRows = [
     ['discountRate', 'معدل الخصم', (value) => `${(Number(value) * 100).toFixed(1)}%`],
@@ -58,7 +54,7 @@ export function renderStudyConfidence(confidence) {
                 <strong>درجة موثوقية النتائج: ${confidence.score}% <span class="text-muted">(${confidence.level})</span></strong>
                 <span class="text-xs text-muted">حُسبت: ${confidence.generatedAt}</span>
             </div>
-            <p class="text-xs text-muted" style="margin:8px 0;">${confidence.note}</p>
+            <p class="text-xs text-muted" style="margin:8px 0;">${escapeHtml(confidence.note)}</p>
             <details>
                 <summary class="text-sm" style="cursor:pointer;">الافتراضات والمصادر المستخدمة</summary>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:10px;" class="text-xs">

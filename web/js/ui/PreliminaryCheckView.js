@@ -322,7 +322,7 @@ export class PreliminaryCheckView {
         return `
             ${this._renderIdeaScoreChip()}
             <div class="pc-result pc-result--${level}">
-                <strong style="font-size:1rem;"><span class="pc-dot pc-dot--${level}"></span>${palette.title}</strong>
+                <strong style="font-size:1rem;"><span class="pc-dot pc-dot--${level}"></span>${esc(palette.title)}</strong>
                 <p class="mb-0 mt-2" style="font-size:.92rem;">${body}</p>
                 ${list}
                 ${cta}

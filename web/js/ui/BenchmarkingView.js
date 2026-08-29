@@ -3,6 +3,7 @@
  * مستوحى من جدوى كلاود: عرض Benchmarking يفتقده المستخدم عندهم.
  */
 import { getCostRatios } from '../core/costRatios.js';
+import { escapeHtml } from '../utils/escape.js';
 
 /** معايير قطاعية — Food Cost، Labor %، Rent %، Gross Margin، Profit Margin (نطاقات %) */
 const SECTOR_BENCHMARKS = {
@@ -176,7 +177,7 @@ export function renderBenchmarkingSection(results, studyData) {
     return `
         <div class="card glass-card mt-4" id="benchmarkingSection" aria-label="هل أرقامي منطقية؟">
             <h3 class="card-title mb-2 text-gold"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> هل أرقامي منطقية؟</h3>
-            <p class="text-xs text-muted mb-3">مقارنة مع معايير قطاع «${bench.name}» في السوق السعودي. الأرقام خارج النطاق قد تحتاج مراجعة.</p>
+            <p class="text-xs text-muted mb-3">مقارنة مع معايير قطاع «${escapeHtml(bench.name)}» في السوق السعودي. الأرقام خارج النطاق قد تحتاج مراجعة.</p>
             <div class="benchmarks-container overflow-x-auto">
                 <table class="data-table" style="font-size: 0.9rem;">
                     <thead>

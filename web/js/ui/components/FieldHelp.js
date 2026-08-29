@@ -4,6 +4,8 @@
  * تعمل باللمس والفأرة ولوحة المفاتيح (زر حقيقي + aria)، RTL، وتحقن CSS مرة واحدة.
  */
 
+import { escapeHtml } from '../../utils/escape.js';
+
 let stylesInjected = false;
 let helpSequence = 0;
 
@@ -100,12 +102,6 @@ function delegateEvents() {
             w.querySelector('.field-help-btn')?.setAttribute('aria-expanded', 'false');
         });
     });
-}
-
-function escapeHtml(s) {
-    return String(s ?? '')
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 /**

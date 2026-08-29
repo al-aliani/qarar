@@ -21,7 +21,7 @@ function formatCurrency(n) {
     return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
 }
 
-function safe(s) {
+function safeText(s) {
     return escapeHtml(s || '');
 }
 
@@ -44,14 +44,14 @@ export class PitchDeckExporter {
                 return `<div class="slide" style="min-height:100vh;padding:48px;display:flex;gap:24px;align-items:stretch;">
                 <div style="flex:1;padding:32px;background:rgba(127,29,29,0.2);border:1px solid rgba(239,68,68,0.3);border-radius:16px;">
                     <h2 style="font-size:28px;font-weight:700;color:#f87171;margin-bottom:24px;">🛑 المشكلة</h2>
-                    <p style="font-size:18px;color:#e5e7eb;line-height:1.7;">${safe(exec.problemStatement || 'لم يتم تحديد المشكلة بعد...')}</p>
+                    <p style="font-size:18px;color:#e5e7eb;line-height:1.7;">${safeText(exec.problemStatement || 'لم يتم تحديد المشكلة بعد...')}</p>
                 </div>
                 <div style="flex:1;padding:32px;background:rgba(6,95,70,0.2);border:1px solid rgba(52,211,153,0.3);border-radius:16px;">
                     <h2 style="font-size:28px;font-weight:700;color:#4ade80;margin-bottom:24px;">💡 الحل المقترح</h2>
-                    <p style="font-size:18px;color:#e5e7eb;line-height:1.7;">${safe(project.concept || exec.solutionStatement || 'لم يتم تحديد الحل...')}</p>
+                    <p style="font-size:18px;color:#e5e7eb;line-height:1.7;">${safeText(project.concept || exec.solutionStatement || 'لم يتم تحديد الحل...')}</p>
                     <div style="margin-top:24px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.1);">
                         <h4 style="color:#86efac;font-weight:700;margin-bottom:8px;">✨ القيمة المميزة:</h4>
-                        <p style="color:#d1d5db;">${safe(exec.uniqueValueProposition || '—')}</p>
+                        <p style="color:#d1d5db;">${safeText(exec.uniqueValueProposition || '—')}</p>
                     </div>
                 </div>
             </div>`;
@@ -113,7 +113,7 @@ export class PitchDeckExporter {
                     </div>
                 </div>
                 <div style="margin-top:48px;padding:16px 32px;background:rgba(255,255,255,0.1);border-radius:999px;border:1px solid rgba(255,255,255,0.2);">
-                    <span style="font-weight:700;">قرار النظام: ${safe(score.recommendationLabel || 'يحتاج مراجعة')}</span>
+                    <span style="font-weight:700;">قرار النظام: ${safeText(score.recommendationLabel || 'يحتاج مراجعة')}</span>
                 </div>
             </div>`;
             default:
@@ -139,8 +139,8 @@ export class PitchDeckExporter {
 
         const titleSlide = `<div class="slide slide-title" style="background:linear-gradient(135deg,#312e81,#000);padding:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:100vh;">
                 <div style="font-size:80px;margin-bottom:24px;">🚀</div>
-                <h1 style="font-size:48px;font-weight:800;color:#60a5fa;margin-bottom:16px;">${safe(project.name || 'مشروع جديد')}</h1>
-                <p style="font-size:24px;color:#d1d5db;max-width:600px;line-height:1.6;">${safe(project.description || 'فرصة استثمارية واعدة')}</p>
+                <h1 style="font-size:48px;font-weight:800;color:#60a5fa;margin-bottom:16px;">${safeText(project.name || 'مشروع جديد')}</h1>
+                <p style="font-size:24px;color:#d1d5db;max-width:600px;line-height:1.6;">${safeText(project.description || 'فرصة استثمارية واعدة')}</p>
                 <p style="margin-top:48px;font-size:14px;color:#9ca3af;">${new Date().toLocaleDateString('ar-SA')} | عرض تقديمي للمستثمرين</p>
             </div>`;
 

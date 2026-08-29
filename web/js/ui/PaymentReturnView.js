@@ -13,6 +13,7 @@ import { getOrderStatus } from '../services/PaymentService.js';
 import { buildWhatsAppLink } from '../config.js';
 import { trackEvent } from '../utils/analytics.js';
 import { monitoring } from '../utils/monitoring.js';
+import { escapeHtml } from '../utils/escape.js';
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_ATTEMPTS = 10; // ~20 ثانية إجمالاً قبل عرض رسالة "لا يزال قيد المعالجة"
@@ -95,7 +96,7 @@ export class PaymentReturnView {
         this.container.innerHTML = `
             <div class="payment-return-view" style="max-width:480px;margin:60px auto;text-align:center;padding:24px;">
                 <div style="font-size:2.5rem;margin-bottom:12px;"><svg class="ic" aria-hidden="true" style="width:2.5rem;height:2.5rem;"><use href="#${m.icon}"/></svg></div>
-                <h2 style="margin-bottom:8px;">${m.title}</h2>
+                <h2 style="margin-bottom:8px;">${escapeHtml(m.title)}</h2>
                 <p class="text-muted">${m.body}</p>
                 <div class="d-flex gap-2 justify-center mt-4" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
                     ${waAction}

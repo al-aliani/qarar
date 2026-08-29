@@ -208,7 +208,7 @@ export class IntegrationsView {
         <div class="card p-4">
           ${items.map(item => `
             <div class="flex items-center justify-between gap-2 p-2 rounded mb-2" style="background: var(--c-bg-app);">
-              <span class="text-sm font-medium">${item.name}</span>
+              <span class="text-sm font-medium">${escapeHtml(item.name)}</span>
               <span class="badge ${item.ok ? 'bg-success' : 'bg-muted'}" style="padding: 4px 10px; border-radius: 999px; font-size: 12px;">${item.ok ? 'مفعّل' : 'غير مفعّل'}</span>
             </div>
           `).join('')}

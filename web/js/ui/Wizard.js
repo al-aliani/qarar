@@ -1342,9 +1342,10 @@ export class Wizard {
         if (fullKey === 'terminalValue.method') {
             const arabicLbl = getLabelSDB(labelKey, getLabel(fullKey));
             const tvEntry = getFieldHelp('terminalValue');
+            const tvHelpHtml = tvEntry ? fieldHelp(tvEntry.help, tvEntry.example) : '';
             return `
                 <div class="form-group">
-                    <label for="field-${fullKey}">${arabicLbl}${tvEntry ? fieldHelp(tvEntry.help, tvEntry.example) : ''}</label>
+                    <label for="field-${fullKey}">${arabicLbl}${tvHelpHtml}</label>
                     <select id="field-${fullKey}" data-key="${fullKey}" class="input" style="width:100%; max-width:320px;">
                         <option value="gordon" ${value !== 'none' ? 'selected' : ''}>استرشادية (نمو Gordon) — القرار يبقى على NPV المتحفظ</option>
                         <option value="none" ${value === 'none' ? 'selected' : ''}>بدون قيمة نهائية</option>

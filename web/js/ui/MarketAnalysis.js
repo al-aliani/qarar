@@ -525,7 +525,7 @@ export class MarketAnalysis {
                     <tbody id="segmentsBody">
                         ${segments.map((seg, idx) => `
                             <tr data-idx="${idx}">
-                                <td><input type="text" class="input input--sm segment-field" data-field="name" value="${(seg.name || '').toString().replace(/"/g, '&quot;')}"></td>
+                                <td><input type="text" class="input input--sm segment-field" data-field="name" value="${escapeHtml((seg.name || '').toString())}"></td>
                                 <td><input type="text" class="input input--sm segment-field" data-field="demographics" value="${(seg.demographics || '').toString().replace(/"/g, '&quot;')}"></td>
                                 <td><input type="text" class="input input--sm segment-field" data-field="needs" value="${(seg.needs || '').toString().replace(/"/g, '&quot;')}"></td>
                                 <td>

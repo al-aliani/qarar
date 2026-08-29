@@ -4,6 +4,7 @@
  * نفس اتفاقيات AuthModalStub.js (overlay/escape/focus-trap) لتوحيد تجربة المصادقة.
  */
 import { attachModalA11y } from '../utils/modalA11y.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class NewPasswordModal {
     /**
@@ -36,7 +37,7 @@ export class NewPasswordModal {
                     <button type="button" class="btn-close" aria-label="إغلاق">×</button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted text-sm mb-3">${this.description}</p>
+                    <p class="text-muted text-sm mb-3">${escapeHtml(this.description)}</p>
                     <div id="newPasswordError" class="text-danger text-sm mb-2" role="alert" style="display:none;"></div>
                     <form id="newPasswordForm">
                         <div class="mb-3">

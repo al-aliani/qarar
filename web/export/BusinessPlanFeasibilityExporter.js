@@ -20,7 +20,7 @@ const REPORT_SECTION_TO_BP_SUMMARY = {
     recommendation: 'request'
 };
 
-function esc(s) {
+function escOrDash(s) {
     if (s == null || s === '') return '—';
     return escapeHtml(s);
 }
@@ -86,19 +86,19 @@ export class BusinessPlanFeasibilityExporter {
         const year1 = Array.isArray(incomeStatement) && incomeStatement.length > 0 ? incomeStatement[0] : {};
         const currency = state.assumptions?.currency || 'SAR';
 
-        const name = esc(info.name || 'المشروع');
-        const vision = esc(info.identityStatement || exec.projectOverview || info.valueProposition || info.concept || '—');
+        const name = escOrDash(info.name || 'المشروع');
+        const vision = escOrDash(info.identityStatement || exec.projectOverview || info.valueProposition || info.concept || '—');
         const objectivesHtml = goals.length
-            ? goals.map((g, i) => `<li>${esc(g.specific || g.measurable || g.relevant || 'هدف ' + (i + 1))}</li>`).join('')
+            ? goals.map((g, i) => `<li>${escOrDash(g.specific || g.measurable || g.relevant || 'هدف ' + (i + 1))}</li>`).join('')
             : '<li>يُضاف من قسم الأهداف الذكية</li>';
 
-        const productLine = esc(exec.proposedSolution || info.concept || info.description || '—').slice(0, 200);
-        const productLine2 = esc(info.valueProposition || exec.uniqueValueProposition || '').slice(0, 200) || '—';
+        const productLine = escOrDash(exec.proposedSolution || info.concept || info.description || '—').slice(0, 200);
+        const productLine2 = escOrDash(info.valueProposition || exec.uniqueValueProposition || '').slice(0, 200) || '—';
 
         const marketLine = (marketing.marketAnalysis?.summary || marketing.marketAnalysis?.description || '').toString().slice(0, 150);
         const comps = (marketing.competitors || []).slice(0, 3).map(c => typeof c === 'string' ? c : (c.name || c)).filter(Boolean);
         const competitorsLine = comps.length ? comps.join('، ') : 'يُضاف من تحليل المنافسين';
-        const marketTwoLines = esc(marketLine || 'السوق المستهدف: يُضاف من تحليل السوق.') + ' المنافسون: ' + esc(competitorsLine);
+        const marketTwoLines = escOrDash(marketLine || 'السوق المستهدف: يُضاف من تحليل السوق.') + ' المنافسون: ' + escOrDash(competitorsLine);
 
         const rev = year1.revenue || 0;
         // «—» أصدق من «٠»: صافٍ غير منتهٍ (NaN/±Infinity) يعني فشل حساب لا ربحاً صفرياً،
@@ -117,7 +117,7 @@ export class BusinessPlanFeasibilityExporter {
         const askAmount = financing.totalInvestment || (financing.sources?.equity?.amount || 0) + (financing.sources?.bankLoan?.amount || 0);
         const useOfFunds = (financing.useOfFunds || '').toString().trim() || 'استثمار وتشغيل المشروع.';
         const requestHtml = askAmount > 0
-            ? `<strong>الطلب:</strong> ${formatCurrency(askAmount, currency)} — ${esc(useOfFunds).slice(0, 120)}`
+            ? `<strong>الطلب:</strong> ${formatCurrency(askAmount, currency)} — ${escOrDash(useOfFunds).slice(0, 120)}`
             : 'الطلب: يُضاف من هيكل التمويل إن وُجد (تمويل أو شريك).';
 
         const financialHtml = `<p>إيراد متوقع: ${formatCurrency(rev, currency)} — إجمالي التكاليف والأعباء: ${formatCurrency(cost, currency)} — صافي: ${formatCurrency(net, currency)}.</p><p>مؤشرات: NPV ${npvStr}، IRR ${irrStr}، فترة استرداد ${paybackStr}.</p>`;
