@@ -9,6 +9,13 @@
  *     صُحِّح لـHMAC-SHA256 بمفتاح SUPABASE_SERVICE_ROLE_KEY (سرّ موجود أصلاً).
  * يستخدم الآن Deno.env (عبر hmacSha256Hex/webhookVerify.ts غير مباشر) —
  * يحتاج تمويه globalThis.Deno قبل الاستيراد.
+ *
+ * تدقيق 2026-08-29 (سباق تزامن): checkAnonRateLimit لم يعد يستدعي .from()...
+ * insert() مباشرة — التحقق والتسجيل صارا داخل استدعاء RPC ذرّي واحد
+ * (check_and_record_anon_rate_limit، migration 20260829030000) محميّ بقفل
+ * استشاري في قاعدة البيانات. هذه الاختبارات تُثبِّت سلوك *غلاف* checkAnonRateLimit
+ * (تجزئة IP، تمرير المعاملات، fail-open) عبر عميل مموَّه لاستدعاء RPC — إثبات
+ * الذرّية الفعلي بمحاكاة تزامن حقيقية موجود في rateLimitConcurrency.test.js.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 
@@ -16,22 +23,14 @@ beforeEach(() => {
     globalThis.Deno = { env: { get: (key) => (key === 'SUPABASE_SERVICE_ROLE_KEY' ? 'test-service-role-key' : undefined) } };
 });
 
-function makeAdminClient(existingRows) {
-    const inserted = [];
+function makeAdminClient(rpcResult) {
+    const calls = [];
     return {
-        _inserted: inserted,
-        from: () => ({
-            select: () => ({
-                eq: () => ({
-                    eq: () => ({
-                        gte: () => ({
-                            order: async () => ({ data: existingRows, error: null }),
-                        }),
-                    }),
-                }),
-            }),
-            insert: async (row) => { inserted.push(row); return { error: null }; },
-        }),
+        _rpcCalls: calls,
+        rpc: (fnName, args) => {
+            calls.push({ fnName, args });
+            return { single: async () => rpcResult };
+        },
     };
 }
 
@@ -66,56 +65,53 @@ describe('extractClientIp', () => {
 });
 
 describe('checkAnonRateLimit — حدّ معدّل بمعرّف IP مُجزَّأ بـHMAC', () => {
-    it('يسمح بالطلب الأول ويُدرِج حدثاً جديداً — الهاش HMAC لا SHA-256 عادياً', async () => {
+    it('يسمح بالطلب الأول — الهاش HMAC (لا SHA-256 عادياً) يصل كمعامل RPC، لا IP الخام', async () => {
         const { checkAnonRateLimit } = await import('../anonRateLimit.ts');
-        const adminClient = makeAdminClient([]);
+        const adminClient = makeAdminClient({ data: { allowed: true, retry_after_seconds: null }, error: null });
         const result = await checkAnonRateLimit(adminClient, '9.9.9.9', 'submit-application', 3, 86400);
         expect(result.ok).toBe(true);
-        expect(adminClient._inserted).toHaveLength(1);
-        // لا تخزين IP خام إطلاقاً — فقط الهاش.
-        expect(adminClient._inserted[0].identifier_hash).not.toContain('9.9.9.9');
-        expect(adminClient._inserted[0].identifier_hash).toMatch(/^[0-9a-f]{64}$/);
+        expect(adminClient._rpcCalls).toHaveLength(1);
+        expect(adminClient._rpcCalls[0].fnName).toBe('check_and_record_anon_rate_limit');
+        // لا تمرير IP خام للـRPC إطلاقاً — فقط الهاش.
+        expect(adminClient._rpcCalls[0].args.p_identifier_hash).not.toContain('9.9.9.9');
+        expect(adminClient._rpcCalls[0].args.p_identifier_hash).toMatch(/^[0-9a-f]{64}$/);
     });
 
     it('[إثبات المفتاح السرّي] نفس IP/endpoint بمفتاح سرّي مختلف ينتج هاشاً مختلفاً تماماً (ليس SHA-256 عادياً قابلاً لإعادة الحساب بلا مفتاح)', async () => {
         const { checkAnonRateLimit } = await import('../anonRateLimit.ts');
-        const client1 = makeAdminClient([]);
+        const okResult = { data: { allowed: true, retry_after_seconds: null }, error: null };
+        const client1 = makeAdminClient(okResult);
         await checkAnonRateLimit(client1, '9.9.9.9', 'submit-application', 3, 86400);
 
         globalThis.Deno.env.get = (key) => (key === 'SUPABASE_SERVICE_ROLE_KEY' ? 'different-service-role-key' : undefined);
-        const client2 = makeAdminClient([]);
+        const client2 = makeAdminClient(okResult);
         await checkAnonRateLimit(client2, '9.9.9.9', 'submit-application', 3, 86400);
 
-        expect(client1._inserted[0].identifier_hash).not.toBe(client2._inserted[0].identifier_hash);
+        expect(client1._rpcCalls[0].args.p_identifier_hash).not.toBe(client2._rpcCalls[0].args.p_identifier_hash);
     });
 
-    it('يرفض بعد بلوغ الحد الأقصى ضمن النافذة الزمنية', async () => {
+    it('يرفض بعد بلوغ الحد الأقصى ضمن النافذة الزمنية (RPC الذرّي يُرجِع allowed:false)', async () => {
         const { checkAnonRateLimit } = await import('../anonRateLimit.ts');
-        const now = new Date().toISOString();
-        const adminClient = makeAdminClient([{ created_at: now }, { created_at: now }, { created_at: now }]);
+        const adminClient = makeAdminClient({ data: { allowed: false, retry_after_seconds: 42 }, error: null });
         const result = await checkAnonRateLimit(adminClient, '9.9.9.9', 'submit-application', 3, 86400);
         expect(result.ok).toBe(false);
-        expect(result.retryAfterSeconds).toBeGreaterThan(0);
+        expect(result.retryAfterSeconds).toBe(42);
     });
 
-    it('[fail-open] فشل استعلام قاعدة البيانات لا يحجب الطلب — عطل الحدّ نفسه لا يمنع خدمة شرعية', async () => {
+    it('[fail-open] فشل استدعاء RPC لا يحجب الطلب — عطل الحدّ نفسه لا يمنع خدمة شرعية', async () => {
         const { checkAnonRateLimit } = await import('../anonRateLimit.ts');
-        const adminClient = {
-            from: () => ({
-                select: () => ({ eq: () => ({ eq: () => ({ gte: () => ({ order: async () => ({ data: null, error: { message: 'boom' } }) }) }) }) }),
-                insert: async () => ({ error: null }),
-            }),
-        };
+        const adminClient = makeAdminClient({ data: null, error: { message: 'boom' } });
         const result = await checkAnonRateLimit(adminClient, '9.9.9.9', 'submit-application', 3, 86400);
         expect(result.ok).toBe(true);
     });
 
     it('نفس IP على دالة (endpoint) مختلفة له عدّاد منفصل تماماً (الهاش يضمّن اسم الدالة)', async () => {
         const { checkAnonRateLimit } = await import('../anonRateLimit.ts');
-        const adminClient1 = makeAdminClient([]);
+        const okResult = { data: { allowed: true, retry_after_seconds: null }, error: null };
+        const adminClient1 = makeAdminClient(okResult);
         await checkAnonRateLimit(adminClient1, '9.9.9.9', 'submit-application', 3, 86400);
-        const adminClient2 = makeAdminClient([]);
+        const adminClient2 = makeAdminClient(okResult);
         await checkAnonRateLimit(adminClient2, '9.9.9.9', 'other-endpoint', 3, 86400);
-        expect(adminClient1._inserted[0].identifier_hash).not.toBe(adminClient2._inserted[0].identifier_hash);
+        expect(adminClient1._rpcCalls[0].args.p_identifier_hash).not.toBe(adminClient2._rpcCalls[0].args.p_identifier_hash);
     });
 });

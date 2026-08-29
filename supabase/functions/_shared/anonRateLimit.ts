@@ -33,7 +33,14 @@ export function extractClientIp(req: Request): string {
 }
 
 /**
- * @param adminClient عميل service_role — anon_endpoint_hits بلا أي سياسة RLS لغيره.
+ * تدقيق 2026-08-29 (سباق تزامن): نفس عطل rateLimit.ts بالضبط (SELECT ثم INSERT
+ * منفصلان يتيحان لطلبين متزامنين من نفس الـIP كليهما رؤية "دون الحد" معاً).
+ * الإصلاح: استدعاء RPC ذرّي واحد (check_and_record_anon_rate_limit، migration
+ * 20260829030000) محميّ بقفل استشاري (pg_advisory_xact_lock) بمفتاح (هاش
+ * المعرّف، الدالة) — انظر تعليق rateLimit.ts/الـmigration لشرح كامل الآلية.
+ *
+ * @param adminClient عميل service_role — check_and_record_anon_rate_limit بلا
+ *   grant execute لغير service_role (انظر migration).
  * @param clientIp عنوان IP الخام (يُجزَّأ داخلياً قبل أي استعلام/تخزين).
  * @param endpoint معرّف الدالة — يفصل عدّادات كل دالة عن الأخرى.
  */
@@ -46,31 +53,24 @@ export async function checkAnonRateLimit(
 ): Promise<AnonRateLimitResult> {
   const pepper = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || 'fallback-pepper-should-not-happen-in-production';
   const identifierHash = await hmacSha256Hex(pepper, `${endpoint}:${clientIp}`);
-  const since = new Date(Date.now() - windowSeconds * 1000).toISOString();
 
   const { data, error } = await adminClient
-    .from('anon_endpoint_hits')
-    .select('created_at')
-    .eq('endpoint', endpoint)
-    .eq('identifier_hash', identifierHash)
-    .gte('created_at', since)
-    .order('created_at', { ascending: true });
+    .rpc('check_and_record_anon_rate_limit', {
+      p_identifier_hash: identifierHash,
+      p_endpoint: endpoint,
+      p_max_requests: maxRequests,
+      p_window_seconds: windowSeconds,
+    })
+    .single();
 
-  if (error) {
-    // فشل قراءة الحد صمتاً = سماح — عطل بالحد نفسه لا يجوز أن يمنع خدمة شرعية
-    // (نفس فلسفة rateLimit.ts المعتمدة أصلاً في المشروع).
-    console.error(`[anonRateLimit] query failed for ${endpoint}:`, error);
+  if (error || !data) {
+    // فشل الاستدعاء صمتاً = سماح — عطل بالحد نفسه لا يجوز أن يمنع خدمة شرعية
+    // (نفس فلسفة rateLimit.ts المعتمدة أصلاً في المشروع، بلا تعديل سلوكه).
+    console.error(`[anonRateLimit] rpc failed for ${endpoint}:`, error);
     return { ok: true };
   }
 
-  const events = data || [];
-  if (events.length >= maxRequests) {
-    const oldest = new Date(events[0].created_at).getTime();
-    const retryAfterMs = oldest + windowSeconds * 1000 - Date.now();
-    return { ok: false, retryAfterSeconds: Math.max(1, Math.ceil(retryAfterMs / 1000)) };
-  }
-
-  const { error: insertError } = await adminClient.from('anon_endpoint_hits').insert({ endpoint, identifier_hash: identifierHash });
-  if (insertError) console.error(`[anonRateLimit] insert failed for ${endpoint}:`, insertError);
-  return { ok: true };
+  return data.allowed
+    ? { ok: true }
+    : { ok: false, retryAfterSeconds: data.retry_after_seconds };
 }
