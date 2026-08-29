@@ -8,6 +8,13 @@
  *
  * cookie-policy.html الآن يحمل زراً يمسح المفتاح وحده (لا بيانات الدراسة)
  * ويُعيد الزائر للرئيسية حيث يُعاد حقن الإشعار فوراً.
+ *
+ * تحديث 2026-08-29: منطق الزر نُقل من <script> inline داخل هذا الملف إلى
+ * js/cookie-policy-page.js (سكربت خارجي) — CSP الإنتاج في vercel.json
+ * (script-src بلا unsafe-inline/nonce/hash) كان يحجب الـinline صامتاً رغم
+ * نجاح هذا الاختبار محلياً (لا CSP في jsdom/Vitest). انظر
+ * web/__tests__/cspInlineScript.guard.test.js. السلوك المُتحقَّق هنا لم يتغيّر،
+ * فقط مكان قراءة الشفرة.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
@@ -18,19 +25,20 @@ const WEB_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (name) => readFileSync(resolve(WEB_DIR, name), 'utf-8');
 
 describe('cookie-policy.html — زر "تغيير تفضيلات الكوكيز" يعمل فعلياً', () => {
-    it('الزر موجود في قسم "إدارة التفضيلات"', () => {
+    it('الزر موجود في قسم "إدارة التفضيلات" ويُحمَّل سكربت الصفحة خارجياً (لا inline، توافقاً مع CSP)', () => {
         const html = read('cookie-policy.html');
         const section = html.slice(html.indexOf('إدارة التفضيلات'), html.indexOf('إدارة التفضيلات') + 800);
         expect(section).toContain('id="cookiePrefsReset"');
         expect(section).toContain('تغيير تفضيلات الكوكيز');
+        expect(html).toContain('<script type="module" src="./js/cookie-policy-page.js"></script>');
     });
 
     it('يمسح نفس مفتاح localStorage الذي يقرأه cookie-notice.js وcookieConsent.js بالضبط', () => {
-        const html = read('cookie-policy.html');
+        const pageScript = read('js/cookie-policy-page.js');
         const noticeSrc = read('public/js/cookie-notice.js');
         const consentModule = read('js/utils/cookieConsent.js');
 
-        const keyMatch = html.match(/localStorage\.removeItem\('([^']+)'\)/);
+        const keyMatch = pageScript.match(/localStorage\.removeItem\('([^']+)'\)/);
         expect(keyMatch, 'لا استدعاء removeItem موجود').toBeTruthy();
         const key = keyMatch[1];
 
@@ -40,14 +48,14 @@ describe('cookie-policy.html — زر "تغيير تفضيلات الكوكيز"
     });
 
     it('لا يمسح أي مفتاح آخر (بيانات الدراسة) — استدعاء removeItem واحد فقط', () => {
-        const html = read('cookie-policy.html');
-        const calls = html.match(/localStorage\.removeItem\(/g) || [];
+        const pageScript = read('js/cookie-policy-page.js');
+        const calls = pageScript.match(/localStorage\.removeItem\(/g) || [];
         expect(calls.length).toBe(1);
     });
 
     it('يعيد التوجيه إلى الرئيسية (الصفحة الوحيدة مع landing.html التي تحمّل cookie-notice.js)', () => {
-        const html = read('cookie-policy.html');
-        expect(html).toMatch(/window\.location\.href\s*=\s*'\.\/';/);
+        const pageScript = read('js/cookie-policy-page.js');
+        expect(pageScript).toMatch(/window\.location\.href\s*=\s*'\.\/';/);
     });
 
     it('[إثبات الحارس] إزالة الزر يُفشل الاختبار الأول', () => {
