@@ -4,6 +4,7 @@
  */
 
 import { fieldHelp } from '../ui/components/FieldHelp.js';
+import { escapeHtml } from './escape.js';
 
 export const FINANCIAL_TERMS = {
     NPV: {
@@ -161,7 +162,7 @@ export function createTooltip(term, variant = 'info') {
         ${glossary.definition}
         ${glossary.formula ? `<br><br><span class="formula">${glossary.formula}</span>` : ''}
         ${glossary.interpretation ? `<br><br>💡 ${glossary.interpretation}` : ''}
-        ${glossary.example ? `<br><br>📌 <em>${glossary.example}</em>` : ''}
+        ${glossary.example ? `<br><br>📌 <em>${escapeHtml(glossary.example)}</em>` : ''}
       </span>
     </span>
   `;
@@ -186,7 +187,7 @@ export function wrapWithTooltip(text, term, variant = 'info') {
         ${glossary.definition}
         ${glossary.formula ? `<br><br><span class="formula">${glossary.formula}</span>` : ''}
         ${glossary.interpretation ? `<br><br>💡 ${glossary.interpretation}` : ''}
-        ${glossary.example ? `<br><br>📌 <em>${glossary.example}</em>` : ''}
+        ${glossary.example ? `<br><br>📌 <em>${escapeHtml(glossary.example)}</em>` : ''}
       </span>
     </span>
   `;

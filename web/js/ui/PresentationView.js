@@ -218,7 +218,7 @@ export class PresentationView {
                         <div class="space-y-4">
                             ${(state.riskAnalysis?.risks || []).slice(0, 3).map(risk => `
                                 <div class="p-4 bg-white/5 rounded-lg">
-                                    <div class="font-bold mb-2">${risk.name || 'خطر غير محدد'}</div>
+                                    <div class="font-bold mb-2">${escapeHtml(risk.name || 'خطر غير محدد')}</div>
                                     <div class="text-sm text-gray-300">${risk.type || ''} | ${risk.probability || ''} | ${risk.impact || ''}</div>
                                 </div>
                             `).join('') || '<p class="text-gray-400">لم يتم تحديد المخاطر بعد</p>'}
@@ -231,7 +231,7 @@ export class PresentationView {
                         <div class="space-y-4">
                             ${(state.riskAnalysis?.risks || []).slice(0, 3).map(risk => `
                                 <div class="p-4 bg-white/5 rounded-lg">
-                                    <div class="text-sm text-gray-300">${risk.mitigation || 'لم يتم تحديد خطة المواجهة'}</div>
+                                    <div class="text-sm text-gray-300">${escapeHtml(risk.mitigation || 'لم يتم تحديد خطة المواجهة')}</div>
                                 </div>
                             `).join('') || '<p class="text-gray-400">لم يتم تحديد خطط المواجهة بعد</p>'}
                         </div>
@@ -374,14 +374,14 @@ export class PresentationView {
         } else if (slide.type === 'center') {
             html = `
                 <div class="h-full flex flex-col items-center justify-center p-12 slide-in-right">
-                    <h2 class="text-5xl font-bold mb-12">${slide.title}</h2>
+                    <h2 class="text-5xl font-bold mb-12">${escapeHtml(slide.title)}</h2>
                     ${slide.content}
                 </div>
             `;
         } else if (slide.type === 'grid') {
             html = `
                 <div class="h-full flex flex-col items-center justify-center p-12 slide-in-right">
-                    <h2 class="text-5xl font-bold mb-16">${slide.title}</h2>
+                    <h2 class="text-5xl font-bold mb-16">${escapeHtml(slide.title)}</h2>
                     <div class="grid grid-cols-2 gap-12 w-full max-w-5xl">
                         ${slide.items.map(item => `
                             <div class="bg-white/5 p-8 rounded-2xl border border-white/10 flex flex-col items-center text-center">

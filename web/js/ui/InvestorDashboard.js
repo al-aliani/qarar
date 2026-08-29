@@ -7,20 +7,7 @@ import { calculateStudy as runFullModel } from '../core/engine.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { animateCounter } from '../utils/ui.js';
 import { formatIrrPct } from '../utils/indicatorFormat.js';
-
-/**
- * يهرّب الحروف الحساسة في HTML لمنع حقن السكربتات (XSS) عبر قيم يتحكم بها المستخدم.
- * تُستدعى على كل قيمة نصية قادمة من الحمولة (?data=) قبل حقنها في innerHTML.
- */
-function escapeHtml(value) {
-    if (value === null || value === undefined) return '';
-    return String(value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
+import { escapeHtml } from '../utils/escape.js';
 
 export class InvestorDashboard {
     constructor(containerId, store, options = {}) {

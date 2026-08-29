@@ -81,7 +81,7 @@ export class ReportGenerator {
                     <tr><td>DSCR السنة الأولى</td><td>${dscrText}</td><td>${d.dscrBlocked ? 'دون الحد المستهدف ' + d.targetDSCR.toFixed(2) + 'x' : 'مقبول مبدئياً'}</td></tr>
                     <tr><td>EBITDA السنة الأولى</td><td>${y1Text}</td><td>${d.y1Ebitda < 0 ? 'سالب؛ يحتاج تمويل/سماح أطول' : 'موجب'}</td></tr>
                 </tbody></table>
-                ${d.alerts?.length ? `<ul>${d.alerts.map(a => `<li><strong>${a.title}:</strong> ${a.text}</li>`).join('')}</ul>` : ''}
+                ${d.alerts?.length ? `<ul>${d.alerts.map(a => `<li><strong>${escapeHtml(a.title)}:</strong> ${escapeHtml(a.text)}</li>`).join('')}</ul>` : ''}
             </div>
         `;
     }
@@ -513,7 +513,7 @@ export class ReportGenerator {
                             </div>
                             <div class="report-meta-item">
                                 <strong>النشاط</strong>
-                                <span>${info.activity || 'غير محدد'}</span>
+                                <span>${escapeHtml(info.activity || 'غير محدد')}</span>
                             </div>
                             <div class="report-meta-item">
                                 <strong>نوع الدراسة</strong>
@@ -574,7 +574,7 @@ export class ReportGenerator {
                             فهرس المحتويات
                         </h3>
                         <ol style="padding-right: 24px; line-height: 2;">
-                            ${ordered.map(o => `<li>${o.title}</li>`).join('')}
+                            ${ordered.map(o => `<li>${escapeHtml(o.title)}</li>`).join('')}
                         </ol>
                     </div>`;
         const sectionsHtml = ordered.map(o => o.html).join('\n                    ');
@@ -658,10 +658,10 @@ export class ReportGenerator {
                                 const cost = Number(idea.estimatedCost) || 0, ret = Number(idea.estimatedReturn) || 0;
                                 const payback = cost > 0 && ret > 0 ? (cost / ret).toFixed(1) : '-';
                                 const riskAr = { low: 'منخفضة', medium: 'متوسطة', high: 'عالية' }[idea.risk] || '-';
-                                return `<tr><td>${(idea.name || '-')}</td><td>${new Intl.NumberFormat('ar-SA').format(cost)}</td><td>${new Intl.NumberFormat('ar-SA').format(ret)}</td><td>${riskAr}</td><td>${payback}</td><td>${(idea.notes || '-')}</td></tr>`;
+                                return `<tr><td>${escapeHtml(idea.name || '-')}</td><td>${new Intl.NumberFormat('ar-SA').format(cost)}</td><td>${new Intl.NumberFormat('ar-SA').format(ret)}</td><td>${riskAr}</td><td>${payback}</td><td>${escapeHtml(idea.notes || '-')}</td></tr>`;
                             }).join('')}
                             </tbody></table>
-                            ${state.projectAlternatives.selectedIndex != null && state.projectAlternatives.ideas?.[state.projectAlternatives.selectedIndex] ? `<p style="margin-top:12px;"><strong>الفكرة المختارة للمتابعة:</strong> ${(state.projectAlternatives.ideas[state.projectAlternatives.selectedIndex].name || '-')}</p>` : ''}
+                            ${state.projectAlternatives.selectedIndex != null && state.projectAlternatives.ideas?.[state.projectAlternatives.selectedIndex] ? `<p style="margin-top:12px;"><strong>الفكرة المختارة للمتابعة:</strong> ${escapeHtml(state.projectAlternatives.ideas[state.projectAlternatives.selectedIndex].name || '-')}</p>` : ''}
                         </div>
                     </div>`;
                 break;
@@ -671,12 +671,12 @@ export class ReportGenerator {
                         <div class="section-content">
                             <ul>
                                 <li><strong>اسم المشروع:</strong> ${escapeHtml(info.name || '-')}</li>
-                                <li><strong>النشاط التجاري:</strong> ${info.concept || info.activity || '-'}</li>
-                                <li><strong>الموقع:</strong> ${info.city || info.location || '-'} ${info.district ? '، ' + info.district : ''}</li>
-                                <li><strong>الهوية:</strong> ${(info.identityStatement || '-').toString().slice(0, 200)}${(info.identityStatement || '').length > 200 ? '...' : ''}</li>
-                                <li><strong>القيمة المقترحة:</strong> ${(info.valueProposition || '-').toString().slice(0, 200)}${(info.valueProposition || '').length > 200 ? '...' : ''}</li>
+                                <li><strong>النشاط التجاري:</strong> ${escapeHtml(info.concept || info.activity || '-')}</li>
+                                <li><strong>الموقع:</strong> ${escapeHtml(info.city || info.location || '-')} ${info.district ? '، ' + escapeHtml(info.district) : ''}</li>
+                                <li><strong>الهوية:</strong> ${escapeHtml((info.identityStatement || '-').toString().slice(0, 200))}${(info.identityStatement || '').length > 200 ? '...' : ''}</li>
+                                <li><strong>القيمة المقترحة:</strong> ${escapeHtml((info.valueProposition || '-').toString().slice(0, 200))}${(info.valueProposition || '').length > 200 ? '...' : ''}</li>
                             </ul>
-                            ${(info.dataGatheringChecklist || []).length > 0 ? `<h4 style="margin-top:16px;">خطوات جمع المعلومات (زيارات ميدانية)</h4><table style="margin-top:8px;"><thead><tr><th>الخطوة</th><th>تم؟</th><th>ملاحظات</th></tr></thead><tbody>${(info.dataGatheringChecklist || []).map(c => `<tr><td>${(c.step || '-')}</td><td>${c.done ? 'نعم' : 'لا'}</td><td>${(c.notes || '-')}</td></tr>`).join('')}</tbody></table>` : ''}
+                            ${(info.dataGatheringChecklist || []).length > 0 ? `<h4 style="margin-top:16px;">خطوات جمع المعلومات (زيارات ميدانية)</h4><table style="margin-top:8px;"><thead><tr><th>الخطوة</th><th>تم؟</th><th>ملاحظات</th></tr></thead><tbody>${(info.dataGatheringChecklist || []).map(c => `<tr><td>${escapeHtml(c.step || '-')}</td><td>${c.done ? 'نعم' : 'لا'}</td><td>${escapeHtml(c.notes || '-')}</td></tr>`).join('')}</tbody></table>` : ''}
                         </div>
                     </div>`;
                 break;
@@ -721,7 +721,7 @@ export class ReportGenerator {
                         <div class="section-content">
                             ${state.keyPeople?.keyPeople?.length > 0 ? `<h4 style="margin-bottom:8px;">الأشخاص الرئيسون</h4><table style="margin-bottom:16px;"><thead><tr><th>الاسم</th><th>الدور</th><th>الخبرة</th><th>المؤهلات</th></tr></thead><tbody>${(state.keyPeople.keyPeople || []).map(p => `<tr><td>${escapeHtml(p.name || '-')}</td><td>${escapeHtml(p.role || '-')}</td><td>${escapeHtml(p.experience || '-')}</td><td>${escapeHtml(p.qualifications || '-')}</td></tr>`).join('')}</tbody></table>` : ''}
                             ${state.keyPeople?.partnershipContracts?.length > 0 ? `<h4 style="margin-bottom:8px;">عقود الشراكة</h4><table style="margin-bottom:16px;"><thead><tr><th>اسم الشريك</th><th>الدور/المسؤولية</th><th>النسبة %</th><th>ملاحظات</th></tr></thead><tbody>${(state.keyPeople.partnershipContracts || []).map(p => `<tr><td>${escapeHtml(p.partnerName || '-')}</td><td>${escapeHtml(p.role || '-')}</td><td>${p.sharePercent != null ? escapeHtml(String(p.sharePercent)) + '%' : '-'}</td><td>${escapeHtml(p.notes || '-')}</td></tr>`).join('')}</tbody></table>` : ''}
-                            ${info.products?.length > 0 ? `<h4 style="margin-bottom:8px;">المنتجات</h4><table style="margin-bottom:12px;"><thead><tr><th>النوع</th><th>المنتج</th><th>الوصف</th><th>الميزة الفريدة / القيمة المضافة</th></tr></thead><tbody>${(info.products || []).map(p => `<tr><td>${p.type === 'primary' ? 'أولي' : p.type === 'semi' ? 'نصف مصنع' : 'نهائي'}</td><td>${(p.name || '-')}</td><td>${(p.description || '-')}</td><td>${[p.uniqueFeatures, p.valueAdded].filter(v => v && String(v).trim()).join(' — ') || '-'}</td></tr>`).join('')}</tbody></table>` : ''}
+                            ${info.products?.length > 0 ? `<h4 style="margin-bottom:8px;">المنتجات</h4><table style="margin-bottom:12px;"><thead><tr><th>النوع</th><th>المنتج</th><th>الوصف</th><th>الميزة الفريدة / القيمة المضافة</th></tr></thead><tbody>${(info.products || []).map(p => `<tr><td>${p.type === 'primary' ? 'أولي' : p.type === 'semi' ? 'نصف مصنع' : 'نهائي'}</td><td>${escapeHtml(p.name || '-')}</td><td>${escapeHtml(p.description || '-')}</td><td>${escapeHtml([p.uniqueFeatures, p.valueAdded].filter(v => v && String(v).trim()).join(' — ') || '-')}</td></tr>`).join('')}</tbody></table>` : ''}
                             ${(info.startupHypothesis?.problem || info.startupHypothesis?.solution || info.unfairAdvantage?.insightText) ? `<h4 style="margin-bottom:8px;">الفرضية وتقييم الفكرة</h4><ul>${info.startupHypothesis?.problem ? `<li><strong>المشكلة:</strong> ${escapeHtml(info.startupHypothesis.problem)}</li>` : ''}${info.startupHypothesis?.solution ? `<li><strong>الحل:</strong> ${escapeHtml(info.startupHypothesis.solution)}</li>` : ''}${info.unfairAdvantage?.insightText ? `<li><strong>الاستبصار:</strong> ${escapeHtml(info.unfairAdvantage.insightText)}</li>` : ''}</ul>` : ''}
                         </div>
                     </div>`;

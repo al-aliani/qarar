@@ -3,6 +3,7 @@
  * (جدوى كلاود — إحساس أن المنصة لا تتركه بعد التقرير)
  */
 import { APP_CONFIG, RESOURCES_GUIDANCE_LINKS } from '../config.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class PostFeasibilityView {
     constructor(containerId, options = {}) {
@@ -40,7 +41,7 @@ export class PostFeasibilityView {
                         <p class="text-sm text-muted mb-3">بعد إكمال الدراسة، استخدم تصدير <strong>عرض للمستثمر/المسرّعة</strong> من قائمة التصدير، ثم قدّم لجهات التمويل أو المسرّعات حسب متطلبات كل جهة.</p>
                         ${fundingLinks.length > 0 ? `
                             <ul class="text-sm space-y-1 mt-2">
-                                ${fundingLinks.map(l => `<li><a href="${l.url}" target="_blank" rel="noopener" class="text-gold underline">${l.name}</a> — ${l.description || ''}</li>`).join('')}
+                                ${fundingLinks.map(l => `<li><a href="${escapeHtml(l.url)}" target="_blank" rel="noopener" class="text-gold underline">${escapeHtml(l.name)}</a> — ${escapeHtml(l.description || '')}</li>`).join('')}
                             </ul>
                         ` : ''}
                     </section>
@@ -55,7 +56,7 @@ export class PostFeasibilityView {
                         <p class="text-sm text-muted mb-3">روابط جهات مفيدة للاستشارة والتمويل والشراكات (بدون التعهد بخدمات طرف ثالث):</p>
                         ${partnershipLinks.length > 0 ? `
                             <ul class="text-sm space-y-2">
-                                ${partnershipLinks.map(l => `<li><a href="${l.url}" target="_blank" rel="noopener" class="text-gold underline">${l.name}</a> — ${l.description || ''}</li>`).join('')}
+                                ${partnershipLinks.map(l => `<li><a href="${escapeHtml(l.url)}" target="_blank" rel="noopener" class="text-gold underline">${escapeHtml(l.name)}</a> — ${escapeHtml(l.description || '')}</li>`).join('')}
                             </ul>
                         ` : '<p class="text-xs text-muted">لا توجد روابط مُعدّة حاليًا.</p>'}
                     </section>

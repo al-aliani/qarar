@@ -556,7 +556,7 @@ export class FinancialDashboard {
                             ${item.type === 'danger' || item.type === 'critical' ? '<svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg>' : item.type === 'warning' ? '<svg class="ic" aria-hidden="true"><use href="#i-hand-stop"/></svg>' : '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>'}
                         </div>
                         <div class="insight-content">
-                            <div class="insight-msg font-bold">${item.message}</div>
+                            <div class="insight-msg font-bold">${escapeHtml(item.message)}</div>
                             <div class="insight-action text-sm text-gold mt-1"><svg class="ic" aria-hidden="true"><use href="#i-lightbulb"/></svg> الحل المقترح: ${item.action}</div>
                         </div>
                     </div>
@@ -588,7 +588,7 @@ export class FinancialDashboard {
                 <table class="summary-table">
                     ${items.map(i => `
                         <tr>
-                            <td>${(i.name || i.source || '').toString()}</td>
+                            <td>${escapeHtml((i.name || i.source || '').toString())}</td>
                             <td class="text-mono">${this.formatCurrency(i.annual ?? (i.monthly ?? 0) * 12)}</td>
                         </tr>
                     `).join('')}

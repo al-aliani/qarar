@@ -294,9 +294,9 @@ export class TemplateGallery {
                                 <button type="button" class="btn-smart-template" data-id="${t.id}" style="text-align: right; background: var(--c-bg-card); border: 1px solid var(--c-border); border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s;">
                                     <div class="flex items-center gap-2 mb-2">
                                         <svg class="ic text-gold"><use href="#${t.icon || 'i-star'}"/></svg>
-                                        <strong style="color: var(--c-text-main);">${t.name}</strong>
+                                        <strong style="color: var(--c-text-main);">${escapeHtml(t.name)}</strong>
                                     </div>
-                                    <div class="text-xs text-muted leading-relaxed">${t.description}</div>
+                                    <div class="text-xs text-muted leading-relaxed">${escapeHtml(t.description)}</div>
                                 </button>
                             `).join('')}
                         </div>
@@ -402,8 +402,8 @@ export class TemplateGallery {
                         <button type="button" class="mode-card ${m.id === currentMode ? 'active' : ''}" data-mode="${m.id}" role="radio" aria-checked="${m.id === currentMode}" aria-label="${escapeHtml(m.name)}: ${escapeHtml(m.desc)}${m.badge ? ' — ' + escapeHtml(m.badge) : ''}">
                             ${m.badge ? `<span class="mode-card__badge" style="display:block;font-size:.7rem;font-weight:700;color:var(--c-primary,#0f5132);margin-bottom:4px;">${m.badge}</span>` : ''}
                             <span class="mode-card__icon" aria-hidden="true" style="font-size:1.5rem;"><svg class="ic" aria-hidden="true"><use href="#i-${m.icon}"/></svg></span>
-                            <span class="mode-card__name" style="display:block;font-weight:700;font-size:1.05rem;margin-top:4px;">${m.name}</span>
-                            <span class="mode-card__desc">${m.desc}</span>
+                            <span class="mode-card__name" style="display:block;font-weight:700;font-size:1.05rem;margin-top:4px;">${escapeHtml(m.name)}</span>
+                            <span class="mode-card__desc">${escapeHtml(m.desc)}</span>
                         </button>
                     `).join('')}
                 </div>

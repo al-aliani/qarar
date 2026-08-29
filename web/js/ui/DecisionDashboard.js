@@ -189,11 +189,11 @@ export class DecisionDashboard {
                     <div class="dd-verdict__body">
                         <span class="dd-verdict__eyebrow">التقييم الشامل</span>
                         <h2 class="dd-verdict__title">
-                            ${decisionLocked ? qualityGate.title : evaluation.recommendationLabel}
+                            ${decisionLocked ? escapeHtml(qualityGate.title) : escapeHtml(evaluation.recommendationLabel)}
                         </h2>
                         <p class="dd-verdict__desc">
                             ${decisionLocked
-                                ? `${qualityGate.summary} جاهزية البيانات الحالية ${qualityGate.score}%.`
+                                ? `${escapeHtml(qualityGate.summary)} جاهزية البيانات الحالية ${qualityGate.score}%.`
                                 : `بناءً على تحليل ${evaluation.details.length} معايير تشمل الجدوى المالية، المخاطر/مونت كارلو، اكتمال البيانات، وجاهزية السوق.`}
                             <!-- تدقيق 2026-07-12: كانت العتبة score >= 100 (حرفياً 100/100) لا تتحقق عملياً إلا
                             نادراً فلا تظهر الفقرة تقريباً أبداً — score >= 80 يطابق نفس عتبة استنتاج "go" الاحتياطية
@@ -245,7 +245,7 @@ export class DecisionDashboard {
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1.5rem;">
                         <div>
                             <h3 class="card-title">لماذا هذا القرار؟</h3>
-                            ${decision.desc ? `<p class="text-sm" style="line-height:1.8; margin-bottom:.6rem;">${decision.desc}</p>` : ''}
+                            ${decision.desc ? `<p class="text-sm" style="line-height:1.8; margin-bottom:.6rem;">${escapeHtml(decision.desc)}</p>` : ''}
                             ${decision.reasons.length ? `
                                 <ul class="decision-reason-list" style="margin:0; padding-inline-start:1.1rem; font-size:.85rem; line-height:1.8;">
                                     ${decision.reasons.map(r => `<li>${r}</li>`).join('')}
@@ -256,7 +256,7 @@ export class DecisionDashboard {
                             <h3 class="card-title">خطواتك التالية</h3>
                             ${decision.nextSteps.length ? `
                                 <ol class="decision-next-steps" style="margin:0; padding-inline-start:1.2rem; font-size:.85rem; line-height:1.9;">
-                                    ${decision.nextSteps.map(s => `<li><strong>${s.step}:</strong> ${s.text}</li>`).join('')}
+                                    ${decision.nextSteps.map(s => `<li><strong>${s.step}:</strong> ${escapeHtml(s.text)}</li>`).join('')}
                                 </ol>` : `<p class="text-sm text-success">لا خطوات عالقة — الدراسة مكتملة الأركان. راجع الملخص التنفيذي وصدّر التقرير.</p>`}
                         </div>
                     </div>
@@ -272,7 +272,7 @@ export class DecisionDashboard {
                             <h3 class="dd-status__title">أخطاء حرجة - الدراسة غير جاهزة</h3>
                         </div>
                         <ul class="dd-status__list">
-                            ${qaResults.hardErrors.map(err => `<li>${err.message || err}</li>`).join('')}
+                            ${qaResults.hardErrors.map(err => `<li>${escapeHtml(err.message || err)}</li>`).join('')}
                         </ul>
                     </div>
                 ` : ''}
@@ -283,7 +283,7 @@ export class DecisionDashboard {
                             <h3 class="dd-status__title">تحذيرات مهمة</h3>
                         </div>
                         <ul class="dd-status__list">
-                            ${qaResults.softWarnings.map(warn => `<li>${warn.message || warn}</li>`).join('')}
+                            ${qaResults.softWarnings.map(warn => `<li>${escapeHtml(warn.message || warn)}</li>`).join('')}
                         </ul>
                     </div>
                 ` : ''}
@@ -1053,7 +1053,7 @@ export class DecisionDashboard {
                         <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
                         <h3 class="dd-status__title">مفسّر القرار: لا يوجد رقم كاسر واضح</h3>
                     </div>
-                    <p class="dd-status__note">${explanation?.summary || 'الأرقام الرئيسية لا تكسر القرار حالياً، لكن يبقى توثيق الافتراضات ضرورياً.'}</p>
+                    <p class="dd-status__note">${escapeHtml(explanation?.summary || 'الأرقام الرئيسية لا تكسر القرار حالياً، لكن يبقى توثيق الافتراضات ضرورياً.')}</p>
                 </div>
             `;
         }
@@ -1065,13 +1065,13 @@ export class DecisionDashboard {
                     <svg class="ic dd-status__ic" aria-hidden="true"><use href="#i-shield"/></svg>
                     <div>
                         <h3 class="dd-status__title">مفسّر القرار: ما الرقم الذي كسر الدراسة؟</h3>
-                        <p class="dd-status__note">${explanation.summary || ''}</p>
+                        <p class="dd-status__note">${escapeHtml(explanation.summary || '')}</p>
                     </div>
                 </div>
                 <ul class="dd-status__list">
                     ${issues.slice(0, 5).map(issue => `
                         <li>
-                            <strong>${issue.title}</strong> ${issue.tooltipKey ? createTooltip(issue.tooltipKey) : ''}: ${issue.explanation}
+                            <strong>${escapeHtml(issue.title)}</strong> ${issue.tooltipKey ? createTooltip(issue.tooltipKey) : ''}: ${escapeHtml(issue.explanation)}
                             <br><span class="text-muted">عدّل من خطوة: <strong>${this.pathToStepLabel(issue.path)}</strong> — ${issue.action}</span>
                         </li>
                     `).join('')}
@@ -1190,7 +1190,7 @@ export class DecisionDashboard {
                 </div>
                 ${d.alerts?.length ? `
                     <ul class="dd-status__list" style="margin-top:10px;">
-                        ${d.alerts.map(a => `<li><strong>${a.title}:</strong> ${a.text}</li>`).join('')}
+                        ${d.alerts.map(a => `<li><strong>${escapeHtml(a.title)}:</strong> ${escapeHtml(a.text)}</li>`).join('')}
                     </ul>
                 ` : ''}
             </div>

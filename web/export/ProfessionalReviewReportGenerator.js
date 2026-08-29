@@ -136,7 +136,7 @@ export class ProfessionalReviewReportGenerator {
         <div class="pr-toc" id="toc">
             <h3>فهرس المحتويات</h3>
             <ol>
-                ${toc.map(t => `<li><a href="#${t.id}">${t.num}. ${t.title}</a></li>`).join('')}
+                ${toc.map(t => `<li><a href="#${t.id}">${t.num}. ${escapeHtml(t.title)}</a></li>`).join('')}
             </ol>
         </div>
 

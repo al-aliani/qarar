@@ -2,6 +2,7 @@
  * أمثلة دراسات — تُعرض فقط عند وجود أمثلة معتمدة من مختصين.
  */
 import { EXAMPLE_STUDIES } from '../config.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class ExamplesInspireView {
     constructor(containerId, options = {}) {
@@ -31,7 +32,7 @@ export class ExamplesInspireView {
                                         <p class="text-sm text-muted">${(ex.sector || '').toString().replace(/</g, '&lt;')}</p>
                                     </div>
                                 </div>
-                                <p class="text-sm text-muted mb-0">${(ex.description || '').toString().replace(/</g, '&lt;')}</p>
+                                <p class="text-sm text-muted mb-0">${escapeHtml((ex.description || '').toString())}</p>
                             </div>
                         `).join('')}
                     </div>

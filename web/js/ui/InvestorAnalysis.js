@@ -162,10 +162,10 @@ export class InvestorAnalysis {
                             <tbody>
                                 ${criteria.map(c => `
                                     <tr>
-                                        <td>${c.name}</td>
+                                        <td>${esc(c.name)}</td>
                                         <td class="text-mono">${c.threshold}</td>
                                         <td class="text-mono ${c.ok ? 'text-success' : 'text-muted'}">${c.yours}</td>
-                                        <td class="${c.blocker ? 'text-danger' : 'text-muted'}" style="font-size:0.75rem;">${c.note}</td>
+                                        <td class="${c.blocker ? 'text-danger' : 'text-muted'}" style="font-size:0.75rem;">${esc(c.note)}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>

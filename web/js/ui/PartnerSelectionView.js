@@ -5,6 +5,7 @@
 
 import { RESOURCES_GUIDANCE_LINKS } from '../config.js';
 import { calculateStudy } from '../core/engine.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class PartnerSelectionView {
     constructor(containerId, options = {}) {
@@ -30,7 +31,7 @@ export class PartnerSelectionView {
                 ${partnerNeeds.map(n => `
                     <li class="card p-4">
                         <strong>${n.label}</strong>
-                        <p class="text-sm text-muted mt-1">${n.reason}</p>
+                        <p class="text-sm text-muted mt-1">${escapeHtml(n.reason)}</p>
                     </li>
                 `).join('')}
             </ul>
@@ -53,7 +54,7 @@ export class PartnerSelectionView {
         ];
 
         const linksHtml = (RESOURCES_GUIDANCE_LINKS || []).slice(0, 4).map(item => `
-            <a href="${item.url || '#'}" target="_blank" rel="noopener noreferrer" class="text-gold font-medium">${item.name}</a>
+            <a href="${escapeHtml(item.url || '#')}" target="_blank" rel="noopener noreferrer" class="text-gold font-medium">${escapeHtml(item.name)}</a>
         `).join(' • ');
 
         this.container.innerHTML = `

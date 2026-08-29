@@ -1,5 +1,6 @@
 import { store } from '../core/store.js';
 import { toast } from '../utils/toast.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export class HypothesisView {
     constructor() {
@@ -53,7 +54,7 @@ export class HypothesisView {
 
                 <div class="form-group">
                     <label class="block font-bold text-sm mb-2">اشرح المشكلة في جملة واحدة (من يعاني؟ وما هي المعاناة؟)</label>
-                    <textarea class="form-textarea w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" rows="2" data-section="startupHypothesis" data-field="problem" placeholder="مثال: أصحاب المطاعم يعانون من صعوبة بناء دراسة جدوى دقيقة...">${hypothesis.problem || ''}</textarea>
+                    <textarea class="form-textarea w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" rows="2" data-section="startupHypothesis" data-field="problem" placeholder="مثال: أصحاب المطاعم يعانون من صعوبة بناء دراسة جدوى دقيقة...">${escapeHtml(hypothesis.problem || '')}</textarea>
                 </div>
             </div>
 
@@ -61,7 +62,7 @@ export class HypothesisView {
                 <h3 class="text-xl font-bold mb-4 text-gray-800">2. الحل (The Solution)</h3>
                 <div class="form-group mb-4">
                     <label class="block font-bold text-sm mb-2">ما هي التجربة التي ستجريها لحل المشكلة؟</label>
-                    <textarea class="form-textarea w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" rows="2" data-section="startupHypothesis" data-field="solution" placeholder="مثال: منصة أونلاين تحسب التكاليف تلقائياً وتصدر تقريراً جاهزاً للبنك...">${hypothesis.solution || ''}</textarea>
+                    <textarea class="form-textarea w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" rows="2" data-section="startupHypothesis" data-field="solution" placeholder="مثال: منصة أونلاين تحسب التكاليف تلقائياً وتصدر تقريراً جاهزاً للبنك...">${escapeHtml(hypothesis.solution || '')}</textarea>
                 </div>
             </div>
 
@@ -83,7 +84,7 @@ export class HypothesisView {
 
                     <div class="form-group">
                         <label class="block font-bold text-sm mb-2">اشرح استبصارك (السحر الخاص بك)</label>
-                        <textarea class="form-textarea w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none h-full" data-section="startupHypothesis" data-field="insight" placeholder="لماذا سنربح نحن وليس غيرنا؟">${hypothesis.insight || ''}</textarea>
+                        <textarea class="form-textarea w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none h-full" data-section="startupHypothesis" data-field="insight" placeholder="لماذا سنربح نحن وليس غيرنا؟">${escapeHtml(hypothesis.insight || '')}</textarea>
                     </div>
                 </div>
             </div>

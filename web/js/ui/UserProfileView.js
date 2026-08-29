@@ -7,6 +7,7 @@ import { getSupabaseClient, getAuthUser, updateUserDisplayName, getUserProfile, 
 import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
 import { toast } from '../utils/toast.js';
 import { trackEvent } from '../utils/analytics.js';
+import { escapeHtml } from '../utils/escape.js';
 
 function getDisplayName(user) {
   return (user?.user_metadata?.full_name || '').trim() || user?.email || user?.phone || '—';
@@ -68,7 +69,7 @@ export class UserProfileView {
                         </div>
                         <div class="flex-1">
                             <div class="text-sm text-muted">البريد / الجوال</div>
-                            <div class="font-bold">${user.email || user.phone || user.user_metadata?.email || '—'}</div>
+                            <div class="font-bold">${escapeHtml(user.email || user.phone || user.user_metadata?.email || '—')}</div>
                             <div class="text-xs text-muted mt-1">تاريخ الانضمام: ${createdAt}</div>
                         </div>
                     </div>

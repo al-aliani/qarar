@@ -64,7 +64,7 @@ export class InvestorAcceleratorOnePager {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${label.title} — ${escapeHtml(info.name || 'المشروع')}</title>
+    <title>${escapeHtml(label.title)} — ${escapeHtml(info.name || 'المشروع')}</title>
     <link href="/fonts/fonts.css" rel="stylesheet">
     <style>
         :root { --gold: #C9A227; --dark: #1a202c; --blue: #2c5282; }
@@ -87,7 +87,7 @@ export class InvestorAcceleratorOnePager {
     </style>
 </head>
 <body>
-    <h1>${label.title}: ${escapeHtml(info.name || 'عرض المشروع')}</h1>
+    <h1>${escapeHtml(label.title)}: ${escapeHtml(info.name || 'عرض المشروع')}</h1>
 
     <div class="row">
         <div class="block">

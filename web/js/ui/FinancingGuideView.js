@@ -68,7 +68,7 @@ export class FinancingGuideView {
         const fundingLinks = (RESOURCES_GUIDANCE_LINKS || []).filter(l => (l.name || '').includes('بنك') || (l.name || '').includes('تمويل') || (l.url || '').includes('sdb') || (l.url || '').includes('monshaat'));
         const partnerLink = consultationUrl ? { url: consultationUrl, name: 'صفحة حجز الاستشارة' } : (fundingLinks[0] ? { url: fundingLinks[0].url, name: fundingLinks[0].name } : null);
         const consultationParagraph = partnerLink
-            ? `للحصول على استشارة تمويل متخصصة أو ربط بمصادر تمويل، يمكنك التواصل مع <a href="${partnerLink.url}" target="_blank" rel="noopener" class="text-gold underline">${partnerLink.name}</a>. المنصة لا تتعهد بنتائج أو اعتماد من جهات التمويل.`
+            ? `للحصول على استشارة تمويل متخصصة أو ربط بمصادر تمويل، يمكنك التواصل مع <a href="${escapeHtml(partnerLink.url)}" target="_blank" rel="noopener" class="text-gold underline">${escapeHtml(partnerLink.name)}</a>. المنصة لا تتعهد بنتائج أو اعتماد من جهات التمويل.`
             : 'للحصول على استشارة تمويل متخصصة أو ربط بمصادر تمويل، يمكنك التواصل مع إدارة المنصة أو الجهات المعنية في بلدك. المنصة لا تتعهد بنتائج أو اعتماد من جهات التمويل.';
 
         let partnerNeeds = [];
@@ -122,7 +122,7 @@ export class FinancingGuideView {
                 </div>
 
                 <div class="card card-hover mb-6 p-4">
-                    ${fundingNeed ? `<p class="text-sm mb-3">${fundingNeed.reason}</p>` : ''}
+                    ${fundingNeed ? `<p class="text-sm mb-3">${escapeHtml(fundingNeed.reason)}</p>` : ''}
                     <p class="text-sm text-muted">${consultationParagraph}</p>
                 </div>
 

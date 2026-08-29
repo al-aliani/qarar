@@ -140,10 +140,10 @@ export class ShareStudyView {
                     ${this._members.map(m => `
                         <li class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10">
                             <div>
-                                <span class="font-medium">${m.email}</span>
+                                <span class="font-medium">${escapeHtml(m.email)}</span>
                                 <span class="text-xs text-muted mr-2">${m.role === 'editor' ? 'محرر' : 'مشاهد'}</span>
                             </div>
-                            <button type="button" class="btn btn--sm btn--ghost text-danger btn-revoke" data-email="${m.email}" title="إلغاء الدعوة">إلغاء الدعوة</button>
+                            <button type="button" class="btn btn--sm btn--ghost text-danger btn-revoke" data-email="${escapeHtml(m.email)}" title="إلغاء الدعوة">إلغاء الدعوة</button>
                         </li>
                     `).join('')}
                 </ul>

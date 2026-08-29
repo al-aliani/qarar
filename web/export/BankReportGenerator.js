@@ -15,6 +15,7 @@ import { BANK_COMPLIANCE_SENTENCE } from '../js/config.js';
 import { getOptionLabel } from '../js/core/fieldOptions.js';
 import { buildFinancingDiagnostics } from '../js/utils/financingDiagnostics.js';
 import { buildIndicatorInsights } from '../js/utils/indicatorInsights.js';
+import { escapeHtml as bankEsc } from '../js/utils/escape.js';
 
 /** أقسام تقرير البنك (معرّفات قابلة للربط مع reportSectionOrder). */
 const BANK_SECTION_IDS = [
@@ -48,15 +49,6 @@ const GUARANTEE_TYPE_LABELS = {
     salaryAssignment: 'تحويل راتب',
     other: 'أخرى',
 };
-
-function bankEsc(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
 
 export class BankReportGenerator {
 

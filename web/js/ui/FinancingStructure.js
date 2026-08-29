@@ -5,6 +5,7 @@
  */
 
 import { calculateStudy as runFullModel, rateOrDefault, resolveDecisionThresholds, calculateFinancingWACC } from '../core/engine.js';
+import { escapeHtml } from '../utils/escape.js';
 
 // أيقونة من الـsprite الموحّد بدل إيموجي — تدقيق تنظيف 2026-07-11.
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -618,7 +619,7 @@ export class FinancingStructure {
                         ${Object.entries(typeLabels).map(([v, l]) => `<option value="${v}" ${(g.type || 'mortgage') === v ? 'selected' : ''}>${l}</option>`).join('')}
                     </select>
                 </td>
-                <td><input type="text" class="input input--sm guarantee-input" data-index="${i}" data-field="description" value="${(g.description || '').replace(/"/g, '&quot;')}" placeholder="وصف الضمان"></td>
+                <td><input type="text" class="input input--sm guarantee-input" data-index="${i}" data-field="description" value="${escapeHtml(g.description || '')}" placeholder="وصف الضمان"></td>
                 <td><input type="number" class="input input--sm guarantee-input" data-index="${i}" data-field="value" value="${g.value || 0}" min="0"></td>
                 <td><button type="button" class="btn btn--sm btn--danger guarantee-remove" data-index="${i}">حذف</button></td>
             </tr>
