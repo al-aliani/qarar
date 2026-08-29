@@ -11,6 +11,13 @@
 
 const MOYASAR_API_BASE = 'https://api.moyasar.com/v1';
 
+// تدقيق 2026-08-29: fetch() هنا بلا أي مهلة — تعليق شبكي فعلي لدى Moyasar (لا استجابة
+// ولا رفض) كان يُعلّق create-checkout للأبد، تاركاً العميل أمام واجهة دفع متجمّدة بلا أي
+// ملاحظة. نفس نمط nameAvailability.ts (AbortSignal.timeout) المُختبَر فعلياً في هذا
+// المستودع؛ 15 ثانية أطول من الفحص الإرشادي هناك (4 ثوانٍ، غير حرج) لأن نداء مزوّد دفع
+// حقيقياً قد يستغرق فعلاً بضع ثوانٍ، لكن غير مفتوح بلا سقف.
+const FETCH_TIMEOUT_MS = 15000;
+
 export interface MoyasarCheckoutParams {
   amountSar: number;
   description: string;
@@ -43,6 +50,7 @@ export async function createMoyasarCheckout(
       callback_url: params.callbackUrl,
       metadata: params.metadata,
     }),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {

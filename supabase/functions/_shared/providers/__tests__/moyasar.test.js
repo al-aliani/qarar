@@ -56,6 +56,21 @@ describe('createMoyasarCheckout', () => {
       createMoyasarCheckout('bad_key', { amountSar: 100, description: 'x', callbackUrl: 'https://x.com', metadata: {} })
     ).rejects.toThrow(/401/);
   });
+
+  // تدقيق 2026-08-29: fetch كان بلا أي مهلة — تعليق شبكي فعلي لدى Moyasar (لا استجابة
+  // ولا رفض) كان يُعلّق create-checkout للأبد.
+  it('يمرّر signal (AbortSignal.timeout) إلى fetch — الطلب محدود بمهلة لا مفتوح للأبد', async () => {
+    await createMoyasarCheckout('sk_test', { amountSar: 100, description: 'x', callbackUrl: 'https://x.com', metadata: {} });
+    const [, options] = fetchMock.mock.calls[0];
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('لا يبتلع رفض التعليق/المهلة صامتاً — ينتشر للمستدعي فعلياً (لا نتيجة وهمية، لا ابتلاع)', async () => {
+    fetchMock.mockRejectedValueOnce(new DOMException('signal timed out', 'TimeoutError'));
+    await expect(
+      createMoyasarCheckout('sk_test', { amountSar: 100, description: 'x', callbackUrl: 'https://x.com', metadata: {} })
+    ).rejects.toMatchObject({ name: 'TimeoutError' });
+  });
 });
 
 describe('parseMoyasarWebhookStatus', () => {

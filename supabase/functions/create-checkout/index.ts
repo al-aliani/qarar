@@ -22,6 +22,7 @@ import { createTamaraCheckout } from '../_shared/providers/tamara.ts';
 import { selectedAddons } from '../_shared/catalog.ts';
 import { corsHeaders, handlePreflight } from '../_shared/cors.ts';
 import { checkRateLimit } from '../_shared/rateLimit.ts';
+import { sendAlert } from '../_shared/alerting.ts';
 
 // تدقيق أمني 2026-08-21: بلا حد سابقاً — أي جلسة عادية تقدر تستنزف حصة Moyasar/
 // Stripe/Tamara الحيّة بحلقة استدعاءات (كل نداء ناجح ينشئ فاتورة/جلسة حقيقية على
@@ -48,6 +49,7 @@ function jsonResponse(req: Request, body: unknown, status = 200): Response {
 }
 
 Deno.serve(async (req: Request) => {
+  const sentryDsn = Deno.env.get('SENTRY_DSN');
   const preflight = handlePreflight(req);
   if (preflight) return preflight;
   if (req.method !== 'POST') return jsonResponse(req, { error: 'method_not_allowed' }, 405);
@@ -221,8 +223,19 @@ Deno.serve(async (req: Request) => {
 
     return jsonResponse(req, { checkoutUrl, orderId });
   } catch (e) {
+    // تدقيق 2026-08-29: fetch لدى المزوّد (moyasar.ts/stripe.ts/tamara.ts) صار محدوداً
+    // بمهلة (AbortSignal.timeout) — تعليق شبكي حقيقي هناك يصل هنا كرفض (AbortError/
+    // TimeoutError) بدل تعليق create-checkout نفسه للأبد. نميّزه في التنبيه فقط
+    // (معلومة تشخيصية مفيدة)، والاستجابة للعميل تبقى نفسها: رسالة واضحة 502، لا انهيار
+    // بلا معالجة ولا 500 غامض.
+    const isTimeout = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
     console.error('[create-checkout] provider checkout creation failed:', e);
     await adminClient.from('orders').update({ status: 'failed' }).eq('id', orderId);
+    await sendAlert(sentryDsn, {
+      message: `[create-checkout] provider checkout creation failed (provider=${provider}, orderId=${orderId}, timeout=${isTimeout}): ${e instanceof Error ? e.message : String(e)}`,
+      level: 'error',
+      tags: { source: 'create-checkout', kind: isTimeout ? 'provider_timeout' : 'provider_checkout_failed' },
+    });
     return jsonResponse(req, { error: 'checkout_creation_failed' }, 502);
   }
 });
