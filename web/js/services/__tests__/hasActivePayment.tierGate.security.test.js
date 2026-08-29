@@ -19,6 +19,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * الاستعلام الفعلي المُرسَل، لا مجرد أن دالة استُدعيت بوسائط معيّنة.
  */
 
+// PaymentService.js استوردت monitoring.js حديثاً (بلوكر مراقبة 2026-08-29) — بلا هذا
+// التمويه، سطر _init() في monitoring.js يقرأ window.location مباشرة ويكسر أي اختبار
+// يعمل ببيئة node الافتراضية (لا jsdom) بمجرد استيراد PaymentService.js.
+vi.mock('../../utils/monitoring.js', () => ({
+    monitoring: { captureException: vi.fn() },
+}));
+
 let dbRows = [];
 
 function buildOrdersQuery() {

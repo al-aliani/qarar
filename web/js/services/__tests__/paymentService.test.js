@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+const captureExceptionMock = vi.fn();
+vi.mock('../../utils/monitoring.js', () => ({
+    monitoring: { captureException: (...a) => captureExceptionMock(...a) },
+}));
+
 const getAuthUserMock = vi.fn(async () => ({ user: null }));
 const invokeMock = vi.fn(async () => ({ data: null, error: null }));
 const rpcMock = vi.fn(async () => ({ data: null, error: null }));
@@ -29,6 +34,7 @@ describe('hasActivePayment', () => {
         selectChain.in.mockReturnThis();
         selectChain.limit.mockResolvedValue({ data: [], error: null });
         fromMock.mockClear();
+        captureExceptionMock.mockClear();
     });
 
     it('بلا studyId ⇒ false فوراً بلا أي استعلام', async () => {
@@ -72,6 +78,24 @@ describe('hasActivePayment', () => {
         await hasActivePayment('study-1');
         expect(selectChain.in).toHaveBeenCalledWith('tier', ['self', 'reviewed', 'full']);
     });
+
+    it('بلوكر مراقبة 2026-08-29: خطأ في الاستعلام يُبلَّغ لـmonitoring.captureException بسياق studyId — كان يُبتلَع بconsole.warn فقط', async () => {
+        selectChain.limit.mockResolvedValue({ data: null, error: { message: 'network error' } });
+        const { hasActivePayment } = await import('../PaymentService.js');
+        await hasActivePayment('study-1');
+
+        expect(captureExceptionMock).toHaveBeenCalledTimes(1);
+        const [err, context] = captureExceptionMock.mock.calls[0];
+        expect(err.message).toBe('network error');
+        expect(context).toMatchObject({ source: 'PaymentService.hasActivePayment', studyId: 'study-1' });
+    });
+
+    it('نجاح الاستعلام (بصرف النظر عن النتيجة) ⇒ لا يستدعي captureException إطلاقاً', async () => {
+        selectChain.limit.mockResolvedValue({ data: [{ id: 'order-1' }], error: null });
+        const { hasActivePayment } = await import('../PaymentService.js');
+        await hasActivePayment('study-1');
+        expect(captureExceptionMock).not.toHaveBeenCalled();
+    });
 });
 
 describe('startCheckout', () => {
@@ -81,6 +105,7 @@ describe('startCheckout', () => {
             data: { checkoutUrl: 'https://pay.example.com/abc', orderId: 'order-1' },
             error: null,
         });
+        captureExceptionMock.mockClear();
     });
 
     it('بلا مستخدم مسجَّل ⇒ خطأ واضح، لا يستدعي invoke', async () => {
@@ -114,6 +139,32 @@ describe('startCheckout', () => {
         const { startCheckout } = await import('../PaymentService.js');
         const result = await startCheckout({ tier: 'self', studyId: 's1', provider: 'moyasar' });
         expect(result.ok).toBe(false);
+    });
+
+    it('بلوكر مراقبة 2026-08-29: استثناء اتصال حقيقي (invoke يرمي) يُبلَّغ لـmonitoring.captureException بسياق الباقة والدراسة والمزوّد', async () => {
+        invokeMock.mockRejectedValue(new Error('network down'));
+        const { startCheckout } = await import('../PaymentService.js');
+        const result = await startCheckout({ tier: 'self', studyId: 's1', provider: 'moyasar' });
+
+        expect(result.ok).toBe(false);
+        expect(result.error).toBe('network down');
+        expect(captureExceptionMock).toHaveBeenCalledTimes(1);
+        const [err, context] = captureExceptionMock.mock.calls[0];
+        expect(err.message).toBe('network down');
+        expect(context).toMatchObject({ source: 'PaymentService.startCheckout', studyId: 's1', tier: 'self', provider: 'moyasar' });
+    });
+
+    it('فشل منطقي عادي من create-checkout (error في data لا استثناء) ⇒ لا يستدعي captureException (ليس استثناء اتصال)', async () => {
+        invokeMock.mockResolvedValue({ data: null, error: { message: 'invalid_tier' } });
+        const { startCheckout } = await import('../PaymentService.js');
+        await startCheckout({ tier: 'self', studyId: 's1', provider: 'moyasar' });
+        expect(captureExceptionMock).not.toHaveBeenCalled();
+    });
+
+    it('نجاح ⇒ لا يستدعي captureException إطلاقاً', async () => {
+        const { startCheckout } = await import('../PaymentService.js');
+        await startCheckout({ tier: 'self', studyId: 's1', provider: 'moyasar' });
+        expect(captureExceptionMock).not.toHaveBeenCalled();
     });
 });
 
@@ -150,6 +201,7 @@ describe('listOrders', () => {
         selectChain.select.mockReturnThis();
         selectChain.order.mockResolvedValue({ data: [{ id: 'order-1', status: 'expired' }], error: null });
         fromMock.mockClear();
+        captureExceptionMock.mockClear();
     });
 
     it('ينظّف الطلبات المنتهية (RPC) قبل جلب السجل — بلوكر #9', async () => {
@@ -179,5 +231,22 @@ describe('listOrders', () => {
         selectChain.order.mockResolvedValue({ data: null, error: { message: 'network error' } });
         const { listOrders } = await import('../PaymentService.js');
         await expect(listOrders()).rejects.toThrow('network error');
+    });
+
+    it('بلوكر مراقبة 2026-08-29: فشل استعلام السجل يُبلَّغ لـmonitoring.captureException قبل الرمي — لا مستدعٍ حالي (BillingHistoryView/DashboardView) يُبلِّغ عن هذا الرمي بنفسه', async () => {
+        selectChain.order.mockResolvedValue({ data: null, error: { message: 'network error' } });
+        const { listOrders } = await import('../PaymentService.js');
+        await expect(listOrders()).rejects.toThrow('network error');
+
+        expect(captureExceptionMock).toHaveBeenCalledTimes(1);
+        const [err, context] = captureExceptionMock.mock.calls[0];
+        expect(err.message).toBe('network error');
+        expect(context).toMatchObject({ source: 'PaymentService.listOrders' });
+    });
+
+    it('نجاح جلب السجل ⇒ لا يستدعي captureException إطلاقاً', async () => {
+        const { listOrders } = await import('../PaymentService.js');
+        await listOrders();
+        expect(captureExceptionMock).not.toHaveBeenCalled();
     });
 });

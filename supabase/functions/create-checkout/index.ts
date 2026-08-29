@@ -155,7 +155,14 @@ Deno.serve(async (req: Request) => {
     .single();
 
   if (insertError || !orderRow) {
+    // هذه الدالة هي المسؤولة الفعلية عن إنشاء الطلب المدفوع أصلاً — فشل هنا سابقاً كان
+    // يُسجَّل بconsole.error فقط بخلاف webhook-moyasar/stripe/tamara التي تُنبِّه فعلياً.
     console.error('[create-checkout] insert order failed:', insertError);
+    await sendAlert(sentryDsn, {
+      message: `[create-checkout] order insert failed (user_id=${userId}, tier=${pkg.id}): ${insertError?.message || insertError}`,
+      level: 'error',
+      tags: { source: 'create-checkout', kind: 'order_insert_failed' },
+    });
     return jsonResponse(req, { error: 'order_creation_failed' }, 500);
   }
 

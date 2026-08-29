@@ -6,6 +6,13 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// PaymentService.js استوردت monitoring.js حديثاً (بلوكر مراقبة 2026-08-29) — بلا هذا
+// التمويه، سطر _init() في monitoring.js يقرأ window.location مباشرة ويكسر أي اختبار
+// يعمل ببيئة node الافتراضية (لا jsdom) بمجرد استيراد PaymentService.js.
+vi.mock('../../utils/monitoring.js', () => ({
+    monitoring: { captureException: vi.fn() },
+}));
+
 const getAuthUserMock = vi.fn(async () => ({ user: { id: 'u1' } }));
 const maybeSingleMock = vi.fn();
 const chain = {
