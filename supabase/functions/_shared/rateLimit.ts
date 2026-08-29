@@ -4,6 +4,16 @@
  * مدفوعة حقيقية (Moyasar/Stripe/Tamara، Google Places) أو كتابة صفوف orders بلا
  * سقف. نفس مبدأ whatsapp-otp-send (تهدئة + سقف نافذة زمنية) لكن معمَّم عبر
  * public.rate_limit_events بدل جدول مخصَّص لكل دالة.
+ *
+ * تدقيق 2026-08-29 (سباق تزامن): التنفيذ السابق كان SELECT count(*) ثم — فقط
+ * إن كان دون الحد — INSERT منفصل، عبر استدعاءين شبكيين مستقلَّين. طلبان
+ * متزامنان فعلياً من نفس المستخدم استطاعا كلاهما تنفيذ SELECT قبل أن يلتزم
+ * (commit) أيّ منهما INSERT — فيريان معاً "دون الحد" ويتجاوز العدد الفعلي
+ * الحدَّ المفروض. الإصلاح: استدعاء RPC ذرّي واحد (check_and_record_rate_limit،
+ * migration 20260829030000) ينفّذ التحقق والتسجيل معاً محميَّين بقفل استشاري
+ * (pg_advisory_xact_lock) بمفتاح (المستخدم، الدالة) — يُسلسِل الاستدعاءات
+ * المتزامنة لنفس المفتاح فعلياً بدل تركها تتسابق. انظر تعليق الـmigration
+ * لشرح لماذا تجميع الخطوتين في دالة واحدة بلا قفل ما كان يكفي وحده.
  */
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
@@ -13,7 +23,8 @@ export interface RateLimitResult {
 }
 
 /**
- * @param adminClient عميل service_role — rate_limit_events بلا أي سياسة RLS لغيره.
+ * @param adminClient عميل service_role — check_and_record_rate_limit بلا grant
+ *   execute لغير service_role (انظر migration)، فلا يمكن استدعاؤها من عميل آخر.
  * @param userId هوية المستخدم من JWT الجلسة (لا من جسم الطلب أبداً).
  * @param endpoint معرّف الدالة (مثال: 'create-checkout') — يفصل عدّادات كل دالة عن الأخرى.
  * @param maxRequests أقصى عدد طلبات مسموح خلال windowSeconds.
@@ -26,29 +37,23 @@ export async function checkRateLimit(
   maxRequests: number,
   windowSeconds: number
 ): Promise<RateLimitResult> {
-  const since = new Date(Date.now() - windowSeconds * 1000).toISOString();
   const { data, error } = await adminClient
-    .from('rate_limit_events')
-    .select('created_at')
-    .eq('user_id', userId)
-    .eq('endpoint', endpoint)
-    .gte('created_at', since)
-    .order('created_at', { ascending: true });
+    .rpc('check_and_record_rate_limit', {
+      p_user_id: userId,
+      p_endpoint: endpoint,
+      p_max_requests: maxRequests,
+      p_window_seconds: windowSeconds,
+    })
+    .single();
 
-  if (error) {
-    // فشل قراءة الحد صمتاً = سماح — عطل بالحد نفسه لا يجوز أن يمنع خدمة شرعية.
-    console.error(`[rateLimit] query failed for ${endpoint}:`, error);
+  if (error || !data) {
+    // فشل الاستدعاء صمتاً = سماح — عطل بالحد نفسه لا يجوز أن يمنع خدمة شرعية
+    // (نفس القرار الموثَّق أصلاً قبل هذا التغيير، بلا تعديل سلوكه).
+    console.error(`[rateLimit] rpc failed for ${endpoint}:`, error);
     return { ok: true };
   }
 
-  const events = data || [];
-  if (events.length >= maxRequests) {
-    const oldest = new Date(events[0].created_at).getTime();
-    const retryAfterMs = oldest + windowSeconds * 1000 - Date.now();
-    return { ok: false, retryAfterSeconds: Math.max(1, Math.ceil(retryAfterMs / 1000)) };
-  }
-
-  const { error: insertError } = await adminClient.from('rate_limit_events').insert({ user_id: userId, endpoint });
-  if (insertError) console.error(`[rateLimit] insert failed for ${endpoint}:`, insertError);
-  return { ok: true };
+  return data.allowed
+    ? { ok: true }
+    : { ok: false, retryAfterSeconds: data.retry_after_seconds };
 }

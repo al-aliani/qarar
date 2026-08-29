@@ -76,21 +76,6 @@ function buildOrdersTable() {
     };
 }
 
-function buildRateLimitTable() {
-    return {
-        select: () => ({
-            eq: () => ({
-                eq: () => ({
-                    gte: () => ({
-                        order: async () => ({ data: [], error: null }), // دائماً تحت الحد
-                    }),
-                }),
-            }),
-        }),
-        insert: async () => ({ error: null }),
-    };
-}
-
 function buildStudiesTable() {
     return {
         select: () => ({
@@ -113,15 +98,23 @@ function buildCouponsTable() {
 
 function buildTable(table) {
     if (table === 'orders') return buildOrdersTable();
-    if (table === 'rate_limit_events') return buildRateLimitTable();
     if (table === 'studies') return buildStudiesTable();
     if (table === 'coupons') return buildCouponsTable();
     throw new Error(`[test] جدول غير متوقَّع: ${table}`);
 }
 
+// تدقيق 2026-08-29 (سباق تزامن حدّ المعدّل): checkRateLimit صار يستدعي RPC ذرّي
+// واحد (check_and_record_rate_limit) بدل .from('rate_limit_events') مباشرة —
+// كل اختبارات هذا الملف تفترض "دائماً تحت الحد" أصلاً (لا تختبر رفض 429)، فالموك
+// يُرجع allowed:true ثابتاً، مطابقاً لسلوك buildRateLimitTable القديم تماماً.
+function buildRpc(fnName) {
+    if (fnName !== 'check_and_record_rate_limit') throw new Error(`[test] rpc غير متوقَّع: ${fnName}`);
+    return { single: async () => ({ data: { allowed: true, retry_after_seconds: null }, error: null }) };
+}
+
 vi.mock('npm:@supabase/supabase-js@2', () => ({
     createClient: (_url, key) => {
-        if (key === SERVICE_ROLE_KEY) return { from: (table) => buildTable(table) };
+        if (key === SERVICE_ROLE_KEY) return { from: (table) => buildTable(table), rpc: (fnName) => buildRpc(fnName) };
         return { auth: { getUser: async () => authState } };
     },
 }));

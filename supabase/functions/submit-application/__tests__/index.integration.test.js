@@ -2,6 +2,13 @@
  * دفعة 3 من خطة إغلاق فجوات الطبقات الـ16: يستدعي المعالج الحقيقي (نفس نمط
  * webhook-moyasar integration test — انظر batch 2) عبر تمويه Deno.serve/env،
  * ويستخدم checkAnonRateLimit الحقيقي (لا موك) — فقط createClient مموَّه.
+ *
+ * تدقيق 2026-08-29 (سباق تزامن): checkAnonRateLimit صار يستدعي RPC ذرّي واحد
+ * (check_and_record_anon_rate_limit) بدل .from('anon_endpoint_hits').select()
+ * ...insert() منفصلين — الموك أدناه يحاكي منطق تلك الدالة (تحقّق العدّ ضمن
+ * النافذة ثم تسجيل الطلب) داخل .rpc() بدل .from()، بلا تغيير أي توقّع اختبار
+ * (نفس سيناريوهات الحد/العزل بين عناوين IP كما كانت). إثبات الذرّية الفعلي
+ * (لا مجرد إعادة إنتاج المنطق) في rateLimitConcurrency.test.js.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -11,24 +18,25 @@ let insertedApplications = [];
 
 function buildAdminClient() {
     return {
+        rpc: (fnName, args) => {
+            if (fnName !== 'check_and_record_anon_rate_limit') throw new Error(`unexpected rpc: ${fnName}`);
+            return {
+                single: async () => {
+                    const sinceMs = Date.now() - args.p_window_seconds * 1000;
+                    const matching = hits.filter(
+                        (h) => h.endpoint === args.p_endpoint && h.identifier_hash === args.p_identifier_hash && new Date(h.created_at).getTime() >= sinceMs
+                    );
+                    if (matching.length >= args.p_max_requests) {
+                        const oldest = Math.min(...matching.map((h) => new Date(h.created_at).getTime()));
+                        const retryAfterSeconds = Math.max(1, Math.ceil((oldest + args.p_window_seconds * 1000 - Date.now()) / 1000));
+                        return { data: { allowed: false, retry_after_seconds: retryAfterSeconds }, error: null };
+                    }
+                    hits.push({ endpoint: args.p_endpoint, identifier_hash: args.p_identifier_hash, created_at: new Date().toISOString() });
+                    return { data: { allowed: true, retry_after_seconds: null }, error: null };
+                },
+            };
+        },
         from: (table) => {
-            if (table === 'anon_endpoint_hits') {
-                return {
-                    select: () => ({
-                        eq: (_c1, endpoint) => ({
-                            eq: (_c2, hash) => ({
-                                gte: () => ({
-                                    order: async () => ({
-                                        data: hits.filter((h) => h.endpoint === endpoint && h.identifier_hash === hash),
-                                        error: null,
-                                    }),
-                                }),
-                            }),
-                        }),
-                    }),
-                    insert: async (row) => { hits.push({ ...row, created_at: new Date().toISOString() }); return { error: null }; },
-                };
-            }
             if (table === 'public_applications') {
                 return {
                     insert: async (row) => {
