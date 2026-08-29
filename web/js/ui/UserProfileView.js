@@ -13,6 +13,12 @@ function getDisplayName(user) {
   return (user?.user_metadata?.full_name || '').trim() || user?.email || user?.phone || '—';
 }
 
+function formatArabicDate(dateStr) {
+  return dateStr
+    ? new Date(dateStr).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric', numberingSystem: 'latn' })
+    : '—';
+}
+
 export class UserProfileView {
     /**
      * @param {HTMLElement} container - العنصر الذي يُعرض فيه المحتوى (مثلاً wizardContainer)
@@ -32,9 +38,7 @@ export class UserProfileView {
             return;
         }
 
-        const createdAt = user.created_at
-            ? new Date(user.created_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric', numberingSystem: 'latn' })
-            : '—';
+        const createdAt = formatArabicDate(user.created_at);
         const displayName = getDisplayName(user);
         const initial = (displayName !== '—' ? displayName[0] : (user.email || user.phone || '?')[0]).toUpperCase();
         const { ok: profileOk, profile } = await getUserProfile();
@@ -49,10 +53,13 @@ export class UserProfileView {
                     ? '<span class="badge badge--warning"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg> بانتظار تأكيد الفريق</span>'
                     : '';
 
-        // حذف الحساب: نُقدّم طلباً عبر AccountService.requestAccountDeletion() بدل
-        // حذف تلقائي فوري — بعض بياناتك (الفواتير) يجب الاحتفاظ بها نظاماً حتى بعد
-        // طلب الحذف (انظر privacy.html §6 "الاحتفاظ والأمان")، فالحذف الفوري الكامل
-        // قد يخالف هذا الالتزام نفسه؛ الطلب يُسجَّل بحالة 'requested' ليعالجه الفريق.
+        // حذف الحساب (2026-08-29، تفويض مالك صريح: فترة سماح 7 أيام): الطلب يُسجَّل
+        // بحالة 'requested' وتُعالجه فعلياً process-account-deletions (Edge Function
+        // مجدولة يومياً) بعد تجاوز 7 أيام — لا حذف فوري، وليس مجرد تسجيل نية بلا
+        // تنفيذ كما كان سابقاً. بعض بياناتك (الفواتير) تبقى 6 سنوات نظاماً حتى بعد
+        // الحذف (انظر data-retention.html). يمكن التراجع خلال فترة السماح.
+        const { getPendingAccountDeletionRequest } = await import('../services/AccountService.js');
+        const { request: pendingDeletion } = await getPendingAccountDeletionRequest();
 
         this.container.innerHTML = `
             <div class="user-profile-page" style="max-width: 560px; margin: 0 auto; padding: var(--s-4) 0;">
@@ -111,9 +118,18 @@ export class UserProfileView {
                         </button>
                     </div>
 
+                    ${pendingDeletion ? `
+                    <div class="card p-4 mt-4" style="border:1px solid var(--c-danger);">
+                        <p class="text-sm mb-3">
+                            لديك طلب حذف حساب قيد الانتظار (قُدِّم بتاريخ ${formatArabicDate(pendingDeletion.created_at)})، وسيُنفَّذ فعلياً خلال نحو 7 أيام من تقديمه ما لم تُلغِه قبل ذلك.
+                        </p>
+                        <button type="button" id="btnCancelAccountDeletion" class="btn btn--secondary w-full">إلغاء طلب الحذف</button>
+                    </div>
+                    ` : `
                     <p class="text-xs text-center mt-3">
                         <button type="button" id="btnUserProfileDeleteAccount" class="text-danger" style="background:none;border:none;padding:0;font:inherit;text-decoration:underline;cursor:pointer;">حذف حسابي نهائياً</button>
                     </p>
+                    `}
                 </div>
 
                 <p class="text-xs text-muted">دراساتك تُحفظ سحابياً وتظهر في القائمة الجانبية عند فتح "تحميل دراسة".</p>
@@ -138,7 +154,7 @@ export class UserProfileView {
             ]);
             const step1 = await Swal.fire({
                 title: 'هل أنت متأكد من حذف حسابك؟',
-                text: 'سيُقدَّم طلب حذف حسابك للمراجعة من فريقنا ولن يُنفَّذ فوراً — بعض بياناتك (كالفواتير) قد تُحتفظ بها للالتزامات النظامية. لا يمكن التراجع عن الطلب بعد تقديمه.',
+                text: 'سيُقدَّم طلب حذف حسابك، وسيُنفَّذ فعلياً خلال نحو 7 أيام من تقديمه — بعض بياناتك (كالفواتير) تُحتفظ بها للالتزامات النظامية حتى بعد الحذف. يمكنك التراجع عن الطلب خلال فترة السماح من صفحة حسابي.',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'متابعة',
@@ -165,9 +181,37 @@ export class UserProfileView {
             const delResult = await requestAccountDeletion();
             if (delResult.ok) {
                 trackEvent('account_deletion_requested', { surface: 'user_profile' });
-                toast.success('تم تقديم طلب حذف حسابك. سيراجعه فريقنا وسيتم التواصل معك.');
+                toast.success('تم تقديم طلب حذف حسابك، وسيُنفَّذ خلال نحو 7 أيام ما لم تُلغِه.');
+                await this.render();
             } else {
                 toast.error(delResult.error || 'تعذّر تقديم طلب حذف الحساب، حاول لاحقاً أو تواصل معنا.');
+            }
+        });
+
+        document.getElementById('btnCancelAccountDeletion')?.addEventListener('click', async () => {
+            const [{ default: Swal }, { cancelAccountDeletionRequest }] = await Promise.all([
+                import('sweetalert2'),
+                import('../services/AccountService.js'),
+            ]);
+            const confirmCancel = await Swal.fire({
+                title: 'إلغاء طلب حذف الحساب؟',
+                text: 'سيستمر حسابك بكامل بياناته كما هو.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'نعم، ألغِ الطلب',
+                cancelButtonText: 'تراجع',
+                customClass: { confirmButton: 'btn btn--primary', cancelButton: 'btn btn-secondary' },
+                buttonsStyling: false,
+            });
+            if (!confirmCancel.isConfirmed) return;
+
+            const cancelResult = await cancelAccountDeletionRequest();
+            if (cancelResult.ok) {
+                trackEvent('account_deletion_cancelled', { surface: 'user_profile' });
+                toast.success('تم إلغاء طلب حذف الحساب.');
+                await this.render();
+            } else {
+                toast.error(cancelResult.error || 'تعذّر إلغاء الطلب، حاول لاحقاً أو تواصل معنا.');
             }
         });
 

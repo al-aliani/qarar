@@ -11,13 +11,21 @@ let currentProfile = null;
 const getUserMock = vi.fn(async () => ({
     data: { user: { id: 'u1', email: 'a@test.com', created_at: '2026-01-01T00:00:00Z' } }
 }));
-const fromMock = vi.fn(() => ({
-    select: () => ({
-        eq: () => ({
-            single: async () => ({ data: currentProfile, error: null })
+// حذف الحساب (2026-08-29): render() يستعلم الآن account_deletion_requests عبر
+// AccountService.getPendingAccountDeletionRequest() أيضاً — fromMock يجب أن يميّز
+// الجدول، وإلا يحاول .eq(...).eq(...) استدعاء .eq() على نتيجة .single() (غير موجودة).
+const fromMock = vi.fn((table) => {
+    if (table === 'account_deletion_requests') {
+        return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) };
+    }
+    return {
+        select: () => ({
+            eq: () => ({
+                single: async () => ({ data: currentProfile, error: null })
+            })
         })
-    })
-}));
+    };
+});
 
 vi.mock('@supabase/supabase-js', () => ({
     createClient: vi.fn(() => ({
