@@ -29,6 +29,17 @@ import { checkRateLimit } from '../_shared/rateLimit.ts';
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_SECONDS = 600;
 
+// تدقيق أمني 2026-08-29: 'free' موجودة في _shared/pricing.ts (وTier يقبلها) لغرض
+// مختلف تماماً — تمثيل الباقة المجانية في شاشات العرض/المقارنة على العميل (انظر
+// web/js/core/pricing.js PRICING_COMPARISON.free)، وليست منتجاً يُشترى عبر هذه
+// الدالة. getPackage('free') كان يُعيد باقة صالحة (price:0) فتمرّ فحص `if (!pkg)`
+// بلا أي مانع، وينتهي الأمر عند فرع `total === 0` أدناه الذي يؤكّد الطلب paid
+// مباشرة (مصمَّم أصلاً لكوبون خصم 100% على باقة حقيقية) — أي طلب paid بلا أي دفع
+// فعلي. القائمة أدناه يجب أن تطابق حرفياً قيد orders_tier_check في migration
+// 20260709120000_create_orders_payments.sql (لم يُوسَّع لاحقاً ليشمل 'free' —
+// هذا الفحص التطبيقي دفاع مستقل، لا اعتماد على قيد القاعدة وحدها مستقبلاً).
+const PAYABLE_TIERS = new Set(['self', 'reviewed', 'full']);
+
 function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -77,7 +88,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const pkg = getPackage(body.tier || '');
-  if (!pkg) return jsonResponse(req, { error: 'invalid_tier' }, 400);
+  if (!pkg || !PAYABLE_TIERS.has(pkg.id)) return jsonResponse(req, { error: 'invalid_tier' }, 400);
 
   const provider = body.provider === 'stripe' ? 'stripe' : body.provider === 'moyasar' ? 'moyasar' : body.provider === 'tamara' ? 'tamara' : body.provider === 'bank_transfer' ? 'bank_transfer' : null;
   if (!provider) return jsonResponse(req, { error: 'invalid_provider' }, 400);

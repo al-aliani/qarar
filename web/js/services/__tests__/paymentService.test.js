@@ -6,6 +6,7 @@ const rpcMock = vi.fn(async () => ({ data: null, error: null }));
 const selectChain = {
     select: vi.fn(),
     eq: vi.fn(),
+    in: vi.fn(),
     limit: vi.fn(),
     single: vi.fn(),
     order: vi.fn(),
@@ -25,6 +26,7 @@ describe('hasActivePayment', () => {
         getAuthUserMock.mockReset().mockResolvedValue({ user: { id: 'u1' } });
         selectChain.select.mockReturnThis();
         selectChain.eq.mockReturnThis();
+        selectChain.in.mockReturnThis();
         selectChain.limit.mockResolvedValue({ data: [], error: null });
         fromMock.mockClear();
     });
@@ -59,6 +61,16 @@ describe('hasActivePayment', () => {
         selectChain.limit.mockResolvedValue({ data: null, error: { message: 'network error' } });
         const { hasActivePayment } = await import('../PaymentService.js');
         expect(await hasActivePayment('study-1')).toBe(false);
+    });
+
+    it('تدقيق أمني 2026-08-29: الاستعلام يفلتر على tier من الباقات المدفوعة فعلاً، لا status=paid وحدها', async () => {
+        // بلا هذا الفلتر، أي صف orders بحالة paid (مهما كان tier، بما فيه 'free' غير
+        // المدفوعة أصلاً) كان يفتح كل بوابات التصدير — انظر hasActivePayment.tierGate
+        // .security.test.js لاختبار السلوك الفعلي عبر قاعدة بيانات مموَّهة حقيقية.
+        selectChain.limit.mockResolvedValue({ data: [{ id: 'order-1' }], error: null });
+        const { hasActivePayment } = await import('../PaymentService.js');
+        await hasActivePayment('study-1');
+        expect(selectChain.in).toHaveBeenCalledWith('tier', ['self', 'reviewed', 'full']);
     });
 });
 
