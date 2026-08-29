@@ -42,6 +42,12 @@
 #     GooglePlacesConnector.js في العميل. بدون هذا السرّ يبقى الموصّل يُعيد
 #     unavailable بأمان، لا خطأ نشر)
 #
+# مطلوبة لتنفيذ حذف الحساب الفعلي بعد فترة سماح 7 أيام (2026-08-29، تفويض مالك
+# صريح — انظر process-account-deletions.yml):
+#   - ACCOUNT_DELETION_CRON_SECRET (سرّ عشوائي جديد خاص بهذا الاستدعاء المجدول
+#     فقط — process-account-deletions/index.ts يرفض أي طلب بلا هذا السرّ برأس
+#     Authorization: Bearer. ولّده بنفسك، مثال: openssl rand -hex 32)
+#
 # كل سرّ غائب يُتخطّى بتحذير واضح بدل إيقاف النشر بالكامل — يمكن تفعيل مزوّد واحد
 # أولاً (مثلاً Moyasar فقط) وإضافة الآخر لاحقاً بلا أي تعديل كود.
 
@@ -201,6 +207,16 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase functions deploy send-sms-hook --no-verify-jwt
 
+      # تدقيق 2026-08-29 (تنفيذ حذف الحساب، تفويض مالك صريح): تُستدعى من GitHub
+      # Actions مجدولة (process-account-deletions.yml) لا من متصفح مستخدم — بلا JWT
+      # منصّة (نفس منطق webhook-*/health أعلاه)، التحقق الحقيقي عبر سرّ مخصص
+      # ACCOUNT_DELETION_CRON_SECRET يُقارَن برأس Authorization داخل الدالة نفسها.
+      - name: "Deploy process-account-deletions (استدعاء مجدول بسرّ مخصص — بلا JWT منصّة)"
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: npx supabase functions deploy process-account-deletions --no-verify-jwt
+
       - name: Push payment provider secrets to Supabase (skips any missing one safely)
         if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
@@ -226,6 +242,7 @@ jobs:
             [RECOVERY_CODE_HASH_SECRET]="${{ secrets.RECOVERY_CODE_HASH_SECRET }}"
             [SEND_SMS_HOOK_SECRET]="${{ secrets.SEND_SMS_HOOK_SECRET }}"
             [GOOGLE_PLACES_API_KEY]="${{ secrets.GOOGLE_PLACES_API_KEY }}"
+            [ACCOUNT_DELETION_CRON_SECRET]="${{ secrets.ACCOUNT_DELETION_CRON_SECRET }}"
           )
           MISSING=""
           for KEY in "${!SECRET_VALUES[@]}"; do

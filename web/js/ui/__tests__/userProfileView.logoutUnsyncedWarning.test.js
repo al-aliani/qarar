@@ -12,8 +12,13 @@ const swalFireMock = vi.fn(async () => ({ isConfirmed: false }));
 vi.mock('sweetalert2', () => ({ default: { fire: swalFireMock } }));
 
 const signOutMock = vi.fn(async () => {});
+// حذف الحساب (2026-08-29): render() يستعلم الآن account_deletion_requests عبر
+// AccountService.getPendingAccountDeletionRequest() — supabase بحاجة .from() فعلي
+// (لا كائن فارغ كما كان سابقاً) وإلا يفشل render() نفسه بخطأ "from is not a function"
+// قبل الوصول لمنطق تحذير الخروج الذي يختبره هذا الملف أصلاً.
+const noopDeletionRequestChain = { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) };
 vi.mock('../../../supabaseClient.js', () => ({
-    getSupabaseClient: vi.fn(async () => ({ ok: true, supabase: {} })),
+    getSupabaseClient: vi.fn(async () => ({ ok: true, supabase: { from: () => noopDeletionRequestChain } })),
     getAuthUser: vi.fn(async () => ({ user: { id: 'u1', email: 'a@b.com', created_at: '2026-01-01' } })),
     getUserProfile: vi.fn(async () => ({ ok: true, profile: { phone: '' } })),
     updateUserDisplayName: vi.fn(),

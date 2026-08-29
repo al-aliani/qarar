@@ -1,0 +1,48 @@
+# تنفيذ حذف الحساب (2026-08-29، تفويض مالك صريح: فترة سماح 7 أيام + احتفاظ 6
+# سنوات بالفواتير) — استدعاء يومي مجدول لدالة process-account-deletions التي
+# تُعالج طلبات account_deletion_requests المتجاوزة لفترة السماح فعلياً.
+#
+# لماذا GitHub Actions المجدولة لا pg_cron (رغم أن pg_cron مُفعَّل فعلاً بهذا
+# المشروع لـcheck-stale-studies-daily): pg_cron ينفّذ SQL خام فقط، وحذف
+# auth.users الفعلي يتطلب واجهة GoTrue الإدارية (supabase-js
+# auth.admin.deleteUser) غير المتاحة من SQL خالص بلا امتداد pg_net (غير
+# مستخدَم إطلاقاً بهذا المستودع) — إضافته فقط لهذا الغرض تُدخِل نمطاً جديداً
+# كلياً بلا سابقة تثبته هنا. هذا الملف يتبع بدل ذلك نمط GitHub Actions
+# المجدولة الموثَّق فعلاً بمنطق أسرار مماثل (supabase-functions-deploy.yml).
+#
+# سرّ إضافي مطلوب (أضفه في Settings → Secrets and variables → Actions):
+#   - ACCOUNT_DELETION_CRON_SECRET (سرّ عشوائي جديد خاص بهذا الاستدعاء فقط —
+#     يُدفَع لأسرار Supabase عبر خطوة "Push payment provider secrets" الموجودة
+#     أصلاً في supabase-functions-deploy.yml؛ الدالة ترفض أي طلب لا يحمل هذا
+#     السرّ برأس Authorization: Bearer. ولّده بنفسك، مثال: openssl rand -hex 32)
+# يعتمد أيضاً على SUPABASE_URL الموجود أصلاً كسرّ في هذا المستودع.
+
+name: Process Account Deletions
+
+on:
+  schedule:
+    # 03:00 UTC يومياً — يفي بمهلة "خلال نحو 7-8 أيام" الموثَّقة في data-retention.html
+    # (7 أيام فترة سماح + حتى 24 ساعة انتظار للتشغيلة اليومية التالية).
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  process-deletions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required secrets are configured
+        id: check_secrets
+        run: |
+          if [ -n "${{ secrets.SUPABASE_URL }}" ] && [ -n "${{ secrets.ACCOUNT_DELETION_CRON_SECRET }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::SUPABASE_URL أو ACCOUNT_DELETION_CRON_SECRET غير مضبوطين — تخطّي تشغيل معالجة طلبات حذف الحساب."
+          fi
+
+      - name: Call process-account-deletions
+        if: steps.check_secrets.outputs.configured == 'true'
+        run: |
+          curl --fail-with-body -sS -X POST \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/process-account-deletions" \
+            -H "Authorization: Bearer ${{ secrets.ACCOUNT_DELETION_CRON_SECRET }}"
