@@ -40,18 +40,43 @@
 
 name: Supabase Edge Functions Deploy
 
+# تدقيق 2026-08-29 (المرحلة 1.2، خطة إعادة تقييم الطبقات الـ16): نفس منطق
+# supabase-migrations.yml (اقرأ تعليقه للتفاصيل الكاملة عن مزالق workflow_run
+# الأربعة) — النشر ينتظر الآن نجاح "E2E Tests" فعلياً بدل التوازي مع الاختبارات.
 on:
-  push:
+  workflow_run:
+    workflows: ["E2E Tests"]
+    types: [completed]
     branches: [main, master]
-    paths:
-      - 'supabase/functions/**'
   workflow_dispatch: {}
+
+concurrency:
+  group: supabase-functions-deploy-${{ github.ref }}
+  # إلزامي false: حلقة "Push payment provider secrets" أدناه تُشغّل `supabase
+  # secrets set` لـ17 سرّاً بالتتابع — إلغاء منتصف الحلقة يترك أسراراً جزئية
+  # محدَّثة على المشروع الحي بلا أي إشارة على ذلك.
+  cancel-in-progress: false
 
 jobs:
   deploy-functions:
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+
+      - name: Check if supabase/functions changed in this push
+        id: check_paths
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git rev-parse HEAD~1 >/dev/null 2>&1 && git diff --name-only HEAD~1 HEAD | grep -q '^supabase/functions/'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Check Supabase link secrets are configured
         id: check_link_secrets
@@ -64,13 +89,13 @@ jobs:
           fi
 
       - name: Link Supabase project
-        if: steps.check_link_secrets.outputs.configured == 'true'
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" -p "${{ secrets.SUPABASE_DB_PASSWORD }}"
 
       - name: "Deploy create-checkout (يتطلب JWT مستخدم حقيقي — تحقق مزدوج: منصة Supabase + تحقق داخلي إضافي في الدالة)"
-        if: steps.check_link_secrets.outputs.configured == 'true'
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase functions deploy create-checkout
@@ -81,7 +106,7 @@ jobs:
       # أي JWT مستخدم. التحقق الحقيقي لهذين المسارين هو توقيع/سرّ الـwebhook نفسه
       # (webhookVerify.ts) — طبقة حماية مستقلة تماماً عن Supabase JWT.
       - name: "Deploy webhook-moyasar / webhook-stripe / webhook-tamara (بلا تحقق JWT منصّة — التحقق عبر توقيع المزوّد نفسه)"
-        if: steps.check_link_secrets.outputs.configured == 'true'
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
@@ -90,7 +115,7 @@ jobs:
           npx supabase functions deploy webhook-tamara --no-verify-jwt
 
       - name: "Deploy whatsapp-otp-send / whatsapp-otp-verify (تتطلبان JWT مستخدم حقيقي، نفس نمط create-checkout)"
-        if: steps.check_link_secrets.outputs.configured == 'true'
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
@@ -101,7 +126,7 @@ jobs:
       # create-checkout/whatsapp-otp-*)؛ التحقق الإضافي (AAL2 للتوليد، رمز الاسترداد
       # نفسه للإلغاء) داخل الدالتين لا علاقة له بتحقق JWT هذا.
       - name: "Deploy mfa-recovery-generate / mfa-recovery-unenroll (تتطلبان JWT مستخدم حقيقي)"
-        if: steps.check_link_secrets.outputs.configured == 'true'
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
@@ -109,7 +134,7 @@ jobs:
           npx supabase functions deploy mfa-recovery-unenroll
 
       - name: "Deploy check-name-availability (JWT مستخدم حقيقي، بلا أسرار — فحوصات صادرة فقط)"
-        if: steps.check_link_secrets.outputs.configured == 'true'
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase functions deploy check-name-availability
@@ -119,13 +144,13 @@ jobs:
       # معدّل). JWT افتراضي (مفتاح anon نفسه صالح) — لا --no-verify-jwt، فالحماية
       # الحقيقية حدّ المعدّل بـIP + honeypot خادمي داخل الدالة نفسها.
       - name: "Deploy submit-application (نموذج انضمام خبير/مورّد العام — حدّ معدّل بـIP)"
-        if: steps.check_link_secrets.outputs.configured == 'true'
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase functions deploy submit-application
 
       - name: "Deploy places-nearby (JWT مستخدم حقيقي، يتطلب GOOGLE_PLACES_API_KEY)"
-        if: steps.check_link_secrets.outputs.configured == 'true'
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase functions deploy places-nearby
@@ -135,7 +160,7 @@ jobs:
       # خطوة نشر هنا إطلاقاً — 404 حيّ لباقة «مراجَع بخبير» (1,999 ﷼) رغم بيعها فعلياً.
       # JWT مستخدم حقيقي (نفس نمط create-checkout)، بلا أسرار إضافية.
       - name: "Deploy reviewer-queue / reviewer-claim / reviewer-submit (بوابة مراجعة الخبراء)"
-        if: steps.check_link_secrets.outputs.configured == 'true'
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
@@ -149,13 +174,13 @@ jobs:
       # عام)، بلا أسرار إضافية غير SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY الموجودين
       # أصلاً في خطوة دفع الأسرار أدناه.
       - name: "Deploy health (فحص صحّي عام بلا JWT — لمراقبة خارجية)"
-        if: steps.check_link_secrets.outputs.configured == 'true'
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase functions deploy health --no-verify-jwt
 
       - name: Push payment provider secrets to Supabase (skips any missing one safely)
-        if: steps.check_link_secrets.outputs.configured == 'true'
+        if: steps.check_link_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |

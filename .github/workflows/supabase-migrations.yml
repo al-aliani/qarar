@@ -15,18 +15,54 @@
 # صامتاً إلى الأبد كما كان الحال.
 name: Supabase DB Migrations
 
+# تدقيق 2026-08-29 (المرحلة 1.2، خطة إعادة تقييم الطبقات الـ16): كانت هذه الورشة
+# تعمل بالتوازي مع الاختبارات (push مباشر) لا بعدها — فيمكن لترحيل يكسر الاختبارات
+# أن يُنشَر على القاعدة الحيّة قبل أن يُبلغ CI بالفشل أصلاً. التبديل لـworkflow_run
+# يجعل النشر ينتظر اكتمال "E2E Tests" (ci.yml اندمجت فيها بالمرحلة 1.2) بنجاح فعلي.
+#
+# أربعة مزالق تعامَل معها هذا الملف صراحة:
+# 1) `paths:` يسقط صامتاً تحت workflow_run — خطوة check_paths أدناه (git diff يدوي)
+#    تعوّض عن ذلك، وإلا صار كل دفع أخضر يُعيد تشغيل db push حتى لو لم تتغيّر أي
+#    ترحيلة، وهو غير خطير هنا (idempotent) لكنه تكلفة بلا داعٍ.
+# 2) actions/checkout@v4 يجلب افتراضياً رأس الفرع الافتراضي لا الالتزام المُختبَر
+#    فعلياً تحت workflow_run — `ref: head_sha` أدناه إلزامي.
+# 3) شرط الوظيفة يسمح صراحة بـworkflow_dispatch (المخرج اليدوي) بجانب اشتراط نجاح
+#    E2E Tests، وإلا تعطّل التشغيل اليدوي كلياً.
+# 4) fetch-depth: 2 مطلوبة لـcheck_paths (تحتاج مقارنة HEAD مقابل أبيها المباشر).
 on:
-  push:
+  workflow_run:
+    workflows: ["E2E Tests"]
+    types: [completed]
     branches: [main, master]
-    paths:
-      - 'supabase/migrations/**'
   workflow_dispatch: {}
+
+concurrency:
+  group: supabase-db-migrations-${{ github.ref }}
+  # إلزامي false: `db push --include-all` يطبّق ملفات SQL تتابعاً بلا معاملة شاملة،
+  # وكل ملف يُسجَّل في سجلّ schema_migrations فور نجاحه — إلغاء منتصف التشغيل يترك
+  # السجلّ متقدّماً جزئياً بلا أي إشارة تدل على ذلك لاحقاً.
+  cancel-in-progress: false
 
 jobs:
   db-migrations:
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+
+      - name: Check if migrations changed in this push
+        id: check_paths
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git rev-parse HEAD~1 >/dev/null 2>&1 && git diff --name-only HEAD~1 HEAD | grep -q '^supabase/migrations/'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Check Supabase secrets are configured
         id: check_secrets
@@ -39,7 +75,7 @@ jobs:
           fi
 
       - name: Push migrations (enables RLS on public.studies) to Supabase
-        if: steps.check_secrets.outputs.configured == 'true'
+        if: steps.check_secrets.outputs.configured == 'true' && steps.check_paths.outputs.changed == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |

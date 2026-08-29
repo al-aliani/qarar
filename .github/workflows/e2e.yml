@@ -7,7 +7,58 @@ on:
   pull_request:
     branches: [main, master]
 
+# تدقيق 2026-08-29 (المرحلة 1.3، خطة إعادة تقييم الطبقات الـ16): لا خطر في إلغاء
+# تشغيلة اختبار قديمة حين يصل دفع أحدث لنفس الفرع — كل ما يحدث هو أن حدث
+# workflow_run الناتج عن التشغيلة المُلغاة يصل بـconclusion=cancelled فيتجاهله
+# حارس النشر (supabase-migrations.yml/supabase-functions-deploy.yml)، بينما
+# التشغيلة الأحدث تكمل وتُطلق نشرها الخاص بأحدث SHA فعلياً — لا نشر يُفقَد.
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # تدقيق 2026-08-26 (نُقلت من .github/workflows/ci.yml بالمرحلة 1.2، خطة إعادة
+  # تقييم الطبقات الـ16 2026-08-29): كانت CI Pipeline وE2E Tests ورشتَي عمل
+  # منفصلتين تعملان بالتوازي على كل push لـmain — ما يعني عدم وجود اسم ورشة
+  # اختبار واحد يمكن لورشتَي نشر Supabase (ترحيلات + Edge Functions) الانتظار
+  # عليه عبر workflow_run. نُقلت هذه الوظيفة هنا حرفياً بلا أي تغيير على خطواتها
+  # لتصبح "E2E Tests" الاسم الوحيد الذي تُبنى عليه بوابة النشر بعد نجاح الاختبار.
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Linter
+        run: npm run lint
+
+      - name: Run Tests
+        run: npm run test
+
+      # تدقيق 2026-08-26: `scripts/measure-bundle.mjs` كان يحسب الحمولة الأولية الحقيقية
+      # (المدخل + كل استيراد ثابت متعدٍّ + modulepreload) بحجمها الخام وbrotli، لكنه أداة
+      # يدوية فقط — لا ميزانية مفروضة تمنع تضخّم الحزمة صامتاً. كما أن `npm run build` نفسها
+      # لم تكن تُشغَّل في أي CI أصلاً (لا هنا، ولا بـe2e.yml الذي يشغّل خادم dev مباشرة عبر
+      # Playwright webServer بلا بناء إنتاجي). أُضيفت خطوة Build هنا لأول مرة، وبعدها بوابة
+      # الميزانية. القياس الفعلي بهذا التاريخ عبر بناء نظيف: إجمالي brotli للحمولة الأولية
+      # (main-*.js + استيراداته الثابتة المتعدّية + modulepreload) = 276888 بايت. العتبة
+      # أدناه 307200 بايت (300 KiB) — هامش ~11% فوق القياس الفعلي، بنفس نمط ratchet التغطية
+      # في vite.config.js. تُرفع العتبة فقط مع تضخّم متعمَّد موثَّق (ميزة جديدة تستحق الوزن)،
+      # ولا تُخفَّض أبداً بتجاهل فشلها.
+      - name: Build
+        run: npm run build
+
+      - name: Bundle size budget (initial payload, brotli)
+        run: node scripts/measure-bundle.mjs --budget=307200
+
   # تدقيق 2026-07-08: كانت اختبارات الوحدة (npm test، 226+ اختباراً بما فيها حراس
   # الانحدار لمونت كارلو والزكاة/الضريبة وتماسك القرار) لا تُشغَّل في أي CI إطلاقاً —
   # فقط Playwright e2e أدناه. أي انحدار في المحرك المالي كان يمكن أن يُدمَج ويُنشَر
