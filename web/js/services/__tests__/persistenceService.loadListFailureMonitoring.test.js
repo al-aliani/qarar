@@ -7,6 +7,12 @@
  * فقط، فيختفيان صامتاً حتى لو Sentry مضبوط فعلياً بالإنتاج.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SERVICE_PATH = resolve(__dirname, '../PersistenceService.js');
 
 const captureExceptionMock = vi.fn();
 vi.mock('../../utils/monitoring.js', () => ({
@@ -77,9 +83,16 @@ describe('PersistenceService.load/listHeaders — فشل السحابة يُبل
         expect(captureExceptionMock).not.toHaveBeenCalled();
     });
 
-    it('[إثبات الحارس] العطل الأصلي: فشل load/listHeaders كان يُسجَّل بconsole فقط بلا أي استدعاء مراقبة', () => {
-        const oldCatch = (e) => { /* console.warn(e) فقط — لا مراقبة */ return 'logged_to_console_only'; };
-        expect(oldCatch(new Error('x'))).toBe('logged_to_console_only');
-        expect(captureExceptionMock).not.toHaveBeenCalled();
+    it('[إثبات الحارس] العطل الأصلي: كتلتا catch الحقيقيتان في load()/listHeaders() كانتا تكتفيان بـconsole.warn قبل هذا الإصلاح', () => {
+        // العطل الأصلي (قبل دفعة 6): معالجة الفشل كانت تنتهي عند console.warn فقط.
+        // الإصلاح الحقيقي *أضاف* استدعاء captureException بجانب console.warn
+        // القائم أصلاً (لم يستبدله) — تحقّق من نص الملف الحقيقي نفسه لا نسخة
+        // مصطنعة معزولة؛ لو حُذف أحد استدعائي captureException من الكود الفعلي
+        // لفشل هذا التوقع.
+        const src = readFileSync(SERVICE_PATH, 'utf8');
+        expect(src).toMatch(/console\.warn\("Cloud load failed, falling back to local:", e\)/);
+        expect(src).toMatch(/console\.warn\("Cloud list failed:", e\)/);
+        expect(src).toMatch(/monitoring\.captureException\(e,\s*\{\s*source:\s*'PersistenceService\.load'/);
+        expect(src).toMatch(/monitoring\.captureException\(e,\s*\{\s*source:\s*'PersistenceService\.listHeaders'/);
     });
 });

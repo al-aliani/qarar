@@ -185,14 +185,15 @@ describe('store._syncToCloud — يُبلِّغ cloudSyncFailed فعلياً ب�
         expect(saveMock.mock.calls[1][1]).toEqual({ marker: 'LATEST_WHILE_BUSY' });
     });
 
-    it('[إثبات الحارس] العطل الأصلي: _lastSaveStatus لم يكن يحمل cloudSyncFailed إطلاقاً بصرف النظر عن قيمته الحقيقية', () => {
-        const oldStatusBuilder = (result) => ({
-            location: result.location || 'local',
-            success: result.success !== false,
-            error: result.error,
-        });
-        const status = oldStatusBuilder({ success: true, location: 'local', cloudSyncFailed: true });
-        expect(status.cloudSyncFailed).toBeUndefined(); // العطل الأصلي: القيمة تختفي كلياً
-        expect(status.success).toBe(true); // فيظهر "محفوظ محلياً" كأن كل شيء طبيعي
+    it('[إثبات الحارس] استدعاء _syncToCloud الحقيقي فعلياً: cloudSyncFailed يصل إلى _lastSaveStatus الحقيقي لا يختفي', async () => {
+        saveMock.mockResolvedValue({ success: true, location: 'local', cloudSyncFailed: true, error: 'timeout' });
+
+        await store._syncToCloud({ projectInfo: { id: 'study-1' } });
+
+        // العطل الأصلي: لو حُذف `cloudSyncFailed: Boolean(result.cloudSyncFailed)` من بناء
+        // _lastSaveStatus الحقيقي في store.js._syncToCloud، كانت هذه القيمة تختفي كلياً
+        // بصرف النظر عن قيمتها الحقيقية في result، فيظهر "محفوظ محلياً" كأن كل شيء طبيعي.
+        expect(store._lastSaveStatus.cloudSyncFailed).toBe(true);
+        expect(store._lastSaveStatus.success).toBe(true);
     });
 });

@@ -28,10 +28,10 @@ describe('scenario-switcher.css — .comparison-table-wrapper قابل للتم�
         expect(js).toMatch(/comparison-table-wrapper/);
     });
 
-    it('[إثبات الحارس] حذف القاعدة يُعيد غياب overflow-x الكامل', () => {
+    it('[إثبات الحارس] overflow-x:auto موجود فعلياً داخل قاعدة .comparison-table-wrapper الحقيقية (لا في أي مكان آخر)', () => {
         const css = stripComments(read('scenario-switcher.css'));
-        const broken = css.replace(/\.comparison-table-wrapper\s*\{[^}]*\}\s*/, '');
-        expect(broken).not.toMatch(/\.comparison-table-wrapper\s*\{/);
+        const matches = css.match(/\.comparison-table-wrapper\s*\{[^}]*overflow-x:\s*auto[^}]*\}/g) || [];
+        expect(matches.length, 'حذف overflow-x من القاعدة الحقيقية يعني عودة الفيض بلا تمرير ممكن على الجوال').toBe(1);
     });
 });
 
@@ -54,9 +54,11 @@ describe('components.css — .btn-magic-cell مصمَّم لا زر متصفح �
         expect(js).toMatch(/btn-magic-cell/);
     });
 
-    it('[إثبات الحارس] حذف القاعدة يُعيد غياب أي تصميم للزر', () => {
+    it('[إثبات الحارس] القاعدة الأساسية وhover لـ.btn-magic-cell موجودتان فعلياً في الملف الحقيقي', () => {
         const css = stripComments(read('components.css'));
-        const broken = css.replace(/\.btn-magic-cell\s*\{[^}]*\}\s*\n?\.btn-magic-cell:hover\s*\{[^}]*\}\s*\n?/, '');
-        expect(broken.match(/\.btn-magic-cell\s*\{/)).toBeNull();
+        const base = css.match(/\.btn-magic-cell\s*\{[^}]*border:\s*none[^}]*background:\s*var\(--c-p-subtle\)[^}]*\}/);
+        const hover = css.match(/\.btn-magic-cell:hover\s*\{[^}]*background:\s*var\(--c-gold-subtle\)[^}]*\}/);
+        expect(base, 'حذف القاعدة الأساسية يعيد الزر لتصميم المتصفح الافتراضي (مربع رمادي بحدود)').toBeTruthy();
+        expect(hover, 'حذف حالة hover تكسر التناسق مع .btn-magic-wand').toBeTruthy();
     });
 });

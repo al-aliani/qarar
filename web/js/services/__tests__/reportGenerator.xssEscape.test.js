@@ -10,7 +10,13 @@
  * validation.js:80 يُضمِّن "label" مصدر الإيراد حرفياً في رسالة الخطأ).
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { ReportGenerator } from '../ReportGenerator.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SOURCE = readFileSync(join(__dirname, '../ReportGenerator.js'), 'utf8');
 
 function makeStore(state) {
     return { getState: () => state };
@@ -41,10 +47,11 @@ describe('ReportGenerator — تهريب HTML بالملخص التنفيذي و
         expect(html).toContain('مشروع مطعم شاورما في الرياض');
     });
 
-    it('[إثبات الحارس] العطل الأصلي: إدراج النص الحر بلا escapeHtml كان سيُبقي وسم <script> خاماً', () => {
-        const raw = '<script>alert(1)</script>';
-        const buggyHtml = `<p>${raw || 'fallback'}</p>`;
-        expect(buggyHtml).toContain('<script>alert(1)</script>');
+    it('[إثبات الحارس] قراءة السطر الحقيقي في ReportGenerator.js: projectOverview وaiGeneratedText مُغلَّفان فعلياً بـescapeHtml (لا اعتماد على سطر مصطنع)', () => {
+        const line = SOURCE.split('\n').find((l) => l.includes('executiveSummary?.projectOverview ?'));
+        expect(line, 'سطر إدراج الملخص التنفيذي لم يُعثر عليه في ReportGenerator.js').toBeTruthy();
+        expect(line).toContain('escapeHtml(state.executiveSummary.projectOverview)');
+        expect(line).toContain('escapeHtml(state.executiveSummary.aiGeneratedText)');
     });
 });
 
@@ -69,9 +76,10 @@ describe('ReportGenerator — رابط حجز الاستشارة (consultationBo
         expect(html).toContain('احجز استشارة مع خبير');
     });
 
-    it('[إثبات الحارس] العطل الأصلي: تهريب علامة التنصيص وحده لا يمنع مخطط javascript:', () => {
-        const raw = 'javascript:alert(1)';
-        const buggyHref = String(raw).replace(/"/g, '&quot;');
-        expect(buggyHref).toBe('javascript:alert(1)');
+    it('[إثبات الحارس] قراءة السطر الحقيقي في ReportGenerator.js: رابط الاستشارة محروس فعلياً بتحقق مخطط https قبل الإدراج (لا تهريب علامة تنصيص وحده)', () => {
+        const line = SOURCE.split('\n').find((l) => l.includes('consultationBookingUrl'));
+        expect(line, 'سطر رابط حجز الاستشارة لم يُعثر عليه في ReportGenerator.js').toBeTruthy();
+        expect(line).toContain('/^https?:\\/\\//i.test(');
+        expect(line).toContain('href="${escapeHtml(state.consultationBookingUrl.trim())}"');
     });
 });

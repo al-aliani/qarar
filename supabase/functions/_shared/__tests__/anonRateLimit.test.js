@@ -56,13 +56,12 @@ describe('extractClientIp', () => {
         expect(extractClientIp(req)).toBe('unknown');
     });
 
-    it('[إثبات الحارس] العطل الأصلي: أخذ أول عنصر كان يمنح المهاجم تحكماً كاملاً بمعرّف الحدّ', () => {
-        const oldExtractClientIp = (req) => {
-            const forwarded = req.headers.get('x-forwarded-for') || '';
-            return forwarded.split(',')[0]?.trim() || 'unknown';
-        };
+    it('[إثبات الحارس] استدعاء extractClientIp الحقيقية: القيمة المعادة ليست ما تحكّم به المهاجم في أول عنصر', async () => {
+        const { extractClientIp } = await import('../anonRateLimit.ts');
         const req = { headers: { get: () => 'attacker-fake-ip, 1.2.3.4, 10.0.0.1' } };
-        expect(oldExtractClientIp(req)).toBe('attacker-fake-ip'); // قيمة يتحكم بها المهاجم بالكامل
+        const ip = extractClientIp(req);
+        expect(ip).not.toBe('attacker-fake-ip'); // العطل الأصلي: أول عنصر يمنح المهاجم تحكماً كاملاً بمعرّف الحدّ
+        expect(ip).toBe('10.0.0.1');
     });
 });
 

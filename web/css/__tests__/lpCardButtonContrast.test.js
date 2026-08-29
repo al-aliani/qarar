@@ -62,14 +62,16 @@ describe('legal-pages.css — .lp-card لا تسرق لون نص أزرار .btn
         expect(contrast(BTN_CONTRAST, BTN_GRADIENT_BOTTOM)).toBeGreaterThanOrEqual(4.5);
     });
 
-    it('[إثبات الحارس] إزالة :not(.btn) تُعيد نص الأزرار إلى --lp-primary غير المقروء', () => {
+    it('[إثبات الحارس] لو غابت :not(.btn) عن القاعدة الحقيقية لسقط تباين نص .btn--primary دون WCAG', () => {
+        // نقرأ القاعدة الحقيقية من الملف الحيّ (لا نسخة معطوبة مصطنعة) ونحسب فعلياً
+        // ما كان سيحدث للتباين لو غابت :not(.btn) عنها تحديداً: عندها --lp-primary
+        // يسطو على لون نص .btn--primary نفسه (تخصيص 0-1-1 يهزم 0-1-0).
         const css = read('legal-pages.css').replace(/\/\*[\s\S]*?\*\//g, '');
-        const broken = css.replace(/\.lp-card a:not\(\.btn\)/g, '.lp-card a');
-        const rule = broken.match(/\.lp-card a\s*\{[^}]*color:\s*var\(--lp-primary\)[^}]*\}/);
-        expect(rule, 'إعادة إدخال العيب فشلت — النمط تغيّر').toBeTruthy();
-        // القاعدة المعطوبة تطبّق --lp-primary على كل <a> داخل .lp-card بلا استثناء،
-        // فتتفوق (0-1-1) على قاعدة .btn--primary (0-1-0) وتُلغي الأبيض المقصود —
-        // وهذا بالضبط ما كان يحدث فعلياً قبل هذا الإصلاح.
-        expect(contrast(LP_PRIMARY, BTN_GRADIENT_TOP)).toBeLessThan(1.5);
+        const rule = css.match(/\.lp-card a[^{]*\{[^}]*color:\s*var\(--lp-primary\)[^}]*\}/);
+        expect(rule, 'قاعدة .lp-card a بلون --lp-primary غير موجودة في الملف الحقيقي').toBeTruthy();
+
+        const hasExclusion = /\.lp-card a:not\(\.btn\)/.test(rule[0]);
+        const effectiveTextColor = hasExclusion ? BTN_CONTRAST : LP_PRIMARY;
+        expect(contrast(effectiveTextColor, BTN_GRADIENT_TOP)).toBeGreaterThanOrEqual(4.5);
     });
 });

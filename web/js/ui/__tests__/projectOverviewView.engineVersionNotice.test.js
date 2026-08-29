@@ -61,9 +61,15 @@ describe('ProjectOverviewView — تنبيه تغيّر إصدار المحرك'
         expect(html).toContain('تحديث معادلات المحرك المالي');
     });
 
-    it('[إثبات الحارس] لو حُذف فحص المقارنة (أعيد نص فارغ دوماً) لفشل اختبار البانر أعلاه', async () => {
-        // محاكاة العطل الأصلي: دالة لا تقارن شيئاً، تعيد '' دوماً بصرف النظر عن البيانات.
-        const alwaysEmpty = () => '';
-        expect(alwaysEmpty({ engineVersion: 'v-old' })).not.toContain('po__engine-notice');
+    it('[إثبات الحارس] استدعاء مباشر لـ_renderEngineVersionNotice الحقيقية (لا بديل مصطنع): تعتمد فعلياً على المقارنة', async () => {
+        const { ProjectOverviewView } = await import('../ProjectOverviewView.js');
+        const view = new ProjectOverviewView('host', { set: vi.fn() }, {});
+
+        // استدعاء الدالة الحقيقية نفسها (لا نسخة بديلة منفصلة) — لو حُذف فحص
+        // المقارنة من الكود الفعلي (أعاد '' دوماً كما كانت الحال قبل قرار اللجنة
+        // 2026-08-27) لفشل هذا التوقع تحديداً، لا توقعاً على دالة وهمية معزولة.
+        expect(view._renderEngineVersionNotice({ _meta: { engineVersion: 'v-old' } })).toContain('po__engine-notice');
+        expect(view._renderEngineVersionNotice({ _meta: { engineVersion: 'v-current' } })).toBe('');
+        expect(view._renderEngineVersionNotice({ _meta: undefined })).toBe('');
     });
 });

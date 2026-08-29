@@ -44,9 +44,16 @@ describe('components.css — .btn--outline معرَّف فعلياً (لا يع�
         expect(pricingHtml).toMatch(/btn--outline/);
     });
 
-    it('[إثبات الحارس] حذف قاعدة .btn--outline يُعيد الأزرار لانعدام أي تصميم', () => {
-        const css = read('components.css').replace(/\/\*[\s\S]*?\*\//g, '');
-        const broken = css.replace(/\.btn--outline\s*\{[^}]*\}\s*\n?\s*\.btn--outline:hover\s*\{[^}]*\}\s*\n?/, '');
-        expect(broken.match(/\.btn--outline\s*\{/)).toBeNull();
+    it('[إثبات الحارس] لا قاعدة بديلة في أي ملف CSS آخر تُعيد تصميم .btn--outline لو حُذفت هذه القاعدة', () => {
+        // العطل الأصلي: العنصر لم يكن له أي تعريف مخصص أصلاً في المشروع كله، فسقط
+        // لتصميم المتصفح الافتراضي (بلا حدود ولا خلفية). نتحقق من الملفات الحقيقية
+        // مباشرة أن القاعدة الوحيدة التي تمنح .btn--outline حدوداً/خلفية هي هذه —
+        // لا قاعدة أخرى "تُنقذها" لو حُذفت هذه بالذات.
+        const files = ['main.css', 'components.css', 'legal-pages.css'];
+        const matches = files.flatMap((f) => {
+            const css = read(f).replace(/\/\*[\s\S]*?\*\//g, '');
+            return css.match(/\.btn--outline\s*\{[^}]*(?:border|background)[^}]*\}/g) || [];
+        });
+        expect(matches.length, 'يجب أن توجد قاعدة واحدة بالضبط تمنح .btn--outline حدوداً/خلفية في شجرة CSS كلها').toBe(1);
     });
 });
