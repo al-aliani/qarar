@@ -6,31 +6,31 @@
  * المخاطرة هنا قبل هذا الملف: ثغرة 'free' tier (انظر أدناه) لم تكن ستُكتشف بأي
  * اختبار قائم لأن شيئاً لا يستدعي المعالج الحقيقي.
  *
- * الثغرة المُصلَحة: pricing.ts يعرّف 'free' كـTier صالح (price:0) موجود فقط لعرض
- * صفحة الأسعار/المقارنة على العميل (web/js/core/pricing.js PRICING_COMPARISON.free)
- * — ليست منتجاً يُشترى. قبل هذا الإصلاح، `getPackage('free')` كان يُعيد باقة صالحة
- * فيمرّ فحص `if (!pkg) return 400` بلا أي مانع، وبما أن price=0 فبلا أي addons أو
- * كوبون يصبح `total === 0`، فيدخل الكود فرع «كوبون خصم 100%» الذي يؤكّد الطلب
- * status='paid' مباشرة — طلب مدفوع بالكامل بلا أي دفع فعلي. الإصلاح: PAYABLE_TIERS
- * في index.ts يرفض أي tier ليس ضمن ('self','reviewed','full') — نفس قائمة قيد
- * orders_tier_check في migration 20260709120000_create_orders_payments.sql — قبل
- * الوصول لأي منطق حساب أو إنشاء صف orders.
+ * الثغرة المُصلَحة (دفعة أمنية سابقة، #51): pricing.ts يعرّف 'free' كـTier صالح
+ * (price:0) موجود فقط لعرض صفحة الأسعار/المقارنة على العميل
+ * (web/js/core/pricing.js PRICING_COMPARISON.free) — ليست منتجاً يُشترى. قبل ذلك
+ * الإصلاح، `getPackage('free')` كان يُعيد باقة صالحة فيمرّ فحص `if (!pkg) return
+ * 400` بلا أي مانع، وبما أن price=0 فبلا أي addons أو كوبون يصبح `total === 0`،
+ * فيدخل الكود فرع «كوبون خصم 100%» الذي يؤكّد الطلب status='paid' مباشرة — طلب
+ * مدفوع بالكامل بلا أي دفع فعلي. الإصلاح: PAYABLE_TIERS في index.ts يرفض أي tier
+ * ليس ضمن ('self','reviewed','full') — نفس قائمة قيد orders_tier_check في
+ * migration 20260709120000_create_orders_payments.sql — قبل الوصول لأي منطق حساب
+ * أو إنشاء صف orders.
  *
- * تنبيه مهم اكتُشف أثناء التحقيق: قيد orders_tier_check في القاعدة الحقيقية لم
- * يُوسَّع قط ليشمل 'free' (يبقى check (tier in ('self','reviewed','full')) —
- * لا ALTER لاحق يغيّره)، فإدراج صف بtier='free' كان سيفشل أصلاً بعطل قيد على
- * Postgres حقيقي (insertError ⇒ 500 order_creation_failed) لا أن يمنح paid. لكن
- * هذا حماية عرضية بحتة على مستوى القاعدة فقط — index.ts نفسه لم يكن يملك أي مانع
- * تطبيقي مستقل، فأي بيئة اختبار/محاكاة لا تفرض قيد القاعدة (كهذا الملف بالضبط،
- * أو أي تخفيف مستقبلي للقيد — سابقة موجودة فعلاً: 20260717010000_whatsapp_otp_
- * verification.sql وسّع قيداً مشابهاً "preferred_tier" ليشمل 'free' تحديداً) كانت
- * ستمنح status='paid' فوراً. هذا الملف يثبت أن index.ts نفسه يرفض الآن دون أي
- * اعتماد على قيد القاعدة.
+ * دفعة إصلاح مهلات مزوّدي الدفع 2026-08-29 (هذه الدفعة): fetch لدى Moyasar/Stripe/
+ * Tamara (supabase/functions/_shared/providers/*.ts) كان بلا أي مهلة — تعليق شبكي
+ * حقيقي هناك (لا استجابة، لا رفض) كان يُعلّق create-checkout نفسه للأبد، تاركاً
+ * العميل أمام واجهة دفع متجمّدة بلا أي ملاحظة. الوصف السفلي يحقن رفض AbortError/
+ * TimeoutError من طبقة المزوّد (بدل انتظار 15 ثانية حقيقية لإطلاق
+ * AbortSignal.timeout فعلياً — تلك المهلة آلية منصّة موثوقة، والتوصيل الفعلي
+ * لـsignal مُختبَر توصيلاً في providers/__tests__/*.test.js) ليثبت أن create-checkout
+ * يتعامل مع هذا الرفض بوضوح: تحديث الطلب لحالة failed، تنبيه عبر sendAlert،
+ * واستجابة 502 واضحة — لا تعليق أبدي ولا استثناء غير مُعالَج يهرب من المعالج.
  *
  * نمط الاختبار مطابق لـwebhook-moyasar: تمويه globalThis.Deno + التقاط المعالج
  * الحقيقي عبر Deno.serve، مع استخدام pricing.ts/catalog.ts/cors.ts/rateLimit.ts
  * الحقيقية (لا موك) — فقط createClient ومزوّدو الدفع الثلاثة (نداءات HTTP خارجية
- * فعلية) مُموَّهة.
+ * فعلية) وsendAlert (تنبيه خارجي حقيقي أيضاً) مُموَّهة.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -41,6 +41,7 @@ let capturedHandler = null;
 let authState = null; // { data: { user }, error }
 let ordersState = null; // آخر صف orders أُنشئ (يُحدَّث بنفس مرجع الكائن كما تفعل القاعدة الحقيقية)
 let orderIdSeq = 0;
+const sendAlertMock = vi.fn();
 
 function buildOrdersTable() {
     return {
@@ -119,6 +120,15 @@ const createTamaraCheckout = vi.fn(async () => ({ checkoutUrl: 'https://tamara.e
 vi.mock('../../_shared/providers/moyasar.ts', () => ({ createMoyasarCheckout: (...a) => createMoyasarCheckout(...a) }));
 vi.mock('../../_shared/providers/stripe.ts', () => ({ createStripeCheckout: (...a) => createStripeCheckout(...a) }));
 vi.mock('../../_shared/providers/tamara.ts', () => ({ createTamaraCheckout: (...a) => createTamaraCheckout(...a) }));
+vi.mock('../../_shared/alerting.ts', () => ({ sendAlert: (...a) => sendAlertMock(...a) }));
+
+function makeRequest(body, { origin = 'https://sahib.sa' } = {}) {
+    return {
+        method: 'POST',
+        json: async () => body,
+        headers: new Map([['Authorization', 'Bearer valid-jwt'], ['origin', origin]]),
+    };
+}
 
 beforeEach(async () => {
     authState = { data: { user: { id: 'user-1' } }, error: null };
@@ -128,6 +138,7 @@ beforeEach(async () => {
     createMoyasarCheckout.mockClear();
     createStripeCheckout.mockClear();
     createTamaraCheckout.mockClear();
+    sendAlertMock.mockClear();
 
     globalThis.Deno = {
         serve: (handler) => { capturedHandler = handler; },
@@ -146,14 +157,6 @@ beforeEach(async () => {
     vi.resetModules();
     await import('../index.ts');
 });
-
-function makeRequest(body, { origin = 'https://sahib.sa' } = {}) {
-    return {
-        method: 'POST',
-        json: async () => body,
-        headers: new Map([['Authorization', 'Bearer valid-jwt'], ['origin', origin]]),
-    };
-}
 
 describe("create-checkout/index.ts — تدقيق أمني 2026-08-29: رفض tier='free' (وأي باقة غير مدفوعة فعلاً)", () => {
     it("يرفض 400 invalid_tier لطلب tier='free' مباشر (تجاوز الواجهة تماماً)، ولا يُنشئ أي صف orders", async () => {
@@ -211,5 +214,52 @@ describe('create-checkout/index.ts — المسار الشرعي يبقى يعم
         expect(res.status).toBe(200);
         expect(ordersState.tier).toBe('reviewed');
         expect(createTamaraCheckout).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('create-checkout/index.ts — تعليق/مهلة مزوّد الدفع لا يُعلّق الدالة للأبد', () => {
+    it('AbortError/TimeoutError من Moyasar ⇒ 502 واضح، الطلب يتحوّل failed، وتنبيه sendAlert بنوع provider_timeout', async () => {
+        createMoyasarCheckout.mockRejectedValueOnce(new DOMException('signal timed out', 'TimeoutError'));
+
+        const res = await capturedHandler(makeRequest({ tier: 'self', provider: 'moyasar' }));
+        const body = await res.json();
+
+        expect(res.status).toBe(502);
+        expect(body).toEqual({ error: 'checkout_creation_failed' });
+        expect(ordersState.status).toBe('failed');
+        expect(sendAlertMock).toHaveBeenCalledTimes(1);
+        const [, ctx] = sendAlertMock.mock.calls[0];
+        expect(ctx.tags.kind).toBe('provider_timeout');
+        expect(ctx.tags.source).toBe('create-checkout');
+        expect(ctx.message).toContain('timeout=true');
+    });
+
+    it('فشل عادي (غير مهلة) من Stripe ⇒ نفس استجابة 502 الواضحة، لكن تنبيه sendAlert بنوع provider_checkout_failed لا provider_timeout', async () => {
+        createStripeCheckout.mockRejectedValueOnce(new Error('Stripe checkout session creation failed (400): bad request'));
+
+        const res = await capturedHandler(makeRequest({ tier: 'self', provider: 'stripe' }));
+        const body = await res.json();
+
+        expect(res.status).toBe(502);
+        expect(body).toEqual({ error: 'checkout_creation_failed' });
+        expect(ordersState.status).toBe('failed');
+        const [, ctx] = sendAlertMock.mock.calls[0];
+        expect(ctx.tags.kind).toBe('provider_checkout_failed');
+    });
+
+    it('[إثبات الحارس] رفض المزوّد يُعاد كاستجابة Response منظّمة لا كاستثناء يهرب من المعالج (العطل الأصلي: بلا try/catch حول استدعاء المزوّد كان يُسقط الطلب كرفض غير مُعالَج)', async () => {
+        createMoyasarCheckout.mockRejectedValueOnce(new DOMException('signal timed out', 'TimeoutError'));
+        await expect(capturedHandler(makeRequest({ tier: 'self', provider: 'moyasar' }))).resolves.toBeInstanceOf(Response);
+    });
+
+    it('نجاح عادي (بلا تعليق) يبقى يعمل كالمعتاد بعد إضافة المهلة — checkoutUrl وorderId يُعادان، لا تنبيه ولا فشل', async () => {
+        const res = await capturedHandler(makeRequest({ tier: 'self', provider: 'tamara' }));
+        const body = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(body.checkoutUrl).toBe('https://tamara.example/pay/abc');
+        expect(body.orderId).toBeTruthy();
+        expect(ordersState.status).not.toBe('failed');
+        expect(sendAlertMock).not.toHaveBeenCalled();
     });
 });

@@ -12,6 +12,11 @@
 
 const TAMARA_API_BASE = 'https://api.tamara.co';
 
+// تدقيق 2026-08-29: fetch() هنا بلا أي مهلة — تعليق شبكي فعلي لدى تمارا كان يُعلّق
+// create-checkout للأبد. نفس نمط nameAvailability.ts (AbortSignal.timeout). 15 ثانية:
+// كافية لنداء مزوّد دفع حقيقي (قد يستغرق فعلاً بضع ثوانٍ)، لكن غير مفتوحة بلا سقف.
+const FETCH_TIMEOUT_MS = 15000;
+
 export interface TamaraCheckoutParams {
   amountSar: number;
   description: string;
@@ -65,6 +70,7 @@ export async function createTamaraCheckout(
       },
       metadata: params.metadata,
     }),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {

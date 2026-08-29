@@ -74,6 +74,21 @@ describe('createStripeCheckout', () => {
       createStripeCheckout('bad_key', { amountSar: 100, description: 'x', successUrl: 'https://x.com', cancelUrl: 'https://x.com', metadata: {} })
     ).rejects.toThrow(/400/);
   });
+
+  // تدقيق 2026-08-29: fetch كان بلا أي مهلة — تعليق شبكي فعلي لدى Stripe كان يُعلّق
+  // create-checkout للأبد.
+  it('يمرّر signal (AbortSignal.timeout) إلى fetch — الطلب محدود بمهلة لا مفتوح للأبد', async () => {
+    await createStripeCheckout('sk_test', { amountSar: 100, description: 'x', successUrl: 'https://x.com', cancelUrl: 'https://x.com', metadata: {} });
+    const [, options] = fetchMock.mock.calls[0];
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('لا يبتلع رفض التعليق/المهلة صامتاً — ينتشر للمستدعي فعلياً (لا نتيجة وهمية، لا ابتلاع)', async () => {
+    fetchMock.mockRejectedValueOnce(new DOMException('signal timed out', 'TimeoutError'));
+    await expect(
+      createStripeCheckout('sk_test', { amountSar: 100, description: 'x', successUrl: 'https://x.com', cancelUrl: 'https://x.com', metadata: {} })
+    ).rejects.toMatchObject({ name: 'TimeoutError' });
+  });
 });
 
 describe('parseStripeWebhookStatus / getStripeSessionId', () => {

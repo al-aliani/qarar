@@ -81,6 +81,33 @@ describe('createTamaraCheckout', () => {
             })
         ).rejects.toThrow(/401/);
     });
+
+    // تدقيق 2026-08-29: fetch كان بلا أي مهلة — تعليق شبكي فعلي لدى تمارا كان يُعلّق
+    // create-checkout للأبد.
+    it('يمرّر signal (AbortSignal.timeout) إلى fetch — الطلب محدود بمهلة لا مفتوح للأبد', async () => {
+        await createTamaraCheckout('token', {
+            amountSar: 100,
+            description: 'x',
+            callbackUrl: 'https://x.com',
+            notificationUrl: 'https://project.supabase.co/functions/v1/webhook-tamara',
+            metadata: {},
+        });
+        const [, options] = fetchMock.mock.calls[0];
+        expect(options.signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it('لا يبتلع رفض التعليق/المهلة صامتاً — ينتشر للمستدعي فعلياً (لا نتيجة وهمية، لا ابتلاع)', async () => {
+        fetchMock.mockRejectedValueOnce(new DOMException('signal timed out', 'TimeoutError'));
+        await expect(
+            createTamaraCheckout('token', {
+                amountSar: 100,
+                description: 'x',
+                callbackUrl: 'https://x.com',
+                notificationUrl: 'https://project.supabase.co/functions/v1/webhook-tamara',
+                metadata: {},
+            })
+        ).rejects.toMatchObject({ name: 'TimeoutError' });
+    });
 });
 
 describe('parseTamaraWebhookStatus', () => {

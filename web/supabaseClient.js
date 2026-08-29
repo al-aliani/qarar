@@ -61,6 +61,30 @@ function showDevProdWarningBanner() {
   else document.addEventListener("DOMContentLoaded", show, { once: true });
 }
 
+/**
+ * تدقيق 2026-08-29: عميل Supabase يُنشأ بلا أي مهلة على fetch — تعليق شبكي فعلي
+ * (لا استجابة، لا رفض) لدى أي استدعاء (حفظ/تحميل دراسة، مصادقة...) كان يُعلّق العملية
+ * للأبد بلا أي ملاحظة للمستخدم (لا خطأ، لا تايم-آوت، فقط دوّار تحميل أبدي).
+ * نمرّر دالة fetch مغلّفة عبر خيار global.fetch الموثَّق في supabase-js (createClient).
+ *
+ * ملاحظة تصميم: لم نستخدم AbortSignal.timeout() هنا (رغم استخدامها في
+ * supabase/functions/_shared/nameAvailability.ts على جانب الخادم) — تجربة فعلية أثبتت
+ * أنها لا تتأثر بمؤقّتات Vitest الوهمية (vi.useFakeTimers)، أي لا يمكن اختبار إطلاقها
+ * فعلياً دون انتظار حقيقي. النمط هنا مطابق تماماً لـ AIConnector.js._postJson
+ * (AbortController + setTimeout يدوياً) — قابل للاختبار بمؤقّتات وهمية، وتوافق أوسع
+ * مع المتصفحات القديمة لكود يعمل في المتصفح مباشرة (خلافاً لدوال الحافة أعلاه).
+ */
+const DEFAULT_FETCH_TIMEOUT_MS = 25000; // أطول من AIConnector.js (20000) لأن حمولة دراسة كاملة قد تكون أضخم من طلب توليد نص
+
+/** يغلّف fetch بمهلة افتراضية ما لم يمرّر المستدعي (supabase-js) signal خاصاً به بالفعل —
+ *  عندها لا نتدخل ونتركه كما هو. */
+export function fetchWithTimeout(input, init = {}) {
+  if (init && init.signal) return fetch(input, init);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_FETCH_TIMEOUT_MS);
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+}
+
 let _client = null;
 let _lastError = "";
 /** Promise of the first client creation — avoids multiple GoTrueClient when getSupabaseClient() is called concurrently */
@@ -158,6 +182,7 @@ export async function getSupabaseClient() {
           autoRefreshToken: true,
           detectSessionInUrl: true,
         },
+        global: { fetch: fetchWithTimeout },
       });
       _client = supabase;
       _lastError = "";
