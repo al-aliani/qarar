@@ -19,13 +19,14 @@
  *    إلزامي قبل العرض (فخّ متكرر موثّق: أنتج سابقاً «عائد داخلي −0.1%» في تقرير ممول).
  */
 import { ProjectManager } from '../services/ProjectManager.js';
-import { calculateStudy, ENGINE_VERSION } from '../core/engine.js';
+import { calculateStudy } from '../core/engine.js';
 import { getOfficialIndicators } from '../core/resultContract.js';
 import { generateExecutiveSummary } from '../services/InternalAIGenerator.js';
 import { calculateStudyCompleteness } from '../utils/studyCompleteness.js';
 import { escapeHtml } from '../utils/escape.js';
 import { runQAChecks } from '../utils/qaChecks.js';
 import { buildDecisionQualityGate } from '../utils/decisionQuality.js';
+import { renderEngineVersionNotice } from '../utils/engineVersionNotice.js';
 
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
 
@@ -102,9 +103,13 @@ export class ProjectOverviewView {
             console.warn('[ProjectOverviewView] تعذّر جلب اسم المشروع من الفهرس:', e);
         }
 
-        // تحميل الدراسة في المخزن المشترك: زر «تعديل» ينقل للويزارد الذي يقرأ من المخزن،
-        // فبدون هذا يفتح الويزارد على دراسة أخرى (أو فارغة).
-        try { this.store?.set?.(data); } catch (e) { console.warn('[ProjectOverviewView] store.set فشل:', e); }
+        // بلوكر بانر إصدار المحرك (2026-08-29): store.set(data) هنا كان يُحمَّل عند كل *عرض*
+        // للصفحة (مجرّد زيارة، بلا أي نيّة تعديل)، و set() يستدعي save() داخلياً — سلسلة
+        // حفظ تُنهي بإعادة وسم _meta.engineVersion بعد ~1.8 ثانية بلا أي تفاعل من المستخدم،
+        // فيختفي تنبيه تغيّر المحرك (أدناه) بمجرد فتح الصفحة قبل أن يُقرأ أصلاً. نحتفظ ببيانات
+        // الدراسة المحمَّلة هنا فقط، ونؤجّل store.set الفعلي إلى لحظة الضغط على «تعديل» في
+        // _bind() — عندها فقط تحميل الدراسة في المخزن نيّة حقيقية (المستخدم سينتقل للويزارد).
+        this._loadedData = data;
 
         let results = null;
         try {
@@ -155,21 +160,14 @@ export class ProjectOverviewView {
     }
 
     /**
-     * قرار لجنة 2026-08-27 (انظر engine.js:ENGINE_VERSION): لا تنبيه لو لم
-     * تُحفَظ الدراسة قط ببصمة إصدار سابقة (لا أساس مقارنة — دراسات قديمة قبل
-     * هذه الميزة)، ولا لو النسخة المحفوظة تطابق الحالية. تنبيه فقط حين نعرف
-     * فعلياً أن المعادلات تغيّرت منذ آخر حفظ لهذه الدراسة تحديداً.
+     * منطق المقارنة والنص منتقلان إلى utils/engineVersionNotice.js (خطة إصلاح البانر،
+     * بند 4، 2026-08-29) — هذه الشاشة كانت المصدر الوحيد للفحص، وتوسيع التغطية لأسطح
+     * أخرى (ShareView وDecisionDashboard وExecutiveSummary) يعني تكراره بلا هذا التوحيد.
+     * السلوك نفسه كما كان: لا تنبيه بلا بصمة سابقة (لا أساس مقارنة)، ولا حين تطابق
+     * الحالية — تنبيه فقط حين تغيّرت المعادلات فعلياً منذ آخر حفظ لهذه الدراسة.
      */
     _renderEngineVersionNotice(data) {
-        const savedVersion = data?._meta?.engineVersion;
-        if (!savedVersion || savedVersion === ENGINE_VERSION) return '';
-        return `
-            <div class="po__engine-notice" role="note">
-                تم تحديث معادلات المحرك المالي منذ آخر حفظ لهذه الدراسة — قد تختلف
-                الأرقام المعروضة الآن عمّا رأيته أو صدّرته سابقاً. احفظ الدراسة من
-                جديد لتثبيت النسخة الحالية.
-            </div>
-        `;
+        return renderEngineVersionNotice(data);
     }
 
     _renderHeader(data, completeness, headerName = '') {
@@ -290,6 +288,14 @@ export class ProjectOverviewView {
 
     _bind() {
         this.container.querySelectorAll('.po__back').forEach(b => b.addEventListener('click', () => this.onBack()));
-        this.container.querySelectorAll('.po__edit').forEach(b => b.addEventListener('click', () => this.onEdit(this.projectId)));
+        // تحميل الدراسة في المخزن المشترك عند الضغط الفعلي على «تعديل» فقط — لا عند مجرّد
+        // العرض (انظر تعليق render() أعلاه). زر التعديل ينقل للويزارد الذي يقرأ من المخزن،
+        // فبدون هذا يفتح الويزارد على دراسة أخرى (أو فارغة) — ولأن this._loadedData هي
+        // دائماً بيانات هذه الدراسة تحديداً (حُمِّلت طازجة في render() لهذا الاستدعاء)، لا
+        // خطر من فتح دراسة خاطئة كما كان في الخلل التاريخي الذي حرست منه هذه الشاشة سابقاً.
+        this.container.querySelectorAll('.po__edit').forEach(b => b.addEventListener('click', () => {
+            try { this.store?.set?.(this._loadedData); } catch (e) { console.warn('[ProjectOverviewView] store.set فشل:', e); }
+            this.onEdit(this.projectId);
+        }));
     }
 }

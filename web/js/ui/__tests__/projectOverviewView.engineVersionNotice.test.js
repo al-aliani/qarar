@@ -57,7 +57,11 @@ describe('ProjectOverviewView — تنبيه تغيّر إصدار المحرك'
 
     it('يعرض بانراً صريحاً حين تختلف البصمة المحفوظة عن الإصدار الحالي', async () => {
         const html = await renderWith({ engineVersion: 'v-old' });
-        expect(html).toContain('po__engine-notice');
+        // الصنف صار عاماً في components.css (engine-version-notice) بعد توحيد المنطق
+        // في utils/engineVersionNotice.js (بند 4، 2026-08-29) — لم يعد po__engine-notice
+        // المحلي القديم، كي تستطيع أسطح أخرى (ShareView، DecisionDashboard، ExecutiveSummary)
+        // استخدام نفس الصنف بلا تكرار تنسيق.
+        expect(html).toContain('engine-version-notice');
         expect(html).toContain('تحديث معادلات المحرك المالي');
     });
 
@@ -68,7 +72,7 @@ describe('ProjectOverviewView — تنبيه تغيّر إصدار المحرك'
         // استدعاء الدالة الحقيقية نفسها (لا نسخة بديلة منفصلة) — لو حُذف فحص
         // المقارنة من الكود الفعلي (أعاد '' دوماً كما كانت الحال قبل قرار اللجنة
         // 2026-08-27) لفشل هذا التوقع تحديداً، لا توقعاً على دالة وهمية معزولة.
-        expect(view._renderEngineVersionNotice({ _meta: { engineVersion: 'v-old' } })).toContain('po__engine-notice');
+        expect(view._renderEngineVersionNotice({ _meta: { engineVersion: 'v-old' } })).toContain('engine-version-notice');
         expect(view._renderEngineVersionNotice({ _meta: { engineVersion: 'v-current' } })).toBe('');
         expect(view._renderEngineVersionNotice({ _meta: undefined })).toBe('');
     });

@@ -15,6 +15,7 @@ import { toast } from '../utils/toast.js';
 import { getOfficialIndicators } from '../core/resultContract.js';
 import { escapeHtml } from '../utils/escape.js';
 import { trackEvent } from '../utils/analytics.js';
+import { renderEngineVersionNotice } from '../utils/engineVersionNotice.js';
 
 export class ShareView {
     constructor(containerId, store, onNavigate) {
@@ -45,6 +46,13 @@ export class ShareView {
         // Generate Executive Summary if missing
         const execSummary = generateExecutiveSummary(state, engineResults);
 
+        // بند 4 (بانر إصدار المحرك، 2026-08-29): أعلى أولوية بين الأسطح المضافة — من يفتح
+        // رابط المشاركة (بنك/مستثمر) لا يملك وصولاً لـProjectOverviewView أصلاً، فبلا هذا
+        // كان لا توجد أي وسيلة تُعلمه أن الأرقام قد تكون تغيّرت منذ إنشاء صاحب الدراسة لهذا
+        // الرابط. يُدرَج داخل قسم الغلاف (z-10) لا قبل شريط التنقّل الثابت (fixed)، وإلا
+        // اختفى جزء منه تحت الشريط في أعلى الصفحة.
+        const engineNotice = renderEngineVersionNotice(state);
+
         this.container.innerHTML = `
             <div class="share-view bg-gray-50 min-h-screen font-sans">
                 <!-- Header / Navigation -->
@@ -64,6 +72,7 @@ export class ShareView {
                     <!-- نقش زخرفي مضمّن (data-URI) بدل طلب خارجي — أسرع وأأمن (يسمح بتضييق CSP img-src) -->
                     <div class="absolute inset-0 opacity-10" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 0h40v40H0z' fill='none'/%3E%3Cpath d='M0 20h40M20 0v40' stroke='%23ffffff' stroke-width='1' opacity='0.5'/%3E%3C/svg%3E&quot;);"></div>
                     <div class="z-10 max-w-4xl animate-fade-in-up">
+                        ${engineNotice}
                         <h1 class="text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-gold to-yellow-200">${escapeHtml(pi.name || 'مشروع جديد')}</h1>
                         <p class="text-2xl text-gray-300 font-light mb-8">${escapeHtml(pi.concept || 'فكرة المشروع')}</p>
                         <div class="inline-block border-t border-gold/50 pt-8 mt-4">

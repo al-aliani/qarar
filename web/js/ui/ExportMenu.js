@@ -15,6 +15,7 @@ import { toast } from '../utils/toast.js';
 import { log as auditLog, ACTIONS } from '../utils/auditLogger.js';
 import { trackEvent } from '../utils/analytics.js';
 import { attachModalA11y } from '../utils/modalA11y.js';
+import { isEngineVersionStale } from '../utils/engineVersionNotice.js';
 import { APP_CONFIG, BANK_COMPLIANCE_SENTENCE } from '../config.js';
 import { ConsultationModal } from './ConsultationModal.js';
 import { PaywallModal } from './PaywallModal.js';
@@ -632,7 +633,12 @@ export class ExportMenu {
         // احسب نتائج النموذج مرة واحدة (تُستخدم في بوابة الجودة وفي التصدير)
         let results = null;
         try { results = runFullModel(state); } catch (e) { }
-        if (results && this.store?.update) this.store.update('results', results);
+        // updateSectionInMemory لا update() العادية (بلوكر بانر إصدار المحرك، 2026-08-29):
+        // هذا الاستدعاء يسبق كل تصدير (أي زر في هذه القائمة)، فكان يُفعِّل سلسلة الحفظ
+        // الكاملة قبل أن يبدأ التصدير الفعلي أصلاً فيُعيد وسم _meta.engineVersion — أي أن
+        // الضغط على أي زر تصدير كان يمحو الدليل الذي يُبنى عليه تنبيه تغيّر إصدار المحرك،
+        // بصرف النظر عمّا إذا كانت الصيغة المصدَّرة (ReportGenerator.js) تعيد لمس المخزن أم لا.
+        if (results && this.store?.updateSectionInMemory) this.store.updateSectionInMemory('results', results);
 
         // ═══ بوابة الجودة الصارمة (QA Gate) ═══
         // لا يخرج أي تقرير موجَّه للعميل/الممول إذا كانت الدراسة ناقصة أو متناقضة.
@@ -654,6 +660,15 @@ export class ExportMenu {
                     if (!proceed) return; // أُلغي التصدير — الأزرار لم تتغيّر بعد
                 }
             }
+        }
+
+        // بند 4 (بانر إصدار المحرك، 2026-08-29): نفس التنبيه الذي يراه صاحب الدراسة في
+        // صفحة الخلاصة — تحذير غير معطِّل (لا يوقف التصدير) قبل توليد أي تقرير فعلياً،
+        // كي لا يفاجأ من يُصدِّر تقريراً بأرقام قد تختلف عمّا حُفظ سابقاً بلا أي إشارة.
+        // يُستثنى مثل بوابة الجودة أعلاه (RAW_EXPORTS): تصدير بيانات خام (JSON/مجلد) ليس
+        // "تقريراً" يقرأه بنك أو ممول، فلا داعي لهذا التحذير هناك.
+        if (!RAW_EXPORTS.has(type) && isEngineVersionStale(state)) {
+            toast.warning('تحديث معادلات المحرك المالي منذ آخر حفظ لهذه الدراسة — الأرقام في هذا التصدير محسوبة بالمعادلات الحالية وقد تختلف عمّا صدّرته سابقاً.');
         }
 
         const originalText = btn.innerHTML;

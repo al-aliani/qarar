@@ -504,6 +504,22 @@ select:focus {
     border: 1px solid var(--c-warning, #d99a00);
 }
 
+/* تنبيه بصمة إصدار المحرك (قرار لجنة 2026-08-27، وتوسيع التغطية 2026-08-29) —
+   مصدر تنسيق موحّد لكل الأسطح التي تستدعي renderEngineVersionNotice
+   (utils/engineVersionNotice.js): ProjectOverviewView وShareView وDecisionDashboard
+   وExecutiveSummary. لون تحذيري خفيف، ليس خطأ ولا قرار GO/REVISE/NO-GO، فلا
+   يستخدم .decision-banner عمداً. */
+.engine-version-notice {
+    margin-bottom: var(--s-4);
+    padding: var(--s-3) var(--s-4);
+    border: 1px solid var(--c-warning-subtle);
+    border-radius: var(--r-md);
+    background: var(--c-warning-subtle);
+    color: var(--c-warning-text);
+    font-size: 0.85rem;
+    line-height: 1.8;
+}
+
 .indicators-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

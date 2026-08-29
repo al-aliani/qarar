@@ -36,10 +36,13 @@ export class ProfessionalReviewReportGenerator {
     static generateHTML(store) {
         const state = store.getState ? store.getState() : store.get();
         const info = state.projectInfo || {};
+        // updateSectionInMemory لا update() العادية (بلوكر بانر إصدار المحرك، 2026-08-29):
+        // نفس علّة ReportGenerator.js — update() كانت تُفعِّل سلسلة الحفظ الكاملة فتمحو
+        // صمتاً وسم _meta.engineVersion الذي يُبنى عليه تنبيه تغيّر إصدار المحرك.
         let results;
         try {
             results = runFullModel(state);
-            if (store && typeof store.update === 'function') store.update('results', results);
+            if (store && typeof store.updateSectionInMemory === 'function') store.updateSectionInMemory('results', results);
         } catch (e) {
             results = state.results || {};
         }
