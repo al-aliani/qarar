@@ -10,19 +10,33 @@
 # كلياً بلا سابقة تثبته هنا. هذا الملف يتبع بدل ذلك نمط GitHub Actions
 # المجدولة الموثَّق فعلاً بمنطق أسرار مماثل (supabase-functions-deploy.yml).
 #
-# سرّ إضافي مطلوب (أضفه في Settings → Secrets and variables → Actions):
+# سرّان مطلوبان (أضفهما في Settings → Secrets and variables → Actions):
 #   - ACCOUNT_DELETION_CRON_SECRET (سرّ عشوائي جديد خاص بهذا الاستدعاء فقط —
 #     يُدفَع لأسرار Supabase عبر خطوة "Push payment provider secrets" الموجودة
 #     أصلاً في supabase-functions-deploy.yml؛ الدالة ترفض أي طلب لا يحمل هذا
 #     السرّ برأس Authorization: Bearer. ولّده بنفسك، مثال: openssl rand -hex 32)
-# يعتمد أيضاً على SUPABASE_URL الموجود أصلاً كسرّ في هذا المستودع.
+#   - SUPABASE_URL — أيضاً مطلوب صراحة (تصحيح 2026-08-30: التعليق السابق هنا
+#     زعم أنه "موجود أصلاً" بالمستودع، وهذا غير صحيح — تحقّق مباشر عبر
+#     gh secret list على al-aliani/qarar أثبت غيابه هو أيضاً).
+#
+# تصحيح 2026-08-30 (مراجعة عدائية بعد الدمج، بقرار مالك صريح): خطوة
+# check_secrets أدناه كانت تتبع نمط "تخطٍّ آمن + ::warning::" المستخدم في
+# supabase-migrations.yml/supabase-functions-deploy.yml. هذا النمط صحيح هناك
+# (مزوّد دفع أو نشر لم يُضبط بعد لا يكسر وعداً لعميل). هنا العكس تماماً: نص
+# privacy.html/data-retention.html يَعِد عملاء حقيقيين بمهلة تنفيذ محددة لحذف
+# حسابهم، فتخطٍّ صامت يعني وعداً مكسوراً بلا أي تنبيه — وهذا ما حدث فعلاً: كل
+# تشغيلة يومية منذ الدمج تخطّت نفسها صمتاً لأن السرَّين غائبان. لذلك، ولهذه
+# الوظيفة تحديداً فقط، تفشل الوظيفة (exit 1) بدل التخطي حين تغيب الأسرار كي
+# يظهر ✗ أحمر في تبويب Actions. النص القانوني رجع مؤقتاً لصياغته الصادقة
+# الأقدم (بلا رقم مضمون) حتى تُضبط الأسرار ويُتحقَّق من الآلية طرفاً لطرف —
+# عندها قرار مستقبلي منفصل يعيد الرقم المحدَّد للنص.
 
 name: Process Account Deletions
 
 on:
   schedule:
-    # 03:00 UTC يومياً — يفي بمهلة "خلال نحو 7-8 أيام" الموثَّقة في data-retention.html
-    # (7 أيام فترة سماح + حتى 24 ساعة انتظار للتشغيلة اليومية التالية).
+    # 03:00 UTC يومياً — يفي بمهلة السماح 7 أيام لو كانت الآلية تعمل فعلاً
+    # (معطَّلة صمتاً اليوم حتى تُضبط الأسرار أعلاه — انظر تعليق أعلى الملف).
     - cron: '0 3 * * *'
   workflow_dispatch: {}
 
@@ -33,15 +47,12 @@ jobs:
       - name: Check required secrets are configured
         id: check_secrets
         run: |
-          if [ -n "${{ secrets.SUPABASE_URL }}" ] && [ -n "${{ secrets.ACCOUNT_DELETION_CRON_SECRET }}" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::SUPABASE_URL أو ACCOUNT_DELETION_CRON_SECRET غير مضبوطين — تخطّي تشغيل معالجة طلبات حذف الحساب."
+          if [ -z "${{ secrets.SUPABASE_URL }}" ] || [ -z "${{ secrets.ACCOUNT_DELETION_CRON_SECRET }}" ]; then
+            echo "::error::SUPABASE_URL أو ACCOUNT_DELETION_CRON_SECRET غير مضبوطين في أسرار المستودع — معالجة طلبات حذف الحساب معطَّلة فعلياً. هذا التزام قانوني (PDPL) صريح لعملاء حقيقيين بحذف بياناتهم، لا ميزة اختيارية لم تُفعَّل بعد — التخطّي الصامت هنا وعد مكسور. أضف السرَّين في Settings → Secrets and variables → Actions ثم أعد تشغيل هذه الوظيفة."
+            exit 1
           fi
 
       - name: Call process-account-deletions
-        if: steps.check_secrets.outputs.configured == 'true'
         run: |
           curl --fail-with-body -sS -X POST \
             "${{ secrets.SUPABASE_URL }}/functions/v1/process-account-deletions" \
