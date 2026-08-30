@@ -56,6 +56,18 @@ name: Supabase Edge Functions Deploy
 # تدقيق 2026-08-29 (المرحلة 1.2، خطة إعادة تقييم الطبقات الـ16): نفس منطق
 # supabase-migrations.yml (اقرأ تعليقه للتفاصيل الكاملة عن مزالق workflow_run
 # الأربعة) — النشر ينتظر الآن نجاح "E2E Tests" فعلياً بدل التوازي مع الاختبارات.
+#
+# تدقيق 2026-08-29 (إعادة تقييم عدائية، ثغرة "Pwn Request"، نفس اليوم): هذا
+# الملف بالذات هو الأخطر — ينشر Edge Functions بأسرار الإنتاج الكاملة (Stripe،
+# Moyasar، SUPABASE_SERVICE_ROLE_KEY، ~19 سرّاً). `branches: [main, master]`
+# أدناه مطابقة بالاسم فقط بلا تحقق مصدر — مهاجم يُفرّع المستودع العام (بلا
+# حماية فروع)، يسمّي فرعه "main"، يفتح PR بتعديل خبيث في دالة غير مغطاة باختبار
+# مدخل حقيقي (health/places-nearby/reviewer-*/whatsapp-otp-*/mfa-recovery-*/
+# check-name-availability)، وحين تنجح "E2E Tests" على الـPR يُطلَق workflow_run
+# فيسحب النشر أدناه `head_sha` — التزام فرع المهاجم نفسه — وينشره حياً. الشرط
+# أدناه يضيف تحقق نفس المصدر لمسار workflow_run فقط (`head_repository.full_name
+# == github.repository`) — لا لـworkflow_dispatch، الذي لا يملك سياق
+# head_repository أصلاً وموثوق بنيوياً (يتطلب صلاحية كتابة على هذا المستودع).
 on:
   workflow_run:
     workflows: ["E2E Tests"]
@@ -73,7 +85,7 @@ concurrency:
 jobs:
   deploy-functions:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
     steps:
       - uses: actions/checkout@v4
         with:

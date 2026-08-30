@@ -20,6 +20,22 @@ name: Supabase DB Migrations
 # أن يُنشَر على القاعدة الحيّة قبل أن يُبلغ CI بالفشل أصلاً. التبديل لـworkflow_run
 # يجعل النشر ينتظر اكتمال "E2E Tests" (ci.yml اندمجت فيها بالمرحلة 1.2) بنجاح فعلي.
 #
+# تدقيق 2026-08-29 (إعادة تقييم عدائية، ثغرة "Pwn Request"، PR #43 عولجت لاحقاً
+# بنفس اليوم): تبديل اليوم نفسه إلى workflow_run فتح ثغرة حرجة — `branches:
+# [main, master]` أدناه مطابقة بالاسم فقط، بلا أي تحقق أن التشغيل المُطلِق فعلاً
+# من هذا المستودع. المستودع عام بلا حماية فروع وبتفريع (fork) غير مقيّد: مهاجم
+# يُفرّع المستودع، يسمّي فرعه "main" (يجتاز فلتر الاسم)، يفتح PR بتعديل خبيث في
+# دالة Edge غير مغطاة باختبار مدخل حقيقي (health/places-nearby/reviewer-*/
+# whatsapp-otp-*/mfa-recovery-*/check-name-availability). حين تُبلغ "E2E Tests"
+# نجاحاً على الـPR (لا حاجة أن يكسر الدفع الخبيث شيئاً — يستهدف مساراً غير
+# مختبر)، يُطلَق workflow_run، وخطوة checkout أدناه تسحب `head_sha` — التزام
+# فرع المهاجم نفسه — وتنشره حياً بأسرار الإنتاج الكاملة (~19 سرّاً). الشرط
+# أدناه يضيف تحقق نفس المصدر (`head_repository.full_name == github.repository`)
+# صراحة لمسار workflow_run فقط — لا لـworkflow_dispatch، لأن التشغيل اليدوي
+# لا يملك سياق `head_repository` إطلاقاً أصلاً (السياق غير موجود بنيوياً لا فقط
+# فارغاً)، والتشغيل اليدوي موثوق بنيوياً (يتطلب صلاحية كتابة على هذا المستودع
+# نفسه أصلاً لإطلاقه).
+#
 # أربعة مزالق تعامَل معها هذا الملف صراحة:
 # 1) `paths:` يسقط صامتاً تحت workflow_run — خطوة check_paths أدناه (git diff يدوي)
 #    تعوّض عن ذلك، وإلا صار كل دفع أخضر يُعيد تشغيل db push حتى لو لم تتغيّر أي
@@ -27,7 +43,8 @@ name: Supabase DB Migrations
 # 2) actions/checkout@v4 يجلب افتراضياً رأس الفرع الافتراضي لا الالتزام المُختبَر
 #    فعلياً تحت workflow_run — `ref: head_sha` أدناه إلزامي.
 # 3) شرط الوظيفة يسمح صراحة بـworkflow_dispatch (المخرج اليدوي) بجانب اشتراط نجاح
-#    E2E Tests، وإلا تعطّل التشغيل اليدوي كلياً.
+#    E2E Tests **من هذا المستودع نفسه** (لا أي fork)، وإلا تعطّل التشغيل اليدوي
+#    كلياً أو انفتحت ثغرة Pwn Request الموصوفة أعلاه.
 # 4) fetch-depth: 2 مطلوبة لـcheck_paths (تحتاج مقارنة HEAD مقابل أبيها المباشر).
 on:
   workflow_run:
@@ -46,7 +63,7 @@ concurrency:
 jobs:
   db-migrations:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
     steps:
       - uses: actions/checkout@v4
         with:
