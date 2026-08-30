@@ -17,6 +17,7 @@ import { STEPS, SIDEBAR_SECTIONS } from '../core/wizardSteps.js';
 import { stepReportType, stepCanReport, STEP_TYPE_BADGE } from '../core/stepReportType.js';
 import { DATA_SOURCE_CATALOG } from '../services/DataConnectors.js';
 import { trackEvent } from '../utils/analytics.js';
+import { isEngineVersionStale } from '../utils/engineVersionNotice.js';
 
 const FOLDERS_STORAGE_KEY = 'feas_folders';
 
@@ -1685,6 +1686,16 @@ export class DashboardView {
         window.location.hash = `#/project/${id}`;
     }
 
+    /**
+     * نفس منطق المقارنة الموحّد في utils/engineVersionNotice.js (المستخدم في
+     * ProjectOverviewView/DecisionDashboard/ExecutiveSummary/ShareView/ExportMenu) —
+     * toast لا بانر HTML لأن كل مستدعٍ من loadProject() يُغادر لوحة التحكم فوراً.
+     */
+    _warnIfEngineVersionStale(data) {
+        if (!isEngineVersionStale(data)) return;
+        toast.warning('تحديث معادلات المحرك المالي منذ آخر حفظ لهذه الدراسة — الأرقام المعروضة الآن قد تختلف عمّا رأيته أو صدّرته سابقاً.');
+    }
+
     async loadProject(id) {
         // Show loading overlay
         const loadingOverlay = document.createElement('div');
@@ -1711,6 +1722,7 @@ export class DashboardView {
             if (currentId && currentId === id) {
                 await this.store.flush();
                 this.store.notify();
+                this._warnIfEngineVersionStale(this.store.getState());
                 if (this.onProjectSelect) this.onProjectSelect(id);
                 toast.success('تم تحميل المشروع بنجاح');
                 if (typeof enterWorkspaceMode === 'function') enterWorkspaceMode();
@@ -1721,6 +1733,19 @@ export class DashboardView {
             const result = await ProjectManager.loadProject(id);
 
             if (result?.data) {
+                // بلوكر بانر إصدار المحرك (2026-08-29): loadProject() هو نداء «آخر ما فتحته»
+                // (الشريط) وأيقونة المشاركة/التصدير على بطاقة المشروع — كلاهما ينقل مباشرة
+                // إلى مساحة العمل (خطوة إدخال بالويزارد) أو قائمة التصدير، بلا مرور بصفحة
+                // الخلاصة (ProjectOverviewView) التي تعرض هذا التنبيه. store.set() أدناه
+                // يستدعي save() فيُشغّل سلسلة الحفظ (saveLocalDebounced 1000ms →
+                // _syncToCloud 800ms → PersistenceService.save) التي تُعيد وسم
+                // _meta.engineVersion صامتاً — فتُمحى بصمة الإصدار القديمة بلا أن يرى
+                // المستخدم أي تنبيه إطلاقاً على أيٍّ من الوجهتين. الفحص هنا (على البيانات
+                // الطازجة المحمَّلة من التخزين، قبل استبدالها بـstore.set) يعطي المستخدم
+                // نفس التحذير الذي يراه في صفحة الخلاصة/لوحة القرار — عبر toast لأن كلا
+                // الوجهتين تُغادر شاشة لوحة التحكم فوراً فلا مكان لبانر HTML ثابت هنا.
+                this._warnIfEngineVersionStale(result.data);
+
                 // Load into store
                 this.store.set(result.data);
 
