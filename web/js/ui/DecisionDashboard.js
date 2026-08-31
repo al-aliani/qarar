@@ -183,7 +183,10 @@ export class DecisionDashboard {
                             <!-- Background Circle -->
                             <circle cx="50" cy="50" r="45" class="dd-gauge__track" stroke-width="8" fill="none" />
                             <!-- Progress Circle -->
-                            <circle cx="50" cy="50" r="45" stroke="${this.getScoreColor(evaluation.score)}" stroke-width="8" fill="none"
+                            <!-- decisionLocked=true يعني القرار محجوب (بوابة الجودة، ~سطر 157) — لون
+                                 دلالي (أخضر/أحمر) على الحلقة هنا كان يوحي بتقييم فعلي رغم أن لا توصية
+                                 صدرت أصلاً. حياديّ عند الحجب بدل استدعاء getScoreColor. -->
+                            <circle cx="50" cy="50" r="45" stroke="${decisionLocked ? 'var(--c-text-muted)' : this.getScoreColor(evaluation.score)}" stroke-width="8" fill="none"
                                 stroke-dasharray="283" stroke-dashoffset="${283 - (283 * evaluation.score / 100)}"
                                 class="dd-gauge__fill" />
                         </svg>
@@ -525,7 +528,7 @@ export class DecisionDashboard {
             </div>
         `;
 
-        this.bindEvents(state, results);
+        this.bindEvents(state, results, readiness, financingDiagnostics);
 
         // إعلان مقتضب لقارئ الشاشة بعد كل إعادة رسم: تغيير أي افتراض يعيد بناء اللوحة
         // كاملة بـ innerHTML، فكان القرار والدرجة وNPV تتغيّر كلها بصمت تامة.
@@ -618,7 +621,14 @@ export class DecisionDashboard {
         }
     }
 
-    bindEvents(state, results) {
+    // تدقيق [مراجعة عدائية]: كانت bindEvents تستقبل فقط (state, results) بينما جسمها
+    // (حارس الاحتفال أدناه) يستخدم readiness وfinancingDiagnostics — متغيّران محليّان
+    // في render() فقط، لم يُمرَّرا هنا قط. ReferenceError غير محاط بـtry/catch يُرمى في
+    // كل متصفح حقيقي (canPlayConfetti يتحقق دوماً تقريباً خارج jsdom)، فيوقف كل ربط
+    // أزرار بعد سطر الاحتفال (حفظ/تصدير Excel/PDF/Pitch/رابط المستثمر...) — اختبارات
+    // jsdom كانت تتجنّبه بدارة قصر (canPlayConfetti=false) فتبقى الاختبارات خضراء رغم
+    // الخلل. الآن تُمرَّران من نقطة الاستدعاء الوحيدة في render().
+    bindEvents(state, results, readiness, financingDiagnostics) {
         this.container.querySelectorAll('[data-quality-step]').forEach((button) => {
             const handler = () => {
                 const stepIndex = Number(button.dataset.qualityStep);
@@ -1211,7 +1221,6 @@ export class DecisionDashboard {
      */
     buildDecisionReasons(state, results, readiness, evaluation) {
         const kpis = results?.indicators || {};
-        const payback = kpis.paybackPeriod ?? kpis.payback;
         const thresholds = results?.assumptionsApplied?.thresholds || { minNPV: 0, minIRR: 0.15, maxPayback: 3.5, minROI: 0.20 };
         const reasons = [];
         const nextSteps = [];
@@ -1227,17 +1236,15 @@ export class DecisionDashboard {
             }
         });
 
-        // الأسباب المالية
+        // الأسباب المالية — نص السبب نفسه يصل أصلاً عبر engineReasons أعلاه (نفس القيم
+        // NPV/IRR/الاسترداد من computeDecision في engine.js، حرفياً)؛ كانت تُعاد صياغتها
+        // محلياً هنا بنص مختلف فيظهر السبب مرتين بصياغتين لنفس الحقيقة. هنا فقط خطوات
+        // علاجية إضافية لا تكرار نصي لها.
         if (!(kpis.npv > thresholds.minNPV)) {
-            reasons.push(`صافي القيمة الحالية (${this.formatCurrency(kpis.npv)}) دون الحد الأدنى (${this.formatCurrency(thresholds.minNPV)}).`);
             nextSteps.push({ step: 'التمويل والتكاليف', text: 'راجع هيكل التكاليف أو قلّل الاستثمار المبدئي لرفع صافي القيمة الحالية.' });
         }
         if (!(kpis.irr >= thresholds.minIRR)) {
-            reasons.push(`معدل العائد الداخلي أقل من ${(thresholds.minIRR * 100).toFixed(0)}%.`);
             nextSteps.push({ step: 'الافتراضات المالية', text: 'حسّن هامش الربح أو أعد النظر في التسعير ومعدل النمو.' });
-        }
-        if (!(payback <= thresholds.maxPayback && payback > 0)) {
-            reasons.push(`فترة الاسترداد تتجاوز ${thresholds.maxPayback} سنوات.`);
         }
 
         // الأسباب التشغيلية (نقص بيانات الجاهزية)
@@ -1318,6 +1325,7 @@ export class DecisionDashboard {
             if (item.key === 'irr') return this.formatPercent(item.value);
             if (item.key === 'payback') return `${Number(item.value).toFixed(1)} سنة`;
             if (item.key === 'dscr') return `${Number(item.value).toFixed(2)}x`;
+            if (item.key === 'roi') return this.formatPercent(item.value);
             return String(item.value);
         };
         return `<div class="dd-insight-grid" aria-label="تفسير المؤشرات بلغة بسيطة">

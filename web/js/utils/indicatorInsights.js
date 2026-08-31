@@ -43,5 +43,17 @@ export function buildIndicatorInsights(results = {}, state = {}) {
         action: 'راجع مبلغ القرض، مدة السداد، فترة السماح والتدفق التشغيلي.'
     });
 
+    // العائد على الاستثمار (ROI) — أحد الشروط الأربعة الفعلية في computeDecision
+    // (engine.js، thresholds.minROI) لكنه كان غائباً عن هذه البطاقة رغم توفّر عتبته
+    // بنفس الدالة أصلاً — كان المستخدم يرى تفسير NPV/IRR/الاسترداد/DSCR فقط دون ROI.
+    const roi = ind.roi == null ? null : Number(ind.roi);
+    add({
+        key: 'roi', label: 'العائد على الاستثمار', value: Number.isFinite(roi) ? roi : null,
+        status: Number.isFinite(roi) ? (roi >= thresholds.minROI ? 'good' : 'warning') : 'unknown',
+        meaning: Number.isFinite(roi) ? (roi >= thresholds.minROI ? 'العائد الكلي على رأس المال المستثمر يتجاوز حد القبول المحدد للدراسة.' : 'العائد الكلي على رأس المال المستثمر أدنى من حد القبول المحدد للدراسة.') : 'لا يمكن حسابه قبل اكتمال بيانات الاستثمار والتدفقات.',
+        source: 'محسوب من إجمالي العائد مقسوماً على إجمالي الاستثمار.',
+        action: Number.isFinite(roi) ? 'قارنه بعائد بدائل الاستثمار المتاحة لك.' : 'أكمل بيانات الاستثمار الرأسمالي والتدفقات النقدية.'
+    });
+
     return items;
 }

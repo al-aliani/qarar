@@ -68,15 +68,15 @@ export class ShareView {
                 </div>
 
                 <!-- Hero Section (Cover Slide) -->
-                <header class="min-h-[80vh] flex flex-col justify-center items-center text-center p-10 bg-gradient-to-br from-slate-900 to-slate-800 text-white relative overflow-hidden">
+                <header class="min-h-[80vh] flex flex-col justify-center items-center text-center p-10 share-hero relative overflow-hidden">
                     <!-- نقش زخرفي مضمّن (data-URI) بدل طلب خارجي — أسرع وأأمن (يسمح بتضييق CSP img-src) -->
                     <div class="absolute inset-0 opacity-10" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 0h40v40H0z' fill='none'/%3E%3Cpath d='M0 20h40M20 0v40' stroke='%23ffffff' stroke-width='1' opacity='0.5'/%3E%3C/svg%3E&quot;);"></div>
                     <div class="z-10 max-w-4xl animate-fade-in-up">
                         ${engineNotice}
-                        <h1 class="text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-gold to-yellow-200">${escapeHtml(pi.name || 'مشروع جديد')}</h1>
-                        <p class="text-2xl text-gray-300 font-light mb-8">${escapeHtml(pi.concept || 'فكرة المشروع')}</p>
-                        <div class="inline-block border-t border-gold/50 pt-8 mt-4">
-                            <p class="text-lg text-gold/90">${escapeHtml(pi.city || 'المدينة المستهدفة')}</p>
+                        <h1 class="text-6xl font-bold mb-6 share-hero__title">${escapeHtml(pi.name || 'مشروع جديد')}</h1>
+                        <p class="text-2xl font-light mb-8 share-hero__subtitle">${escapeHtml(pi.concept || 'فكرة المشروع')}</p>
+                        <div class="inline-block share-hero__divider pt-8 mt-4">
+                            <p class="text-lg share-hero__location">${escapeHtml(pi.city || 'المدينة المستهدفة')}</p>
                         </div>
                     </div>
                 </header>
@@ -84,14 +84,14 @@ export class ShareView {
                 <!-- Section 1: The Opportunity (Problem & Solution) -->
                 <section class="py-20 px-6 max-w-5xl mx-auto">
                     <div class="grid md:grid-cols-2 gap-12 items-center">
-                        <div class="p-8 bg-white rounded-3xl shadow-xl border border-gray-100 transform hover:-translate-y-2 transition-transform duration-500">
+                        <div class="p-8 bg-white rounded-3xl shadow-xl border border-gray-100 hover:-translate-y-2 transition-transform duration-500">
                             <svg class="ic text-4xl mb-4" aria-hidden="true"><use href="#i-warning"/></svg>
                             <h2 class="text-2xl font-bold mb-4 text-red-500">المشكلة</h2>
                             <p class="text-lg text-gray-600 leading-relaxed">
                                 ${escapeHtml(pi.startupHypothesis?.problem || 'لم يتم تحديد المشكلة بالتفصيل.')}
                             </p>
                         </div>
-                        <div class="p-8 bg-white rounded-3xl shadow-xl border border-gray-100 transform hover:-translate-y-2 transition-transform duration-500 delay-100">
+                        <div class="p-8 bg-white rounded-3xl shadow-xl border border-gray-100 hover:-translate-y-2 transition-transform duration-500 delay-100">
                             <svg class="ic text-4xl mb-4" aria-hidden="true"><use href="#i-lightbulb"/></svg>
                             <h2 class="text-2xl font-bold mb-4 text-green-500">الحل المقترح</h2>
                             <p class="text-lg text-gray-600 leading-relaxed">
@@ -112,7 +112,7 @@ export class ShareView {
                             <span class="relative z-10 bg-white px-4 text-3xl font-bold text-gray-800">حجم السوق والفرصة</span>
                             <div class="absolute top-1/2 left-0 w-full h-px bg-gray-200 -z-0"></div>
                         </h2>
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
                             <div class="p-6 rounded-2xl bg-gray-50 border border-gray-100">
                                 <div class="text-sm text-gray-400 uppercase tracking-widest mb-2">TAM (السوق الكلي)</div>
@@ -125,10 +125,10 @@ export class ShareView {
                                 <p class="text-xs text-gray-500">ريال/سنة</p>
                             </div>
                             <div class="p-6 rounded-2xl bg-gold/10 border border-gold/30 relative overflow-hidden">
-                                <div class="absolute top-0 right-0 bg-gold text-white text-[10px] px-2 py-1 rounded-bl-lg">مستهدف</div>
-                                <div class="text-sm text-gold-dark uppercase tracking-widest mb-2">SOM (حصتنا)</div>
-                                <div class="text-4xl font-bold text-gold-dark mb-2">${state.marketSizing?.som ? Number(state.marketSizing.som).toLocaleString() : '-'}</div>
-                                <p class="text-xs text-gold-dark/80">ريال/سنة</p>
+                                <div class="absolute top-0 right-0 bg-gold text-invert text-[10px] px-2 py-1 rounded-bl-lg">مستهدف</div>
+                                <div class="text-sm text-gold uppercase tracking-widest mb-2">SOM (حصتنا)</div>
+                                <div class="text-4xl font-bold text-gold mb-2">${state.marketSizing?.som ? Number(state.marketSizing.som).toLocaleString() : '-'}</div>
+                                <p class="text-xs text-gold/80">ريال/سنة</p>
                             </div>
                         </div>
 
@@ -142,7 +142,7 @@ export class ShareView {
                 <!-- Section 3: Financial Highlights (The "Ask") -->
                 <section class="py-20 px-6 max-w-5xl mx-auto">
                     <h2 class="section-title text-center mb-12 text-3xl font-bold text-gray-800">المؤشرات المالية (5 سنوات)</h2>
-                    
+
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
                         <div class="kpi-card text-center p-6 bg-white rounded-2xl shadow-lg border-b-4 border-blue-500">
                             <div class="text-gray-400 text-xs mb-1">صافي القيمة الحالية (NPV)</div>

@@ -19,11 +19,11 @@ export class AcademyView {
                             <svg class="ic w-6 h-6 text-red-500" aria-hidden="true"><use href="#i-graduation"/></svg>
                             أكاديمية قرار — دورات ريادة الأعمال
                         </h2>
-                        <p class="text-white/60 text-sm">تصور مبدئي لشكل أكاديمية تدريبية داخل المنصة — عناوين الدورات أدناه أمثلة توضيحية فقط، ولا يوجد محتوى فيديو فعلي أو نظام تشغيل أو تتبّع تقدّم مرتبط بها حالياً.</p>
+                        <p class="text-gray-500 text-sm">تصور مبدئي لشكل أكاديمية تدريبية داخل المنصة — عناوين الدورات أدناه أمثلة توضيحية فقط، ولا يوجد محتوى فيديو فعلي أو نظام تشغيل أو تتبّع تقدّم مرتبط بها حالياً.</p>
                     </div>
-                    <div class="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
+                    <div class="flex items-center gap-3 bg-black/80 px-4 py-2 rounded-xl border border-invert/5">
                         <div class="w-2 h-2 rounded-full bg-amber-500"></div>
-                        <span class="text-xs text-white/80 font-bold">مفهوم — قيد التطوير (Demo)</span>
+                        <span class="text-xs text-invert/80 font-bold">مفهوم — قيد التطوير (Demo)</span>
                     </div>
                 </div>
 
@@ -38,10 +38,10 @@ export class AcademyView {
                             <div class="min-w-[250px] group cursor-default">
                                 <div class="relative w-full aspect-[3/4] rounded-xl overflow-hidden mb-2 border border-white/10">
                                     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10"></div>
-                                    <div class="absolute top-2 right-2 bg-white/10 text-white/70 text-[10px] px-2 py-0.5 rounded z-20">مثال</div>
+                                    <div class="absolute top-2 right-2 bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded z-20">مثال</div>
                                     <div class="absolute bottom-4 right-4 left-4 z-20">
-                                        <h4 class="text-white font-bold mb-1">أسرار التقييم (Valuation)</h4>
-                                        <p class="text-[10px] text-white/50">كيف تقيم شركتك قبل دخول المستثمرين؟</p>
+                                        <h4 class="text-invert font-bold mb-1">أسرار التقييم (Valuation)</h4>
+                                        <p class="text-[10px] text-invert/50">كيف تقيم شركتك قبل دخول المستثمرين؟</p>
                                     </div>
                                 </div>
                             </div>
@@ -50,10 +50,10 @@ export class AcademyView {
                             <div class="min-w-[250px] group cursor-default">
                                 <div class="relative w-full aspect-[3/4] rounded-xl overflow-hidden mb-2 border border-white/10">
                                     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10"></div>
-                                    <div class="absolute top-2 right-2 bg-white/10 text-white/70 text-[10px] px-2 py-0.5 rounded z-20">مثال</div>
+                                    <div class="absolute top-2 right-2 bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded z-20">مثال</div>
                                     <div class="absolute bottom-4 right-4 left-4 z-20">
-                                        <h4 class="text-white font-bold mb-1">هندسة التسعير</h4>
-                                        <p class="text-[10px] text-white/50">استراتيجيات التسعير السيكولوجي</p>
+                                        <h4 class="text-invert font-bold mb-1">هندسة التسعير</h4>
+                                        <p class="text-[10px] text-invert/50">استراتيجيات التسعير السيكولوجي</p>
                                     </div>
                                 </div>
                             </div>
@@ -62,10 +62,10 @@ export class AcademyView {
                             <div class="min-w-[250px] group cursor-default">
                                 <div class="relative w-full aspect-[3/4] rounded-xl overflow-hidden mb-2 border border-white/10">
                                     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10"></div>
-                                    <div class="absolute top-2 right-2 bg-white/10 text-white/70 text-[10px] px-2 py-0.5 rounded z-20">مثال</div>
+                                    <div class="absolute top-2 right-2 bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded z-20">مثال</div>
                                     <div class="absolute bottom-4 right-4 left-4 z-20">
-                                        <h4 class="text-white font-bold mb-1">النجاة من وادي الموت</h4>
-                                        <p class="text-[10px] text-white/50">إدارة التدفقات النقدية في السنة الأولى</p>
+                                        <h4 class="text-invert font-bold mb-1">النجاة من وادي الموت</h4>
+                                        <p class="text-[10px] text-invert/50">إدارة التدفقات النقدية في السنة الأولى</p>
                                     </div>
                                 </div>
                             </div>
@@ -76,7 +76,7 @@ export class AcademyView {
             </div>
 
             <div class="max-w-6xl mx-auto px-4 mt-6">
-                <button type="button" class="btn btn-secondary btn-back-dashboard">
+                <button type="button" class="btn btn--secondary btn-back-dashboard">
                     <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>
                     العودة للوحة التحكم
                 </button>

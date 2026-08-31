@@ -37,11 +37,16 @@ vi.mock('../components/BankTransferPanel.js', () => ({
     renderBankTransferPanel: (...a) => renderBankTransferPanelMock(...a),
 }));
 
-async function mountView() {
+const toastSuccessMock = vi.fn();
+vi.mock('../../utils/toast.js', () => ({
+    toast: { success: (...a) => toastSuccessMock(...a) },
+}));
+
+async function mountView(options) {
     document.body.innerHTML = '<div id="root"></div>';
     const container = document.getElementById('root');
     const { SubscriptionCheckoutView } = await import('../SubscriptionCheckoutView.js');
-    const view = new SubscriptionCheckoutView(container);
+    const view = new SubscriptionCheckoutView(container, options);
     await view.render();
     return { view, container };
 }
@@ -104,6 +109,22 @@ describe('SubscriptionCheckoutView — تحويل بنكي فقط (قرار ما
         expect(errEl.style.display).not.toBe('none');
         expect(errEl.textContent).toContain('network down');
     });
+
+    it("تدقيق 2026-08-31: كوبون 100% (freeViaCoupon) ⇒ toast نجاح + رجوع، لا رسالة خطأ رغم نجاح الطلب فعلياً", async () => {
+        startCheckoutMock.mockResolvedValue({ ok: true, freeViaCoupon: true, orderId: 'order-1' });
+        const onBackMock = vi.fn();
+        const { container } = await mountView({ onBack: onBackMock });
+
+        container.querySelector('#checkoutPayBank').click();
+        await new Promise((r) => setTimeout(r, 0));
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(renderBankTransferPanelMock).not.toHaveBeenCalled();
+        expect(toastSuccessMock).toHaveBeenCalledTimes(1);
+        expect(onBackMock).toHaveBeenCalledTimes(1);
+        const errEl = container.querySelector('#checkoutError');
+        expect(errEl.style.display).toBe('none'); // لا يُعامَل كفشل
+    });
 });
 
 describe('SubscriptionCheckoutView — placeholder كوبون الخصم لا يُسرّب كوداً حقيقياً', () => {
@@ -118,5 +139,12 @@ describe('SubscriptionCheckoutView — placeholder كوبون الخصم لا ي
         const input = container.querySelector('#checkoutCoupon');
         expect(input).not.toBeNull();
         expect(input.getAttribute('placeholder')).not.toMatch(/WELCOME10/i);
+    });
+
+    it('إصلاح وصول 2026-08-31: label حقل الكوبون مربوط بـfor="checkoutCoupon" (قارئ الشاشة)', async () => {
+        const { container } = await mountView();
+        const label = [...container.querySelectorAll('label')].find(l => l.getAttribute('for') === 'checkoutCoupon');
+        expect(label).toBeTruthy();
+        expect(label.textContent).toContain('كوبون الخصم');
     });
 });

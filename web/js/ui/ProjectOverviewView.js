@@ -139,7 +139,11 @@ export class ProjectOverviewView {
                 ${this._renderHeader(data, completeness, headerName)}
                 ${this._renderEngineVersionNotice(data)}
                 ${qualityGate.locked ? this._renderQualityBlocked(qualityGate) : (decision ? this._renderDecision(decision, results, data?.appSettings?.mode) : this._renderInsufficient(completeness))}
-                ${this._renderIndicators(indicators)}
+                <!-- مبوَّبة بـhasRealModel نفسه المستخدم أعلاه لـdecision: _renderIndicators صار
+                     يميّز داخلياً صفراً حقيقياً محسوباً (Number.isFinite) عن غياب حساب — لكن هذا
+                     وحده لا يمنع شبكة كاملة من «0 ﷼ · 0.0%» على دراسة بلا أي بيانات (كل المؤشرات
+                     صفر معاً). البوابة هنا هي ما يمنع ذلك تحديداً، لا الفحص الداخلي للحقل الواحد. -->
+                ${hasRealModel(indicators) ? this._renderIndicators(indicators) : ''}
                 ${decision ? this._renderSummary(data, results) : ''}
                 ${this._renderActions()}
             </div>
@@ -217,14 +221,17 @@ export class ProjectOverviewView {
 
     _renderIndicators(ind) {
         // المؤشر يظهر فقط إن كانت له قيمة فعلية — نفس مبدأ generateExecutiveSummary،
-        // يمنع شبكة من «0 ﷼ · 0.0%» تبدو نتيجةً وهي غياب بيانات.
+        // يمنع شبكة من «0 ﷼ · 0.0%» تبدو نتيجةً وهي غياب بيانات. لكن الشرط كان truthy
+        // صريحاً (Number(ind.x) ? ... : null) فيُخفي أي مؤشر يساوي صفراً بالضبط (رقم
+        // حقيقي حُسب) كأنه لم يُحسَب إطلاقاً — Number.isFinite يميّز رقماً حقيقياً
+        // (=0 شامل) عن null/undefined/NaN فعلاً غير المحسوب.
         const cards = [
-            Number(ind.npv) ? { label: 'صافي القيمة الحالية', value: fmtMoney(ind.npv), good: Number(ind.npv) > 0 } : null,
-            Number(ind.irr) ? { label: 'معدل العائد الداخلي', value: fmtPct(ind.irr), good: Number(ind.irr) > 0 } : null,
+            Number.isFinite(Number(ind.npv)) ? { label: 'صافي القيمة الحالية', value: fmtMoney(ind.npv), good: Number(ind.npv) > 0 } : null,
+            Number.isFinite(Number(ind.irr)) ? { label: 'معدل العائد الداخلي', value: fmtPct(ind.irr), good: Number(ind.irr) > 0 } : null,
             Number(ind.paybackPeriod) > 0 ? { label: 'فترة الاسترداد', value: fmtYears(ind.paybackPeriod), good: true } : null,
-            Number(ind.roi) ? { label: 'العائد على الاستثمار', value: fmtPct(ind.roi), good: Number(ind.roi) > 0 } : null,
-            Number(ind.breakEvenPointValue) ? { label: 'نقطة التعادل (سنوياً)', value: fmtMoney(ind.breakEvenPointValue), good: true } : null,
-            Number(ind.profitMargin) ? { label: 'هامش الربح الصافي', value: fmtPct(ind.profitMargin), good: Number(ind.profitMargin) > 0 } : null
+            Number.isFinite(Number(ind.roi)) ? { label: 'العائد على الاستثمار', value: fmtPct(ind.roi), good: Number(ind.roi) > 0 } : null,
+            Number.isFinite(Number(ind.breakEvenPointValue)) ? { label: 'نقطة التعادل (سنوياً)', value: fmtMoney(ind.breakEvenPointValue), good: true } : null,
+            Number.isFinite(Number(ind.profitMargin)) ? { label: 'هامش الربح الصافي', value: fmtPct(ind.profitMargin), good: Number(ind.profitMargin) > 0 } : null
         ].filter(Boolean);
 
         if (!cards.length) return '';

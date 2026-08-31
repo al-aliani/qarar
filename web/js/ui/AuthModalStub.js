@@ -24,6 +24,23 @@ function translateAuthError(error) {
     return found ? found.text : 'فشل تسجيل الدخول أو إنشاء الحساب.';
 }
 
+// تدقيق 2026-08-31: زر "إعادة إرسال رابط التأكيد" أدناه كان يعرض res.error الخام من
+// Supabase عند الفشل (مثال: "For security purposes, you can only request this after
+// N seconds") رغم أن translateAuthError أعلاه بُني بالضبط لمنع هذا النوع من التسريب —
+// لم يكن مطبَّقاً على مسار resendConfirmationEmail. نفس النمط هنا لأخطائه الشائعة.
+const RESEND_ERROR_TRANSLATIONS = [
+    { match: 'security purposes', text: 'محاولات كثيرة خلال وقت قصير — انتظر قليلاً ثم أعد المحاولة.' },
+    { match: 'rate limit', text: 'محاولات كثيرة خلال وقت قصير — انتظر قليلاً ثم أعد المحاولة.' },
+    { match: 'user not found', text: 'لا يوجد حساب مسجَّل بهذا البريد.' },
+    { match: 'email not found', text: 'لا يوجد حساب مسجَّل بهذا البريد.' },
+];
+
+function translateResendError(error) {
+    const errLower = (error || '').toLowerCase();
+    const found = RESEND_ERROR_TRANSLATIONS.find((t) => errLower.includes(t.match));
+    return found ? found.text : 'تعذّر إرسال رابط التأكيد. حاول مرة أخرى لاحقاً.';
+}
+
 // أكواد خطأ mfa-recovery-unenroll (مصدرها الخادم — انظر supabase/functions/
 // mfa-recovery-unenroll/index.ts) — نفس نمط ERROR_MESSAGES/friendlyError في
 // WhatsAppVerifyModal.js.
@@ -94,7 +111,7 @@ export class AuthModal {
                         <p class="text-danger mb-1">البريد غير مفعّل. تحقق من صندوق الوارد أو البريد المزعج.</p>
                         <button type="button" id="authBtnResendConfirm" class="btn btn--ghost text-sm">إعادة إرسال رابط التأكيد</button>
                     </div>
-                    <div id="authModalNotConfigured" class="p-3 bg-warning/10 border border-warning/30 rounded text-sm" style="display:none;"></div>
+                    <div id="authModalNotConfigured" class="alert alert--warning text-sm" style="display:none;"></div>
                     <div id="authTabRow" class="auth-tabs" role="tablist" aria-label="دخول أو إنشاء حساب">
                         <button type="button" id="authTabSignIn" class="btn btn--primary" role="tab" aria-selected="true" aria-controls="authModalForm">دخول</button>
                         <button type="button" id="authTabSignUp" class="btn btn--ghost" role="tab" aria-selected="false" aria-controls="authModalForm">إنشاء حساب</button>
@@ -106,7 +123,7 @@ export class AuthModal {
                         </div>
                         <div class="mb-3">
                             <label class="block text-sm mb-1" for="authPassword">كلمة المرور</label>
-                            <div class="auth-field"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><input type="password" id="authPassword" placeholder="••••••••" required minlength="8" title="8+ أحرف، رقم واحد على الأقل، رمز واحد على الأقل" autocomplete="current-password"></div>
+                            <div class="auth-field"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><input type="password" id="authPassword" placeholder="••••••••" required autocomplete="current-password"></div>
                             <div id="authPasswordStrength" class="auth-strength" style="display:none;">
                                 <div class="auth-strength-track"><div id="authPasswordStrengthFill" class="auth-strength-fill"></div></div>
                                 <span id="authPasswordStrengthLabel" class="auth-strength-label"></span>
@@ -238,6 +255,21 @@ export class AuthModal {
             phoneGroup.style.display = signUp ? 'block' : 'none';
             btnSignInEl.style.display = signUp ? 'none' : 'block';
             btnSignUpEl.style.display = signUp ? 'block' : 'none';
+            // تدقيق 2026-08-31: minlength="8" كان ثابتاً بالـHTML بصرف النظر عن التبويب
+            // النشط، بينما حد "8 أحرف" الفعلي (validatePassword أدناه) يُطبَّق فقط عند
+            // التسجيل، والحد الأدنى الحقيقي على الخادم 6 (انظر AUTH_ERROR_TRANSLATIONS)
+            // — فكان يمنع تحقق المتصفح إرسال نموذج الدخول لحساب حقيقي بكلمة مرور 6-7
+            // أحرف قبل وصول أي كود JS. الآن يُضبط ديناميكياً حسب التبويب النشط.
+            const passwordFieldEl = this.overlay.querySelector('#authPassword');
+            if (passwordFieldEl) {
+                if (signUp) {
+                    passwordFieldEl.setAttribute('minlength', '8');
+                    passwordFieldEl.title = '8+ أحرف، رقم واحد على الأقل، رمز واحد على الأقل';
+                } else {
+                    passwordFieldEl.removeAttribute('minlength');
+                    passwordFieldEl.removeAttribute('title');
+                }
+            }
             if (titleEl) titleEl.textContent = signUp ? 'إنشاء حساب جديد' : 'أهلاً بعودتك';
             if (subtitleEl) subtitleEl.textContent = 'احفظ دراستك وزامنها بين أجهزتك';
             showErr('');
@@ -514,9 +546,15 @@ export class AuthModal {
             btn.textContent = 'جاري الإرسال...';
             const { resendConfirmationEmail } = await import('../../supabaseClient.js');
             const res = await resendConfirmationEmail(email);
-            if (res.ok) { showErr(''); if (block) block.style.display = 'none'; btn.textContent = 'تم الإرسال. تحقق من بريدك.'; } else { showErr(res.error || 'فشل الإرسال'); }
+            if (res.ok) {
+                showErr('');
+                if (block) block.style.display = 'none';
+                btn.textContent = 'تم الإرسال. تحقق من بريدك.';
+            } else {
+                showErr(translateResendError(res.error));
+                btn.textContent = 'إعادة إرسال رابط التأكيد';
+            }
             btn.disabled = false;
-            btn.textContent = 'إعادة إرسال رابط التأكيد';
         });
 
         // تسجيل الدخول بـ Google (OAuth)
@@ -555,6 +593,8 @@ export class AuthModal {
             if (titleEl) titleEl.textContent = 'استعادة الحساب';
             if (subtitleEl) subtitleEl.textContent = 'أدخل بريدك ونرسل لك رابط إعادة التعيين';
             if (forgotPanel) forgotPanel.style.display = 'block';
+            const forgotEmailInput = this.overlay.querySelector('#authForgotEmail');
+            setTimeout(() => forgotEmailInput?.focus(), 30);
         });
         this.overlay.querySelector('#authBtnBackToLogin')?.addEventListener('click', () => {
             if (forgotPanel) forgotPanel.style.display = 'none';

@@ -86,11 +86,13 @@ function buildStudiesTable() {
     };
 }
 
+let couponState = null; // كوبون مُحقَّن لاختبار واحد — null افتراضياً (بلا كوبون مفعَّل)
+
 function buildCouponsTable() {
     return {
         select: () => ({
             eq: () => ({
-                maybeSingle: async () => ({ data: null, error: null }), // بلا كوبون مفعَّل في هذه الاختبارات
+                maybeSingle: async () => ({ data: couponState, error: null }),
             }),
         }),
     };
@@ -142,6 +144,7 @@ beforeEach(async () => {
     ordersState = null;
     orderIdSeq = 0;
     nextInsertError = null;
+    couponState = null;
     capturedHandler = null;
     createMoyasarCheckout.mockClear();
     createStripeCheckout.mockClear();
@@ -223,6 +226,22 @@ describe('create-checkout/index.ts — المسار الشرعي يبقى يعم
         expect(res.status).toBe(200);
         expect(ordersState.tier).toBe('reviewed');
         expect(createTamaraCheckout).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe("create-checkout/index.ts — تدقيق 2026-08-31: كوبون خصم 100% + provider='bank_transfer' لا يعلق pending للأبد", () => {
+    it("كوبون 100% مع provider='bank_transfer' ⇒ يُؤكَّد الطلب paid تلقائياً (freeViaCoupon)، لا بقاء pending بانتظار تحويل 0 ريال", async () => {
+        couponState = { discount_percent: 100, active: true, expires_at: null, max_uses: null, used_count: 0 };
+
+        const res = await capturedHandler(makeRequest({ tier: 'self', provider: 'bank_transfer', coupon: 'FREE100' }));
+        const body = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(body).toEqual({ orderId: expect.any(String), freeViaCoupon: true, amount: 0 });
+        expect(body.bankTransfer).toBeUndefined(); // العطل الأصلي: كان يعود من فرع bank_transfer قبل الوصول لفحص total===0
+        expect(ordersState.status).toBe('paid');
+        expect(ordersState.paid_at).toBeTruthy();
+        expect(ordersState.total_sar).toBe(0);
     });
 });
 

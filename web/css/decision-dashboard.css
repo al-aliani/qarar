@@ -704,6 +704,81 @@
     box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2); /* على سطح العرض الداكن الثابت */
 }
 
+/* تدقيق تالٍ (فئات Tailwind وهمية إضافية داخل شرائح العرض — 8 شرائح، كل شريحة
+   تستخدم ألوان/تدرّجات مختلفة). القيم عبر --c-accent-*، --c-warning، --c-p-*
+   الموجودة أصلاً في variables.css — بلا أي قيمة hex جديدة، إلا حيث الأسود
+   الحرفي هو أرضية الشريحة الثابتة نفسها (نفس استثناء #presentationOverlay
+   أعلاه). النصوص الرمادية (text-gray-300/400) كانت تُقرأ من تعريف عام آخر
+   معايَر للسياق الفاتح (utilities.css: var(--c-text-muted)) فيسقط تباينها إلى
+   ~3.5:1 فوق الأسود — أقل من حد WCAG AA 4.5:1 للنص العادي؛ نطاق محصور هنا يمنحها
+   قيمة مضيئة آمنة على هذه الشريحة الداكنة الثابتة دون المساس بالتعريف العام. */
+.z-\[100\] { z-index: 100; }
+#presentationOverlay .text-gray-200,
+#presentationOverlay .text-gray-300 { color: color-mix(in srgb, #fff 82%, transparent); }
+#presentationOverlay .text-gray-400,
+#presentationOverlay .text-gray-500 { color: color-mix(in srgb, #fff 62%, transparent); }
+#presentationOverlay .text-white\/50 { color: color-mix(in srgb, #fff 50%, transparent); }
+
+#presentationOverlay .backdrop-blur { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+#presentationOverlay .animate-bounce { animation: pvBounce 1s infinite; }
+@keyframes pvBounce {
+    0%, 100% { transform: translateY(0); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
+    50% { transform: translateY(-12px); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+}
+#presentationOverlay .animate-slide-in { animation: pvFadeIn 0.4s ease-out; }
+@keyframes pvFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+#presentationOverlay .hover\:bg-white\/20:hover { background-color: color-mix(in srgb, #fff 20%, transparent); }
+#presentationOverlay .group:hover .group-hover\:bg-blue-600 { background-color: var(--c-accent-blue); }
+#presentationOverlay .group:hover .group-hover\:bg-blue-800 { background-color: color-mix(in srgb, var(--c-accent-blue) 70%, black); }
+
+/* ألوان الشرائح: مشكلة/حل (أحمر/أخضر)، مخاطر (برتقالي/أزرق)، الجدول الزمني
+   (نقاط أخضر/أزرق/أصفر) */
+#presentationOverlay .bg-red-900\/20 { background-color: color-mix(in srgb, var(--c-accent-red) 14%, transparent); }
+#presentationOverlay .border-red-500\/20 { border-color: color-mix(in srgb, var(--c-accent-red) 25%, transparent); }
+#presentationOverlay .bg-green-900\/20 { background-color: color-mix(in srgb, var(--c-accent-green) 14%, transparent); }
+#presentationOverlay .border-green-500\/20 { border-color: color-mix(in srgb, var(--c-accent-green) 25%, transparent); }
+#presentationOverlay .text-green-300 { color: color-mix(in srgb, var(--c-accent-green) 70%, white); }
+#presentationOverlay .bg-orange-900\/20 { background-color: color-mix(in srgb, var(--c-warning) 14%, transparent); }
+#presentationOverlay .border-orange-500\/20 { border-color: color-mix(in srgb, var(--c-warning) 25%, transparent); }
+#presentationOverlay .text-orange-400 { color: color-mix(in srgb, var(--c-warning) 75%, white); }
+#presentationOverlay .bg-blue-900\/20 { background-color: color-mix(in srgb, var(--c-accent-blue) 14%, transparent); }
+#presentationOverlay .border-blue-500\/20 { border-color: color-mix(in srgb, var(--c-accent-blue) 25%, transparent); }
+#presentationOverlay .bg-blue-500 { background-color: var(--c-accent-blue); }
+#presentationOverlay .bg-green-500 { background-color: var(--c-accent-green); }
+#presentationOverlay .bg-yellow-500 { background-color: var(--c-warning); }
+
+/* شريط TAM/SAM/SOM (شريحة حجم السوق): تعبئة الأعمدة + توهّج ذهبي لعمود SOM */
+#presentationOverlay .bg-blue-900\/50 { background-color: color-mix(in srgb, var(--c-accent-blue) 32%, transparent); }
+#presentationOverlay .bg-blue-600\/50 { background-color: color-mix(in srgb, var(--c-accent-blue) 48%, transparent); }
+#presentationOverlay .shadow-\[0_0_30px_rgba\(255\,215\,0\,0\.3\)\] {
+    box-shadow: 0 0 30px color-mix(in srgb, var(--c-gold-bright) 30%, transparent);
+}
+#presentationOverlay .drop-shadow-\[0_0_20px_rgba\(16\,185\,129\,0\.5\)\] {
+    filter: drop-shadow(0 0 20px color-mix(in srgb, var(--c-accent-green) 50%, transparent));
+}
+
+/* خلفيات الشرائح الكاملة (from/to) وتدرّج نص العنوان (bg-clip-text) — تركيبات
+   محدَّدة فقط، هي كل ما تستخدمه الشرائح الثمانية فعلياً؛ لا محرّك تدرّجات عام. */
+.bg-gradient-to-br.from-indigo-900.to-black {
+    background-image: linear-gradient(to bottom right, color-mix(in srgb, var(--c-accent-indigo) 40%, black), black);
+}
+.bg-gradient-to-t.from-green-900.to-black {
+    background-image: linear-gradient(to top, color-mix(in srgb, var(--c-p-600) 65%, black), black);
+}
+.bg-gradient-to-br.from-purple-900.via-indigo-900.to-black {
+    background-image: linear-gradient(to bottom right, color-mix(in srgb, var(--c-accent-purple) 40%, black), color-mix(in srgb, var(--c-accent-indigo) 30%, black), black);
+}
+.bg-gradient-to-r.from-blue-400.to-purple-400 {
+    background-image: linear-gradient(to right, var(--c-accent-blue), var(--c-accent-purple));
+}
+.bg-gradient-to-r.from-blue-400.via-purple-400.to-pink-400 {
+    background-image: linear-gradient(to right, var(--c-accent-blue), var(--c-accent-purple), var(--c-accent-pink));
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    EXECUTIVE SUMMARY - PREMIUM POLISH
    ═══════════════════════════════════════════════════════════════════════════ */

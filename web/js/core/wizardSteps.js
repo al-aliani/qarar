@@ -414,10 +414,15 @@ export const SIMPLE_MODE_HIDDEN_STEP_IDS = [
   'studyComparison',
 ];
 
-/** هل يظهر القسم (بمعرّفه) في وضع التفصيل المعطى؟ (الافتراض: مفصّل → الكل) */
+/** هل يظهر القسم (بمعرّفه) في وضع التفصيل المعطى؟ (الافتراض: مفصّل → الكل)
+ *  ملاحظة: زر «أساسي» بصفحة الفئات (StudyCategoryView.js) يضبط الوضع على 'quick' لا
+ *  'simple' — القيمة نفسها التي يعتمد عليها Wizard.js/DynamicTable.js فعلاً لتقصير
+ *  الحقول/الأعمدة، فلا يصح توحيدها مع 'simple' هناك. هنا (تصفية الأقسام) 'quick'
+ *  يُعامَل معاملة 'simple' تماماً (تدقيق 2026-08-31: كان يسقط على `return true` فتظهر
+ *  الأربعون خطوة كاملة رغم أن الزر عنوانه «إخفاء التفاصيل المعقدة»). */
 export function isStepVisibleInStudyMode(stepId, mode) {
   if (mode === 'mini') return MINI_MODE_STEP_IDS.includes(stepId);
-  if (mode === 'simple') return !SIMPLE_MODE_HIDDEN_STEP_IDS.includes(stepId);
+  if (mode === 'simple' || mode === 'quick') return !SIMPLE_MODE_HIDDEN_STEP_IDS.includes(stepId);
   return true;
 }
 

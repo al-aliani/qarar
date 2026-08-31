@@ -26,11 +26,11 @@ export class CommunityForumView {
                             <svg class="ic w-6 h-6 text-pink-400" aria-hidden="true"><use href="#i-users"/></svg>
                             مجتمع رواد قرار (مفهوم)
                         </h2>
-                        <p class="text-white/60 text-sm">أمثلة توضيحية لشكل مجتمع نقاش بين مستخدمي المنصة — لا يوجد حالياً أعضاء أو منشورات حقيقية، والميزة غير مفعّلة.</p>
+                        <p class="text-gray-500 text-sm">أمثلة توضيحية لشكل مجتمع نقاش بين مستخدمي المنصة — لا يوجد حالياً أعضاء أو منشورات حقيقية، والميزة غير مفعّلة.</p>
                     </div>
-                    <div class="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
+                    <div class="flex items-center gap-3 bg-black/80 px-4 py-2 rounded-xl border border-invert/5">
                         <div class="w-2 h-2 rounded-full bg-amber-500"></div>
-                        <span class="text-xs text-white/80 font-bold">بيانات تجريبية (Demo)</span>
+                        <span class="text-xs text-invert/80 font-bold">بيانات تجريبية (Demo)</span>
                     </div>
                 </div>
 
@@ -39,39 +39,39 @@ export class CommunityForumView {
                     <!-- Sidebar Topics -->
                     <div class="lg:col-span-1 space-y-2">
                         <h3 class="text-white font-bold text-sm mb-4">التصنيفات</h3>
-                        <div class="p-3 rounded-lg bg-white/10 border border-white/20 text-white flex items-center justify-between" title="تصنيف توضيحي — التصفية غير مفعّلة">
+                        <div class="p-3 rounded-lg bg-gray-100 border border-gray-100 text-white flex items-center justify-between" title="تصنيف توضيحي — التصفية غير مفعّلة">
                             <span class="text-sm font-medium">النقاش العام</span>
-                            <span class="bg-white/20 text-xs px-2 py-0.5 rounded-full">120</span>
+                            <span class="bg-gray-200 text-xs px-2 py-0.5 rounded-full">120</span>
                         </div>
-                        <div class="p-3 rounded-lg border border-transparent text-white/70 flex items-center justify-between" title="تصنيف توضيحي — التصفية غير مفعّلة">
+                        <div class="p-3 rounded-lg border border-transparent text-gray-500 flex items-center justify-between" title="تصنيف توضيحي — التصفية غير مفعّلة">
                             <span class="text-sm font-medium">تأسيس وتراخيص</span>
-                            <span class="bg-white/10 text-xs px-2 py-0.5 rounded-full">45</span>
+                            <span class="bg-gray-100 text-xs px-2 py-0.5 rounded-full">45</span>
                         </div>
-                        <div class="p-3 rounded-lg border border-transparent text-white/70 flex items-center justify-between" title="تصنيف توضيحي — التصفية غير مفعّلة">
+                        <div class="p-3 rounded-lg border border-transparent text-gray-500 flex items-center justify-between" title="تصنيف توضيحي — التصفية غير مفعّلة">
                             <span class="text-sm font-medium">تمويل واستثمار</span>
-                            <span class="bg-white/10 text-xs px-2 py-0.5 rounded-full">89</span>
+                            <span class="bg-gray-100 text-xs px-2 py-0.5 rounded-full">89</span>
                         </div>
-                        <div class="p-3 rounded-lg border border-transparent text-white/70 flex items-center justify-between" title="تصنيف توضيحي — التصفية غير مفعّلة">
+                        <div class="p-3 rounded-lg border border-transparent text-gray-500 flex items-center justify-between" title="تصنيف توضيحي — التصفية غير مفعّلة">
                             <span class="text-sm font-medium">تسويق ومبيعات</span>
-                            <span class="bg-white/10 text-xs px-2 py-0.5 rounded-full">32</span>
+                            <span class="bg-gray-100 text-xs px-2 py-0.5 rounded-full">32</span>
                         </div>
                     </div>
 
                     <!-- Posts Feed -->
                     <div class="lg:col-span-3 space-y-4">
                         ${posts.map(post => `
-                            <div class="p-6 rounded-2xl border border-white/5 hover:bg-white/5 transition-colors cursor-pointer" style="background: rgba(255,255,255,0.02);">
+                            <div class="p-6 rounded-2xl border border-white/5 hover:bg-gray-50 transition-colors cursor-pointer" style="background: rgba(255,255,255,0.02);">
                                 <div class="flex items-center gap-3 mb-4">
-                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-invert font-bold text-sm">
                                         ${post.user.charAt(0)}
                                     </div>
                                     <div>
                                         <div class="text-white font-bold text-sm">${post.user}</div>
-                                        <div class="text-[10px] text-white/40">${post.time} • ${post.topic}</div>
+                                        <div class="text-[10px] text-gray-400">${post.time} • ${post.topic}</div>
                                     </div>
                                 </div>
-                                <p class="text-white/80 text-sm mb-4 leading-relaxed">${post.text}</p>
-                                <div class="flex items-center gap-4 text-white/50 text-xs">
+                                <p class="text-gray-800 text-sm mb-4 leading-relaxed">${post.text}</p>
+                                <div class="flex items-center gap-4 text-gray-500 text-xs">
                                     <button class="flex items-center gap-1 cursor-not-allowed" disabled title="بيانات تجريبية — التفاعل غير مفعّل">
                                         <svg class="ic w-4 h-4" aria-hidden="true"><use href="#i-heart"/></svg> ${post.likes} إعجاب
                                     </button>
@@ -87,9 +87,9 @@ export class CommunityForumView {
                     </div>
                 </div>
             </div>
-            
+
             <div class="max-w-5xl mx-auto px-4 mt-6">
-                <button type="button" class="btn btn-secondary btn-back-dashboard">
+                <button type="button" class="btn btn--secondary btn-back-dashboard">
                     <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>
                     العودة للوحة التحكم
                 </button>

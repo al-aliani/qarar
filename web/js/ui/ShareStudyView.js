@@ -421,7 +421,17 @@ export class ShareStudyView {
         // تصدير مباشر — Word/Excel/PowerPoint محمية بنفس بوابة الدفع المستخدمة في
         // ExportMenu.js (hasActivePayment + PaywallModal)؛ JSON مجاني بلا بوابة.
         this.overlay.querySelectorAll('.btn-direct-export').forEach((btn) => {
-            btn.addEventListener('click', () => this._runDirectExport(btn.dataset.format));
+            btn.addEventListener('click', async () => {
+                const originalLabel = btn.textContent;
+                btn.disabled = true;
+                btn.textContent = 'جاري التصدير...';
+                try {
+                    await this._runDirectExport(btn.dataset.format);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = originalLabel;
+                }
+            });
         });
 
         // إعادة الرسم (بعد إلغاء رابط مثلاً) تستبدل innerHTML فيختفي العنصر المركَّز —

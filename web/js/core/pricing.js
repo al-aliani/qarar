@@ -14,7 +14,7 @@ export const PRICING_PACKAGES = [
         features: ['إدخال الدراسة وحفظها', 'لوحة المؤشرات الأساسية', 'نسخة احتياطية JSON وCSV']
     },
     {
-        id: 'self', name: 'ذاتي', price: 299, unit: '﷼ / دراسة', channel: 'app', audience: 'لمن يملك بياناته ويريد التقرير فوراً', delivery: 'فوري',
+        id: 'self', name: 'ذاتي', price: 299, unit: '﷼ / دراسة', channel: 'app', audience: 'لمن يملك بياناته ويريد التقرير دون مراجعة إضافية', delivery: 'خلال ساعات العمل',
         features: ['كل أدوات بناء الدراسة', 'بوابة الجودة وتفسير المؤشرات', 'PDF وExcel وWord والتقرير البنكي']
     },
     {

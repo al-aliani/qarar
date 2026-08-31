@@ -7,6 +7,7 @@ import { trackEvent } from '../utils/analytics.js';
 import { monitoring } from '../utils/monitoring.js';
 import { renderBankTransferPanel } from './components/BankTransferPanel.js';
 import { escapeHtml } from '../utils/escape.js';
+import { toast } from '../utils/toast.js';
 
 export class SubscriptionCheckoutView {
     constructor(container, options = {}) { this.container = container; this.onBack = options.onBack || (() => {}); this.studyId = null; }
@@ -74,7 +75,7 @@ export class SubscriptionCheckoutView {
         // الدفع الرئيسية القادمة من صفحة التسعير، لا PaywallModal فقط. نص الاسترداد
         // ثابت هنا (لا REFUND_POLICY.shortTitle) بلا استيراد إضافي من config.js.
         const trustHtml = `<p class="text-xs text-muted text-center w-full mt-3">جميع الأسعار شاملة ضريبة القيمة المضافة (15%) — لا رسوم إضافية عند الدفع.</p><p class="text-xs text-muted text-center w-full">ضمان استرداد خلال 15 يوم على الباقات المدفوعة إن لم تُقنعك النتيجة.</p><p class="text-xs text-muted text-center w-full">الأدوات المجانية (JSON، CSV، لوحة المستثمر للمشاركة) تبقى بلا قيود.</p>`;
-        this.container.innerHTML = `<div class="p-6 max-w-3xl mx-auto"><button id="checkoutBack" class="btn btn--ghost mb-4">← رجوع</button><h1 class="text-2xl font-bold mb-2">إكمال الطلب</h1><p class="text-muted mb-5">راجع الباقة والخدمات الإضافية، ثم أرسل طلب الدفع بتحويل بنكي.</p><div class="card p-6" id="checkoutCard"><h2 class="text-sm font-bold mb-2">الباقة</h2><div class="checkout-tiers mb-2">${tiersHtml}</div><p class="text-xs text-muted mb-4" id="checkoutPkgAudience">${pkg.audience} · التسليم: ${pkg.delivery}</p><h2 class="text-sm font-bold mb-2">خدمات إضافية</h2>${ADDONS.map(a => this._addonRowHtml(a, pkg)).join('')}<div class="form-group mt-4"><label class="text-sm">كوبون الخصم</label><input id="checkoutCoupon" class="form-input w-full" dir="ltr" placeholder="أدخل كود الخصم إن وُجد"></div><div class="mt-5" style="border-top:1px solid var(--c-border)"><div class="flex justify-between py-2"><span id="checkoutPkgName">${escapeHtml(pkg.name)}</span><span id="checkoutPkgPrice">${formatPrice(pkg.price)} ريال</span></div><div class="flex justify-between py-2"><span>الإجمالي (شامل الضريبة)</span><span id="checkoutSubtotal"></span></div><div class="flex justify-between py-2"><span>الخصم المتوقع</span><span id="checkoutDiscount">يُتحقق منه عند الدفع</span></div><div class="flex justify-between py-2 text-muted" style="font-size:.9rem"><span>منها ضريبة القيمة المضافة (15%)</span><span id="checkoutVat"></span></div><div class="flex justify-between py-2 font-bold text-lg"><span>المطلوب دفعه</span><span id="checkoutTotal"></span></div></div><div id="checkoutError" class="text-danger text-sm mt-2" role="alert" style="display:none"></div>${payAction}${trustHtml}</div></div>`;
+        this.container.innerHTML = `<div class="p-6 max-w-3xl mx-auto"><button id="checkoutBack" class="btn btn--ghost mb-4">← رجوع</button><h1 class="text-2xl font-bold mb-2">إكمال الطلب</h1><p class="text-muted mb-5">راجع الباقة والخدمات الإضافية، ثم أرسل طلب الدفع بتحويل بنكي.</p><div class="card p-6" id="checkoutCard"><h2 class="text-sm font-bold mb-2">الباقة</h2><div class="checkout-tiers mb-2">${tiersHtml}</div><p class="text-xs text-muted mb-4" id="checkoutPkgAudience">${pkg.audience} · التسليم: ${pkg.delivery}</p><h2 class="text-sm font-bold mb-2">خدمات إضافية</h2>${ADDONS.map(a => this._addonRowHtml(a, pkg)).join('')}<div class="form-group mt-4"><label class="text-sm" for="checkoutCoupon">كوبون الخصم</label><input id="checkoutCoupon" class="form-input w-full" dir="ltr" placeholder="أدخل كود الخصم إن وُجد"></div><div class="mt-5" style="border-top:1px solid var(--c-border)"><div class="flex justify-between py-2"><span id="checkoutPkgName">${escapeHtml(pkg.name)}</span><span id="checkoutPkgPrice">${formatPrice(pkg.price)} ريال</span></div><div class="flex justify-between py-2"><span>الإجمالي (شامل الضريبة)</span><span id="checkoutSubtotal"></span></div><div class="flex justify-between py-2"><span>الخصم المتوقع</span><span id="checkoutDiscount">يُتحقق منه عند الدفع</span></div><div class="flex justify-between py-2 text-muted" style="font-size:.9rem"><span>منها ضريبة القيمة المضافة (15%)</span><span id="checkoutVat"></span></div><div class="flex justify-between py-2 font-bold text-lg"><span>المطلوب دفعه</span><span id="checkoutTotal"></span></div></div><div id="checkoutError" class="text-danger text-sm mt-2" role="alert" style="display:none"></div>${payAction}${trustHtml}</div></div>`;
         this.container.querySelector('#checkoutBack')?.addEventListener('click', () => this.onBack());
         this.container.querySelectorAll('[data-addon]').forEach(el => el.addEventListener('change', () => this.update(this._pkg)));
         this.container.querySelector('#checkoutPayBank')?.addEventListener('click', (e) => this.payBankTransfer(this._pkg, e.currentTarget));
@@ -162,6 +163,14 @@ export class SubscriptionCheckoutView {
         if (result.ok && result.bankTransfer) {
             const card = this.container.querySelector('#checkoutCard');
             renderBankTransferPanel(card, { tier: pkg.id, orderId: result.orderId, amount: result.amount, onBack: () => this._renderCheckout() });
+            return;
+        }
+        // تدقيق 2026-08-31: كوبون خصم 100% مع bank_transfer ⇒ create-checkout يؤكّد الطلب
+        // paid فوراً خادمياً (لا شيء للتحصيل) ويعيد freeViaCoupon لا bankTransfer — كانت
+        // هذه الاستجابة الناجحة تسقط بالفرع العام أدناه وتعرض رسالة فشل رغم نجاح الطلب.
+        if (result.ok && result.freeViaCoupon) {
+            toast.success('تم تفعيل طلبك مجاناً بالكوبون — لا حاجة لتحويل بنكي.');
+            this.onBack();
             return;
         }
         trackEvent('payment_error', { tier: pkg.id, provider: 'bank_transfer', message: result.error || 'bank_transfer_failed' });

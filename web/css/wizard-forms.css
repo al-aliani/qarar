@@ -36,10 +36,32 @@
 .h-3 { height: 8px; }
 .border-r-2 { border-inline-start: 2px solid var(--c-gold-deco); }
 .border-gold\/50 { border-color: var(--c-gold-deco); }
+.bg-gold\/5 { background-color: color-mix(in srgb, var(--c-gold-500) 5%, transparent); }
+.border-gold\/20 { border-color: color-mix(in srgb, var(--c-gold-500) 20%, transparent); }
 .pr-2 { padding-inline-start: var(--s-2); }
 .text-green-400 { color: var(--c-success); }
 .text-blue-400 { color: var(--c-accent-blue); }
 .animate-bounce-slight, .animate-pulse-slow { animation: none; }
+
+/* امتداد للتحييد أعلاه — تدقيق AIFocusGroupView.js/AcademyView.js/CommunityForumView.js
+   (2026-08-31): حدود ملوّنة يجب أن تفوز على .border الشامل أعلاه (نفس الملف/بعد سطره
+   يضمن ذلك بصرف النظر عن ترتيب bundle.css)، وعائلة نيلي/وردي عبر --c-accent-indigo/
+   --c-accent-pink (المضافتين بنفس أسلوب --c-accent-teal في variables.css) لا مكافئ
+   BEM جاهز لها. */
+.border-blue-500\/30 { border-color: color-mix(in srgb, var(--c-accent-blue) 30%, transparent); }
+.border-transparent { border-color: transparent; }
+.border-indigo-500\/30 { border-color: color-mix(in srgb, var(--c-accent-indigo) 30%, transparent); }
+.border-indigo-500\/50 { border-color: color-mix(in srgb, var(--c-accent-indigo) 50%, transparent); }
+.border-indigo-500 { border-color: var(--c-accent-indigo); }
+.border-pink-500\/20 { border-color: color-mix(in srgb, var(--c-accent-pink) 20%, transparent); }
+.bg-indigo-600 { background-color: var(--c-accent-indigo); }
+.bg-indigo-900\/40 { background-color: color-mix(in srgb, var(--c-accent-indigo) 40%, transparent); }
+.text-indigo-400 { color: var(--c-accent-indigo); }
+/* indigo-300 نص فاتح فوق شارة bg-indigo-900/40 (فحص تباين: خلط indigo-400 نفسه
+   مع نغمة الخلفية المشتقة من نفس المتغيّر يعطي ~1.9:1 فقط — مزجه بالأبيض
+   يفصله بصرياً عن الخلفية ويجتاز 4.5:1). */
+.text-indigo-300 { color: color-mix(in srgb, var(--c-accent-indigo) 35%, var(--c-p-contrast) 65%); }
+.text-pink-400 { color: var(--c-accent-pink); }
 
 /* ── 2) رأس التقدم — يُظهر الشريط المخفي ── */
 .wizard-progress { margin-bottom: var(--s-4); }

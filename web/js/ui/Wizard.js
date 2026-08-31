@@ -1637,8 +1637,6 @@ export class Wizard {
         if (step.id === 'projectInfo') {
             if (!data?.name || data?.name.trim() === '') {
                 const errorKey = 'projectInfo_no_name';
-                // إظهار الخطأ inline أسفل حقل الاسم + نقل التركيز إليه
-                this.showFieldError('name', 'اسم المشروع مطلوب للمتابعة.');
                 if (this.lastValidationError !== errorKey) {
                     this.lastValidationError = errorKey;
                     toast.error('يرجى إدخال اسم المشروع.', { duration: 3000 });

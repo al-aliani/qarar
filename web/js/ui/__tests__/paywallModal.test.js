@@ -15,8 +15,15 @@ import { PaywallModal } from '../PaywallModal.js';
 import { PRICING_PACKAGES, formatPrice } from '../../core/pricing.js';
 
 const startCheckoutMock = vi.fn(async () => ({ ok: true, bankTransfer: true, orderId: 'order-1', amount: 299 }));
+const listOrdersMock = vi.fn(async () => []);
 vi.mock('../../services/PaymentService.js', () => ({
     startCheckout: (...a) => startCheckoutMock(...a),
+    listOrders: (...a) => listOrdersMock(...a),
+}));
+
+const toastSuccessMock = vi.fn();
+vi.mock('../../utils/toast.js', () => ({
+    toast: { success: (...a) => toastSuccessMock(...a) },
 }));
 
 const getBankTransferConfigMock = vi.fn(() => ({ beneficiaryName: 'شركة شفق الأعمال التجارية', bankName: 'بنك البلاد', iban: 'SA5815000900142467710006' }));
@@ -38,6 +45,8 @@ describe('PaywallModal — عرض الباقات المدفوعة بأسعار p
     beforeEach(() => {
         document.body.innerHTML = '';
         startCheckoutMock.mockClear();
+        listOrdersMock.mockReset().mockResolvedValue([]);
+        toastSuccessMock.mockClear();
         renderBankTransferPanelMock.mockClear();
         getBankTransferConfigMock.mockReset().mockReturnValue({ beneficiaryName: 'شركة شفق الأعمال التجارية', bankName: 'بنك البلاد', iban: 'SA5815000900142467710006' });
         delete window.location;
@@ -144,6 +153,44 @@ describe('PaywallModal — عرض الباقات المدفوعة بأسعار p
 
         expect(document.getElementById('paywallPayError').textContent).toContain('مزوّد الدفع غير متاح حالياً');
         expect(btn.disabled).toBe(false);
+    });
+
+    it("تدقيق 2026-08-31: كوبون 100% (freeViaCoupon) ⇒ toast نجاح ويُغلق النافذة، لا رسالة خطأ رغم نجاح الطلب فعلياً", async () => {
+        startCheckoutMock.mockResolvedValueOnce({ ok: true, freeViaCoupon: true, orderId: 'order-1' });
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
+        modal.open('تقرير PDF شامل');
+
+        const btn = document.querySelector('.btn-pay-now[data-package="self"][data-provider="bank_transfer"]');
+        btn.click();
+        await new Promise(r => setTimeout(r, 0));
+
+        expect(renderBankTransferPanelMock).not.toHaveBeenCalled();
+        expect(toastSuccessMock).toHaveBeenCalledTimes(1);
+        expect(document.getElementById('paywallOverlay').classList.contains('is-open')).toBe(false);
+        const errEl = document.getElementById('paywallPayError');
+        expect(errEl.style.display).not.toBe('block'); // لا يُعامَل كفشل
+    });
+
+    it("تحسين 2026-08-31: طلب pending سابق لهذه الدراسة ⇒ تنبيه واضح أعلى شبكة الباقات بدل عرض شراء جديد بصمت", async () => {
+        listOrdersMock.mockResolvedValue([{ id: 'order-abcdef12', status: 'pending', study_id: 'study-1' }]);
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
+        modal.open('تقرير PDF شامل');
+        await new Promise(r => setTimeout(r, 0));
+
+        expect(listOrdersMock).toHaveBeenCalledWith('study-1');
+        const notice = document.getElementById('paywallPendingOrderNotice');
+        expect(notice.textContent).toContain('قيد التأكيد');
+        expect(notice.textContent).toContain('order-ab');
+    });
+
+    it("لا طلب pending لهذه الدراسة ⇒ لا يظهر أي تنبيه", async () => {
+        listOrdersMock.mockResolvedValue([{ id: 'order-1', status: 'paid', study_id: 'study-1' }]);
+        const modal = new PaywallModal('paywallOverlay', fakeStore({ projectInfo: { id: 'study-1' } }));
+        modal.open('تقرير PDF شامل');
+        await new Promise(r => setTimeout(r, 0));
+
+        const notice = document.getElementById('paywallPendingOrderNotice');
+        expect(notice.textContent.trim()).toBe('');
     });
 
     it('اسم الصيغة المطلوبة (formatLabel) يظهر فعلياً في نص الرسالة الرئيسي للنافذة', () => {
