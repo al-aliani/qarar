@@ -79,9 +79,9 @@ export class TwoFactorModal {
 
     renderManageMode(factors) {
         return `
-            <div style="padding:16px;background:#10b98114;border:1px solid #10b981;border-radius:8px;margin-bottom:16px;">
-                <p style="color:#065f46;font-weight:600;">✓ المصادقة الثنائية مفعّلة</p>
-                <p style="font-size:12px;color:#047857;margin-top:4px;">حسابك محمي بطبقة أمان إضافية</p>
+            <div style="padding:16px;background:color-mix(in srgb, var(--c-success) 8%, transparent);border:1px solid var(--c-success);border-radius:8px;margin-bottom:16px;">
+                <p style="color:color-mix(in srgb, var(--c-success) 85%, black);font-weight:600;">✓ المصادقة الثنائية مفعّلة</p>
+                <p style="font-size:12px;color:color-mix(in srgb, var(--c-success) 93%, black);margin-top:4px;">حسابك محمي بطبقة أمان إضافية</p>
             </div>
             ${factors.map(f => `
                 <div style="padding:12px;background:var(--c-bg-app);border:1px solid var(--c-border);border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">

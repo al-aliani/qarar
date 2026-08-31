@@ -57,6 +57,8 @@ export class DownloadsCenterView {
     async render() {
         if (!this.container) return;
 
+        this.container.innerHTML = '<p class="text-muted text-sm">جارٍ التحميل...</p>';
+
         const { user } = await getAuthUser();
         const { supabase, ok } = await getSupabaseClient();
         
