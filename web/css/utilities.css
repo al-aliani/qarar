@@ -18,6 +18,10 @@
     align-items: center;
 }
 
+.items-start {
+    align-items: flex-start;
+}
+
 .mt-2 {
     margin-top: var(--s-2);
 }
@@ -51,6 +55,18 @@
     color: var(--c-text-muted);
 }
 
+.text-main {
+    color: var(--c-text-main);
+}
+
+.border-border {
+    border-color: var(--c-border);
+}
+
+.bg-card {
+    background-color: var(--c-bg-card);
+}
+
 .badge {
     display: inline-block;
     padding: 2px 6px;
@@ -82,6 +98,10 @@
     gap: var(--s-4);
 }
 
+.gap-6 {
+    gap: var(--s-4);
+}
+
 .justify-center {
     justify-content: center;
 }
@@ -90,12 +110,20 @@
     flex-wrap: wrap;
 }
 
+.flex-1 {
+    flex: 1 1 0%;
+}
+
 .text-center {
     text-align: center;
 }
 
 .text-success {
     color: var(--c-success);
+}
+
+.text-danger {
+    color: var(--c-danger);
 }
 
 .font-bold {
@@ -128,6 +156,10 @@
 
 .shadow-lg {
     box-shadow: var(--shadow-lg);
+}
+
+.border-t {
+    border-top: 1px solid var(--c-border);
 }
 
 /* Transitions */
@@ -205,9 +237,11 @@
 .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
+.text-xs { font-size: 0.75rem; }
 .text-xl { font-size: 1.25rem; }
 .text-2xl { font-size: 1.5rem; }
 .text-3xl { font-size: 1.875rem; }
+.text-4xl { font-size: 2.25rem; }
 
 .space-y-3 > * + * { margin-top: 0.75rem; }
 .space-y-4 > * + * { margin-top: 1rem; }
@@ -220,6 +254,11 @@
 .mb-8 { margin-bottom: var(--s-5); }
 
 .p-6 { padding: var(--s-4); }
+
+.py-1 { padding-top: var(--s-1); padding-bottom: var(--s-1); }
+.pt-4 { padding-top: var(--s-3); }
+.py-10 { padding-top: var(--s-5); padding-bottom: var(--s-5); }
+.py-20 { padding-top: var(--s-8); padding-bottom: var(--s-8); }
 
 .max-w-md { max-width: 28rem; }
 .max-w-2xl { max-width: 42rem; }
@@ -241,5 +280,553 @@
 }
 
 @media (min-width: 1024px) {
+    .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .lg\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.col-span-full { grid-column: 1 / -1; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   تدقيق ShareView.js (صفحة مشاركة المستثمر/البنك الخارجية) — 94 فئة Tailwind
+   وهمية بلا أي تعريف CSS فعلي (tailwind.config.js لا يغطي web/js/**). القيم
+   تطابق سلّم Tailwind الفعلي كبقية هذا الملف؛ الألوان حصراً عبر متغيرات
+   --c-*/--grad-* الموجودة أصلاً في variables.css — بلا أي قيمة hex جديدة.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* --- أولوية قصوى: print:hidden لم تكن معرَّفة إطلاقاً — شريط التنقّل الثابت
+   وصندوق الدعوة التسويقية كانا يظهران فعلياً داخل أي PDF يُصدَّر عبر
+   window.print() ويُرسَل لمستثمر/بنك حقيقي. */
+@media print {
+    .print\:hidden {
+        display: none !important;
+    }
+}
+
+/* --- Layout / position / sizing (بلا لون) --- */
+.fixed { position: fixed; }
+.inline-block { display: inline-block; }
+.top-0 { top: 0; }
+.left-0 { left: 0; }
+.right-0 { right: 0; }
+.top-1\/2 { top: 50%; }
+.inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+.-z-0 { z-index: 0; }
+.z-10 { z-index: 10; }
+.z-50 { z-index: 50; }
+.h-px { height: 1px; }
+.min-h-\[80vh\] { min-height: 80vh; }
+.opacity-10 { opacity: 0.1; }
+.uppercase { text-transform: uppercase; }
+.tracking-widest { letter-spacing: 0.1em; }
+.leading-relaxed { line-height: 1.625; }
+.font-light { font-weight: 300; }
+.font-normal { font-weight: 400; }
+.font-sans { font-family: var(--font-ui); }
+.text-\[10px\] { font-size: 10px; }
+.text-6xl { font-size: 3.75rem; }
+.rounded-2xl { border-radius: 1rem; }
+.rounded-3xl { border-radius: 1.5rem; }
+.rounded-bl-lg { border-bottom-left-radius: 0.5rem; }
+.border-l-4 { border-inline-start-width: 4px; border-inline-start-style: solid; }
+.border-b-4 { border-bottom-width: 4px; border-bottom-style: solid; }
+.transition-transform { transition-property: transform; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+.duration-500 { transition-duration: 500ms; }
+.delay-100 { transition-delay: 100ms; }
+.hover\:-translate-y-2:hover { transform: translateY(-0.5rem); }
+
+/* --- Spacing (تطابق سلّم Tailwind الفعلي: var(--s-*) عند تطابق تام، وإلا rem حرفي) --- */
+.p-1 { padding: var(--s-1); }
+.p-8 { padding: 2rem; }
+.p-10 { padding: 2.5rem; }
+.px-2 { padding-inline: var(--s-2); }
+.px-4 { padding-inline: var(--s-3); }
+.px-6 { padding-inline: var(--s-4); }
+.py-2 { padding-block: var(--s-2); }
+.py-3 { padding-block: 0.75rem; }
+.pt-8 { padding-top: 2rem; }
+.mt-6 { margin-top: var(--s-4); }
+.mt-12 { margin-top: var(--s-6); }
+.mb-12 { margin-bottom: var(--s-6); }
+.mb-16 { margin-bottom: var(--s-7); }
+.gap-3 { gap: 0.75rem; }
+.gap-8 { gap: 2rem; }
+.gap-12 { gap: var(--s-6); }
+
+@media (min-width: 768px) {
+    .md\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* --- ألوان: بدائل حقيقية لسلّم رمادي/دلالي Tailwind — عبر رموز التصميم الموجودة فقط --- */
+.bg-white { background-color: var(--c-bg-app); }
+.bg-white\/90 { background-color: color-mix(in srgb, var(--c-bg-app) 90%, transparent); }
+.bg-gray-50 { background-color: var(--c-bg-panel); }
+.bg-gray-100 { background-color: var(--c-surface-2); }
+.bg-gray-200 { background-color: var(--c-border); }
+.border-gray-100 { border-color: var(--c-border); }
+.text-gray-800 { color: var(--c-text-main); }
+.text-gray-600 { color: var(--c-text-muted); }
+.text-gray-500 { color: var(--c-text-muted); }
+.text-gray-400 { color: var(--c-text-muted); }
+.text-red-500 { color: var(--c-danger); }
+.text-green-500 { color: var(--c-success); }
+.text-green-600 { color: var(--c-success); }
+.text-blue-600 { color: var(--c-accent-blue); }
+.text-purple-600 { color: var(--c-accent-purple); }
+.text-orange-600 { color: var(--c-warning); }
+.border-blue-500 { border-color: var(--c-accent-blue); }
+.border-green-500 { border-color: var(--c-success); }
+.border-purple-500 { border-color: var(--c-accent-purple); }
+.border-orange-500 { border-color: var(--c-warning); }
+.bg-gold { background-color: var(--c-gold-500); }
+.border-gold { border-color: var(--c-gold-500); }
+.bg-gold\/10 { background-color: var(--c-gold-subtle); }
+.border-gold\/30 { border-color: var(--c-gold-border); }
+.text-gold\/80 { color: color-mix(in srgb, var(--c-gold-500) 80%, transparent); }
+/* نص فاتح فوق أسطح داكنة/ملوّنة (بديل .text-white — الاسم الحرفي محجوز أصلاً في
+   wizard-forms.css لتحييد بقايا ثيم داكن قديم، بلون معاكس تماماً لهذا الاستخدام) */
+.text-invert { color: var(--c-p-contrast); }
+.backdrop-blur-md { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-xl { box-shadow: var(--shadow-lg); }
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fadeInUp 0.6s ease-out; }
+
+/* --- غلاف ShareView الداكن (Cover Slide): أخضر صنوبري بدل رمادي Tailwind عام —
+   يطابق هوية «قرار» فعلياً، ونص العنوان بالذهبي الفاتح المخصّص للأسطح الداكنة. */
+.share-hero {
+    background: var(--grad-emerald);
+    color: var(--c-p-contrast);
+}
+.share-hero__title {
+    color: var(--c-gold-bright);
+}
+.share-hero__subtitle {
+    color: color-mix(in srgb, var(--c-p-contrast) 85%, transparent);
+}
+.share-hero__location {
+    color: var(--c-gold-bright);
+}
+.share-hero__divider {
+    border-top: 1px solid color-mix(in srgb, var(--c-gold-bright) 50%, transparent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   تدقيق MandAHubView.js / SupplyChainSandboxView.js / TeamManagementView.js —
+   بطاقات "الأدوات المتقدمة" التجريبية: تصميم زجاجي داكن ثابت مستقل عن ثيم
+   الموقع (نفس القرار المعتمد فعلاً لعشرات المكوّنات الشقيقة عبر main.css
+   §13-21 عبر `color:#fff !important` على حاوية كل -view). فئات Tailwind كانت
+   بلا أي تعريف CSS فعلي (tailwind.config.js لا يغطي web/js/**). القيم تطابق
+   سلّم Tailwind الفعلي؛ الألوان حصراً عبر متغيرات --c-* الموجودة (أو المضافة
+   بنفس نمطها في variables.css) — بلا أي قيمة hex جديدة. استثناء واحد مقصود:
+   bg-black/* أسود حرفي عبر rgba() لا متغيّر — لأنه أرضية البطاقة الثابتة التي
+   يعتمد عليها وضوح النص الفاتح فوقها بصرف النظر عن ثيم الصفحة (--c-* الحالية
+   أحادية القيمة، لا تتبدّل مع الثيم). لنفس السبب `.text-white` الحقيقي (يعادل
+   --c-text-main، مضاد تماماً) استُبدل هنا بـ.text-invert (سبق تعريفها أعلاه)
+   في كل الاستخدامات الثلاثة، لا فقط أُضيف بديل بلا استخدام. */
+
+/* --- Layout / position / sizing (بلا لون) --- */
+.border-b { border-bottom: 1px solid var(--c-border); }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+.cursor-not-allowed { cursor: not-allowed; }
+.transition-colors { transition: background-color .2s ease, border-color .2s ease, color .2s ease; }
+.blur-3xl { filter: blur(64px); }
+.rounded-xl { border-radius: var(--r-lg); }
+.text-\[11px\] { font-size: 11px; }
+.\!py-1\.5 { padding-block: 6px !important; }
+.-right-10 { right: -2.5rem; }
+.-top-10 { top: -2.5rem; }
+.-z-10 { z-index: -10; }
+.-translate-y-1\/2 { transform: translateY(-50%); }
+.-translate-x-1\/2 { transform: translateX(-50%); }
+.left-\[20px\] { left: 20px; }
+.left-\[400px\] { left: 400px; }
+.top-\[20px\] { top: 20px; }
+.top-\[40px\] { top: 40px; }
+.top-\[80px\] { top: 80px; }
+.top-\[100px\] { top: 100px; }
+
+@media (min-width: 1024px) {
+    .lg\:col-span-1 { grid-column: span 1 / span 1; }
+    .lg\:col-span-2 { grid-column: span 2 / span 2; }
+}
+
+/* --- Spacing --- */
+.p-2 { padding: var(--s-2); }
+.p-4 { padding: var(--s-3); }
+.px-1 { padding-inline: var(--s-1); }
+.pb-2 { padding-bottom: var(--s-2); }
+.py-4 { padding-block: var(--s-3); }
+.py-8 { padding-block: var(--s-5); }
+.py-0\.5 { padding-block: 2px; }
+.mt-0\.5 { margin-top: 2px; }
+
+/* --- Sizing (w/h): تطابق سلّم Tailwind الفعلي بالبكسل — بلا لون، لا داعٍ لمتغيّر --- */
+.w-1 { width: 4px; }
+.w-2 { width: 8px; }
+.w-3 { width: 12px; }
+.w-4 { width: 16px; }
+.w-5 { width: 20px; }
+.w-6 { width: 24px; }
+.w-8 { width: 32px; }
+.w-10 { width: 40px; }
+.w-40 { width: 160px; }
+.h-0\.5 { height: 2px; }
+.h-1\.5 { height: 6px; }
+.h-2 { height: 8px; }
+.h-4 { height: 16px; }
+.h-5 { height: 20px; }
+.h-6 { height: 24px; }
+.h-8 { height: 32px; }
+.h-10 { height: 40px; }
+.h-40 { height: 160px; }
+
+/* --- ألوان: عبر --c-accent-*/--c-warning/--c-primary الموجودة، + --c-accent-teal
+   المضافة بنفس نمطها في variables.css (لا بديل فيروزي كان موجوداً) --- */
+.bg-amber-500 { background-color: var(--c-warning); }
+.text-primary { color: var(--c-primary); }
+
+.bg-purple-500 { background-color: var(--c-accent-purple); }
+.bg-purple-500\/20 { background-color: color-mix(in srgb, var(--c-accent-purple) 20%, transparent); }
+.bg-purple-500\/5 { background-color: color-mix(in srgb, var(--c-accent-purple) 5%, transparent); }
+.border-purple-500\/20 { border-color: color-mix(in srgb, var(--c-accent-purple) 20%, transparent); }
+.border-purple-500\/50 { border-color: color-mix(in srgb, var(--c-accent-purple) 50%, transparent); }
+.text-purple-400 { color: var(--c-accent-purple); }
+.text-purple-400\/50 { color: color-mix(in srgb, var(--c-accent-purple) 50%, transparent); }
+.text-purple-300\/60 { color: color-mix(in srgb, var(--c-accent-purple) 60%, transparent); }
+.hover\:bg-purple-500\/10:hover { background-color: color-mix(in srgb, var(--c-accent-purple) 10%, transparent); }
+.shadow-glow-purple { box-shadow: 0 0 15px color-mix(in srgb, var(--c-accent-purple) 50%, transparent); }
+
+.bg-red-500 { background-color: var(--c-accent-red); }
+.bg-red-500\/20 { background-color: color-mix(in srgb, var(--c-accent-red) 20%, transparent); }
+.bg-red-500\/10 { background-color: color-mix(in srgb, var(--c-accent-red) 10%, transparent); }
+.bg-red-500\/5 { background-color: color-mix(in srgb, var(--c-accent-red) 5%, transparent); }
+.border-red-500\/20 { border-color: color-mix(in srgb, var(--c-accent-red) 20%, transparent); }
+.border-red-500\/30 { border-color: color-mix(in srgb, var(--c-accent-red) 30%, transparent); }
+.border-red-500\/50 { border-color: color-mix(in srgb, var(--c-accent-red) 50%, transparent); }
+.text-red-400 { color: var(--c-accent-red); }
+.text-red-300\/60 { color: color-mix(in srgb, var(--c-accent-red) 60%, transparent); }
+
+.bg-teal-400 { background-color: var(--c-accent-teal); }
+.bg-teal-500\/20 { background-color: color-mix(in srgb, var(--c-accent-teal) 20%, transparent); }
+.border-teal-500 { border-color: var(--c-accent-teal); }
+.border-teal-500\/20 { border-color: color-mix(in srgb, var(--c-accent-teal) 20%, transparent); }
+.border-teal-500\/30 { border-color: color-mix(in srgb, var(--c-accent-teal) 30%, transparent); }
+.text-teal-400 { color: var(--c-accent-teal); }
+
+.bg-yellow-400 { background-color: var(--c-warning); }
+.bg-yellow-500 { background-color: var(--c-warning); }
+.bg-yellow-500\/20 { background-color: color-mix(in srgb, var(--c-warning) 20%, transparent); }
+.border-yellow-500\/30 { border-color: color-mix(in srgb, var(--c-warning) 30%, transparent); }
+.border-yellow-500\/50 { border-color: color-mix(in srgb, var(--c-warning) 50%, transparent); }
+.text-yellow-400 { color: var(--c-warning); }
+.text-yellow-300\/60 { color: color-mix(in srgb, var(--c-warning) 60%, transparent); }
+
+/* الأسود الحرفي: أرضية البطاقات الداكنة الثابتة (انظر تعليق القسم أعلاه) */
+.bg-black\/20 { background-color: rgba(0, 0, 0, 0.2); }
+.bg-black\/30 { background-color: rgba(0, 0, 0, 0.3); }
+.bg-black\/40 { background-color: rgba(0, 0, 0, 0.4); }
+.bg-black\/50 { background-color: rgba(0, 0, 0, 0.5); }
+.bg-black\/80 { background-color: rgba(0, 0, 0, 0.8); }
+
+/* نص/حدود/خلفية فاتحة فوق هذه البطاقات الداكنة — امتداد لنفس أسلوب .text-invert
+   أعلاه (var(--c-p-contrast)) بدرجات شفافية مختلفة، لا قيمة hex جديدة. */
+.text-invert\/30 { color: color-mix(in srgb, var(--c-p-contrast) 30%, transparent); }
+.text-invert\/40 { color: color-mix(in srgb, var(--c-p-contrast) 40%, transparent); }
+.text-invert\/50 { color: color-mix(in srgb, var(--c-p-contrast) 50%, transparent); }
+.text-invert\/60 { color: color-mix(in srgb, var(--c-p-contrast) 60%, transparent); }
+.text-invert\/70 { color: color-mix(in srgb, var(--c-p-contrast) 70%, transparent); }
+.text-invert\/80 { color: color-mix(in srgb, var(--c-p-contrast) 80%, transparent); }
+.border-invert\/5 { border-color: color-mix(in srgb, var(--c-p-contrast) 5%, transparent); }
+.border-invert\/10 { border-color: color-mix(in srgb, var(--c-p-contrast) 10%, transparent); }
+.border-invert\/20 { border-color: color-mix(in srgb, var(--c-p-contrast) 20%, transparent); }
+.border-invert\/30 { border-color: color-mix(in srgb, var(--c-p-contrast) 30%, transparent); }
+.bg-invert\/10 { background-color: color-mix(in srgb, var(--c-p-contrast) 10%, transparent); }
+.hover\:bg-white\/5:hover { background-color: rgba(255, 255, 255, 0.05); }
+
+/* تدرّج بنفسجي/فيروزي خفيف لرأس M&A Hub / Supply Chain Sandbox — Tailwind يبني
+   هذا عبر متغيرات --tw-gradient-* غير الموجودة هنا؛ تعريف مباشر يغطي التركيبتين
+   الفعليتين المستخدَمتين فقط (from-*/500/10 + to-transparent + bg-gradient-to-l). */
+.bg-gradient-to-l.from-purple-500\/10 {
+    background-image: linear-gradient(to left, color-mix(in srgb, var(--c-accent-purple) 10%, transparent), transparent);
+}
+.bg-gradient-to-l.from-teal-500\/10 {
+    background-image: linear-gradient(to left, color-mix(in srgb, var(--c-accent-teal) 10%, transparent), transparent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   تدقيق HypothesisView.js / InvestorDashboard.js — فئات Tailwind وهمية بلا
+   تعريف CSS فعلي (tailwind.config.js لا يغطي web/js/**). القيم تطابق سلّم
+   Tailwind الفعلي كبقية هذا الملف؛ الألوان حصراً عبر متغيرات --c-* الموجودة —
+   بلا أي قيمة hex جديدة.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* --- بنية/تموضع عامة (بلا لون) --- */
+.inline-flex { display: inline-flex; }
+.italic { font-style: italic; }
+.leading-tight { line-height: 1.25; }
+.tracking-tight { letter-spacing: -0.025em; }
+.font-black { font-weight: 900; }
+.flex-shrink-0 { flex-shrink: 0; }
+@media print {
+    .no-print { display: none !important; }
+}
+
+/* حالة تركيز الحقول — الحقول الفعلية مُنسَّقة أصلاً عبر محدِّد العنصر
+   input/textarea:focus في wizard-forms.css (outline/box-shadow)؛ هذه فئات
+   صريحة لنفس الأثر أينما استُخدمت. */
+.outline-none { outline: none; }
+.focus\:ring-2:focus { box-shadow: var(--focus-ring); }
+.focus\:ring-blue-500:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-accent-blue) 35%, transparent); }
+.focus\:ring-purple-500:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-accent-purple) 35%, transparent); }
+.hover\:bg-gray-50:hover { background-color: var(--c-surface-2); }
+
+/* أحجام Tailwind الحرفية غير المطابقة لأي رمز --s-* */
+.w-4 { width: 1rem; }
+.h-4 { height: 1rem; }
+.w-8 { width: 2rem; }
+.h-8 { height: 2rem; }
+.w-12 { width: 3rem; }
+.h-12 { height: 3rem; }
+.w-20 { width: 5rem; }
+.h-20 { height: 5rem; }
+.text-5xl { font-size: 3rem; }
+.rounded-xl { border-radius: var(--r-xl); }
+.rounded-t-xl { border-top-left-radius: var(--r-xl); border-top-right-radius: var(--r-xl); }
+.pb-4 { padding-bottom: var(--s-4); }
+.pb-6 { padding-bottom: var(--s-4); }
+.pb-8 { padding-bottom: 2rem; }
+.pb-10 { padding-bottom: 2.5rem; }
+.pt-6 { padding-top: var(--s-4); }
+.p-12 { padding: 3rem; }
+.px-3 { padding-inline: 0.75rem; }
+.px-8 { padding-inline: 2rem; }
+.mt-3 { margin-top: 0.75rem; }
+.mt-8 { margin-top: 2rem; }
+.mt-16 { margin-top: var(--s-7); }
+.mt-20 { margin-top: 5rem; }
+.right-6 { right: var(--s-4); }
+.bottom-6 { bottom: var(--s-4); }
+.z-20 { z-index: 20; }
+.inset-x-0 { left: 0; right: 0; }
+.list-disc { list-style-type: disc; }
+.space-y-2 > * + * { margin-top: 0.5rem; }
+.duration-200 { transition-duration: 0.2s; }
+.duration-300 { transition-duration: 0.3s; }
+.transition-all { transition: all 0.2s ease; }
+.transition-opacity { transition: opacity 0.2s ease; }
+.pointer-events-auto { pointer-events: auto; }
+.pointer-events-none { pointer-events: none; }
+.perspective-1000 { perspective: 1000px; }
+.opacity-80 { opacity: 0.8; }
+.text-8xl { font-size: 6rem; }
+.bg-clip-text { -webkit-background-clip: text; background-clip: text; }
+.text-transparent { color: transparent; }
+/* شريط تمييز جانبي (اقتباس/صندوق نصائح) — .border-inline-start يبقى على يمين RTL
+   بصرف النظر عن الاتجاه، بنفس منطق step-help-box/faq-item في wizard-forms.css. */
+.border-r-4 { border-inline-start-width: 4px; border-inline-start-style: solid; }
+
+/* --- ألوان: سياق فاتح (HypothesisView) --- */
+.bg-blue-50 { background-color: color-mix(in srgb, var(--c-accent-blue) 8%, var(--c-bg-app)); }
+.bg-yellow-50\/30 { background-color: color-mix(in srgb, var(--c-warning) 10%, var(--c-bg-app)); }
+.text-blue-800 { color: color-mix(in srgb, var(--c-accent-blue) 55%, black); }
+.text-blue-900 { color: color-mix(in srgb, var(--c-accent-blue) 70%, black); }
+.text-purple-900 { color: color-mix(in srgb, var(--c-accent-purple) 65%, black); }
+.border-yellow-400 { border-color: var(--c-warning); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   InvestorDashboard.js (لوحة عرض المستثمر) — بطاقة عرض داكنة ثابتة بصرف النظر
+   عن ثيم الموقع (نفس قرار البطاقات الزجاجية الداكنة في main.css §13-21 وpitch
+   mode #presentationOverlay في decision-dashboard.css). جذر المكوّن
+   .investor-dashboard كان بلا أي خلفية حقيقية رغم أن كل محتواه (نص أبيض، بطاقات
+   bg-white/5 شبه شفافة) يفترض أرضية داكنة — bg-bg-app الوهمية لو عُرِّفت بمعناها
+   الاسمي الحرفي (--c-bg-app أبيض) كانت ستُسقط الصفحة لنص أبيض فوق أبيض، غير
+   مقروء إطلاقاً. التدرّج الأخضر يطابق --grad-emerald المستخدَم فعلاً لنفس السياق
+   في #presentationOverlay وShareView (.share-hero) — لا لون جديد. */
+.bg-bg-app { background-color: var(--c-bg-app); }
+.investor-dashboard {
+    background: var(--grad-emerald);
+    color: var(--c-p-contrast);
+}
+.investor-dashboard .text-white { color: var(--c-p-contrast); }
+.investor-dashboard .text-danger { color: color-mix(in srgb, var(--c-danger) 60%, white); }
+.investor-dashboard .text-success { color: color-mix(in srgb, var(--c-success) 70%, white); }
+.investor-dashboard .text-primary { color: color-mix(in srgb, var(--c-p-500) 45%, white); }
+.investor-dashboard .text-gold\/90 { color: color-mix(in srgb, var(--c-gold-bright) 90%, transparent); }
+/* text-gold عام معايَر للفاتح (--c-gold-500، انظر variables.css) — تسمية TAM/SAM/SOM
+   الصغيرة (text-xs) هنا تحته حد WCAG AA فوق أرضية المكوّن الداكنة؛ --c-gold-bright
+   نفس الرمز المستخدَم أعلاه لبقية النص الذهبي الفاتح. */
+.investor-dashboard .text-gold { color: var(--c-gold-bright); }
+
+.tracking-wider { letter-spacing: 0.05em; }
+.min-w-\[100px\] { min-width: 100px; }
+.w-48 { width: 12rem; }
+.h-96 { height: 24rem; }
+.border-white\/5 { border-color: color-mix(in srgb, var(--c-p-contrast) 5%, transparent); }
+/* bg-white/5 محجوزة اسماً بنفس المعنى المعاكس في wizard-forms.css (تعتيم خفيف
+   بدل تفتيح خفيف) — نفس منطق النطاق أعلاه لبطاقات investor-dashboard/الشرائح
+   الزجاجية شبه الشفافة (bg-white/5 مستخدَمة بكثافة في كليهما). */
+.investor-dashboard .bg-white\/5,
+#presentationOverlay .bg-white\/5 { background-color: color-mix(in srgb, var(--c-p-contrast) 5%, transparent); }
+/* border-white/10 محجوزة اسماً بمعنى معاكس تماماً في wizard-forms.css (تحييد بقايا
+   ثيم داكن قديم لسياق فاتح: var(--c-border) شبه شفاف) — وذلك الملف يُحمَّل بعد هذا
+   في bundle.css فيغلب أي تعريف عام هنا بلا نطاق. نطاق محصور بجذري المكوّنين الداكنين
+   الفعليين (نفس أسلوب investor-dashboard/#presentationOverlay أعلاه) يتغلّب دائماً
+   بصرف النظر عن ترتيب التحميل (خصوصية أعلى: صنفان بدل صنف واحد). */
+.investor-dashboard .border-white\/10,
+#presentationOverlay .border-white\/10 { border-color: color-mix(in srgb, var(--c-p-contrast) 10%, transparent); }
+.investor-dashboard .border-white\/20,
+#presentationOverlay .border-white\/20 { border-color: color-mix(in srgb, var(--c-p-contrast) 20%, transparent); }
+.investor-dashboard .bg-white\/10,
+#presentationOverlay .bg-white\/10 { background-color: color-mix(in srgb, var(--c-p-contrast) 10%, transparent); }
+.investor-dashboard .bg-white\/20,
+#presentationOverlay .bg-white\/20 { background-color: color-mix(in srgb, var(--c-p-contrast) 20%, transparent); }
+.investor-dashboard .hover\:bg-white\/10:hover { background-color: color-mix(in srgb, var(--c-p-contrast) 10%, transparent); }
+.bg-primary\/10 { background-color: color-mix(in srgb, var(--c-p-500) 10%, transparent); }
+.bg-primary\/20 { background-color: color-mix(in srgb, var(--c-p-500) 20%, transparent); }
+.border-primary\/30 { border-color: color-mix(in srgb, var(--c-p-500) 30%, transparent); }
+.bg-success\/20 { background-color: color-mix(in srgb, var(--c-success) 20%, transparent); }
+.opacity-0 { opacity: 0; }
+.group:hover .group-hover\:opacity-100 { opacity: 1; }
+.group:hover .group-hover\:scale-110 { transform: scale(1.1); }
+.hover\:-translate-y-1:hover { transform: translateY(-0.25rem); }
+.bg-black { background-color: black; }
+
+/* تدرّجات مُركَّبة (from/to معاً) — Tailwind يبنيها عبر متغيرات --tw-gradient-*
+   غير الموجودة؛ تعريف مباشر يغطي التركيبتين الفعليتين المستخدَمتين فقط. النحاسي
+   هو هوية «قرار» الثانوية الفعلية (انظر تعليق variables.css: أخضر + نحاسي). */
+.bg-gradient-to-br.from-primary.to-secondary {
+    background-image: linear-gradient(to bottom right, var(--c-p-500), var(--c-gold-500));
+}
+.bg-gradient-to-br.from-white\/5.to-white\/0 {
+    background-image: linear-gradient(to bottom right, color-mix(in srgb, var(--c-p-contrast) 5%, transparent), transparent);
+}
+.bg-gradient-to-br.from-primary\/20.to-secondary\/20 {
+    background-image: linear-gradient(to bottom right, color-mix(in srgb, var(--c-p-500) 20%, transparent), color-mix(in srgb, var(--c-gold-500) 20%, transparent));
+}
+
+/* عرض مبسّط بلا مكتبة Tailwind Typography — سطر مقروء فقط، بلا تنسيقات إضافية */
+.prose, .prose-invert { line-height: 1.7; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   تدقيق AIFocusGroupView.js / AcademyView.js / CommunityForumView.js
+   (2026-08-31) — فئات Tailwind وهمية بلا تعريف CSS فعلي (نفس السبب البنيوي في كل
+   الأقسام أعلاه). القيم تطابق سلّم Tailwind الفعلي؛ الألوان عبر --c-* الموجودة
+   (أو --c-accent-indigo/--c-accent-pink المضافتين بنفس أسلوب --c-accent-teal في
+   variables.css) — بلا أي قيمة hex جديدة. البطاقات الداكنة الثابتة في الملفات
+   الثلاثة (مثال: بطاقة الشخصية الافتراضية، لوحة الدردشة) تعيد استخدام عائلة
+   bg-black\/*‎/.text-invert\/*‎/.border-invert\/* المعرَّفة أعلاه حرفياً (تدقيق
+   MandAHub) بدل تكرار نفس القرار بتسمية مختلفة.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* --- Layout / position / sizing (بلا لون) --- */
+.top-2 { top: 0.5rem; }
+.right-2 { right: 0.5rem; }
+.right-4 { right: 1rem; }
+.bottom-0 { bottom: 0; }
+.bottom-4 { bottom: 1rem; }
+.left-4 { left: 1rem; }
+.left-10 { left: 2.5rem; }
+.-right-20 { right: -5rem; }
+.-top-20 { top: -5rem; }
+.w-24 { width: 6rem; }
+.w-32 { width: 8rem; }
+.w-64 { width: 16rem; }
+.h-1 { height: 0.25rem; }
+.h-24 { height: 6rem; }
+.h-32 { height: 8rem; }
+.h-64 { height: 16rem; }
+.h-\[600px\] { height: 600px; }
+.min-w-\[250px\] { min-width: 250px; }
+.max-w-\[80\%\] { max-width: 80%; }
+.aspect-\[3\/4\] { aspect-ratio: 3 / 4; }
+.mr-auto { margin-right: auto; }
+.my-4 { margin-block: 1rem; }
+.border-0 { border-width: 0; }
+.border-2 { border-width: 2px; border-style: solid; }
+.border-black { border-color: black; }
+.rounded-tl-sm { border-top-left-radius: var(--r-sm); }
+.rounded-tr-sm { border-top-right-radius: var(--r-sm); }
+.opacity-30 { opacity: 0.3; }
+.opacity-60 { opacity: 0.6; }
+.overflow-x-auto { overflow-x: auto; }
+.overflow-y-auto { overflow-y: auto; }
+.whitespace-nowrap { white-space: nowrap; }
+.cursor-default { cursor: default; }
+.duration-1000 { transition-duration: 1000ms; }
+.scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+@media (min-width: 1024px) {
+    .lg\:col-span-3 { grid-column: span 3 / span 3; }
+}
+
+/* أيقونات .ic (main.css) بحجم افتراضي 1.15em تفوز بالترتيب على .w-N/.h-N أعلاه لو
+   استُخدمت وحدها (main.css يُحمَّل بعد هذا الملف)؛ تركيبة .ic.w-N.h-N مضاعفة
+   الخصوصية تضمن التطبيق الفعلي بصرف النظر عن الترتيب. */
+.ic.w-3.h-3 { width: 0.75rem; height: 0.75rem; }
+.ic.w-4.h-4 { width: 1rem; height: 1rem; }
+.ic.w-6.h-6 { width: 1.5rem; height: 1.5rem; }
+.ic.w-8.h-8 { width: 2rem; height: 2rem; }
+.ic.w-12.h-12 { width: 3rem; height: 3rem; }
+
+/* --- ألوان --- */
+.blur-2xl { filter: blur(40px); }
+.bg-emerald-500 { background-color: var(--c-accent-green); }
+.text-emerald-400 { color: var(--c-accent-green); }
+.bg-black\/60 { background-color: rgba(0, 0, 0, 0.6); }
+.bg-blue-600\/10 { background-color: color-mix(in srgb, var(--c-accent-blue) 10%, transparent); }
+.bg-indigo-500\/10 { background-color: color-mix(in srgb, var(--c-accent-indigo) 10%, transparent); }
+/* text-red-400 العام (تدقيق MandAHub أعلاه: var(--c-accent-red)) فحص تباين فعلي هنا
+   يعطي ~2.6:1 فقط فوق بطاقة الشخصية/مؤشر المزاج الداكنة (bg-black/80) — أغمق من
+   أن يُقرأ نصاً أبيض على أسود. نطاق محصور بجذر AIFocusGroupView (خصوصية أعلى:
+   صنفان بدل صنف) يتغلّب دون المساس بالفئة العامة التي تستخدمها ملفات أخرى فوق
+   خلفيات فاتحة حيث accent-red مقروء أصلاً. */
+.ai-focus-group-view .text-red-400 { color: color-mix(in srgb, var(--c-accent-red) 55%, var(--c-p-contrast) 45%); }
+
+/* زر "توليد شخصية جديدة (قريباً)" — Tailwind !important prefix حرفياً */
+.\!bg-blue-600 { background-color: var(--c-accent-blue) !important; }
+
+/* توهّج شريط مؤشر المزاج (AIFocusGroupView) — بديل قيمة Tailwind التعسفية
+   shadow-[0_0_10px_rgba(16,185,129,0.8)] (أقواس/فواصل لا يمكن تحويلها لمحدِّد CSS
+   آمن)؛ نفس اللون عبر --c-accent-green بدل rgba(16,185,129) الحرفي. */
+.mood-fill-glow { box-shadow: 0 0 10px color-mix(in srgb, var(--c-accent-green) 80%, transparent); }
+
+/* حدود ملوّنة فوق .border (wizard-forms.css) — تركيبة مضاعفة الخصوصية تضمن الفوز
+   على شكله المختصر (يعيّن اللون أيضاً) بصرف النظر عن ترتيب bundle.css، بدل نقل
+   الفئات المفردة (border-invert/*‎, border-red-500/20) المعرَّفة أعلاه أصلاً
+   لملفات أخرى قد تستخدمها بصيغتها المفردة أيضاً. */
+.border.border-invert\/5 { border-color: color-mix(in srgb, var(--c-p-contrast) 5%, transparent); }
+.border.border-invert\/20 { border-color: color-mix(in srgb, var(--c-p-contrast) 20%, transparent); }
+.border.border-red-500\/20 { border-color: color-mix(in srgb, var(--c-accent-red) 20%, transparent); }
+
+/* --- تدرّجات مُركَّبة (from/via/to معاً) — Tailwind يبنيها عبر متغيرات
+   --tw-gradient-* غير الموجودة؛ تعريف مباشر يغطي التركيبات الفعلية الثماني
+   المستخدَمة فقط في الملفات الثلاثة، بنفس أسلوب تدرّجات M&A/Supply Chain أعلاه. */
+.ai-focus-group-view .bg-gradient-to-r.from-blue-900\/30.via-indigo-900\/20.to-transparent {
+    background-image: linear-gradient(to right, color-mix(in srgb, var(--c-accent-blue) 30%, transparent), color-mix(in srgb, var(--c-accent-indigo) 20%, transparent), transparent);
+}
+.ai-focus-group-view .bg-gradient-to-br.from-indigo-500.to-purple-600 {
+    background-image: linear-gradient(to bottom right, var(--c-accent-indigo), var(--c-accent-purple));
+}
+.ai-focus-group-view .bg-gradient-to-r.from-blue-400.to-indigo-500 {
+    background-image: linear-gradient(to right, var(--c-accent-blue), var(--c-accent-indigo));
+}
+.ai-focus-group-view .bg-gradient-to-r.from-red-500.via-yellow-500.to-emerald-500 {
+    background-image: linear-gradient(to right, var(--c-accent-red), var(--c-warning), var(--c-accent-green));
+}
+.academy-view .bg-gradient-to-l.from-red-600\/10.to-transparent {
+    background-image: linear-gradient(to left, color-mix(in srgb, var(--c-accent-red) 10%, transparent), transparent);
+}
+.academy-view .bg-gradient-to-t.from-black.via-black\/20.to-transparent {
+    background-image: linear-gradient(to top, black, rgba(0, 0, 0, 0.2), transparent);
+}
+.community-view .bg-gradient-to-l.from-pink-500\/10.to-transparent {
+    background-image: linear-gradient(to left, color-mix(in srgb, var(--c-accent-pink) 10%, transparent), transparent);
+}
+.community-view .bg-gradient-to-br.from-pink-400.to-purple-500 {
+    background-image: linear-gradient(to bottom right, var(--c-accent-pink), var(--c-accent-purple));
 }

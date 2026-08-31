@@ -901,6 +901,98 @@
     box-shadow: 0 0 15px rgba(249, 115, 22, 0.4) !important;
 }
 
+/* تدقيق 2026-08-31: FranchiseHubView.js كان مبنياً بالكامل بفئات Tailwind وهمية
+   (bg-black/40, rounded-2xl, text-white/60...) بلا أي CSS خلفها — نفس علة بقية
+   أقسام هذا الملف، لكن هنا القاعدة أعلاه لم تكن تعطي سوى لون النص الأبيض بلا أي
+   خلفية داكنة حقيقية، فيصل النص أبيض على صفحة التطبيق البيضاء (غير مرئي عملياً).
+   فئات BEM حقيقية هنا بدل ذلك — نفس لغة الزجاج الداكن المستخدمة في أقسام هذا
+   الملف الأخرى (--v2-glass-*، .admin-tile، .report-preview-page). خلفية داكنة
+   #0b1512 مطابقة لـ brand.darkBg الموثّقة في tailwind.config.js (لا لون مخترع). */
+.franchise-hub-view {
+    max-width: 64rem;
+    margin-inline: auto;
+    padding: 32px 16px;
+    background: linear-gradient(160deg, #0b1512 0%, #16281f 100%);
+    border-radius: 24px;
+}
+
+.fh-header {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding: 24px;
+    border-radius: 16px;
+    background: linear-gradient(90deg, rgba(249, 115, 22, 0.1), transparent);
+    border: 1px solid rgba(249, 115, 22, 0.2);
+}
+@media (min-width: 768px) {
+    .fh-header { flex-direction: row; align-items: center; }
+}
+
+.fh-title { display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+.fh-title .ic { color: #fb923c; width: 24px; height: 24px; }
+.fh-desc { font-size: 0.875rem; color: rgba(255, 255, 255, 0.6); }
+
+.fh-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+}
+.fh-badge-dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; }
+
+.fh-grid { display: grid; grid-template-columns: 1fr; gap: 32px; }
+@media (min-width: 1024px) {
+    .fh-grid { grid-template-columns: 1fr 1fr; }
+}
+.fh-col { display: flex; flex-direction: column; gap: 24px; }
+
+.fh-panel { padding: 24px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); background: rgba(255, 255, 255, 0.02); }
+.fh-panel-title { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; font-weight: 700; margin-bottom: 24px; }
+.fh-panel-title .ic { color: #fb923c; width: 20px; height: 20px; }
+
+.fh-slider-row { margin-bottom: 24px; }
+.fh-slider-head { display: flex; justify-content: space-between; font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); margin-bottom: 8px; }
+.fh-slider-head span { color: #fff; }
+.fh-slider-track { width: 100%; height: 8px; border-radius: 999px; background: rgba(0, 0, 0, 0.5); overflow: hidden; }
+.fh-slider-fill { height: 100%; background: #fb923c; }
+.fh-slider-fill--success { background: #34d399; }
+
+.fh-results { margin-top: 32px; padding: 16px; border-radius: 12px; background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.2); }
+.fh-result-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; }
+.fh-result-row:first-child { padding-top: 0; }
+.fh-result-row:last-child { padding-bottom: 0; border-top: 1px solid rgba(249, 115, 22, 0.2); }
+.fh-result-row span:first-child { font-size: 0.875rem; color: rgba(255, 255, 255, 0.8); }
+.fh-result-value { font-size: 1.25rem; font-weight: 700; color: #fb923c; }
+.fh-result-value--plain { color: #fff; }
+
+.fh-readiness { position: relative; overflow: hidden; padding: 24px; border-radius: 16px; background: linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid rgba(249, 115, 22, 0.3); }
+.fh-readiness h3 { font-size: 0.875rem; font-weight: 700; margin-bottom: 8px; }
+.fh-readiness-row { display: flex; align-items: flex-end; gap: 16px; margin-top: 16px; }
+.fh-readiness-value { font-size: 3rem; font-weight: 700; color: #fb923c; }
+.fh-readiness-value small { font-size: 1.5rem; }
+.fh-readiness-note { font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); max-width: 150px; margin-bottom: 8px; }
+
+.fh-docs { flex: 1; }
+.fh-docs-desc { font-size: 0.75rem; color: rgba(255, 255, 255, 0.5); margin-bottom: 24px; }
+.fh-doc-list { display: flex; flex-direction: column; gap: 12px; }
+.fh-doc-btn { width: 100%; text-align: start; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid transparent; display: flex; justify-content: space-between; align-items: center; cursor: not-allowed; opacity: 0.7; }
+.fh-doc-title { font-size: 0.875rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+/* تدقيق تباين 2026-08-31: rgba(255,255,255,.4) على الخلفية الداكنة لهذه البطاقة يقيس
+   ~3.76:1 فقط — دون حد WCAG AA للنص العادي (4.5:1). 0.55 يقيس ~5.8:1. */
+.fh-doc-sub { font-size: 0.625rem; color: rgba(255, 255, 255, 0.55); }
+.fh-doc-btn .ic { color: rgba(255, 255, 255, 0.45); width: 20px; height: 20px; }
+
 
 /* =========================================
    [18] ULTIMATE SCALING VIEWS
@@ -952,6 +1044,143 @@
     transform: translateY(-2px);
     box-shadow: 0 8px 30px rgba(16, 185, 129, 0.2);
 }
+
+/* تدقيق 2026-08-31: GovTendersRadarView.js مبني بفئات Tailwind وهمية (bg-black/40,
+   rounded-2xl, text-white/50...) بلا CSS خلفها — نفس علة الأقسام الأخرى في هذا
+   الملف. القاعدة أعلاه لم تكن تعطي سوى لون النص الأبيض بلا خلفية داكنة حقيقية.
+   فئات BEM حقيقية هنا، بنفس لغة الزجاج الداكن. */
+.tenders-radar-view {
+    max-width: 64rem;
+    margin-inline: auto;
+    padding: 32px 16px;
+    background: linear-gradient(160deg, #0b1512 0%, #16281f 100%);
+    border-radius: 24px;
+}
+
+.tr-header {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding: 24px;
+    border-radius: 16px;
+    background: linear-gradient(90deg, rgba(5, 150, 105, 0.12), transparent);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+@media (min-width: 768px) {
+    .tr-header { flex-direction: row; align-items: center; }
+}
+
+.tr-title { display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+.tr-title .ic { color: #10b981; width: 24px; height: 24px; }
+.tr-desc { font-size: 0.875rem; color: rgba(255, 255, 255, 0.6); }
+
+.tr-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+}
+.tr-badge-dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; }
+
+.tr-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.tr-filters { display: flex; gap: 16px; }
+.tr-filter {
+    width: 160px;
+    font-size: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.1);
+    cursor: not-allowed;
+}
+/* تدقيق تباين 2026-08-31: rgba(52,211,153,.5) على هذه الخلفية الداكنة يقيس ~3.18:1
+   فقط — دون حد WCAG AA (4.5:1)؛ اللون الأخضر عند 0.75 يقيس ~5.3:1 (نفس الدرجة). */
+.tr-sync-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: rgba(52, 211, 153, 0.75);
+    background: none;
+    border: none;
+    cursor: not-allowed;
+}
+.tr-sync-btn .ic { width: 16px; height: 16px; }
+
+.tr-list { display: flex; flex-direction: column; gap: 16px; }
+
+.tr-item {
+    position: relative;
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+    transition: background-color 0.2s ease;
+}
+.tr-item:hover { background: rgba(255, 255, 255, 0.1); }
+.tr-item--match { border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
+
+.tr-item-glow {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 64px;
+    height: 64px;
+    background: rgba(16, 185, 129, 0.1);
+    filter: blur(24px);
+}
+
+.tr-item-body { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 16px; }
+@media (min-width: 768px) {
+    .tr-item-body { flex-direction: row; align-items: center; }
+}
+
+.tr-item-main { flex: 1; }
+.tr-item-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.tr-item-id { font-size: 0.625rem; background: rgba(0, 0, 0, 0.4); color: rgba(255, 255, 255, 0.5); padding: 2px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); font-family: var(--font-mono); }
+.tr-item-entity { font-size: 0.75rem; font-weight: 700; color: rgba(255, 255, 255, 0.8); }
+.tr-item-title { font-size: 1.125rem; font-weight: 700; margin-bottom: 8px; }
+.tr-item:hover .tr-item-title { color: #34d399; }
+.tr-item-facts { display: flex; gap: 16px; font-size: 0.75rem; flex-wrap: wrap; }
+.tr-item-value { color: rgba(255, 255, 255, 0.5); }
+.tr-item-value strong { color: #fff; }
+/* تدقيق تباين 2026-08-31: 0.3 يقيس ~2.4:1 فقط؛ 0.55 يقيس ~5.8:1 — التمييز البصري
+   للقيمة غير المحددة يبقى عبر font-weight:400 (عادي مقابل bold) لا عبر شفافية زائدة. */
+.tr-item-value strong.is-tbd { color: rgba(255, 255, 255, 0.55); font-weight: 400; }
+.tr-item-days { display: flex; align-items: center; gap: 4px; color: #facc15; }
+.tr-item-days .ic { width: 12px; height: 12px; }
+.tr-item-days--urgent { color: #f87171; font-weight: 700; }
+
+.tr-item-side { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; min-width: 150px; }
+.tr-match { display: flex; align-items: center; gap: 8px; }
+.tr-match-label { font-size: 0.625rem; color: rgba(255, 255, 255, 0.5); }
+.tr-match-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #64748b;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: rgba(0, 0, 0, 0.4);
+}
+.tr-match-circle--high { border-color: #10b981; color: #34d399; }
+
+.tr-item-cta { width: 100%; font-size: 0.75rem; cursor: not-allowed; opacity: 0.6; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.tr-item-cta .ic { width: 16px; height: 16px; }
 
 
 /* =========================================
@@ -1063,9 +1292,196 @@
    [24] DIGITAL REPUTATION RADAR VIEW
    ========================================= */
 
+/* تدقيق 2026-08-31: DigitalReputationRadarView.js مبني بفئات Tailwind وهمية
+   (bg-black/40, rounded-2xl, text-white/60...) بلا CSS خلفها — نفس علة الأقسام
+   الأخرى في هذا الملف. القاعدة أدناه كانت تعطي لون النص الأبيض فقط بلا خلفية
+   داكنة حقيقية. فئات BEM حقيقية هنا، بنفس لغة الزجاج الداكن. */
 .digital-reputation-view {
     color: #fff !important;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding: 32px 16px;
+    background: linear-gradient(160deg, #0b1512 0%, #16281f 100%);
+    border-radius: 24px;
 }
+
+.dr-header {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding: 24px;
+    border-radius: 16px;
+    background: linear-gradient(90deg, rgba(37, 99, 235, 0.12), transparent);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+@media (min-width: 768px) {
+    .dr-header { flex-direction: row; align-items: center; }
+}
+
+.dr-title { display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+.dr-title .ic { color: #60a5fa; width: 24px; height: 24px; }
+.dr-desc { font-size: 0.875rem; color: rgba(255, 255, 255, 0.6); line-height: 1.6; }
+
+.dr-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+}
+.dr-badge-dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; }
+
+.dr-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+@media (min-width: 1024px) {
+    .dr-grid { grid-template-columns: 1fr 2fr; }
+}
+.dr-col { display: flex; flex-direction: column; gap: 24px; }
+
+.dr-sentiment-card,
+.dr-keyword-card {
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.4);
+    text-align: center;
+}
+.dr-sentiment-card h3,
+.dr-keyword-card h4 {
+    font-size: 0.875rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+}
+.dr-keyword-card h4 { text-align: start; }
+
+.dr-sentiment-value {
+    font-size: 3.75rem;
+    font-weight: 900;
+    color: #34d399;
+    font-family: var(--font-mono);
+    margin-bottom: 8px;
+}
+.dr-sentiment-caption {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgba(52, 211, 153, 0.7);
+    margin-bottom: 24px;
+}
+
+.dr-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: start;
+    padding: 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 0.75rem;
+}
+.dr-row + .dr-row { margin-top: 12px; }
+.dr-row-label { color: rgba(255, 255, 255, 0.7); }
+.dr-row-value { font-weight: 700; }
+.dr-row-value--positive { color: #34d399; }
+.dr-row-value--negative { color: #f87171; }
+.dr-row-value--neutral { color: #facc15; }
+
+.dr-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.dr-chip { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; border: 1px solid transparent; }
+.dr-chip--positive { background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+.dr-chip--negative { background: rgba(239, 68, 68, 0.2); color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+.dr-chip--neutral { background: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.6); border-color: rgba(255, 255, 255, 0.2); }
+.dr-chip--info { background: rgba(37, 99, 235, 0.2); color: #60a5fa; border-color: rgba(37, 99, 235, 0.3); }
+
+.dr-alert {
+    position: relative;
+    padding: 16px 16px 16px 24px;
+    border-radius: 12px;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    background: rgba(127, 29, 29, 0.3);
+    overflow: hidden;
+}
+.dr-alert::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: #ef4444;
+}
+.dr-alert-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
+.dr-alert-title { display: flex; align-items: center; gap: 8px; color: #f87171; font-weight: 700; font-size: 0.875rem; }
+.dr-alert-title .ic { width: 20px; height: 20px; }
+/* تدقيق تباين 2026-08-31: rgba(252,165,165,.5) على خلفية التنبيه الداكنة يقيس ~3.15:1
+   فقط — دون حد WCAG AA (4.5:1)؛ 0.75 يقيس ~5.3:1. */
+.dr-alert-tag { font-size: 0.625rem; color: rgba(252, 165, 165, 0.75); flex-shrink: 0; }
+.dr-alert-body { font-size: 0.75rem; color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin-bottom: 16px; }
+.dr-alert-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.dr-alert-btn {
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: not-allowed;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: rgba(252, 165, 165, 0.7);
+}
+.dr-alert-btn--primary {
+    background: rgba(220, 38, 38, 0.5);
+    border-color: transparent;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.dr-feed-title { font-size: 0.875rem; font-weight: 700; margin: 24px 0 8px; }
+
+.dr-mentions { display: flex; flex-direction: column; gap: 12px; }
+.dr-mention {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.4);
+    transition: border-color 0.2s ease;
+}
+.dr-mention:hover { border-color: rgba(255, 255, 255, 0.2); }
+.dr-mention--flag { border-color: rgba(239, 68, 68, 0.2); background: rgba(69, 10, 10, 0.2); }
+.dr-mention--flag:hover { border-color: rgba(239, 68, 68, 0.4); }
+
+.dr-mention-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(37, 99, 235, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    font-size: 0.75rem;
+}
+.dr-mention-avatar--alt { background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+.dr-mention-avatar--alt .ic { width: 16px; height: 16px; }
+
+.dr-mention-body { flex: 1; min-width: 0; }
+.dr-mention-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+.dr-mention-name { font-size: 0.75rem; font-weight: 700; }
+/* تدقيق تباين 2026-08-31: rgba(255,255,255,.4) يقيس ~3.76:1 فقط على هذه الخلفية
+   الداكنة — دون حد WCAG AA (4.5:1)؛ 0.55 يقيس ~5.8:1. */
+.dr-mention-tag { font-size: 0.625rem; color: rgba(255, 255, 255, 0.55); flex-shrink: 0; }
+.dr-mention-text { font-size: 0.75rem; color: rgba(255, 255, 255, 0.7); }
+.dr-mention-stars { display: flex; gap: 2px; color: #facc15; margin-bottom: 4px; }
+.dr-mention-note { margin-top: 8px; text-align: end; font-size: 0.625rem; color: rgba(255, 255, 255, 0.55); }
 
 /* Animations */
 @keyframes radar-sweep {

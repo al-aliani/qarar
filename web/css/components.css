@@ -149,6 +149,36 @@
     background: var(--c-p-subtle);
 }
 
+/* أزرار "نسخ/رجوع/روابط داخل السطر" (BankTransferPanel/DashboardView/PhoneAuthModal/
+   AuthModalStub/ServiceAnalysis/OperationalSim) — تُستخدم دائماً بمفردها بلا .btn
+   الأساسي، فتعريفها هنا قائم بذاته: بلا حدود ولا خلفية بأي حالة، بنفس لغة ألوان
+   وانتقال .btn--ghost أعلاه، وحلقة تركيز بنفس نمط .btn:focus-visible. */
+.btn--text {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0;
+    border: none;
+    border-radius: var(--r-sm);
+    background: transparent;
+    color: var(--c-p-500);
+    font: inherit;
+    cursor: pointer;
+    transition: color .2s ease;
+}
+
+.btn--text:hover {
+    color: var(--c-p-600);
+    text-decoration: underline;
+}
+
+.btn--text:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 3px;
+    box-shadow: var(--focus-ring);
+}
+
 .btn--success {
     background-color: var(--c-success);
     color: #fff;
@@ -157,6 +187,29 @@
 .btn--success:hover {
     background-color: var(--c-success);
     filter: brightness(1.08);
+}
+
+/* TrashView (سلة المحذوفات): زر تأكيد الحذف في نوافذ Swal كان يحمل صنفاً وهمياً
+   `btn-danger` بلا أي تعريف — يظهر بلا حدود ولا خلفية رغم buttonsStyling:false. */
+.btn--danger {
+    background-color: var(--c-danger);
+    color: #fff;
+}
+
+.btn--danger:hover {
+    background-color: var(--c-danger);
+    filter: brightness(1.08);
+}
+
+.btn--outline-danger {
+    background-color: transparent;
+    color: var(--c-danger);
+    border-color: var(--c-danger);
+}
+
+.btn--outline-danger:hover {
+    background: var(--c-danger-subtle);
+    color: var(--c-danger);
 }
 .btn-sm {
     padding: 0.35rem 0.75rem;
@@ -3859,6 +3912,12 @@ button.qa-detail-item:hover {
     margin-top: 2px;
 }
 
+@media (max-width: 560px) {
+    .checkout-tiers {
+        grid-template-columns: 1fr;
+    }
+}
+
 .btn-close:hover {
     background: var(--c-bg-card);
     color: var(--c-text-main);
@@ -3971,6 +4030,15 @@ button.qa-detail-item:hover {
     animation: spin 0.8s linear infinite;
     display: inline-block;
     margin-left: 8px;
+}
+
+/* مؤشر تحميل أكبر لحالات الصفحة الكاملة (مثال: TrashView) بدل النقطة الصغيرة
+   المخصَّصة أصلاً لتعليق أزرار/أسطر نصية. */
+.spinner--lg {
+    width: 40px;
+    height: 40px;
+    border-width: 4px;
+    margin-left: 0;
 }
 
 .animate-scale-in {
@@ -4101,6 +4169,17 @@ button.qa-detail-item:hover {
 
 .bg-success\/20 {
     background: rgba(16, 185, 129, 0.2);
+}
+
+/* شارة "اجتازت فحص الجودة 100%" في ExportMenu — 4% لا 10% حرفياً: عند 10% ينخفض
+   تباين .text-success فوقها إلى ~4.25:1 (دون حد WCAG AA 4.5:1 للنص العادي)؛
+   4% يبقيه عند ~4.59:1. */
+.bg-success\/10 {
+    background: color-mix(in srgb, var(--c-success) 4%, transparent);
+}
+
+.border-success\/20 {
+    border-color: color-mix(in srgb, var(--c-success) 30%, transparent);
 }
 
 .bg-warning\/20 {
@@ -4323,4 +4402,37 @@ input[type="number"] {
     margin-top: -1px;
     pointer-events: none;
     box-shadow: -10px 0 16px 10px color-mix(in srgb, var(--c-surface-1) 80%, transparent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TRASH VIEW (سلة المحذوفات) — TrashView.js كان يعتمد كلياً على فئات Tailwind
+   (grid/bg-gray-50/rounded-xl/border-dashed…) غير المعرَّفة إطلاقاً في المشروع
+   (tailwind.config.js لا يغطي web/js/**)، فتصل الصفحة كعمود نص عادي بلا تصميم.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* حالة الفراغ: نفس نمط الصندوق المتقطع المستخدَم في .optional-step-tools
+   وwizard-forms.css/ready-studies.css (بطاقة خفيفة بحدّ متقطّع). */
+.trash-empty {
+    background: var(--c-surface-2);
+    border: 1px dashed var(--c-border);
+    border-radius: var(--r-xl);
+}
+
+/* بطاقة مشروع محذوف: تعتمد على .card الأساسية (خلفية/حدّ/ظل/انتقال جاهزة)،
+   وتستبدل فقط لون التركيز عند المرور بالأحمر (سلة محذوفات) بدل الأخضر الافتراضي. */
+.trash-card:hover {
+    border-color: var(--c-danger-subtle);
+    box-shadow: var(--shadow-sm), 0 0 0 1px var(--c-danger-subtle);
+}
+
+.trash-card__icon {
+    padding: var(--s-2);
+    background: var(--c-danger-subtle);
+    color: var(--c-danger);
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.trash-card:hover .trash-card__icon {
+    background: color-mix(in srgb, var(--c-danger) 16%, transparent);
 }
