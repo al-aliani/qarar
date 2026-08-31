@@ -27,7 +27,7 @@ describe('SupportTicketsView', () => {
     beforeEach(() => {
         document.body.innerHTML = '<div id="root"></div>';
         submitTicketMock.mockReset();
-        listMyTicketsMock.mockReset().mockResolvedValue([]);
+        listMyTicketsMock.mockReset().mockResolvedValue({ ok: true, tickets: [] });
         getTicketWithMessagesMock.mockReset();
         addMessageMock.mockReset();
     });
@@ -68,22 +68,52 @@ describe('SupportTicketsView', () => {
         expect(errEl.style.display).toBe('block');
     });
 
+    it('زر الإرسال يُعطَّل أثناء الطلب (منع نقر مزدوج) ويُعاد تفعيله بعد الفشل', async () => {
+        let resolveSubmit;
+        submitTicketMock.mockReturnValue(new Promise((resolve) => { resolveSubmit = resolve; }));
+        await renderView();
+
+        const btn = document.getElementById('btnSupportSubmit');
+        btn.click();
+        await new Promise((r) => setTimeout(r, 0));
+        expect(btn.disabled).toBe(true);
+        expect(btn.textContent).toBe('جارٍ الإرسال...');
+
+        resolveSubmit({ ok: false, error: 'فشل الإرسال' });
+        await new Promise((r) => setTimeout(r, 0));
+        expect(btn.disabled).toBe(false);
+        expect(btn.textContent).toBe('إرسال التذكرة');
+    });
+
     it('يعرض تذاكر موجودة بشاراتها الصحيحة (مفتوحة/تم الرد/مُغلقة)', async () => {
-        listMyTicketsMock.mockResolvedValue([
-            { id: 't1', subject: 'الأولى', status: 'open', updated_at: '2026-07-18T00:00:00Z' },
-            { id: 't2', subject: 'الثانية', status: 'answered', updated_at: '2026-07-17T00:00:00Z' },
-            { id: 't3', subject: 'الثالثة', status: 'closed', updated_at: '2026-07-16T00:00:00Z' },
-        ]);
+        listMyTicketsMock.mockResolvedValue({
+            ok: true,
+            tickets: [
+                { id: 't1', subject: 'الأولى', status: 'open', updated_at: '2026-07-18T00:00:00Z' },
+                { id: 't2', subject: 'الثانية', status: 'answered', updated_at: '2026-07-17T00:00:00Z' },
+                { id: 't3', subject: 'الثالثة', status: 'closed', updated_at: '2026-07-16T00:00:00Z' },
+            ],
+        });
         await renderView();
 
         const badges = [...document.querySelectorAll('[data-ticket-row] .badge')].map((b) => b.textContent.trim());
         expect(badges).toEqual(['مفتوحة', 'تم الرد', 'مُغلقة']);
     });
 
+    it('فشل جلب التذاكر: يعرض رسالة خطأ منفصلة عن "لا توجد تذاكر"', async () => {
+        listMyTicketsMock.mockResolvedValue({ ok: false, tickets: [], error: 'تعذّر الاتصال بالخادم' });
+        await renderView();
+
+        const listEl = document.getElementById('supportTicketsList');
+        expect(listEl.textContent).toContain('تعذّر الاتصال بالخادم');
+        expect(listEl.textContent).not.toContain('لا توجد تذاكر دعم بعد');
+    });
+
     it('النقر على تذكرة يفتح محادثتها عبر getTicketWithMessages', async () => {
-        listMyTicketsMock.mockResolvedValue([
-            { id: 't1', subject: 'الأولى', status: 'open', updated_at: '2026-07-18T00:00:00Z' },
-        ]);
+        listMyTicketsMock.mockResolvedValue({
+            ok: true,
+            tickets: [{ id: 't1', subject: 'الأولى', status: 'open', updated_at: '2026-07-18T00:00:00Z' }],
+        });
         getTicketWithMessagesMock.mockResolvedValue({
             ok: true,
             ticket: { id: 't1', status: 'open' },

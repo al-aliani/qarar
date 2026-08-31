@@ -76,11 +76,11 @@ export class DownloadsCenterView {
                     <h2 class="text-xl font-bold mb-4" style="border-bottom: 1px solid var(--c-border); padding-bottom: var(--s-2);">مركز التنزيلات</h2>
                     <p class="text-xs text-muted mb-4">الملفات السحابية قابلة للتنزيل المباشر عند تسجيل الدخول. السجل المحلي يحفظ ما خرج من جهازك ويتيح إعادة توليد الملف من قائمة التصدير.</p>
 
-                    <h3 class="text-base font-bold mb-2">محفوظ سحابياً</h3>
+                    <h3 class="text-lg font-bold mb-2">محفوظ سحابياً</h3>
                     ${items.length === 0 ? `
                         <p class="text-muted mb-4">لا توجد تصديرات محفوظة سحابياً حتى الآن.</p>
                     ` : `
-                        <div class="space-y-3 mb-5">
+                        <div class="space-y-3" style="margin-bottom: var(--s-5);">
                             ${items.map((it) => `
                                 <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                                     <div>
@@ -96,7 +96,7 @@ export class DownloadsCenterView {
                         </div>
                     `}
 
-                    <h3 class="text-base font-bold mb-2">السجل المحلي</h3>
+                    <h3 class="text-lg font-bold mb-2">السجل المحلي</h3>
                     ${localItems.length === 0 ? `
                         <p class="text-muted">لم يتم تسجيل تنزيلات محلية بعد.</p>
                     ` : `

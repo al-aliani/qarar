@@ -216,6 +216,11 @@
 .space-y-8 > * + * { margin-top: 2rem; }
 .space-y-16 > * + * { margin-top: 4rem; }
 
+.mb-6 { margin-bottom: var(--s-4); }
+.mb-8 { margin-bottom: var(--s-5); }
+
+.p-6 { padding: var(--s-4); }
+
 .max-w-md { max-width: 28rem; }
 .max-w-2xl { max-width: 42rem; }
 .max-w-3xl { max-width: 48rem; }

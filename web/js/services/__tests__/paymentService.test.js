@@ -126,12 +126,40 @@ describe('startCheckout', () => {
         expect(result.checkoutUrl).toBe('https://pay.example.com/abc');
     });
 
-    it('فشل الخادم (error من invoke) ⇒ ok:false برسالة الخطأ', async () => {
-        invokeMock.mockResolvedValue({ data: null, error: { message: 'invalid_tier' } });
+    it('فشل الخادم (error من invoke، شكل FunctionsHttpError الحقيقي) ⇒ ok:false بالسبب الفعلي من context.json() لا برسالة .message العامة الثابتة', async () => {
+        // شكل FunctionsHttpError الحقيقي (@supabase/functions-js): .message نص عام ثابت
+        // دوماً ('Edge Function returned a non-2xx status code')، والسبب الفعلي الذي
+        // أعادته create-checkout (مثال هنا: invalid_tier) لا يصل إلا عبر قراءة
+        // error.context.json() — انظر node_modules/@supabase/functions-js/src/types.ts
+        // وFunctionsClient.ts (`throw new FunctionsHttpError(response)`).
+        invokeMock.mockResolvedValue({
+            data: null,
+            error: {
+                name: 'FunctionsHttpError',
+                message: 'Edge Function returned a non-2xx status code',
+                context: { json: async () => ({ error: 'invalid_tier' }) },
+            },
+        });
         const { startCheckout } = await import('../PaymentService.js');
         const result = await startCheckout({ tier: 'self', studyId: 's1', provider: 'moyasar' });
         expect(result.ok).toBe(false);
         expect(result.error).toBe('invalid_tier');
+    });
+
+    it('بلوكر 2026-08-31: السبب الحقيقي (rate_limited) من context.json() يصل لـresult.error بدل رسالة .message العامة الثابتة', async () => {
+        invokeMock.mockResolvedValue({
+            data: null,
+            error: {
+                name: 'FunctionsHttpError',
+                message: 'Edge Function returned a non-2xx status code',
+                context: { json: async () => ({ error: 'rate_limited', retryAfterSeconds: 42 }) },
+            },
+        });
+        const { startCheckout } = await import('../PaymentService.js');
+        const result = await startCheckout({ tier: 'self', studyId: 's1', provider: 'moyasar' });
+        expect(result.ok).toBe(false);
+        expect(result.error).toBe('rate_limited');
+        expect(result.error).not.toBe('Edge Function returned a non-2xx status code');
     });
 
     it('استجابة بلا checkoutUrl ⇒ ok:false (لا نفترض نجاحاً من استجابة ناقصة)', async () => {
