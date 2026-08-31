@@ -72,6 +72,21 @@ describe('أوضاع تفصيل الدراسة — إظهار الأقسام', (
             expect(isStepVisibleInStudyMode(s.id, undefined)).toBe(true);
         });
     });
+
+    // تدقيق 2026-08-31: زر «أساسي» بصفحة الفئات (StudyCategoryView.js) يضبط الوضع
+    // على 'quick' لا 'simple' — كان يسقط على `return true` فتظهر الأربعون خطوة
+    // كاملة رغم أن عنوان الزر «إخفاء التفاصيل المعقدة (للمبتدئين)». يجب أن يخفي
+    // خطوات حقيقية تماماً مثل 'simple' (لا يصح توحيد قيمة 'quick' نفسها مع 'simple'
+    // لأن Wizard.js/DynamicTable.js يعتمدان القيمة 'quick' حرفياً لتقصير الحقول/الأعمدة).
+    it('quick (وضع زر «أساسي» الفعلي) يخفي خطوات حقيقية تماماً مثل simple — لا يعرض الأربعين كاملة', () => {
+        const quickVisible = STEPS.filter(s => isStepVisibleInStudyMode(s.id, 'quick')).map(s => s.id);
+        const simpleVisible = STEPS.filter(s => isStepVisibleInStudyMode(s.id, 'simple')).map(s => s.id);
+        expect(quickVisible.length).toBeLessThan(STEPS.length);
+        expect(quickVisible.sort()).toEqual(simpleVisible.sort());
+        SIMPLE_MODE_HIDDEN_STEP_IDS.forEach(id => {
+            expect(isStepVisibleInStudyMode(id, 'quick'), `${id} يجب أن يُخفى في quick`).toBe(false);
+        });
+    });
 });
 
 describe('أوضاع تفصيل الدراسة — انكماش التصنيفات في صفحة الفئات (منطق app.js)', () => {
