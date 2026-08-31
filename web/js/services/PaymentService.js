@@ -68,7 +68,23 @@ export async function startCheckout({ tier, studyId, provider, addons = [], coup
         const { data, error } = await supabase.functions.invoke('create-checkout', {
             body,
         });
-        if (error) return { ok: false, error: error.message || 'فشل إنشاء جلسة الدفع' };
+        if (error) {
+            // تدقيق 2026-08-31: FunctionsHttpError (@supabase/functions-js) يجعل .message
+            // نصاً ثابتاً عاماً بالإنجليزية دوماً ('Edge Function returned a non-2xx status
+            // code') بصرف النظر عن السبب الفعلي — السبب الحقيقي (invalid_tier/invalid_provider/
+            // rate_limited/study_not_owned/order_creation_failed/checkout_creation_failed، انظر
+            // supabase/functions/create-checkout/index.ts) موجود فقط بجسم استجابة create-checkout
+            // نفسه عبر error.context (كائن Response خام لم يُقرأ بعد)، تماماً كنمط error.context
+            // في ReviewerService.js.claimOrder. fallback آمن لو تعذّرت القراءة أو context مفقود.
+            let message = error.message || 'فشل إنشاء جلسة الدفع';
+            try {
+                const body = await error.context?.json();
+                if (body && typeof body.error === 'string') message = body.error;
+            } catch {
+                // جسم غير JSON أو تعذّر القراءة — يبقى fallback الرسالة العامة أعلاه.
+            }
+            return { ok: false, error: message };
+        }
         // تحويل بنكي: لا رابط دفع خارجي — يُعاد رقم الطلب والمبلغ لعرض بيانات الحساب.
         if (data?.bankTransfer) return { ok: true, bankTransfer: true, orderId: data.orderId, amount: data.amount };
         // كوبون خصم 100%: الطلب أُكِّد paid فوراً خادمياً بلا مزوّد دفع (لا شيء للتحصيل).

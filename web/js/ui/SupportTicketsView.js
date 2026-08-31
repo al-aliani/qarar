@@ -51,8 +51,11 @@ export class SupportTicketsView {
         const { user } = await getAuthUser();
         // تم إيقاف فرض تسجيل الدخول مؤقتاً للتجربة
         let tickets = [];
+        let ticketsError = null;
         if (user) {
-            tickets = await listMyTickets();
+            const result = await listMyTickets();
+            tickets = result.tickets || [];
+            if (!result.ok) ticketsError = result.error || 'تعذّر تحميل تذاكرك.';
         }
 
         this.container.innerHTML = `
@@ -92,9 +95,11 @@ export class SupportTicketsView {
                 <div class="card p-6">
                     <h2 class="text-xl font-bold mb-4" style="border-bottom: 1px solid var(--c-border); padding-bottom: var(--s-2);">تذاكرك</h2>
                     <div id="supportTicketsList">
-                        ${tickets.length === 0
-                            ? '<p class="text-muted">لا توجد تذاكر دعم بعد.</p><button type="button" id="supportEmptyNewTicketBtn" class="btn btn--secondary mt-2">فتح تذكرة دعم جديدة</button>'
-                            : tickets.map((t) => this._renderTicketRow(t)).join('')}
+                        ${ticketsError
+                            ? `<p class="text-danger text-sm" role="alert">${escapeHtml(ticketsError)}</p>`
+                            : tickets.length === 0
+                                ? '<p class="text-muted">لا توجد تذاكر دعم بعد.</p><button type="button" id="supportEmptyNewTicketBtn" class="btn btn--secondary mt-2">فتح تذكرة دعم جديدة</button>'
+                                : tickets.map((t) => this._renderTicketRow(t)).join('')}
                     </div>
                 </div>
             </div>
@@ -133,10 +138,19 @@ export class SupportTicketsView {
         const errEl = this.container.querySelector('#supportSubmitError');
         const showErr = (msg) => { errEl.textContent = msg || ''; errEl.style.display = msg ? 'block' : 'none'; };
 
-        this.container.querySelector('#btnSupportSubmit')?.addEventListener('click', async () => {
+        const submitBtn = this.container.querySelector('#btnSupportSubmit');
+        submitBtn?.addEventListener('click', async () => {
             showErr('');
+            const originalLabel = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'جارٍ الإرسال...';
             const result = await submitTicket({ subject: subjectEl.value, body: bodyEl.value, issueType: issueTypeEl.value, priority: priorityEl.value });
-            if (!result.ok) { showErr(result.error || 'فشل إرسال التذكرة'); return; }
+            if (!result.ok) {
+                showErr(result.error || 'فشل إرسال التذكرة');
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalLabel;
+                return;
+            }
             trackEvent('support_ticket_created', { category: 'support' });
             toast.success('تم إرسال تذكرتك — سنرد عليك قريباً');
             await this.render();
@@ -199,12 +213,18 @@ export class SupportTicketsView {
 
         const replyBody = threadEl.querySelector(`#ticketReplyBody-${ticket.id}`);
         const replyErr = threadEl.querySelector(`#ticketReplyError-${ticket.id}`);
-        threadEl.querySelector(`#ticketReplyBtn-${ticket.id}`)?.addEventListener('click', async (e) => {
+        const replyBtn = threadEl.querySelector(`#ticketReplyBtn-${ticket.id}`);
+        replyBtn?.addEventListener('click', async (e) => {
             e.stopPropagation();
+            const originalLabel = replyBtn.textContent;
+            replyBtn.disabled = true;
+            replyBtn.textContent = 'جارٍ الإرسال...';
             const result = await addMessage(ticket.id, replyBody.value);
             if (!result.ok) {
                 replyErr.textContent = result.error || 'فشل إرسال الرد';
                 replyErr.style.display = 'block';
+                replyBtn.disabled = false;
+                replyBtn.textContent = originalLabel;
                 return;
             }
             trackEvent('support_ticket_reply_sent', { surface: 'ticket_thread' });

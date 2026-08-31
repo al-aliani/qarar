@@ -30,11 +30,11 @@ export class ReviewerDashboardView {
             return;
         }
 
-        this.container.innerHTML = `<div class="reviewer-dashboard p-6 max-w-5xl mx-auto"><p class="text-gray-400">جارٍ تحميل الطابور…</p></div>`;
+        this.container.innerHTML = `<div class="reviewer-dashboard p-6 max-w-5xl mx-auto"><p class="text-muted">جارٍ تحميل الطابور…</p></div>`;
 
         const result = await fetchQueue();
         if (!result.ok) {
-            this.container.innerHTML = `<div class="reviewer-dashboard p-6 max-w-5xl mx-auto"><p class="text-red-500">تعذّر تحميل الطابور: ${this._esc(result.error)}</p></div>`;
+            this.container.innerHTML = `<div class="reviewer-dashboard p-6 max-w-5xl mx-auto"><p class="text-danger">تعذّر تحميل الطابور: ${this._esc(result.error)}</p></div>`;
             return;
         }
 
@@ -49,25 +49,25 @@ export class ReviewerDashboardView {
     }
 
     _renderQueueItem(item) {
-        return `<div class="reviewer-card p-4 bg-white rounded-2xl shadow border border-gray-100 mb-3 flex items-center justify-between gap-4" data-order-id="${this._esc(item.orderId)}">
+        return `<div class="reviewer-card card flex items-center justify-between gap-4" data-order-id="${this._esc(item.orderId)}">
             <div>
-                <div class="font-bold text-gray-800">${this._esc(item.studyTitle || 'دراسة بلا عنوان')}</div>
-                <div class="text-xs text-gray-400">${this._esc(item.sector || '—')} · دُفعت ${item.paidAt ? new Date(item.paidAt).toLocaleDateString('ar-SA') : '—'}</div>
+                <div class="font-bold">${this._esc(item.studyTitle || 'دراسة بلا عنوان')}</div>
+                <div class="text-xs text-muted">${this._esc(item.sector || '—')} · دُفعت ${item.paidAt ? new Date(item.paidAt).toLocaleDateString('ar-SA') : '—'}</div>
             </div>
             <button class="btn btn--sm btn--primary btn-claim" data-order-id="${this._esc(item.orderId)}">ادّعاء المراجعة</button>
         </div>`;
     }
 
     _renderClaimItem(item) {
-        return `<div class="reviewer-card p-4 bg-white rounded-2xl shadow border border-gray-100 mb-3" data-order-id="${this._esc(item.orderId)}" data-study-id="${this._esc(item.studyId || '')}">
+        return `<div class="reviewer-card card" data-order-id="${this._esc(item.orderId)}" data-study-id="${this._esc(item.studyId || '')}">
             <div class="flex items-center justify-between gap-4 mb-3">
                 <div>
-                    <div class="font-bold text-gray-800">${this._esc(item.studyTitle || 'دراسة بلا عنوان')}</div>
-                    <div class="text-xs text-gray-400">${this._esc(item.sector || '—')}</div>
+                    <div class="font-bold">${this._esc(item.studyTitle || 'دراسة بلا عنوان')}</div>
+                    <div class="text-xs text-muted">${this._esc(item.sector || '—')}</div>
                 </div>
                 <button class="btn btn--sm btn--ghost btn-open">فتح للمراجعة ↗</button>
             </div>
-            <textarea class="review-notes w-full border border-gray-200 rounded-lg p-2 text-sm" rows="2" placeholder="ملاحظات المراجعة (اختياري)"></textarea>
+            <textarea class="review-notes w-full rounded-lg text-sm" rows="2" placeholder="ملاحظات المراجعة (اختياري)"></textarea>
             <div class="flex gap-2 mt-2">
                 <button class="btn btn--sm btn--primary btn-certify">اعتماد ✓</button>
                 <button class="btn btn--sm btn--ghost btn-reject" style="color:#c53030;">رفض</button>
@@ -79,18 +79,18 @@ export class ReviewerDashboardView {
         this.container.innerHTML = `
             <div class="reviewer-dashboard p-6 max-w-5xl mx-auto">
                 <div class="flex items-center justify-between mb-6">
-                    <h1 class="text-2xl font-bold text-gray-800">بوابة المراجعين</h1>
+                    <h1 class="text-2xl font-bold">بوابة المراجعين</h1>
                     <button id="btnExitReviewer" class="btn btn--sm btn--ghost">خروج</button>
                 </div>
 
                 <section class="mb-8">
-                    <h2 class="text-lg font-bold text-gray-700 mb-3">الطابور (${this.queue.length})</h2>
-                    ${this.queue.length ? this.queue.map((i) => this._renderQueueItem(i)).join('') : '<p class="text-gray-400 text-sm">لا توجد طلبات بانتظار مراجع حالياً.</p>'}
+                    <h2 class="text-lg font-bold mb-3">الطابور (${this.queue.length})</h2>
+                    ${this.queue.length ? this.queue.map((i) => this._renderQueueItem(i)).join('') : '<p class="text-muted text-sm">لا توجد طلبات بانتظار مراجع حالياً.</p>'}
                 </section>
 
                 <section>
-                    <h2 class="text-lg font-bold text-gray-700 mb-3">قيد المراجعة عندي (${this.myClaims.length})</h2>
-                    ${this.myClaims.length ? this.myClaims.map((i) => this._renderClaimItem(i)).join('') : '<p class="text-gray-400 text-sm">لم تدّعِ أي طلب بعد.</p>'}
+                    <h2 class="text-lg font-bold mb-3">قيد المراجعة عندي (${this.myClaims.length})</h2>
+                    ${this.myClaims.length ? this.myClaims.map((i) => this._renderClaimItem(i)).join('') : '<p class="text-muted text-sm">لم تدّعِ أي طلب بعد.</p>'}
                 </section>
             </div>
         `;

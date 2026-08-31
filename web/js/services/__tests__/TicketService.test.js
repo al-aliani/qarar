@@ -90,14 +90,14 @@ describe('submitTicket', () => {
 });
 
 describe('listMyTickets', () => {
-    it('بلا مستخدم مسجَّل ⇒ مصفوفة فارغة، لا يستدعي القاعدة', async () => {
+    it('بلا مستخدم مسجَّل ⇒ {ok:true, tickets:[]}، لا يستدعي القاعدة', async () => {
         getAuthUserMock.mockResolvedValue({ user: null });
         const { listMyTickets } = await import('../TicketService.js');
-        expect(await listMyTickets()).toEqual([]);
+        expect(await listMyTickets()).toEqual({ ok: true, tickets: [] });
         expect(fromMock).not.toHaveBeenCalled();
     });
 
-    it('يُعيد التذاكر بلا أي فلترة user_id يدوية (RLS وحدها)', async () => {
+    it('يُعيد {ok:true, tickets} بلا أي فلترة user_id يدوية (RLS وحدها)', async () => {
         const rows = [{ id: 't1', subject: 'أ', status: 'open' }];
         const chain = chainOf({ data: rows, error: null });
         fromMock.mockImplementation(() => chain);
@@ -106,13 +106,33 @@ describe('listMyTickets', () => {
         const result = await listMyTickets();
         expect(fromMock).toHaveBeenCalledWith('support_tickets');
         expect(chain.eq).not.toHaveBeenCalled();
-        expect(result).toEqual(rows);
+        expect(result).toEqual({ ok: true, tickets: rows });
     });
 
-    it('خطأ استعلام ⇒ مصفوفة فارغة، لا انهيار', async () => {
+    it('خطأ استعلام ⇒ {ok:false, tickets:[], error}، لا انهيار (مميَّز عن "لا توجد تذاكر")', async () => {
         fromMock.mockImplementation(() => chainOf({ data: null, error: { message: 'boom' } }));
         const { listMyTickets } = await import('../TicketService.js');
-        expect(await listMyTickets()).toEqual([]);
+        expect(await listMyTickets()).toEqual({ ok: false, tickets: [], error: 'boom' });
+    });
+});
+
+describe('listAllTickets', () => {
+    it('يُعيد {ok:true, tickets} شاملة issue_type وpriority بالاستعلام', async () => {
+        const rows = [{ id: 't1', subject: 'أ', status: 'open', issue_type: 'technical', priority: 'urgent' }];
+        const chain = chainOf({ data: rows, error: null });
+        fromMock.mockImplementation(() => chain);
+        const { listAllTickets } = await import('../TicketService.js');
+
+        const result = await listAllTickets();
+        expect(chain.select).toHaveBeenCalledWith(expect.stringContaining('issue_type'));
+        expect(chain.select).toHaveBeenCalledWith(expect.stringContaining('priority'));
+        expect(result).toEqual({ ok: true, tickets: rows });
+    });
+
+    it('خطأ استعلام ⇒ {ok:false, tickets:[], error}، لا انهيار (مميَّز عن "لا توجد تذاكر")', async () => {
+        fromMock.mockImplementation(() => chainOf({ data: null, error: { message: 'network down' } }));
+        const { listAllTickets } = await import('../TicketService.js');
+        expect(await listAllTickets()).toEqual({ ok: false, tickets: [], error: 'network down' });
     });
 });
 

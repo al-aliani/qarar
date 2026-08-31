@@ -65,6 +65,16 @@ const TAB_GROUPS = [
     { title: 'المحتوى', keys: ['content'] },
 ];
 
+// نفس تسميات ISSUE_TYPE_OPTIONS/PRIORITY_OPTIONS بـ SupportTicketsView.js (العميل) —
+// مُكرَّرة هنا محلياً بدل استيراد من ملف UI آخر.
+const TICKET_ISSUE_TYPE_LABELS = {
+    technical: 'مشكلة تقنية',
+    billing: 'استفسار عن الدفع/الفوترة',
+    content: 'استفسار عن محتوى دراسة',
+    feature_request: 'طلب ميزة',
+    other: 'غير ذلك',
+};
+
 export class AdminDashboardView {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -1060,7 +1070,11 @@ export class AdminDashboardView {
      * الأحداث، تحديث بإعادة-جلب-وإعادة-رسم كامل لا تحديث متفائل. */
     async _renderTicketsTab(contentEl) {
         contentEl.innerHTML = '<p class="admin-loading">جارٍ التحميل…</p>';
-        const tickets = await TicketService.listAllTickets();
+        const { ok, tickets, error } = await TicketService.listAllTickets();
+        if (!ok) {
+            contentEl.innerHTML = `<p class="admin-error">تعذّر تحميل تذاكر الدعم: ${this._esc(error)}</p>`;
+            return;
+        }
 
         const statusLabel = { open: 'مفتوحة', answered: 'تم الرد', closed: 'مُغلقة' };
 
@@ -1072,7 +1086,7 @@ export class AdminDashboardView {
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                             <div>
                                 <div class="font-bold">
-                                    ${t.category === 'funding_introduction' ? '<span class="badge badge--info" style="margin-inline-end:6px;">طلب تعريف تمويل</span>' : ''}${this._esc(t.subject)}
+                                    ${t.category === 'funding_introduction' ? '<span class="badge badge--info" style="margin-inline-end:6px;">طلب تعريف تمويل</span>' : ''}${t.priority === 'urgent' ? '<span class="badge badge--danger" style="margin-inline-end:6px;">عاجلة</span>' : ''}<span class="badge badge--neutral" style="margin-inline-end:6px;">${this._esc(TICKET_ISSUE_TYPE_LABELS[t.issue_type] || t.issue_type || 'غير ذلك')}</span>${this._esc(t.subject)}
                                 </div>
                                 <div class="text-xs text-muted mt-1">${this._esc(t.user_id)} — ${new Date(t.updated_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric', numberingSystem: 'latn' })}</div>
                             </div>
@@ -1117,6 +1131,10 @@ export class AdminDashboardView {
 
     _renderAdminThread(contentEl, threadEl, ticket, messages) {
         threadEl.innerHTML = `
+            <div class="mb-2" style="display:flex;gap:6px;flex-wrap:wrap;">
+                ${ticket.priority === 'urgent' ? '<span class="badge badge--danger">عاجلة</span>' : ''}
+                <span class="badge badge--neutral">${this._esc(TICKET_ISSUE_TYPE_LABELS[ticket.issue_type] || ticket.issue_type || 'غير ذلك')}</span>
+            </div>
             <div class="space-y-2 mb-3" style="max-height:260px;overflow-y:auto;">
                 ${messages.map((m) => `
                     <div class="p-2 rounded text-sm" style="background:var(--c-surface-2);">
@@ -1137,12 +1155,17 @@ export class AdminDashboardView {
 
         const replyBody = threadEl.querySelector(`#adminTicketReplyBody-${ticket.id}`);
         const replyErr = threadEl.querySelector(`#adminTicketReplyError-${ticket.id}`);
-        threadEl.querySelector(`#adminTicketReplyBtn-${ticket.id}`)?.addEventListener('click', async (e) => {
+        const replyBtn = threadEl.querySelector(`#adminTicketReplyBtn-${ticket.id}`);
+        replyBtn?.addEventListener('click', async (e) => {
             e.stopPropagation();
+            replyBtn.disabled = true;
+            replyBtn.textContent = 'جارٍ الإرسال...';
             const result = await TicketService.addMessage(ticket.id, replyBody.value);
             if (!result.ok) {
                 replyErr.textContent = result.error || 'فشل إرسال الرد';
                 replyErr.style.display = 'block';
+                replyBtn.disabled = false;
+                replyBtn.textContent = 'إرسال الرد';
                 return;
             }
             toast.success('تم إرسال الرد');

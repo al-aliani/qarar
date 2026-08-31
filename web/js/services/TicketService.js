@@ -50,14 +50,16 @@ export async function submitTicket({ subject, body, category = 'support', issueT
 
 /**
  * تذاكر المستخدم الحالي (RLS تقصرها على صاحبها).
- * @returns {Promise<Array<{id:string, subject:string, status:string, created_at:string, updated_at:string}>>}
+ * الشكل {ok, tickets, error} (وليس مصفوفة خام) كي يميّز المستدعي بين "لا توجد
+ * تذاكر فعلاً" (ok:true, tickets:[]) و"فشل الجلب" (ok:false, error).
+ * @returns {Promise<{ok: boolean, tickets: Array<{id:string, subject:string, status:string, created_at:string, updated_at:string}>, error?: string}>}
  */
 export async function listMyTickets() {
     const { user, ok: authOk } = await getAuthUser();
-    if (!authOk || !user) return [];
+    if (!authOk || !user) return { ok: true, tickets: [] };
 
-    const { supabase, ok } = await getSupabaseClient();
-    if (!ok || !supabase) return [];
+    const { supabase, ok, error: clientError } = await getSupabaseClient();
+    if (!ok || !supabase) return { ok: false, tickets: [], error: clientError || 'تعذّر الاتصال بخدمة الدعم.' };
 
     const { data, error } = await supabase
         .from('support_tickets')
@@ -65,29 +67,30 @@ export async function listMyTickets() {
         .order('updated_at', { ascending: false });
     if (error) {
         console.warn('[TicketService] فشل جلب تذاكرك:', error.message);
-        return [];
+        return { ok: false, tickets: [], error: error.message };
     }
-    return data || [];
+    return { ok: true, tickets: data || [] };
 }
 
 /**
  * كل التذاكر (أدمن فقط — RLS تعتمد tickets_admin_all؛ لمستخدم عادي تُعيد قائمة فارغة بصمت).
- * @returns {Promise<Array>}
+ * الشكل {ok, tickets, error} — نفس مبدأ listMyTickets أعلاه.
+ * @returns {Promise<{ok: boolean, tickets: Array, error?: string}>}
  */
 export async function listAllTickets() {
-    const { supabase, ok } = await getSupabaseClient();
-    if (!ok || !supabase) return [];
+    const { supabase, ok, error: clientError } = await getSupabaseClient();
+    if (!ok || !supabase) return { ok: false, tickets: [], error: clientError || 'تعذّر الاتصال بخدمة الدعم.' };
 
     const { data, error } = await supabase
         .from('support_tickets')
-        .select('id, user_id, subject, status, category, created_at, updated_at')
+        .select('id, user_id, subject, status, category, issue_type, priority, created_at, updated_at')
         .order('status', { ascending: true })
         .order('updated_at', { ascending: false });
     if (error) {
         console.warn('[TicketService] فشل جلب كل التذاكر:', error.message);
-        return [];
+        return { ok: false, tickets: [], error: error.message };
     }
-    return data || [];
+    return { ok: true, tickets: data || [] };
 }
 
 /**
