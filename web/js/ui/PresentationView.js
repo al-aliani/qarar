@@ -33,7 +33,7 @@ export class PresentationView {
         if (!document.getElementById('presentationOverlay')) {
             this.container = document.createElement('div');
             this.container.id = 'presentationOverlay';
-            this.container.className = 'fixed inset-0 bg-black z-[100] flex flex-col animate-fade-in text-white overflow-hidden';
+            this.container.className = 'fixed inset-0 bg-black z-[100] flex flex-col animate-entry text-white overflow-hidden';
             document.body.appendChild(this.container);
         } else {
             this.container = document.getElementById('presentationOverlay');

@@ -11,22 +11,22 @@ export class TrashView {
 
     async render() {
         this.container = document.createElement('div');
-        this.container.className = 'trash-view animate-fade-in p-6';
+        this.container.className = 'trash-view fade-in p-6';
 
         this.container.innerHTML = `
             <div class="flex justify-between items-center mb-8">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-800"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg> سلة المحذوفات</h1>
-                    <p class="text-gray-500">المشاريع المحذوفة تبقى هنا حتى تستعيدها أو تحذفها نهائياً بنفسك.</p>
+                    <h1 class="text-2xl font-bold text-main"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg> سلة المحذوفات</h1>
+                    <p class="text-muted">المشاريع المحذوفة تبقى هنا حتى تستعيدها أو تحذفها نهائياً بنفسك.</p>
                 </div>
-                <button class="btn btn-secondary text-sm" onclick="window.history.back()">عودة</button>
+                <button class="btn btn-secondary btn--secondary text-sm" onclick="window.history.back()">عودة</button>
             </div>
-            
+
             <div id="trash-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Loading State -->
                 <div class="col-span-full text-center py-10">
-                    <div class="spinner border-4 border-gray-300 border-t-blue-600 rounded-full w-10 h-10 mx-auto animate-spin"></div>
-                    <p class="mt-4 text-gray-500">جاري تحميل المحذوفات...</p>
+                    <div class="spinner spinner--lg"></div>
+                    <p class="mt-4 text-muted">جاري تحميل المحذوفات...</p>
                 </div>
             </div>
         `;
@@ -44,34 +44,34 @@ export class TrashView {
 
             if (deletedProjects.length === 0) {
                 listContainer.innerHTML = `
-                    <div class="col-span-full text-center py-20 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                    <div class="col-span-full text-center py-20 trash-empty">
                         <svg class="ic text-4xl mb-4" aria-hidden="true"><use href="#i-reset"/></svg>
-                        <h3 class="text-xl font-bold text-gray-600">السلة فارغة</h3>
-                        <p class="text-gray-500">لا توجد مشاريع محذوفة حالياً.</p>
+                        <h3 class="text-xl font-bold text-muted">السلة فارغة</h3>
+                        <p class="text-muted">لا توجد مشاريع محذوفة حالياً.</p>
                     </div>
                 `;
                 return;
             }
 
             listContainer.innerHTML = deletedProjects.map(project => `
-                <div class="card p-5 border border-gray-200 hover:border-red-300 transition-all group bg-white rounded-lg shadow-sm">
+                <div class="card trash-card">
                     <div class="flex justify-between items-start mb-4">
-                        <div class="p-3 bg-red-50 rounded-full text-red-500 text-xl group-hover:bg-red-100 transition-colors">
+                        <div class="trash-card__icon text-xl">
                             <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
                         </div>
-                        <div class="text-xs text-gray-400">
+                        <div class="text-xs text-muted">
                             حذف ${new Date(project.deletedAt || project.lastModified).toLocaleDateString('ar-SA-u-nu-latn')}
                         </div>
                     </div>
-                    
-                    <h3 class="font-bold text-lg mb-2 text-gray-800">${escapeHtml(project.name)}</h3>
-                    <p class="text-xs text-gray-500 mb-4">آخر تعديل: ${new Date(project.lastModified).toLocaleDateString('ar-SA-u-nu-latn')}</p>
-                    
-                    <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
-                        <button class="btn-restore btn btn-sm btn-outline-primary flex-1 py-1" data-id="${project.id}">
+
+                    <h3 class="font-bold text-lg mb-2 text-main">${escapeHtml(project.name)}</h3>
+                    <p class="text-xs text-muted mb-4">آخر تعديل: ${new Date(project.lastModified).toLocaleDateString('ar-SA-u-nu-latn')}</p>
+
+                    <div class="flex gap-2 mt-4 pt-4 border-t">
+                        <button class="btn-restore btn btn-sm btn--outline flex-1 py-1" data-id="${project.id}">
                             <svg class="ic" aria-hidden="true"><use href="#i-reset"/></svg> استعادة
                         </button>
-                        <button class="btn-permanent-delete btn btn-sm btn-outline-danger flex-1 py-1 text-red-600 hover:bg-red-50" data-id="${project.id}" data-name="${escapeHtml(project.name)}">
+                        <button class="btn-permanent-delete btn btn-sm btn--outline-danger flex-1 py-1" data-id="${project.id}" data-name="${escapeHtml(project.name)}">
                             <svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> حذف نهائي
                         </button>
                     </div>
@@ -83,7 +83,7 @@ export class TrashView {
 
         } catch (error) {
             console.error('Error loading trash:', error);
-            listContainer.innerHTML = `<div class="col-span-full text-red-500 text-center">حدث خطأ أثناء تحميل البيانات.</div>`;
+            listContainer.innerHTML = `<div class="col-span-full text-danger text-center">حدث خطأ أثناء تحميل البيانات.</div>`;
         }
     }
 
@@ -99,7 +99,7 @@ export class TrashView {
                     showCancelButton: true,
                     confirmButtonText: 'نعم، استعد',
                     cancelButtonText: 'إلغاء',
-                    customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                    customClass: { confirmButton: 'btn btn--danger', cancelButton: 'btn btn--secondary' },
                     buttonsStyling: false
                 });
                 if (result.isConfirmed) {
@@ -127,7 +127,7 @@ export class TrashView {
                     showCancelButton: true,
                     confirmButtonText: 'متابعة',
                     cancelButtonText: 'إلغاء',
-                    customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                    customClass: { confirmButton: 'btn btn--danger', cancelButton: 'btn btn--secondary' },
                     buttonsStyling: false
                 });
                 if (!step1.isConfirmed) return;
@@ -140,7 +140,7 @@ export class TrashView {
                     showCancelButton: true,
                     confirmButtonText: 'نعم، احذف نهائياً',
                     cancelButtonText: 'إلغاء',
-                    customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
+                    customClass: { confirmButton: 'btn btn--danger', cancelButton: 'btn btn--secondary' },
                     buttonsStyling: false,
                     inputValidator: (value) => (value || '').trim() !== name ? 'الاسم غير مطابق' : undefined
                 });

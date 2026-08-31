@@ -9,7 +9,7 @@ export class HypothesisView {
 
     render() {
         this.container = document.createElement('div');
-        this.container.className = 'hypothesis-view animate-fade-in';
+        this.container.className = 'hypothesis-view animate-entry';
 
         // Get current state from projectInfo ( aligned with schema.js )
         const state = store.getState();
@@ -27,7 +27,7 @@ export class HypothesisView {
                         <h1 class="text-2xl font-bold text-gray-800">فرضية الرواد (Startup Hypothesis) <svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg></h1>
                         <p class="text-gray-500 mt-1">هل فكرتك قابلة للنمو السريع؟ تحقق من الأساسيات قبل الغوص في الأرقام (منهجية YC).</p>
                     </div>
-                    <button class="btn btn-secondary btn-sm" onclick="window.history.back()">عودة للرئيسية</button>
+                    <button class="btn btn--secondary btn-sm" onclick="window.history.back()">عودة للرئيسية</button>
                 </div>
             </div>
 
@@ -54,7 +54,7 @@ export class HypothesisView {
 
                 <div class="form-group">
                     <label class="block font-bold text-sm mb-2">اشرح المشكلة في جملة واحدة (من يعاني؟ وما هي المعاناة؟)</label>
-                    <textarea class="form-textarea w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" rows="2" data-section="startupHypothesis" data-field="problem" placeholder="مثال: أصحاب المطاعم يعانون من صعوبة بناء دراسة جدوى دقيقة...">${escapeHtml(hypothesis.problem || '')}</textarea>
+                    <textarea class="form-input w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" rows="2" data-section="startupHypothesis" data-field="problem" placeholder="مثال: أصحاب المطاعم يعانون من صعوبة بناء دراسة جدوى دقيقة...">${escapeHtml(hypothesis.problem || '')}</textarea>
                 </div>
             </div>
 
@@ -62,7 +62,7 @@ export class HypothesisView {
                 <h3 class="text-xl font-bold mb-4 text-gray-800">2. الحل (The Solution)</h3>
                 <div class="form-group mb-4">
                     <label class="block font-bold text-sm mb-2">ما هي التجربة التي ستجريها لحل المشكلة؟</label>
-                    <textarea class="form-textarea w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" rows="2" data-section="startupHypothesis" data-field="solution" placeholder="مثال: منصة أونلاين تحسب التكاليف تلقائياً وتصدر تقريراً جاهزاً للبنك...">${escapeHtml(hypothesis.solution || '')}</textarea>
+                    <textarea class="form-input w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" rows="2" data-section="startupHypothesis" data-field="solution" placeholder="مثال: منصة أونلاين تحسب التكاليف تلقائياً وتصدر تقريراً جاهزاً للبنك...">${escapeHtml(hypothesis.solution || '')}</textarea>
                 </div>
             </div>
 
@@ -84,16 +84,16 @@ export class HypothesisView {
 
                     <div class="form-group">
                         <label class="block font-bold text-sm mb-2">اشرح استبصارك (السحر الخاص بك)</label>
-                        <textarea class="form-textarea w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none h-full" data-section="startupHypothesis" data-field="insight" placeholder="لماذا سنربح نحن وليس غيرنا؟">${escapeHtml(hypothesis.insight || '')}</textarea>
+                        <textarea class="form-input w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none h-full" data-section="startupHypothesis" data-field="insight" placeholder="لماذا سنربح نحن وليس غيرنا؟">${escapeHtml(hypothesis.insight || '')}</textarea>
                     </div>
                 </div>
             </div>
 
             <div class="flex justify-between mt-8 pb-10">
-                <button class="btn btn-secondary" onclick="window.history.back()">إلغاء</button>
+                <button class="btn btn--secondary" onclick="window.history.back()">إلغاء</button>
                 <div class="flex gap-3">
-                    <button class="btn btn-primary px-8" id="save-hypothesis-btn">حفظ الفرضية <svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></button>
-                    <!-- <button class="btn btn-outline" id="next-step-btn">التالي: الدراسة المالية ➡️</button> -->
+                    <button class="btn btn--primary px-8" id="save-hypothesis-btn">حفظ الفرضية <svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></button>
+                    <!-- <button class="btn btn--outline" id="next-step-btn">التالي: الدراسة المالية ➡️</button> -->
                 </div>
             </div>
         `;
