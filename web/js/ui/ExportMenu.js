@@ -222,7 +222,7 @@ export class ExportMenu {
                     <p id="export-financing-checklist-hint" class="text-xs text-gold mb-2">للتقديم للتمويل: راجع قائمة تحقق متطلبات التقديم في صفحة «الجدوى والتمويل» من القائمة الرئيسية.</p>
                     <p id="export-accelerator-checklist-hint" class="text-xs text-gold mb-2">للتقديم للمسرّعات والحاضنات: راجع قائمة تحقق متطلبات التقديم في صفحة «نصائح المسرّعات» من لوحة التحكم.</p>
                     <p id="export-bank-report-hint" class="text-xs text-gold mb-2">تقرير جاهز للإقراض: اختر «نسخة للممول» أو «تقرير جاهز للإقراض» — ملخص، استخدام القرض، مالي، ضمانات.</p>
-                    <p class="text-xs text-gold/90 mb-3 px-3 py-2 rounded-lg border border-gold/20 bg-gold/5" id="export-compliance-sentence">✓ ${BANK_COMPLIANCE_SENTENCE}</p>
+                    <p class="text-xs text-gold mb-3 px-3 py-2 rounded-lg border border-gold/20 bg-gold/5" id="export-compliance-sentence">✓ ${BANK_COMPLIANCE_SENTENCE}</p>
                     <div class="export-category-title mt-4 mb-2 text-gold font-bold">التقارير الأساسية</div>
                     <div class="export-grid">
                         <button type="button" class="export-card" data-type="pdf" aria-label="تصدير تقرير PDF شامل جاهز للطباعة">
@@ -631,7 +631,10 @@ export class ExportMenu {
                 // سبب القفل + ما سيحصل عليه المستخدم بعد الشراء (بند مراجعة 2026-08-22):
                 // كانت الرسالة تكتفي باسم الصيغة المحجوبة بلا أي سياق يوضّح لماذا هي مدفوعة
                 // أصلاً أو ماذا يكسبه المستخدم بالضبط بعد الدفع.
-                const lockReason = 'هذه الصيغة تقرير نهائي احترافي جاهز للتقديم، وليست بيانات خام — لذلك ضمن الباقات المدفوعة. بعد إتمام الشراء يصبح تصديرها متاحاً فوراً لهذه الدراسة.';
+                // تدقيق 2026-08-31: "متاحاً فوراً" كانت تناقض قناة الدفع الوحيدة الحيّة
+                // فعلياً (تحويل بنكي يدوي — انظر BankTransferPanel.js: «يُفعّل التصدير
+                // خلال ساعات العمل بعد التحقق من وصول المبلغ»)، لا فتحاً آنياً بعد الضغط.
+                const lockReason = 'هذه الصيغة تقرير نهائي احترافي جاهز للتقديم، وليست بيانات خام — لذلك ضمن الباقات المدفوعة. بعد إتمام التحويل البنكي يصبح تصديرها متاحاً لهذه الدراسة خلال ساعات العمل.';
                 modal.open(PREMIUM_EXPORT_TYPES.get(type), lockReason);
                 return;
             }

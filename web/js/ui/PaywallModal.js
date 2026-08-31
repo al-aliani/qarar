@@ -11,12 +11,13 @@
  */
 import { PRICING_PACKAGES, formatPrice } from '../core/pricing.js';
 import { REFUND_POLICY, getBankTransferConfig } from '../config.js';
-import { startCheckout } from '../services/PaymentService.js';
+import { startCheckout, listOrders } from '../services/PaymentService.js';
 import { getExperimentVariant, trackEvent } from '../utils/analytics.js';
 import { monitoring } from '../utils/monitoring.js';
 import { attachModalA11y } from '../utils/modalA11y.js';
 import { renderBankTransferPanel } from './components/BankTransferPanel.js';
 import { escapeHtml } from '../utils/escape.js';
+import { toast } from '../utils/toast.js';
 
 // المحرّك قد يحفظ NO-GO افتراضياً عندما تكون كل المؤشرات أصفاراً. لا نعرض
 // هذه النتيجة للمستخدم كقرار فعلي داخل بوابة الدفع قبل وجود نموذج مالي حقيقي.
@@ -130,6 +131,7 @@ export class PaywallModal {
                     <button type="button" id="btnPreviewLockedReport" class="btn btn--secondary btn-block mb-3"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg> معاينة التقرير قبل الشراء</button>
                     <div id="paywallPayError" class="text-danger text-sm mb-2" role="alert" style="display:none;"></div>
                     ${decisionNote}
+                    <div id="paywallPendingOrderNotice"></div>
                     <div class="paywall-packages-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
                         ${cards}
                     </div>
@@ -157,6 +159,27 @@ export class PaywallModal {
         });
 
         this._applyPreferredTierHighlight();
+        this._checkPendingOrder();
+    }
+
+    /**
+     * تنبيه طلب pending سابق لهذه الدراسة تحديداً (تدقيق 2026-08-31): كان render()
+     * يعرض شبكة الباقات من الصفر دوماً بلا أي فحص لطلب سابق — عميل حوّل فعلاً وينتظر
+     * تأكيد الأدمن يفتح هذه الشاشة فيرى "اختر باقة وادفع" بلا أي ذكر لطلبه المعلّق.
+     * يُشغَّل بعد render() لا قبله (لا يؤخّر فتح النافذة)، ويفشل بصمت عند أي خطأ —
+     * تماماً كنمط _applyPreferredTierHighlight أعلاه.
+     */
+    async _checkPendingOrder() {
+        if (!this.studyId) return;
+        try {
+            const orders = await listOrders(this.studyId);
+            const pending = orders.find(o => o.status === 'pending');
+            if (!pending) return;
+            const notice = this.overlay?.querySelector('#paywallPendingOrderNotice');
+            if (!notice) return;
+            const ref = escapeHtml(String(pending.id || '').slice(0, 8));
+            notice.innerHTML = `<div class="alert alert--warning mb-3">لديك طلب سابق (رقم ${ref}) لا يزال قيد التأكيد — لا حاجة لدفع جديد. إن مرّت ساعات العمل بلا رد بعد إرسال إثبات الحوالة، تواصل معنا عبر واتساب.</div>`;
+        } catch {}
     }
 
     /**
@@ -210,6 +233,14 @@ export class PaywallModal {
         const result = await startCheckout({ tier, studyId: this.studyId, provider: 'bank_transfer' });
         if (result.ok && result.bankTransfer) {
             this._renderBankPanel(tier, result.orderId, result.amount);
+            return;
+        }
+        // تدقيق 2026-08-31: كوبون خصم 100% مع bank_transfer ⇒ create-checkout يؤكّد الطلب
+        // paid فوراً خادمياً (لا شيء للتحصيل) ويعيد freeViaCoupon لا bankTransfer — كانت
+        // هذه الاستجابة الناجحة تسقط بالفرع العام أدناه وتعرض رسالة فشل رغم نجاح الطلب.
+        if (result.ok && result.freeViaCoupon) {
+            toast.success('تم تفعيل طلبك مجاناً بالكوبون — لا حاجة لتحويل بنكي.');
+            this.close();
             return;
         }
         showErr(result.error || 'تعذّر إنشاء طلب التحويل البنكي. حاول لاحقاً.');

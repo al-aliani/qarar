@@ -168,19 +168,23 @@ Deno.serve(async (req: Request) => {
 
   const orderId = orderRow.id as string;
 
+  // كوبون خصم 100%: total=0 — يجب أن يُؤكَّد الطلب تلقائياً بصرف النظر عن provider
+  // المُرسَل (بما فيه bank_transfer)، فلا حاجة لأي قناة تحصيل عند مبلغ صفري. هذا
+  // الفحص يسبق فرع bank_transfer أدناه عمداً (تدقيق 2026-08-31): كان مرتَّباً بعده
+  // سابقاً، فأي كوبون 100% مع bank_transfer (القناة الوحيدة الحيّة فعلياً) كان يرجع
+  // من فرع bank_transfer قبل الوصول هنا — الطلب يبقى pending للأبد ويُطلب من العميل
+  // تحويل 0 ريال فعلياً. مزوّدو الدفع الخارجيون (Moyasar/Stripe/Tamara) أيضاً يرفضون
+  // مبلغاً صفرياً، فلا شيء فعلياً للتحصيل هنا بأي حال.
+  if (total === 0) {
+    await adminClient.from('orders').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', orderId);
+    return jsonResponse(req, { orderId, freeViaCoupon: true, amount: 0 });
+  }
+
   // تحويل بنكي: قناة يدوية — الطلب أُنشئ بحالة pending أعلاه، ولا مزوّد دفع خارجي.
   // نُرجع رقم الطلب والمبلغ فقط ليعرض العميل بيانات الحساب ويحوّل، ثم يؤكّده الأدمن
   // يدوياً (admin_confirm_bank_transfer) بعد وصول الحوالة فتصبح الحالة paid ويُفتح القفل.
   if (provider === 'bank_transfer') {
     return jsonResponse(req, { orderId, bankTransfer: true, amount: total });
-  }
-
-  // كوبون خصم 100%: total=0 — مزوّدو الدفع (Moyasar/Stripe/Tamara) يرفضون مبلغاً
-  // صفرياً، فيفشل إنشاء الجلسة ويعلق الطلب pending للأبد بلا سبب واضح للعميل. لا
-  // شيء فعلياً للتحصيل هنا، فنؤكّد الطلب مباشرة كما لو دُفع بالكامل بالكوبون.
-  if (total === 0) {
-    await adminClient.from('orders').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', orderId);
-    return jsonResponse(req, { orderId, freeViaCoupon: true, amount: 0 });
   }
 
   const returnUrl = `${APP_ORIGIN}/#/payment-return?order=${orderId}`;

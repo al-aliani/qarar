@@ -130,9 +130,13 @@ export async function getOrderStatus(orderId) {
  * كل طلبات الدفع الخاصة بالمستخدم الحالي (لصفحة سجل الفواتير) — بالاعتماد على
  * RLS وحدها (سياسة orders_select_own) تماماً كـgetOrderStatus/hasActivePayment
  * أعلاه، لا فلترة user_id يدوية مكرِّرة لما تضمنه السياسة أصلاً.
+ * @param {string} [studyId] - اختياري: يقتصر السجل على طلبات هذه الدراسة تحديداً
+ *   (تدقيق 2026-08-31: أضيف لاستخدام PaywallModal.js نفس منطق الاستعلام بدل تكراره
+ *   لعرض تنبيه طلب pending سابق قبل الدفع من جديد). بلا هذا الوسيط: كل طلبات المستخدم
+ *   كما كان دوماً (سلوك المستدعين الحاليين BillingHistoryView.js/DashboardView.js).
  * @returns {Promise<Array<{id:string, tier:string, amount_sar:number, currency:string, status:string, study_id:string|null, created_at:string, paid_at:string|null}>>}
  */
-export async function listOrders() {
+export async function listOrders(studyId) {
     const { supabase, ok } = await getSupabaseClient();
     if (!ok || !supabase) return [];
 
@@ -146,10 +150,11 @@ export async function listOrders() {
     const { error: expireError } = await supabase.rpc('expire_stale_pending_orders');
     if (expireError) console.warn('[PaymentService] فشل تنظيف الطلبات المنتهية:', expireError.message);
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('orders')
-        .select('id, tier, amount_sar, subtotal_sar, discount_sar, vat_sar, total_sar, amount_paid_sar, amount_due_sar, coupon_code, items, currency, status, study_id, created_at, paid_at')
-        .order('created_at', { ascending: false });
+        .select('id, tier, amount_sar, subtotal_sar, discount_sar, vat_sar, total_sar, amount_paid_sar, amount_due_sar, coupon_code, items, currency, status, study_id, created_at, paid_at');
+    if (studyId) query = query.eq('study_id', studyId);
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     // تدقيق 2026-08-26: كان يُبتلَع ويُعاد [] — فجلسة سليمة يفشل استعلامها تسقط في فرع
     // «لا توجد عمليات دفع حتى الآن»، أي فشلُ وصولٍ يُقدَّم للعميل كحقيقة عن حسابه. نرمي
