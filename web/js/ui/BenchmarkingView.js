@@ -3,64 +3,56 @@
  * مستوحى من جدوى كلاود: عرض Benchmarking يفتقده المستخدم عندهم.
  */
 import { getCostRatios } from '../core/costRatios.js';
+import { resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
 import { escapeHtml } from '../utils/escape.js';
 
-/** معايير قطاعية — Food Cost، Labor %، Rent %، Gross Margin، Profit Margin (نطاقات %) */
-const SECTOR_BENCHMARKS = {
-    restaurant: {
-        name: 'المطاعم والكافيهات',
-        foodCost: [28, 35],
-        laborPct: [25, 35],
-        rentPct: [5, 15],
-        grossMargin: [65, 72],
-        profitMargin: [5, 12],
-        paybackYears: [2, 4]
-    },
-    retail: {
-        name: 'البيع بالتجزئة',
-        foodCost: null,
-        laborPct: [15, 25],
-        rentPct: [8, 18],
-        grossMargin: [35, 50],
-        profitMargin: [3, 8],
-        paybackYears: [3, 5]
-    },
-    services: {
-        name: 'الخدمات المهنية',
-        foodCost: null,
-        laborPct: [40, 55],
-        rentPct: [5, 12],
-        grossMargin: [70, 90],
-        profitMargin: [15, 30],
-        paybackYears: [1, 2]
-    },
-    fitness: {
-        name: 'النوادي الرياضية',
-        foodCost: null,
-        laborPct: [30, 45],
-        rentPct: [10, 20],
-        grossMargin: [60, 75],
-        profitMargin: [10, 20],
-        paybackYears: [2, 4]
-    },
-    default: {
-        name: 'عام',
-        foodCost: null,
-        laborPct: [20, 35],
-        rentPct: [5, 15],
-        grossMargin: [50, 70],
-        profitMargin: [5, 15],
-        paybackYears: [2, 5]
-    }
+/**
+ * تدقيق 2026-09-04: كان هنا **جدول معايير قطاعي ثانٍ بكاشف قطاع مستقل** يناقض
+ * المصدر الموحّد في core/sectorBenchmarks.js — رغم أن ذاك يوثّق نفسه بأنه «نقطة
+ * الدخول الوحيدة كي لا يتناقض حكمان على نفس الرقم».
+ *
+ * النتيجة على الشاشة: عيادة برواتب 40% من المبيعات تحصل في نفس الجلسة على
+ * «مقبول» من بوابة الجودة والمستشار (نطاق خدمي 30–50%) و«⚠ خارج النطاق» من هذه
+ * البطاقة (نطاق «عام» 20–35%). وكان كاشفها المحلي لا يطابق «رعاية صحية / عيادة»
+ * ولا «صالون / مركز تجميل» ولا «تعليم وتدريب» فيسمّي قطاعها «عام» صراحةً أمام
+ * المستخدم — أي أن المنصة تخبره أنها لا تعرف قطاعه.
+ *
+ * النطاقات الآن مشتقّة من المصدر الموحّد. مجمل الربح يُشتق حسابياً من نطاق التكلفة
+ * المتغيرة (١٠٠٪ − التكلفة) بدل رقم مستقل قد ينحرف عنه.
+ */
+
+/** كسور 0..1 من المصدر الموحّد ⟶ نسب مئوية للعرض. */
+const toPct = ([lo, hi]) => [Math.round(lo * 100), Math.round(hi * 100)];
+
+/**
+ * فترة الاسترداد الوحيدة التي لا يحملها المصدر الموحّد — تبقى هنا موسومة صراحةً
+ * كتقدير عرض محلي (ASSUMPTION)، لا كأنها معيار رسمي.
+ */
+const PAYBACK_YEARS_BY_LABEL = {
+    'مطاعم ومقاهي': [2, 4],
+    'تجزئة': [3, 5],
+    'تجزئة عالية الهامش (عطور/تجميل/إكسسوارات/أزياء)': [2, 4],
+    'خدمي': [1, 3],
+    'صناعي': [3, 6],
+    'لوجستي': [3, 5],
+    'منصة رقمية/SaaS': [2, 5]
 };
 
-function inferSector(concept) {
-    const c = (concept || '').toString().toLowerCase();
-    if (/مطعم|مقهى|كافيه|قهوة|برجر|وجبات|طعام|غذاء/i.test(c)) return 'restaurant';
-    if (/تجزئة|متجر|بيع| retail /i.test(c)) return 'retail';
-    if (/خدمة|استشارة|مكتب|مهني/i.test(c)) return 'services';
-    if (/نادي|رياضة|جيم|fitness/i.test(c)) return 'fitness';
-    return 'default';
+/** يبني نطاقات العرض من المعيار الموحّد للدراسة. */
+function buildDisplayBenchmark(state) {
+    const bench = resolveSectorBenchmark(state);
+    const variableCost = toPct(bench.variableCostRate);
+    return {
+        name: bench.label,
+        isGeneric: bench.isGeneric,
+        foodCost: variableCost,
+        laborPct: toPct(bench.laborToRevenue),
+        rentPct: toPct(bench.rentToRevenue),
+        // مجمل الربح = ١٠٠٪ − التكلفة المتغيرة، مشتقّ لا مستقل
+        grossMargin: [100 - variableCost[1], 100 - variableCost[0]],
+        profitMargin: toPct(bench.netProfitToRevenue),
+        paybackYears: PAYBACK_YEARS_BY_LABEL[bench.label] || [2, 5]
+    };
 }
 
 function inRange(val, range) {
@@ -84,9 +76,7 @@ export function renderBenchmarkingSection(results, studyData) {
     const indicators = results.indicators || {};
     const payback = indicators.paybackPeriod ?? indicators.payback ?? null; // runFullModel returns paybackPeriod
 
-    const concept = studyData?.projectInfo?.concept || studyData?.projectInfo?.description || '';
-    const sectorKey = inferSector(concept);
-    const bench = SECTOR_BENCHMARKS[sectorKey] || SECTOR_BENCHMARKS.default;
+    const bench = buildDisplayBenchmark(studyData);
 
     // استخراج Labor و Rent من opex إن وُجد (aggregateOpex يُرجع fixed/variable arrays)
     const foodCostPct = rev > 0 ? (vc / rev) * 100 : null;
@@ -177,7 +167,7 @@ export function renderBenchmarkingSection(results, studyData) {
     return `
         <div class="card glass-card mt-4" id="benchmarkingSection" aria-label="هل أرقامي منطقية؟">
             <h3 class="card-title mb-2 text-gold"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> هل أرقامي منطقية؟</h3>
-            <p class="text-xs text-muted mb-3">مقارنة مع معايير قطاع «${escapeHtml(bench.name)}» في السوق السعودي. الأرقام خارج النطاق قد تحتاج مراجعة.</p>
+            <p class="text-xs text-muted mb-3">مقارنة مع معايير قطاع «${escapeHtml(bench.name)}» في السوق السعودي — نطاقات تقديرية داخلية لا أرقام رسمية منشورة. الأرقام خارج النطاق قد تحتاج مراجعة.${bench.isGeneric ? ' <strong>لم يُحدَّد نشاط المشروع بدقة، فالمقارنة بنطاق عام</strong> — حدِّد النشاط في «معلومات المشروع» لمقارنة أدقّ.' : ''}</p>
             <div class="benchmarks-container overflow-x-auto">
                 <table class="data-table" style="font-size: 0.9rem;">
                     <thead>

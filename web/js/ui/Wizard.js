@@ -1059,6 +1059,9 @@ export class Wizard {
             ...schema,
             id: tableKey,
             initialData: Array.isArray(tableData) ? tableData : [],
+            // نشاط المشروع — بدونه كان زر التقدير ✨ يحقن نطاق تكلفة الطعام المطعمي
+            // في أي جدول لأي قطاع (تدقيق 2026-09-04).
+            sectorText: proj().sector || proj().concept || proj().activity || '',
             onSuggest, // Inject suggestions
             hintHtml,
             onHintAction: tableKey === 'positions'
