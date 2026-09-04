@@ -1,4 +1,5 @@
 import { getLabel } from '../core/labels.js';
+import { detectSectorBenchmark } from '../core/sectorBenchmarks.js';
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
 import Swal from 'sweetalert2';
@@ -52,10 +53,36 @@ export class DynamicTable {
      * لا كنسبة مئوية خام — لتفادي خطأ ×100 الذي يجعل 55% تُخزَّن 55 وتُعرض 5500% فتدمّر الدراسة.
      * @param {string} colKey مفتاح العمود
      * @param {string} [itemName] اسم البند (لمطابقة الكلمات المفتاحية القطاعية)
+     * @param {string} [sectorText] نشاط المشروع — بدونه كانت القيمة الاحتياطية
+     *        مُعايَرة على المطاعم لأي قطاع (تدقيق 2026-09-04)
      * @returns {number} القيمة المُقدَّرة الجاهزة للتخزين
      */
-    static estimateCellValue(colKey, itemName = '') {
+    /** نطاق دورات الاستخدام/اليوم حسب القطاع (تدقيق 2026-09-04). */
+    static _turnsRangeFor(bench) {
+        if (!bench) return { min: 2, max: 4 };
+        if (bench.label === 'خدمي') return { min: 6, max: 10 };
+        if (bench.label === 'مطاعم ومقاهي') return { min: 2, max: 4 };
+        return { min: 3, max: 6 };
+    }
+
+    /** نطاق عدد الوحدات/المقاعد المتاحة حسب القطاع (تدقيق 2026-09-04). */
+    static _seatsRangeFor(bench) {
+        if (!bench) return { min: 20, max: 60 };
+        if (bench.label === 'خدمي') return { min: 4, max: 12 };
+        if (bench.label === 'مطاعم ومقاهي') return { min: 20, max: 60 };
+        return { min: 8, max: 30 };
+    }
+
+    static estimateCellValue(colKey, itemName = '', sectorText = '') {
         const name = String(itemName || '').toLowerCase();
+        // تدقيق 2026-09-04 (رحلة عميل صالون حلاقة): الدالة لم تكن تستقبل حالة الدراسة
+        // إطلاقاً، فالقاعدة بلا كلمات مفتاحية (catch-all) كانت «تكلفة الطعام النموذجية
+        // للمطاعم» تُحقن في أي جدول لأي قطاع. صاحب صالون يضغط ✨ على «نسبة التكلفة
+        // المتغيرة» فيحصل على ~38% بينما تكلفة مواد الصالون الفعلية 10–15% — فارق
+        // ~25 نقطة من الإيراد يذهب مباشرةً إلى قائمة الدخل وNPV، كافٍ لقلب القرار.
+        // نأخذ النطاق الآن من المصدر القطاعي الموحّد نفسه الذي تحاكم به بوابة الجودة
+        // نفس الرقم لاحقاً — فلا يقترح المنتج قيمة ثم يتّهمها.
+        const sectorBench = sectorText ? detectSectorBenchmark(sectorText) : null;
         // Estimate definitions — النطاقات بوحدة التخزين (الأعمدة الكسرية بوحدة الكسر لا النسبة المئوية)
         const estimates = {
             'price': [
@@ -100,17 +127,25 @@ export class DynamicTable {
             'variableCostRate': [
                 { keywords: ['توصيل', 'طلبات'], min: 0.35, max: 0.55 }, // التوصيل يحمل عمولة منصة
                 { keywords: ['مشروب', 'قهوة', 'عصير', 'شاي'], min: 0.25, max: 0.40 },
-                { keywords: [], min: 0.30, max: 0.45 } // تكلفة الطعام/المتغيرة النموذجية للمطاعم
+                // الاحتياطي من المصدر القطاعي الموحّد؛ وعند غياب النشاط يبقى نطاق
+                // المطاعم التاريخي (سلوك سابق محفوظ عمداً لا تغيير صامت).
+                sectorBench
+                    ? { keywords: [], min: sectorBench.variableCostRate[0], max: sectorBench.variableCostRate[1] }
+                    : { keywords: [], min: 0.30, max: 0.45 }
             ],
             'amortizationRate': [
                 { keywords: [], min: 0.10, max: 0.20 }
             ],
             // نموذج الطاقة القصوى (مقاعد × دورات/يوم × أيام/شهر)
+            // دورات الاستخدام/اليوم لكل وحدة. المطعم يدور المقعد 2–4 مرات، لكن كرسي
+            // الحلاقة يخدم 8–12 عميلاً والعيادة تحجز مواعيد مشابهة — الاحتياطي المطعمي
+            // كان يقصّ الطاقة القصوى للصالون/العيادة إلى الثُلث فيُطلق تحذير
+            // «مبيعات مستحيلة مادياً» بلا سبب حقيقي.
             'turnsPerDay': [
-                { keywords: [], min: 2, max: 4 } // دورات جلوس واقعية لمطعم — لا 55!
+                { keywords: [], ...DynamicTable._turnsRangeFor(sectorBench) }
             ],
             'seats': [
-                { keywords: [], min: 20, max: 60 }
+                { keywords: [], ...DynamicTable._seatsRangeFor(sectorBench) }
             ],
             'daysPerMonth': [
                 { keywords: [], min: 26, max: 30 }
@@ -599,7 +634,7 @@ export class DynamicTable {
         const rowData = this.data[rowIndex] || {};
         const itemName = (rowData.name || rowData.position || rowData.item || rowData.service || '').toLowerCase();
         const isFractionPct = DynamicTable.isFractionPercentColumn(colKey);
-        const estimatedValue = DynamicTable.estimateCellValue(colKey, itemName);
+        const estimatedValue = DynamicTable.estimateCellValue(colKey, itemName, this.config?.sectorText || '');
 
         // Animate — نُبقي أيقونة الزر (i-sparkle) ونضيف نبضاً فقط بدل استبدالها بنص إيموجي
         // مؤقت (تدقيق 2026-07-11)؛ render() يعيد بناء الزر بعد التقدير على أي حال.

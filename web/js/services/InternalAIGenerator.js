@@ -1504,7 +1504,14 @@ export function generatePositions(state) {
     const isEducation = /تعليم|مدرسة|جامعة|تدريب|أكاديم|دورات/i.test(sector);
     const isLogistics = /لوجستي|شحن|نقل|تخزين|توزيع|استيراد|تصدير/i.test(sector);
     const isIndustrial = /صناع|مصنع|إنتاج|تصنيع/i.test(sector);
-    const isService = /استشار|خدمي|صالة|رياض/i.test(sector);
+    // تدقيق 2026-09-04 (رحلة عميل صالون حلاقة): «صالون» لا يطابق /صالة/ — حرف مختلف —
+    // فكان الصالون ومركز الصيانة والمغسلة يسقطون على fallback «مدير المشروع + موظف
+    // تنفيذي×2» العام. نشاطان منهما (صالون/تجميل وصيانة وتنظيف) خياران حرفيان في
+    // قائمة الأنشطة المعروضة للمستخدم.
+    const isService = /استشار|خدمي|صالة|رياض|صالون|تجميل|حلاق|مشغل|صيانة|تنظيف|مغسلة|غسيل/i.test(sector);
+    // فرع أدقّ داخل الخدمي: العناية الشخصية طاقمها مهني مسمّى (حلاق/أخصائي) لا
+    // «منفذ خدمة» عام — وهو أول ما يفتقده صاحب الصالون في الاقتراح.
+    const isPersonalCare = /صالون|تجميل|حلاق|مشغل|سبا نسائي|عناية شخصية/i.test(sector);
     // نفس فجوة generateRevenueStreams أعلاه (راجع تعليقها) — تسقط بلا هذه الفروع على
     // fallback "مدير/مديرة المشروع + موظف تنفيذي×2" العام بلا علاقة بحجم النشاط الفعلي.
     const isBakery = /مخبز|حلويات/i.test(sector);
@@ -1583,6 +1590,16 @@ export function generatePositions(state) {
             { position: 'مدير/مديرة الإنتاج', nationality: 'saudi', count: 1, salary: 10000, months: 12, isVariable: false },
             { position: 'فني/مشغل خط إنتاج', nationality: 'expat', count: 3, salary: 4000, months: 12, isVariable: false },
             { position: 'مراقب جودة ومخازن', nationality: 'expat', count: 1, salary: 3800, months: 12, isVariable: false }
+        ];
+    } else if (isPersonalCare) {
+        // تقديرات في نفس فئة بقية الفروع هنا (ASSUMPTION لا أرقام رسمية منشورة):
+        // رواتب الحلاقين في الرياض تقع عملياً بين 4,000 و6,000 قبل معامل المدينة.
+        positions = [
+            { position: 'مدير/مديرة الصالون', nationality: 'saudi', count: 1, salary: 7000, months: 12, isVariable: false },
+            { position: 'حلاق/مصفف أول', nationality: 'expat', count: 1, salary: 5000, months: 12, isVariable: false },
+            { position: 'حلاق/مصفف', nationality: 'expat', count: 2, salary: 4000, months: 12, isVariable: false },
+            { position: 'أخصائي عناية بالبشرة', nationality: 'expat', count: 1, salary: 4500, months: 12, isVariable: false },
+            { position: 'موظف استقبال وحجوزات', nationality: 'saudi', count: 1, salary: 4000, months: 12, isVariable: false }
         ];
     } else if (isService) {
         positions = [

@@ -8,7 +8,7 @@ import { generateTableSuggestions } from '../services/AIConnector.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { generateCustomerPersonas } from '../services/InternalAIGenerator.js';
 import { getTAMSuggestion } from '../services/SaudiDemographicsService.js';
-import { buildSectorText, forecastDemandTrend } from '../core/marketSizingModel.js';
+import { buildSectorText, forecastDemandTrend, isGenericSectorShare } from '../core/marketSizingModel.js';
 import { analyzeSaudiMarket } from '../core/SaudiMarketEngine.js';
 import { compareSiteOptions } from '../core/siteComparison.js';
 import { suggest, isUsable, provenanceLabel } from '../services/DataConnectors.js';
@@ -1168,6 +1168,7 @@ export class MarketAnalysis {
                     </div>
                     <p class="text-sm text-muted mb-2">بناءً على مدينة <strong>${escapeHtml(city)}</strong>: عدد السكان <strong>${popStr}</strong> نسمة، ونسبة استهلاك القطاع. TAM المقترح: <strong>${(suggestion.tam || 0).toLocaleString('ar-SA')}</strong> ريال سنوياً.</p>
                     <p class="text-xs text-muted mb-2">المصدر: ${escapeHtml(suggestion.sourceLabel)} — <a href="https://www.stats.gov.sa" target="_blank" rel="noopener">هيئة الإحصاء</a></p>
+                    ${isGenericSectorShare(sector) ? `<p class="text-xs mb-2" style="color: var(--c-warning, #b45309);"><strong>تنبيه:</strong> لا توجد نسبة استهلاك خاصة بنشاطك في جدول النِسب، فاستُخدمت نسبة عامة — الرقم أعلاه تقدير سقفي واسع وليس حجم سوق نشاطك تحديداً. راجعه قبل الاعتماد عليه أو أدخل تقديرك بنفسك.</p>` : ''}
                     <button type="button" class="btn btn--secondary btn-sm btn-apply-tam-suggestion">تطبيق الاقتراح</button>
                 </div>
             `;
