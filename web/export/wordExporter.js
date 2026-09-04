@@ -17,11 +17,18 @@ import { calculateProjectScore } from '../js/core/scoring.js';
 import { formatPayback } from '../js/utils/formatters.js';
 import { formatIrrPct } from '../js/utils/indicatorFormat.js';
 import { t } from '../js/i18n/reportStrings.js';
+import { SECTIONS } from '../js/core/schema.js';
 import { getExportMetadata } from './utils.js';
 import { formatRatio } from './ratioUnits.js';
 
 /** أقسام تقرير Word (معرّفات قابلة للربط مع reportSectionOrder). */
-const WORD_SECTION_IDS = ['executive_summary', 'market', 'revenue_breakdown', 'financial_kpis', 'income_statement', 'cash_flow', 'balance_sheet', 'competitors', 'asset_schedule', 'working_capital', 'payroll_growth', 'marketing_growth', 'recommendation'];
+// تدقيق 2026-09-04: كانت القائمة 13 قسماً من 24 في DEFAULT_REPORT_SECTION_ORDER،
+// وينقصها تحديداً ما تَعِد به شاشة البيع: نافذة «معاينة مجانية قبل الشراء — الملف
+// القابل للتعديل» (ReportPreviewModal.js) تسرد «المخاطر» و«طلب التمويل واستخدام
+// الأموال» ضمن «ما تتضمنه النسخة الكاملة» — ولم يكن أيٌّ منهما في ملف Word إطلاقاً
+// (كلمة 'risks' صفر مرة في هذا الملف). دراسة جدوى بلا إجمالي استثمار مطلوب وبلا سجل
+// مخاطر ليست دراسة جدوى. أُضيف القسمان هنا مع بانيَيهما أدناه.
+export const WORD_SECTION_IDS = ['executive_summary', 'market', 'revenue_breakdown', 'capex', 'financial_kpis', 'income_statement', 'cash_flow', 'balance_sheet', 'risks', 'competitors', 'asset_schedule', 'working_capital', 'payroll_growth', 'marketing_growth', 'recommendation'];
 
 /** الخط العربي الموحد للمستند — نفس هوية المنصة */
 const AR_FONT = 'IBM Plex Sans Arabic';
@@ -31,12 +38,19 @@ const AR_FONT = 'IBM Plex Sans Arabic';
 // الإهلاك) — لا مجرد بطاقة KPI واحدة. الاختصار يفقد حتى ±50,000 ﷼ فتتوقف صفوف الجدول
 // (مثل الأصول = الخصوم + حقوق الملكية) عن التوازن ظاهرياً في المستند المُسلَّم رغم أن
 // الأرقام الأساسية صحيحة. Excel لا يختصر إطلاقاً (SAFE.num يكتب الرقم الخام) — نطابقه هنا.
-function formatCurrency(n, lang = 'ar') {
-    if (!n && n !== 0) return '0';
-    if (lang === 'en') {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
-    }
-    return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
+// تدقيق 2026-09-04: (1) العملة كانت مثبَّتة 'SAR' بينما assumptions.currency حقل
+// حقيقي معروض للمستخدم (قائمة بـ6 عملات خليجية في Wizard.js) وتحترمه 7 مولّدات أخرى —
+// فعميل إماراتي يختار AED يحصل على PDF بعملته وWord بـ«ر.س.» على كل رقم. (2) القيمة
+// الغائبة كانت تُطبع '0' (و NaN كذلك، لأن !NaN صحيح) — رقم يبدو حقيقياً؛ PDF يطبع '—'.
+
+// العملة النشطة للمستند الجاري بناؤه — تُضبط في المُنشئ من assumptions.currency.
+// التصدير يجري لمستند واحد في كل مرة داخل exportWorker، فلا تداخل بين مستندين.
+let ACTIVE_CURRENCY = 'SAR';
+
+function formatCurrency(n, lang = 'ar', currency = ACTIVE_CURRENCY) {
+    if (n == null || !Number.isFinite(Number(n))) return '—';
+    const locale = lang === 'en' ? 'en-US' : 'ar-SA';
+    return new Intl.NumberFormat(locale, { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
 }
 
 function hasText(s) {
@@ -59,10 +73,17 @@ export class WordExporter {
         const state = store.getState ? store.getState() : store;
         this.state = state;
         this.results = null;
+        // تدقيق 2026-09-04: كان `catch (_) { this.results = {}; }` يبتلع انهيار المحرك
+        // ثم يُكمل بناء المستند — فيخرج ملف «ناجح» (exportWorker يجد blob صالحاً،
+        // وExportMenu يعرض «تم التصدير بنجاح») وفيه NPV صفر وROI 0.0%، لأن قسم
+        // financial_kpis غير محروس فيُطبع دائماً. العميل يقدّم للبنك تقريراً يقول إن
+        // مشروعه بلا قيمة — وهو ليس نتيجة بل عطل. مسار Excel أمين أصلاً (يحسب خارج
+        // try) فالفشل يصل المستخدم رسالةَ خطأ حقيقية؛ نطابقه هنا.
+        ACTIVE_CURRENCY = state?.assumptions?.currency || 'SAR';
         try {
             this.results = runFullModel(state);
-        } catch (_) {
-            this.results = {};
+        } catch (e) {
+            throw new Error('تعذّر حساب النموذج المالي — لم يُنشأ الملف: ' + (e?.message || e));
         }
         this.score = calculateProjectScore(state, this.results);
     }
@@ -129,6 +150,16 @@ export class WordExporter {
                         spacing: { after: 200 }
                     })
                 ];
+            }
+            case 'capex': {
+                const table = this.createCapexTable();
+                if (!table) return [];
+                return [this.createHeading('إجمالي الاستثمار المطلوب'), table];
+            }
+            case 'risks': {
+                const table = this.createRisksTable();
+                if (!table) return [];
+                return [this.createHeading('سجل المخاطر وخطة التخفيف'), table];
             }
             case 'financial_kpis': {
                 const blocks = [
@@ -357,6 +388,65 @@ export class WordExporter {
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows
         });
+    }
+
+    /**
+     * إجمالي الاستثمار المطلوب وتفصيله. يقرأ results.capex (المصدر نفسه الذي تعرضه
+     * شاشة التمويل) — لا حساب مستقل هنا كي لا يتناقض رقمان لنفس البند.
+     * يعيد null عند غياب استثمار فعلي فلا يُطبع جدول أصفار.
+     */
+    createCapexTable() {
+        const capex = this.results?.capex;
+        if (!capex || !(Number(capex.total) > 0)) return null;
+        const LABELS = {
+            establishment: 'نفقات التأسيس',
+            buildings: 'المباني والإنشاءات',
+            equipment: 'المعدات والأجهزة',
+            furniture: 'الأثاث والتجهيزات',
+            vehicles: 'المركبات',
+            techResources: 'الموارد التقنية',
+            franchiseFee: 'رسوم الامتياز',
+            licenses: 'التراخيص',
+            preOpeningMarketing: 'تسويق ما قبل الافتتاح',
+            servicesCapex: 'تجهيزات الخدمات',
+            ventureBuilder: 'أتعاب بناء المشروع'
+        };
+        const rows = [this.createTableRow(['المبلغ', 'البند'], true)];
+        Object.entries(LABELS).forEach(([key, label]) => {
+            const value = Number(capex.breakdown?.[key] || 0);
+            if (value > 0) rows.push(this.createTableRow([formatCurrency(value, this.lang), label]));
+        });
+        if (Number(capex.workingCapital) > 0) {
+            rows.push(this.createTableRow([formatCurrency(capex.workingCapital, this.lang), 'رأس المال العامل']));
+        }
+        if (Number(capex.openingInventory) > 0) {
+            rows.push(this.createTableRow([formatCurrency(capex.openingInventory, this.lang), 'المخزون الافتتاحي']));
+        }
+        rows.push(this.createTableRow([formatCurrency(capex.total, this.lang), 'إجمالي الاستثمار المطلوب'], true));
+        return new Table({ rows });
+    }
+
+    /**
+     * سجل المخاطر كما أدخله المستخدم. يعيد null عند غياب أي خطر مسمّى — الغياب
+     * يُبلَّغ عنه أصلاً في بوابة الجودة، فلا نطبع جدولاً فارغاً في مستند مدفوع.
+     */
+    createRisksTable() {
+        const PROB = { low: 'منخفضة', medium: 'متوسطة', high: 'مرتفعة' };
+        const IMPACT = { low: 'منخفض', medium: 'متوسط', high: 'مرتفع' };
+        const risks = (this.state?.[SECTIONS.RISK_ANALYSIS]?.risks || [])
+            .filter(r => hasText(r?.name));
+        if (risks.length === 0) return null;
+        const rows = [this.createTableRow(['المسؤول', 'خطة التخفيف', 'الأثر', 'الاحتمال', 'الخطر'], true)];
+        risks.forEach(r => {
+            rows.push(this.createTableRow([
+                hasText(r.owner) ? r.owner : '—',
+                hasText(r.mitigation) ? r.mitigation : '—',
+                IMPACT[r.impact] || '—',
+                PROB[r.probability] || '—',
+                r.name
+            ]));
+        });
+        return new Table({ rows });
     }
 
     createFinancialTable() {

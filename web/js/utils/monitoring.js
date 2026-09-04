@@ -102,7 +102,11 @@ class MonitoringService {
                 filename: event.filename,
                 lineno: event.lineno,
                 colno: event.colno,
-                url: window.location.href
+                // تدقيق 2026-09-04: كان يمرّر href كاملاً و'url' ضمن قائمة السماح في
+                // analytics.js — فأي خطأ JS يقع بينما المستخدم على #/share/<token>
+                // يخزّن رمز مشاركة الدراسة (سرّ وصول) نصاً صريحاً في events.props.url.
+                // نجرّد الـhash: المسار وحده يكفي لتشخيص الخطأ.
+                url: window.location.origin + window.location.pathname
             });
         });
 

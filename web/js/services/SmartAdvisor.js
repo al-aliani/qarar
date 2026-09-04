@@ -39,13 +39,13 @@ export class SmartAdvisor {
             if (!isNaN(irr) && irr > 0 && irr < 0.10) insights.push({ type: 'warning', category: 'عائد', value: irr, message: `معدل العائد الداخلي (${(irr * 100).toFixed(1)}%) منخفض.`, action: 'تحسين الهوامش أو تقليل رأس المال أو إعادة تقييم المخاطر.' });
             const payback = Number(ind.paybackPeriod ?? ind.payback);
             if (!isNaN(payback) && payback > 5) insights.push({ type: 'warning', category: 'سيولة', value: payback, message: `فترة الاسترداد طويلة (${payback.toFixed(1)} سنة).`, action: 'خفض التكاليف الأولية أو تعجيل الإيرادات.' });
-            const decision = results?.decision;
-            const reasons = results?.decisionReasons || [];
-            if (decision === 'REVISE' || decision === 'NO-GO') {
-                const msg = decision === 'NO-GO' ? 'القرار يشير إلى عدم جدوى المشروع.' : 'القرار يوصي بمراجعة الدراسة.';
-                const reasonStr = Array.isArray(reasons) && reasons.length ? ' ' + reasons.slice(0, 2).map(r => typeof r === 'string' ? r : (r?.text || r?.reason || '')).filter(Boolean).join('؛ ') : '';
-                insights.push({ type: 'critical', category: 'قرار', message: msg + reasonStr, action: 'مراجعة بنود الدراسة وإصلاح الافتراضات ثم إعادة الحساب.' });
-            }
+            // تدقيق 2026-09-04 (رأيته حياً في رحلة عميل): هذا الفرع هو حالة «لا إيراد
+            // بعد» — ومع ذلك كان يدفع حكم القرار (REVISE/NO-GO) كـinsight حرج يُعرض
+            // توستاً (app.js:2890)، فيستقبل المستخدم «القرار يوصي بمراجعة الدراسة»
+            // قبل أن يُدخل ريالاً واحداً. وهذا يناقض سياسة المنتج المعلنة في نفس
+            // الشاشة: DecisionDashboard ترفض إظهار أي حكم بلا بيانات إيرادات، ويحرس
+            // ذلك اختبار صريح (ui.test.js «يعرض حالة لا بيانات … بدل حكم سلبي مضلل»).
+            // الحكم يُترك للوحة القرار وبوابة الجودة؛ هنا نكتفي بدعوة إكمال البيانات.
             if (insights.length === 0 && (ind.npv !== undefined || ind.irr !== undefined)) insights.push({ type: 'success', category: 'General', message: 'المؤشرات المتوفرة إيجابية. أكمِل إدخال البيانات لقائمة الدخل لتحليل تفصيلي.', action: 'أضف الإيرادات والتكاليف ثم أعد الحساب.' });
             return { ratios: empty.ratios, insights };
         }

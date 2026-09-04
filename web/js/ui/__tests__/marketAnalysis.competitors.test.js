@@ -53,7 +53,11 @@ describe('MarketAnalysis — زر اكتشاف المنافسين', () => {
         const aiSpy = vi.spyOn(AIWriterModule.AIWriter, 'generate');
 
         const store = fakeStore({
-            projectInfo: { city: 'الرياض' },
+            // تحديث 2026-09-04: الموصّل صار يشتق وسوم OSM من نشاط المشروع بدل البحث
+            // عن مطاعم دائماً لأي نشاط. النشاط هنا متّسق مع بيانات OSM الوهمية أدناه
+            // (مطعم + مقهى). حالة «بلا نشاط» ⟶ امتناع صريح لا مطاعم، مغطّاة في
+            // js/services/connectors/__tests__/overpassSectorAware.test.js.
+            projectInfo: { city: 'الرياض', concept: 'مطعم' },
             marketing: { competitors: [] },
             marketSizing: {}
         });

@@ -1012,7 +1012,11 @@ export class MarketAnalysis {
                     const hasRealCoords = coords && Number.isFinite(Number(coords.lat)) && Number.isFinite(Number(coords.lng));
                     const live = await suggest('market.competitors', {
                         city: projectInfo.city,
-                        coords: hasRealCoords ? coords : undefined
+                        coords: hasRealCoords ? coords : undefined,
+                        // تدقيق 2026-09-04: بلا تمرير النشاط كان الموصّل يبحث عن مطاعم
+                        // فقط لأي مشروع — فيحصل صاحب الصالون/العيادة على مطاعم الحي
+                        // كمنافسين، بنصّ يؤكد أنها منشآت «قريبة فعلياً»، وتُصدَّر للممول.
+                        concept: projectInfo.concept || projectInfo.activity || projectInfo.industry || ''
                     });
 
                     if (isUsable(live) && Array.isArray(live.value?.sample) && live.value.sample.length > 0) {

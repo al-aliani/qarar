@@ -333,8 +333,8 @@ export function createEmptyStudy() {
             // (تبريد/تكييف خصوصاً في تجزئة الأغذية) — صف ظاهر بلا رقم مُختلَق (monthly:0)
             // يجعلها أول ما يُطلب تعبئته بدل أن يتخطاها المستخدم المبتدئ كلياً.
             logistics: [
-                { name: 'التوصيل والنقل (منصات التوصيل/نقل مبرّد)', monthly: 0, variablePercent: 0.5, notes: '' },
-                { name: 'كهرباء ومياه (تبريد/تكييف)', monthly: 0, variablePercent: 0.30, notes: '' }
+                { name: 'التوصيل والنقل', monthly: 0, variablePercent: 0.5, notes: '' },
+                { name: 'كهرباء ومياه', monthly: 0, variablePercent: 0.30, notes: '' }
             ]
         },
 
@@ -348,7 +348,7 @@ export function createEmptyStudy() {
             // المستخدم المبتدئ بالكامل. صف افتراضي ظاهر (monthly:0، لا رقم مُختلَق) يجعل
             // إيجار المحل أول ما يُطلب إدخاله، دون حقن أي تكلفة صامتة.
             administrative: [
-                { name: 'إيجار المحل (الصالة/المطبخ)', monthly: 0, notes: '' }
+                { name: 'إيجار المقر (المحل/الصالة)', monthly: 0, notes: '' }
             ]
         },
 
