@@ -93,6 +93,32 @@ export function resolveSectorShare(text, shares = demographicsJson.sectorConsump
 }
 
 /**
+ * هل نسبة الاستهلاك المستخدَمة هي النسبة العامة الاحتياطية لا نسبة خاصة بالقطاع؟
+ *
+ * تدقيق 2026-09-04 (رحلة عميل صالون حلاقة): الجدول يضمّ 20 مفتاحاً قطاعياً، لكن
+ * الصالونات والمغاسل والنوادي الرياضية ومراكز الصيانة لا مفتاح لأيٍّ منها — فتسقط
+ * كلها على default = 2٪. النتيجة التي رأيتها: TAM مقترح لصالون في الرياض =
+ * ١٥٫١ مليار ريال/سنة، أي ١٬٩٧٠ ريالاً للفرد سنوياً على الحلاقة.
+ *
+ * لم نخترع نسبة بديلة: كل هذه النسب تقديرية بلا مصدر منشور (موسومة ASSUMPTION في
+ * كل مكان تُعرض فيه)، واستبدال تقدير بتقدير لا يزيد صدقاً. الأصدق أن يعرف العميل
+ * أن قطاعه بلا مدخل خاص وأن الرقم عام — فيراجعه بدل الاعتماد عليه.
+ *
+ * @param {string} text نص القطاع
+ * @param {Object} [shares]
+ * @returns {boolean} صحيح حين لم يطابق أي مفتاح قطاعي
+ */
+export function isGenericSectorShare(text, shares = demographicsJson.sectorConsumptionShare) {
+    if (!text || !shares) return true;
+    const s = String(text).trim();
+    for (const key of Object.keys(shares)) {
+        if (key === 'default') continue;
+        if (s.includes(key)) return false;
+    }
+    return true;
+}
+
+/**
  * بيانات مدينة من لقطة GASTAT — قراءة متزامنة (المحرك المالي متزامن بالكامل).
  * نفس دلالات getCityData في SaudiDemographicsService: fallback إلى «أخرى» ثم دخل 70000.
  */
