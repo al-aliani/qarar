@@ -2,7 +2,6 @@ import { getLabel } from '../core/labels.js';
 import { getLabelSDB, getAuditorTooltip, getFieldHint } from '../core/regulatoryLabels.js';
 import { getStepHelp, miniEssentialFields, miniEssentialTables } from '../core/wizardSteps.js';
 import { DynamicTable } from './DynamicTable.js';
-import { DataService } from '../services/DataService.js';
 import { generateTableSuggestions } from '../services/AIConnector.js';
 import { InternalAIGenerator } from '../services/InternalAIGenerator.js';
 import { generateSuggestionStreaming } from '../services/FieldSuggestionService.js';
@@ -35,22 +34,28 @@ const stripEmoji = (s) => (s || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27B
 
 /** Smart Fill handlers keyed by TABLE_SCHEMAS.*.smartFill.dataKey. Add new tables here. */
 export const SMART_FILL_HANDLERS = {
+    // تدقيق 2026-09-04 (رحلة عميل صالون حلاقة): كان هذا الزر يستدعي
+    // DataService.recommendStaffing — فروعه مقهى/مخبز/مطبخ سحابي/ضيافة/SaaS فقط،
+    // والافتراض الاحتياطي حرفياً 'cafe'. فأعطى دراسة صالون: «مدير مشروع + محاسب +
+    // موظف/عامل ×4»، بلا حلاق واحد. وعلى **نفس الجدول** زر «اقتراح بنود» يستدعي
+    // InternalAIGenerator.generatePositions الواعي بالقطاع — فيضيف فوقها مديراً
+    // ثانياً براتب مختلف. رأيته حياً: ٩ موظفين لصالون بستة كراسي، فيهم مديران
+    // ومحاسب وصفر حلاقين.
+    //
+    // نفس علاج التراخيص أدناه (تدقيق 2026-07-08): مصدر واحد واعٍ بالقطاع للزرّين.
+    // recommendStaffing تبقى كما هي — لها مستهلكون آخرون، ولا نحذف كوداً لم نُطالَب بحذفه.
     staffing: (state) => {
-        const size = state.projectInfo?.areaSize || state.technical?.area || 100;
-        const type = state.projectInfo?.concept || state.projectInfo?.activity || 'cafe';
-        const suggestions = DataService.recommendStaffing(size, type);
-        // تدقيق 2026-07-09 (اختبار عميل حي: دراسة مقهى): كان هذا التحويل يُسقط
-        // nationality الذي يُرجعه DataService.recommendStaffing بالفعل — فتُحسب GOSI
-        // دائماً بمعدل الوافد (2%) حتى لموظفين سعوديين، ولوحة نطاقات/التوطين تعرض
-        // 0% بصمت رغم توطين فعلي مرتفع (تناقض مباشر مع جدول الرواتب نفسه).
+        const suggestions = InternalAIGenerator.generatePositions(state);
         return suggestions.map(s => ({
             id: Date.now() + Math.random(),
             position: s.position,
+            // nationality يُرجعه المولّد فعلاً — إسقاطه يجعل GOSI تُحسب بمعدل الوافد
+            // لموظفين سعوديين ويُظهر توطيناً 0% صمتاً (تدقيق 2026-07-09).
             nationality: s.nationality || 'expat',
             count: s.count,
             salary: s.salary,
-            months: 12,
-            isVariable: (s.position || '').includes('عامل')
+            months: s.months || 12,
+            isVariable: !!s.isVariable
         }));
     },
     // تدقيق 2026-07-08 (ملاحظة حرجة، خبير السوق): كان هذا الزر (المربوط فعلياً في

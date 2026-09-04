@@ -15,7 +15,7 @@ import { Wizard } from '../Wizard.js';
 import { StudyJourney } from '../StudyJourney.js';
 import { SECTIONS, createEmptyStudy, TABLE_SCHEMAS } from '../../core/schema.js';
 import { escapeHtml } from '../../utils/escape.js';
-import { DataService } from '../../services/DataService.js';
+import { InternalAIGenerator } from '../../services/InternalAIGenerator.js';
 import { toast } from '../../utils/toast.js';
 
 function fakeStore(state) {
@@ -124,7 +124,7 @@ describe('Wizard batch-4 — XSS، الأزرار العالقة، اتساق ا
     // 3) زر «الجلب الذكي» لكل جدول — لا يعلق إن رمى المُعالج استثناءً
     // ────────────────────────────────────────────────────────────────
     describe('البند 3 — زر الجلب الذكي لا يعلق إن فشل المُعالج', () => {
-        it('disabled يعود false و toast.error يُستدعى إن رمى DataService.recommendStaffing استثناءً', () => {
+        it('disabled يعود false و toast.error يُستدعى إن رمى مولّد الوظائف استثناءً', () => {
             const state = createEmptyStudy();
             // hr.positions موجود افتراضياً كمصفوفة فارغة (schema.js)
 
@@ -134,8 +134,12 @@ describe('Wizard batch-4 — XSS، الأزرار العالقة، اتساق ا
             document.body.innerHTML = `<div id="c"></div>`;
             wizard.container = document.getElementById('c');
 
-            // نجعل المُعالج الحقيقي (staffing → DataService.recommendStaffing) يرمي استثناءً
-            vi.spyOn(DataService, 'recommendStaffing').mockImplementation(() => {
+            // نجعل المُعالج الحقيقي يرمي استثناءً. تحديث 2026-09-04: المسار صار
+            // staffing → InternalAIGenerator.generatePositions بعد توحيد مصدر اقتراح
+            // الرواتب (كان DataService.recommendStaffing، وفروعها لا تعرف القطاع
+            // الخدمي والاحتياطي فيها حرفياً 'cafe'). النية المختبَرة لم تتغيّر:
+            // الزر لا يعلق بنص «جاري البحث…» إذا رمى المُعالج.
+            vi.spyOn(InternalAIGenerator, 'generatePositions').mockImplementation(() => {
                 throw new Error('فشل محاكى في التوصية بالتوظيف');
             });
             const toastErrorSpy = vi.spyOn(toast, 'error').mockImplementation(() => {});

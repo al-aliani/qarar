@@ -358,12 +358,13 @@ export class WordExporter {
     createMarketTable() {
         const market = this.state.marketSizing || {};
         return new Table({
+            visuallyRightToLeft: true,
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows: [
-                this.createTableRow(["الوصف", "القيمة", "المؤشر"], true),
-                this.createTableRow(["إجمالي السوق المتاح", formatCurrency(market.tam?.value), "TAM"]),
-                this.createTableRow(["السوق المستهدف", formatCurrency(market.sam?.value), "SAM"]),
-                this.createTableRow(["الحصة السوقية", formatCurrency(market.som?.value), "SOM"])
+                this.createTableRow(["المؤشر", "القيمة", "الوصف"], true),
+                this.createTableRow(["TAM", formatCurrency(market.tam?.value), "إجمالي السوق المتاح"]),
+                this.createTableRow(["SAM", formatCurrency(market.sam?.value), "السوق المستهدف"]),
+                this.createTableRow(["SOM", formatCurrency(market.som?.value), "الحصة السوقية"])
             ]
         });
     }
@@ -385,6 +386,7 @@ export class WordExporter {
             ], false));
         });
         return new Table({
+            visuallyRightToLeft: true,
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows
         });
@@ -411,19 +413,19 @@ export class WordExporter {
             servicesCapex: 'تجهيزات الخدمات',
             ventureBuilder: 'أتعاب بناء المشروع'
         };
-        const rows = [this.createTableRow(['المبلغ', 'البند'], true)];
+        const rows = [this.createTableRow(['البند', 'المبلغ'], true)];
         Object.entries(LABELS).forEach(([key, label]) => {
             const value = Number(capex.breakdown?.[key] || 0);
-            if (value > 0) rows.push(this.createTableRow([formatCurrency(value, this.lang), label]));
+            if (value > 0) rows.push(this.createTableRow([label, formatCurrency(value, this.lang)]));
         });
         if (Number(capex.workingCapital) > 0) {
-            rows.push(this.createTableRow([formatCurrency(capex.workingCapital, this.lang), 'رأس المال العامل']));
+            rows.push(this.createTableRow(['رأس المال العامل', formatCurrency(capex.workingCapital, this.lang)]));
         }
         if (Number(capex.openingInventory) > 0) {
-            rows.push(this.createTableRow([formatCurrency(capex.openingInventory, this.lang), 'المخزون الافتتاحي']));
+            rows.push(this.createTableRow(['المخزون الافتتاحي', formatCurrency(capex.openingInventory, this.lang)]));
         }
-        rows.push(this.createTableRow([formatCurrency(capex.total, this.lang), 'إجمالي الاستثمار المطلوب'], true));
-        return new Table({ rows });
+        rows.push(this.createTableRow(['إجمالي الاستثمار المطلوب', formatCurrency(capex.total, this.lang)], true));
+        return new Table({ visuallyRightToLeft: true, rows });
     }
 
     /**
@@ -436,30 +438,31 @@ export class WordExporter {
         const risks = (this.state?.[SECTIONS.RISK_ANALYSIS]?.risks || [])
             .filter(r => hasText(r?.name));
         if (risks.length === 0) return null;
-        const rows = [this.createTableRow(['المسؤول', 'خطة التخفيف', 'الأثر', 'الاحتمال', 'الخطر'], true)];
+        const rows = [this.createTableRow(['الخطر', 'الاحتمال', 'الأثر', 'خطة التخفيف', 'المسؤول'], true)];
         risks.forEach(r => {
             rows.push(this.createTableRow([
-                hasText(r.owner) ? r.owner : '—',
-                hasText(r.mitigation) ? r.mitigation : '—',
-                IMPACT[r.impact] || '—',
+                r.name,
                 PROB[r.probability] || '—',
-                r.name
+                IMPACT[r.impact] || '—',
+                hasText(r.mitigation) ? r.mitigation : '—',
+                hasText(r.owner) ? r.owner : '—'
             ]));
         });
-        return new Table({ rows });
+        return new Table({ visuallyRightToLeft: true, rows });
     }
 
     createFinancialTable() {
         const ind = this.results?.indicators || {};
         const lang = this.lang;
         return new Table({
+            visuallyRightToLeft: true,
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows: [
-                this.createTableRow([t('value_column', lang), t('indicator_column', lang)], true),
-                this.createTableRow([formatCurrency(ind.npv, lang), t('npv', lang)]),
-                this.createTableRow([formatIrrPct(ind.irr), t('irr', lang)]),
-                this.createTableRow([formatPayback(ind.paybackPeriod), t('payback_period', lang)]),
-                this.createTableRow([`${((ind.roi ?? 0) * 100).toFixed(1)}%`, t('roi', lang)])
+                this.createTableRow([t('indicator_column', lang), t('value_column', lang)], true),
+                this.createTableRow([t('npv', lang), formatCurrency(ind.npv, lang)]),
+                this.createTableRow([t('irr', lang), formatIrrPct(ind.irr)]),
+                this.createTableRow([t('payback_period', lang), formatPayback(ind.paybackPeriod)]),
+                this.createTableRow([t('roi', lang), `${((ind.roi ?? 0) * 100).toFixed(1)}%`])
             ]
         });
     }
@@ -496,6 +499,7 @@ export class WordExporter {
             tableRows.push(this.createTableRow([label, ...rows.map(r => formatCurrency(r[key], lang))]));
         });
         return new Table({
+            visuallyRightToLeft: true,
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows: tableRows
         });
@@ -522,6 +526,7 @@ export class WordExporter {
             tableRows.push(this.createTableRow([label, ...rows.map(r => formatCurrency(r[key], lang))]));
         });
         return new Table({
+            visuallyRightToLeft: true,
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows: tableRows
         });
@@ -556,6 +561,7 @@ export class WordExporter {
             tableRows.push(this.createTableRow([label, ...rows.map(r => formatCurrency(getter(r), lang))]));
         });
         return new Table({
+            visuallyRightToLeft: true,
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows: tableRows
         });
@@ -583,6 +589,7 @@ export class WordExporter {
             tableRows.push(this.createTableRow([label, ...rows.map(r => formatRatio(key, r[key]))]));
         });
         return new Table({
+            visuallyRightToLeft: true,
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows: tableRows
         });
@@ -603,6 +610,7 @@ export class WordExporter {
             ]));
         });
         return new Table({
+            visuallyRightToLeft: true,
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows
         });
@@ -621,6 +629,7 @@ export class WordExporter {
             ]));
         });
         return new Table({
+            visuallyRightToLeft: true,
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows
         });
@@ -641,6 +650,7 @@ export class WordExporter {
         });
         rows.push(this.createTableRow(["الإجمالي", formatCurrency(operating.total)], true));
         return new Table({
+            visuallyRightToLeft: true,
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows
         });
@@ -661,6 +671,7 @@ export class WordExporter {
             ]));
         });
         return new Table({
+            visuallyRightToLeft: true,
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows: tableRows
         });
@@ -680,6 +691,7 @@ export class WordExporter {
             ]));
         });
         return new Table({
+            visuallyRightToLeft: true,
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows: tableRows
         });
