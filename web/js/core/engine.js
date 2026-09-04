@@ -1637,8 +1637,13 @@ export function calculateStudy(study, overrides) {
                 cashReserve: Math.max(Number(workingCapital) || 0, Number(balanceSheets?.[0]?.assets?.current?.cash) || 0)
             };
             const stress = computeStressSurvival(stressBase, 50, 20);
-            if (d.decision === 'GO' && Number.isFinite(stress.months) && stress.months < 3) {
-                d.decision = 'REVISE';
+            // تدقيق 2026-08-28: كانت إضافة السبب نفسها (لا فقط تخفيض القرار) مشروطة بـ
+            // d.decision === 'GO' — فمشروع REVISE أصلاً بسبب آخر (مثل سقف معقولية IRR/الاسترداد
+            // في computeDecision) لا يُظهر سبب أزمة السيولة الحادة إطلاقاً رغم صحته. نفس
+            // نمط مونت كارلو أسفله بالضبط: تخفيض القرار يبقى مشروطاً بـGO، وإضافة السبب
+            // للشفافية غير مشروطة بحالة القرار الحالية.
+            if (Number.isFinite(stress.months) && stress.months < 3) {
+                if (d.decision === 'GO') d.decision = 'REVISE';
                 d.decisionReasons.unshift(
                     `أشهر البقاء تحت أزمة حادة (اختبار التحمل: -50% مبيعات و+20% تكاليف) = ${stress.months.toFixed(1)} شهراً فقط (أقل من 3) — خطر سيولة حرج قبل أي صدمة سوق معتادة`
                 );
@@ -1828,6 +1833,11 @@ function computeDecision(th, k) {
 
     // سقف معقولية: «أفضل من أن يكون حقيقياً» لا يكون GO قاطعاً. مؤشرات مرتفعة بغرابة
     // (IRR ≥ 100%، استرداد < 1.2 سنة، أو هامش صافٍ > 35%) غالباً تعني تكاليف ناقصة — نخفّضها لمراجعة.
+    // تدقيق 2026-09-04: جرى خفض العتبة مؤقتاً إلى 60%/1.5 سنة (تدقيق 2026-08-28) لالتقاط
+    // حالة تكاليف تشغيلية ناقصة، فقلبت دراسة المطعم المرجعية المربحة إلى REVISE — مطعم
+    // سعودي صغير ناجح يتجاوز 60% عائداً داخلياً بسهولة، فالعتبة كانت تُلغي عملياً حكم
+    // «مجدي». الحالة المقصودة يلتقطها فحص OPERATING_COSTS_MISSING في qaChecks.js مباشرةً
+    // وبدقة أعلى (سبب لا عَرَض)، فأُعيدت العتبة الأصلية.
     if (decision === 'GO') {
         const implausible = (k.irr ?? 0) >= 1
             || (k.paybackPeriod != null && k.paybackPeriod > 0 && k.paybackPeriod < 1.2)

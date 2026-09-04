@@ -294,6 +294,9 @@ export async function runQAChecks(state, results) {
             }
 
             // 4) مؤشرات مبالغ فيها = افتراضات غير واقعية على الأرجح (تنبيه للمراجعة)
+            // العتبة تطابق سقف المعقولية في computeDecision (engine.js) عمداً — أي تغيير
+            // هنا يجب أن يرافقه نفس التغيير هناك، وإلا ظهر تحذير «عائد غير معتاد» تحت
+            // حكم «مشروع مجدي» في نفس الشاشة (تدقيق 2026-09-04).
             const irr = Number(kpis?.irr ?? NaN);
             if (Number.isFinite(irr) && irr >= 1) {
                 qaResults.softWarnings.push({
@@ -478,10 +481,56 @@ export async function runQAChecks(state, results) {
                     return src.reduce((a, s) => a + (Number(s.customersPerMonth) || 0), 0);
                 })();
                 if (!cc && plannedMonthly > 1000) {
+                    // تدقيق 2026-08-28: جدولا capacityModel وlocationAssessment مُستثنَيان
+                    // عمداً من «الوضع المصغّر» (wizardSteps.js MINI_ESSENTIAL_TABLES) —
+                    // فيختفيان من شاشة الدراسة الفنية تماماً في هذا الوضع، ويبقى هذا
+                    // التحذير معلَّقاً بلا أي طريقة لإكماله من نفس الوضع. الرسالة توضّح
+                    // السبب بدل الإيحاء بأن الحقل مفقود سهواً فقط.
+                    const studyMode = state?.appSettings?.mode || 'advanced';
+                    const miniHint = studyMode === 'mini'
+                        ? ' (جدول نموذج الطاقة مخفي في «الوضع المصغّر» — بدّل إلى الوضع الكامل أو المتقدم من صفحة الفئات لإكماله.)'
+                        : '';
                     qaResults.softWarnings.push({
                         code: 'CAPACITY_MODEL_MISSING',
-                        message: `تخطط لـ ${plannedMonthly.toLocaleString('ar-SA')} عميل/شهر دون نموذج طاقة (مقاعد × دورات × أيام) — أضِفه في الدراسة الفنية لإثبات أن المبيعات قابلة للتحقيق مادياً.`,
+                        message: `تخطط لـ ${plannedMonthly.toLocaleString('ar-SA')} عميل/شهر دون نموذج طاقة (مقاعد × دورات × أيام) — أضِفه في الدراسة الفنية لإثبات أن المبيعات قابلة للتحقيق مادياً.${miniHint}`,
                         path: 'technical.capacityModel'
+                    });
+                }
+            }
+
+            // 10.1) حجم السوق المستهدف (SOM) مقابل سقف الطاقة الفعلية — SOM في
+            // marketSizingModel.js نسبة سكانية تصاعدية بلا أي صلة بعدد المقاعد/الطاقة
+            // (تدقيق 2026-08-28)؛ تحذير سقفي فقط هنا، لا تعديل لقيمة SOM نفسها.
+            {
+                const som = Number(state?.marketSizing?.som?.value || 0);
+                const cc = results?.capacityCheck;
+                const y1Revenue = Number(results?.incomeStatement?.[0]?.revenue || 0);
+                if (som > 0 && cc?.maxUnitsPerMonth > 0 && cc?.plannedUnitsPerMonth > 0 && y1Revenue > 0) {
+                    const avgPricePerUnit = y1Revenue / (cc.plannedUnitsPerMonth * 12);
+                    const capacityCeilingRevenue = cc.maxUnitsPerMonth * 12 * avgPricePerUnit;
+                    if (Number.isFinite(capacityCeilingRevenue) && capacityCeilingRevenue > 0 && som > capacityCeilingRevenue * 1.5) {
+                        qaResults.softWarnings.push({
+                            code: 'SOM_EXCEEDS_CAPACITY_CEILING',
+                            message: `الحصة المستهدفة (SOM) المُدخلة ${Math.round(som).toLocaleString('ar-SA')} ريال، بينما أقصى إيراد واقعي بطاقتك الحالية (${cc.maxUnitsPerMonth.toLocaleString('ar-SA')} عميل/شهر بأقصى طاقة) يقارب ${Math.round(capacityCeilingRevenue).toLocaleString('ar-SA')} ريال سنوياً لفرع واحد. SOM يُحسب كنسبة من سوق المدينة كاملة وقد يفترض عدة فروع أو منافسين — إن كانت دراستك لفرع واحد فراجع الرقم أو وضّح الافتراض في الوصف.`,
+                            path: 'marketSizing.som'
+                        });
+                    }
+                }
+            }
+
+            // 10.2) تكاليف تشغيلية مباشرة (مرافق/توصيل) صفرية رغم وجود إيراد حقيقي —
+            // لا يوجد حقل مخصص لكل بند (تدقيق 2026-08-28)؛ صف «كهرباء ومياه» و«التوصيل
+            // والنقل» في logistics.logistics يبدآن بـmonthly:0 (schema.js) ولا فحص نسبي
+            // يغطيهما (RENT_RATIO في sectorBenchmarks.js يستخرج الإيجار فقط بالاسم).
+            {
+                const y1Revenue = Number(results?.incomeStatement?.[0]?.revenue || 0);
+                const logisticsMonthlyTotal = (state?.logistics?.logistics || [])
+                    .reduce((a, item) => a + (Number(item?.monthly) || 0), 0);
+                if (y1Revenue > 0 && logisticsMonthlyTotal <= 0) {
+                    qaResults.softWarnings.push({
+                        code: 'OPERATING_COSTS_MISSING',
+                        message: 'لا توجد تكاليف تشغيلية مباشرة مسجَّلة (مرافق/كهرباء وماء/توصيل ونقل) رغم وجود إيراد متوقع — هذه غالباً ليست صفراً فعلياً، بل حقول لم تُعبَّأ بعد؛ أدخل تقديراً واقعياً قبل اعتماد المؤشرات المالية.',
+                        path: 'logistics.logistics'
                     });
                 }
             }

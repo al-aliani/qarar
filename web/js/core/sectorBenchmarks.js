@@ -201,11 +201,31 @@ export function checkDriversAgainstBenchmarks(state, results) {
             range: bench.laborToRevenue,
             lowHint: 'أدنى من المعتاد — هل الفريق يكفي فعلاً لتحقيق هذه المبيعات؟',
             highHint: 'أعلى من المعتاد — هيكل الرواتب يحتاج مراجعة'
+        },
+        {
+            // تدقيق 2026-08-28: bench.marketingToRevenue كان معرَّفاً لكل قطاع بلا استثناء
+            // (مُستخدَم فعلاً في نص AI الاستشاري عبر core/costRatios.js) لكن غير موصول هنا
+            // إطلاقاً. على عكس السائقين الثلاثة أعلاه، صفر تسويق هو بالضبط الحالة الشائعة
+            // المطلوب رصدها (مصفوفة marketing.campaigns تبدأ فارغة افتراضياً) — فحارس
+            // «تجاهُل الصفر» العام أسفل هذا التعريف يُستثنى له صراحة.
+            code: 'MARKETING_RATIO',
+            label: 'التسويق إلى المبيعات',
+            actual: (Number(results?.opex?.marketingAnnual) || 0) / revenue,
+            range: bench.marketingToRevenue,
+            zeroMessage: 'لا يوجد أي إنفاق تسويقي مسجَّل — توقعات اكتساب العملاء (وبالتالي الإيرادات) متفائلة بلا خطة وصول فعلية لهم.',
+            lowHint: 'أدنى من المعتاد — تسويق ضعيف يجعل توقعات اكتساب العملاء متفائلة',
+            highHint: 'أعلى من المعتاد — راجع فعالية القنوات قبل زيادة الميزانية'
         }
     ];
 
     drivers.forEach(d => {
-        if (!Number.isFinite(d.actual) || d.actual <= 0) return;
+        if (!Number.isFinite(d.actual)) return;
+        if (d.actual <= 0) {
+            if (d.zeroMessage) {
+                warnings.push({ code: `BENCH_${d.code}_ZERO`, message: `${d.label}: ${d.zeroMessage}`, path: 'drivers' });
+            }
+            return;
+        }
         const [lo, hi] = d.range;
         // تدقيق 2026-07-08 (ملاحظة حرجة، خبير السوق): نطاقات sectorBenchmarks.js تقديرية
         // (ASSUMPTION) بلا مصدر خارجي موثّق — كانت تُعرض للمستخدم كأنها معيار رسمي قاطع.
