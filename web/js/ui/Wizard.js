@@ -72,7 +72,7 @@ export const SMART_FILL_HANDLERS = {
 };
 
 // الحقول السردية الطويلة — تُرسم textarea لا سطر إدخال ضيق واحد
-const LONG_TEXT_KEYS = ['identityStatement', 'valueProposition', 'problem', 'solution', 'insight', 'insightText', 'whyUs', 'marketSize', 'competitiveAdvantage', 'locationFactors', 'alternativesComparison', 'finalChoiceReason'];
+const LONG_TEXT_KEYS = ['identityStatement', 'valueProposition', 'problem', 'solution', 'insight', 'insightText', 'whyUs', 'marketSize', 'competitiveAdvantage', 'selectionFactors', 'alternativesComparison', 'chosenReason'];
 
 // حقول خطوة معلومات المشروع الأساسية — الباقي يُطوى تحت «حقول متقدمة» لتخفيف النموذج
 const PROJECT_INFO_BASIC_KEYS = ['name', 'description', 'city', 'district', 'concept', 'studyType', 'businessModel', 'areaSize', 'targetSegment', 'timeline'];
@@ -454,12 +454,27 @@ export class Wizard {
                 if (mapEl) {
                     Promise.all([import('leaflet'), import('leaflet/dist/leaflet.css')]).then(([{ default: L }]) => {
                         if (!this.container?.contains(mapEl)) return;
-                        const map = L.map('technicalMap').setView([24.7136, 46.6753], 12); // Riyadh center
+                        // موقع محفوظ سابقاً إن وُجد، وإلا مركز الرياض الافتراضي — قبل هذا
+                        // الإصلاح كانت الخريطة تُعيد التمركز على الرياض دائماً حتى لو كان
+                        // للمستخدم إحداثيات محفوظة فعلاً (كانت غير مقروءة أصلاً).
+                        const savedCoords = this.store.getState()?.projectInfo?.locationAnalysis?.coordinates;
+                        const startLatLng = (savedCoords?.lat != null && savedCoords?.lng != null)
+                            ? [savedCoords.lat, savedCoords.lng]
+                            : [24.7136, 46.6753];
+                        const map = L.map('technicalMap').setView(startLatLng, 12);
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                             attribution: '© OpenStreetMap contributors'
                         }).addTo(map);
-                        const marker = L.marker([24.7136, 46.6753], {draggable: true}).addTo(map);
-                        marker.bindPopup('<b>موقع المشروع المقترح</b><br>اسحب لتحديد الموقع الدقيق.').openPopup();
+                        const marker = L.marker(startLatLng, {draggable: true}).addTo(map);
+                        const popupSaved = '<b>موقع المشروع المقترح</b><br>اسحب لتحديد الموقع الدقيق.';
+                        marker.bindPopup(popupSaved).openPopup();
+                        // كانت الخريطة زخرفية بالكامل — بلا هذا المعالج، سحب الدبوس لا يحفظ
+                        // شيئاً إطلاقاً (لا نداء تخزين من أي نوع)، فتبدو أداة تعمل وهي معطّلة.
+                        marker.on('dragend', () => {
+                            const { lat, lng } = marker.getLatLng();
+                            this.store.updatePath('projectInfo', 'locationAnalysis.coordinates', { lat, lng });
+                            marker.setPopupContent('<b>تم حفظ الموقع</b><br>يمكنك سحب الدبوس مجدداً للتعديل.').openPopup();
+                        });
                     });
                 }
             }

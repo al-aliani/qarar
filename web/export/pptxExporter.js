@@ -22,9 +22,16 @@ const PPT_SLIDE_IDS = [
 ];
 
 // توحيد مع wordExporter.js (تدقيق 2026-07-22): بلا اختصار — رقم كامل دائماً.
-function formatCurrency(n) {
-    if (!n && n !== 0) return '0';
-    return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(n);
+// تدقيق 2026-09-04: نفس إصلاح wordExporter — العملة من الدراسة لا مثبَّتة، والقيمة
+// الغائبة/NaN تُطبع '—' لا '0'.
+
+// العملة النشطة للمستند الجاري بناؤه — تُضبط في المُنشئ من assumptions.currency.
+// التصدير يجري لمستند واحد في كل مرة داخل exportWorker، فلا تداخل بين مستندين.
+let ACTIVE_CURRENCY = 'SAR';
+
+function formatCurrency(n, currency = ACTIVE_CURRENCY) {
+    if (n == null || !Number.isFinite(Number(n))) return '—';
+    return new Intl.NumberFormat('ar-SA', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
 }
 
 function safeText(s) {
@@ -37,10 +44,17 @@ export class PPTXExporter {
         const state = store.getState ? store.getState() : store;
         this.state = state;
         this.results = null;
+        // تدقيق 2026-09-04: كان `catch (_) { this.results = {}; }` يبتلع انهيار المحرك
+        // ثم يُكمل بناء المستند — فيخرج ملف «ناجح» (exportWorker يجد blob صالحاً،
+        // وExportMenu يعرض «تم التصدير بنجاح») وفيه NPV صفر وROI 0.0%، لأن قسم
+        // financial_kpis غير محروس فيُطبع دائماً. العميل يقدّم للبنك تقريراً يقول إن
+        // مشروعه بلا قيمة — وهو ليس نتيجة بل عطل. مسار Excel أمين أصلاً (يحسب خارج
+        // try) فالفشل يصل المستخدم رسالةَ خطأ حقيقية؛ نطابقه هنا.
+        ACTIVE_CURRENCY = state?.assumptions?.currency || 'SAR';
         try {
             this.results = runFullModel(state);
-        } catch (_) {
-            this.results = {};
+        } catch (e) {
+            throw new Error('تعذّر حساب النموذج المالي — لم يُنشأ الملف: ' + (e?.message || e));
         }
         this.score = calculateProjectScore(state, this.results);
         this.pptx = new pptxgen();

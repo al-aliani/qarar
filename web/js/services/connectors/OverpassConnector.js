@@ -38,21 +38,60 @@ const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter';
 const DEFAULT_RADIUS_M = 1500;
 
 /**
- * بناء استعلام Overpass QL يعدّ منشآت F&B حول نقطة ضمن نصف قطر.
- * مُصدَّر ليتمكّن الاختبار من التحقق منه دون شبكة.
+ * وسوم OpenStreetMap لكل قطاع. تدقيق 2026-09-04 (رحلة عميل صالون حلاقة): كان
+ * الاستعلام مثبَّتاً على amenity=restaurant|fast_food|cafe لأي مشروع مهما كان نشاطه —
+ * فيضغط صاحب الصالون/العيادة «اكتشف المنافسين» فتُحقن مطاعم الحي في مصفوفة منافسيه،
+ * بنصّ يؤكد أنها «منشآت قريبة فعلياً (OpenStreetMap)»، ثم تُصدَّر في الدراسة التي
+ * يقرؤها الممول. كل مجموعة هنا مقاطع Overpass QL جاهزة (بلا around — يُضاف عند البناء).
+ */
+const SECTOR_OSM_FILTERS = Object.freeze({
+    fnb: ['["amenity"~"^(restaurant|fast_food|cafe)$"]'],
+    beauty: ['["shop"~"^(hairdresser|beauty)$"]', '["leisure"="spa"]'],
+    health: ['["amenity"~"^(clinic|doctors|dentist|pharmacy)$"]', '["healthcare"]'],
+    fitness: ['["leisure"="fitness_centre"]', '["sport"="fitness"]'],
+    education: ['["amenity"~"^(school|college|language_school|driving_school)$"]'],
+    laundry: ['["shop"~"^(laundry|dry_cleaning)$"]'],
+    carRepair: ['["shop"~"^(car_repair|tyres|car_parts)$"]'],
+    retail: ['["shop"~"^(supermarket|convenience|clothes|department_store|mall)$"]'],
+});
+
+/** يستنتج مفتاح القطاع من نص النشاط. أول مطابقة تفوز — الخدمي قبل التجزئة عمداً. */
+export function detectOsmSectorKey(conceptText) {
+    const t = String(conceptText || '');
+    if (!t.trim()) return null;
+    if (/صالون|تجميل|حلاق|مشغل|سبا|spa/i.test(t)) return 'beauty';
+    if (/عيادة|صحي|طبي|أسنان|صيدلي|مختبر/i.test(t)) return 'health';
+    if (/رياض|لياقة|نادي|جيم|صالة رياضية/i.test(t)) return 'fitness';
+    if (/تعليم|تدريب|مدرسة|حضانة|روضة|معهد/i.test(t)) return 'education';
+    if (/مغسلة|غسيل|تنظيف جاف|كوي/i.test(t)) return 'laundry';
+    if (/ورشة|صيانة سيارات|كهرباء سيارات|إطارات/i.test(t)) return 'carRepair';
+    if (/مطعم|مقهى|كافيه|قهوة|مخبز|حلويات|وجبات|طعام|مطبخ|عربة طعام|ضيافة/i.test(t)) return 'fnb';
+    if (/تجزئة|بقالة|متجر|سوبرماركت|بوتيك|أزياء|ملابس|عطور/i.test(t)) return 'retail';
+    return null;
+}
+
+/**
+ * بناء استعلام Overpass QL يعدّ المنشآت المنافِسة حول نقطة ضمن نصف قطر، بوسوم
+ * القطاع المطابق. مُصدَّر ليتمكّن الاختبار من التحقق منه دون شبكة.
  * @param {number} lat
  * @param {number} lng
  * @param {number} [radiusMeters=1500]
+ * @param {string} [conceptText] نشاط المشروع — يحدّد وسوم OSM المستخدَمة
  * @returns {string} نص الاستعلام
  */
-export function buildOverpassQuery(lat, lng, radiusMeters = DEFAULT_RADIUS_M) {
+export function buildOverpassQuery(lat, lng, radiusMeters = DEFAULT_RADIUS_M, conceptText = '') {
     const r = Number(radiusMeters) > 0 ? Number(radiusMeters) : DEFAULT_RADIUS_M;
-    // nwr = node|way|relation؛ نلتقط المطاعم والوجبات السريعة والمقاهي فقط.
-    // out tags center = وسوم (للأسماء) + مركز إحداثي لكل عنصر (nodes تملكه أصلاً، وways/
-    // relations يُحتسب لها بـ"center") — لازم لعرض خريطة المنافسين، ببيانات أخفّ من geometry كاملة.
+    // بلا قطاع معروف نبقى على F&B (السلوك التاريخي) — الموصّل نفسه يمتنع عن الاستدعاء
+    // عند غياب القطاع كي لا يعرض مطاعم كمنافسين لنشاط آخر.
+    const key = detectOsmSectorKey(conceptText) || 'fnb';
+    const filters = SECTOR_OSM_FILTERS[key];
+    // nwr = node|way|relation. out tags center = وسوم (للأسماء) + مركز إحداثي لكل عنصر
+    // (nodes تملكه أصلاً، وways/relations يُحتسب لها بـ"center") — لازم لعرض خريطة
+    // المنافسين، ببيانات أخفّ من geometry كاملة.
+    const body = filters.map(f => `  nwr${f}(around:${r},${lat},${lng});`).join('\n');
     return `[out:json][timeout:25];
 (
-  nwr["amenity"~"^(restaurant|fast_food|cafe)$"](around:${r},${lat},${lng});
+${body}
 );
 out tags center;`;
 }
@@ -122,7 +161,14 @@ export async function overpassCompetitorsConnector(context = {}) {
         ? Number(context.radiusMeters)
         : DEFAULT_RADIUS_M;
 
-    const query = buildOverpassQuery(coords.lat, coords.lng, radiusMeters);
+    // بلا نشاط معروف لا نُخمّن: عرض مطاعم كمنافسين لنشاط غير غذائي أسوأ من عدم العرض،
+    // لأن الواجهة تصف النتيجة بأنها منشآت «قريبة فعلياً» وتُصدَّر في الدراسة للممول.
+    const sectorKey = detectOsmSectorKey(context?.concept);
+    if (!sectorKey) {
+        return unavailable('حدّد نشاط المشروع أولاً لاكتشاف منافسين من نفس القطاع');
+    }
+
+    const query = buildOverpassQuery(coords.lat, coords.lng, radiusMeters, context.concept);
 
     try {
         const response = await fetch(OVERPASS_ENDPOINT, {

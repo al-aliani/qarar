@@ -201,11 +201,16 @@ class EncryptionService {
             let target = decrypted;
             let lastKey = keys[keys.length - 1];
 
-            // Navigate to the field
+            // Navigate to the field. A missing intermediate path means only THIS
+            // field is absent — must not abort decryption of the remaining fields
+            // (كان `return decrypted` هنا يُنهي الحلقة كلها، فيترك أي حقل حسّاس بعد
+            // الحقل الغائب مشفّراً بلا فك — راجع qarar-persistence-split).
+            let pathExists = true;
             for (let i = 0; i < keys.length - 1; i++) {
-                if (!target[keys[i]]) return decrypted; // Field doesn't exist
+                if (!target[keys[i]]) { pathExists = false; break; }
                 target = target[keys[i]];
             }
+            if (!pathExists) continue;
 
             // Decrypt the value (only strings can be encrypted payloads —
             // arrays/objects here mean the field was saved plaintext; leave untouched)

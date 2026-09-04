@@ -26,7 +26,7 @@ function buildFixture({ rentMonthly, otherAdminMonthly = 0 }) {
 
     // صف الإيجار الافتراضي الحقيقي (schema.js) — يُملأ برقم معروف بدل 0 الافتراضي.
     const rows = study[SECTIONS.ADMINISTRATIVE].administrative;
-    const rentRow = rows.find(r => r.name.includes('إيجار المحل'));
+    const rentRow = rows.find(r => /إيجار|ايجار|rent|lease/i.test(r.name)); // نفس كشف المحرك (RENT_KEYWORDS_RE) لا تسمية العرض
     expect(rentRow).toBeTruthy(); // يثبّت أن الاختبار يستهدف نفس الصف الذي يراه المستخدم فعلاً
     rentRow.monthly = rentMonthly;
 

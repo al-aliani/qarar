@@ -29,6 +29,9 @@ const CODE_OVERRIDES = {
     BENCH_VC_RATE_LOW: 'revenue', BENCH_VC_RATE_HIGH: 'revenue',
     BENCH_RENT_RATIO_LOW: 'administrative', BENCH_RENT_RATIO_HIGH: 'administrative',
     BENCH_LABOR_RATIO_LOW: 'hr', BENCH_LABOR_RATIO_HIGH: 'hr',
+    // تدقيق 2026-08-28: أُضيف MARKETING_RATIO لـcheckDriversAgainstBenchmarks —
+    // نفس نمط الثلاثة أعلاه (path عام 'drivers' يحتاج توجيهاً صريحاً لقسمه الفعلي).
+    BENCH_MARKETING_RATIO_LOW: 'marketing', BENCH_MARKETING_RATIO_HIGH: 'marketing', BENCH_MARKETING_RATIO_ZERO: 'marketing',
 };
 
 /**

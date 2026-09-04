@@ -4,7 +4,7 @@ import { createTooltip, indicatorHelp } from '../utils/glossary.js';
  * The "Boardroom" view for investors to see if the project is ready
  */
 import { SECTIONS } from '../core/schema.js';
-import { STEPS } from '../core/wizardSteps.js';
+import { STEPS, stepIndexById } from '../core/wizardSteps.js';
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { calculateProjectScore } from '../core/scoring.js';
 import { downloadBlob } from '../../export/utils.js';
@@ -440,14 +440,14 @@ export class DecisionDashboard {
                         <div class="card glass-card">
                             <h3 class="card-title">جاهزية الأبعاد الأساسية</h3>
                             <div class="readiness-list">
-                                ${this.renderReadinessItem('جاهزية السوق', readiness.dimensions.market)}
-                                ${this.renderReadinessItem('جاهزية التمويل', readiness.dimensions.financing)}
-                                ${this.renderReadinessItem('جاهزية الفريق', readiness.dimensions.team)}
-                                ${this.renderReadinessItem('الجاهزية القانونية', readiness.dimensions.legal)}
-                                ${this.renderReadinessItem('جاهزية الموقع', readiness.dimensions.location)}
-                                ${this.renderReadinessItem('إدارة المخاطر', readiness.dimensions.risk)}
-                                ${this.renderReadinessItem('الجاهزية الاستراتيجية', readiness.dimensions.strategic)}
-                                ${this.renderReadinessItem('جاهزية الخدمات/المنتجات', readiness.dimensions.services)}
+                                ${this.renderReadinessItem('جاهزية السوق', readiness.dimensions.market, SECTIONS.MARKET_SIZING)}
+                                ${this.renderReadinessItem('جاهزية التمويل', readiness.dimensions.financing, SECTIONS.FINANCING)}
+                                ${this.renderReadinessItem('جاهزية الفريق', readiness.dimensions.team, SECTIONS.HR)}
+                                ${this.renderReadinessItem('الجاهزية القانونية', readiness.dimensions.legal, SECTIONS.LEGAL)}
+                                ${this.renderReadinessItem('جاهزية الموقع', readiness.dimensions.location, SECTIONS.TECHNICAL)}
+                                ${this.renderReadinessItem('إدارة المخاطر', readiness.dimensions.risk, SECTIONS.RISK_ANALYSIS)}
+                                ${this.renderReadinessItem('الجاهزية الاستراتيجية', readiness.dimensions.strategic, SECTIONS.STRATEGIC)}
+                                ${this.renderReadinessItem('جاهزية الخدمات/المنتجات', readiness.dimensions.services, SECTIONS.SERVICES)}
                             </div>
                         </div>
                     </div>
@@ -1011,8 +1011,19 @@ export class DecisionDashboard {
             minROI: 0.20
         };
 
+        // تدقيق 2026-08-28: كان هذا الفحص يقرأ فقط projectInfo.locationAnalysis
+        // (العنوان/الإحداثيات/عوامل الاختيار) متجاهلاً technical.locationAssessment —
+        // جدول تقييم الموقع الفعلي الذي يعبّئه المستخدم في الدراسة الفنية
+        // (studyCompleteness.js يقرأه بالفعل لحساب اكتمال البيانات، فكان هناك
+        // مصدرا حقيقة متعارضان لنفس السؤال «هل الموقع جاهز؟»). أي من المصدرين
+        // كافٍ الآن، مطابقةً لما تراه لوحة اكتمال البيانات.
         const la = state.projectInfo?.locationAnalysis || {};
-        const hasLocation = la.address || (la.coordinates?.lat != null && la.coordinates?.lng != null) || la.selectionFactors;
+        const hasLocation = Boolean(
+            la.address || la.selectionFactors || la.chosenReason || la.alternativesComparison
+            || state.projectInfo?.district || state.projectInfo?.areaSize
+            || (la.coordinates?.lat != null && la.coordinates?.lng != null)
+            || (state[SECTIONS.TECHNICAL]?.locationAssessment?.length > 0)
+        );
         const financingHealth = this.getFinancingDiagnostics(state, results);
         const hasInvestment = Number(results?.capex?.total || state.financing?.totalInvestment || 0) > 0;
         const swot = state[SECTIONS.STRATEGIC]?.swot || {};
@@ -1389,14 +1400,23 @@ export class DecisionDashboard {
         `;
     }
 
-    renderReadinessItem(label, status) {
+    renderReadinessItem(label, status, stepId = null) {
         // حالة نصية بدل إيموجي ملوّن — أوضح لقارئ الشاشة وأليق بتقرير يُقدَّم للبنك.
         // اللون يأتي من الصنف status-${status}، فالمعنى لا يعتمد على اللون وحده.
         const labels = { ready: 'جاهز', needs_work: 'يحتاج عمل', critical: 'حرج' };
+        // تدقيق 2026-08-28: كانت هذه الشارات نصاً ثابتاً بلا أي رابط للحقل المقصود —
+        // المستخدم يرى «يحتاج عمل» دون معرفة أي خطوة/جدول تحديداً يُكمل. نفس نمط
+        // «إصلاح الآن» الموجود أصلاً في renderQualityActionCenter (data-quality-step
+        // يلتقطه bindEvents() تلقائياً بلا حاجة لربط حدث جديد هنا).
+        const stepIndex = (status !== 'ready' && stepId) ? stepIndexById(stepId) : -1;
+        const action = stepIndex >= 0
+            ? `<button type="button" class="btn btn--ghost btn--sm" data-quality-step="${stepIndex}">إصلاح الآن</button>`
+            : '';
         return `
             <div class="readiness-item status-${status}">
                 <span class="readiness-label">${label}</span>
                 <span class="readiness-status-icon">${labels[status] || '—'}</span>
+                ${action}
             </div>
         `;
     }

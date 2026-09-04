@@ -142,7 +142,11 @@ describe('OverpassConnector — المحلّل وبناء الاستعلام', (
             ok: true,
             json: () => Promise.resolve(json)
         })));
-        const d = await overpassCompetitorsConnector({ city: 'الرياض' });
+        // تحديث 2026-09-04: الموصّل صار يتطلّب نشاط المشروع لاشتقاق وسوم OSM الصحيحة —
+        // بلا نشاط كان يبحث عن مطاعم فقط لأي مشروع، فيحصل صاحب صالون أو عيادة على
+        // مطاعم الحي كمنافسين في دراسة تُقدَّم لممول. حالة «بلا نشاط» مغطّاة في
+        // connectors/__tests__/overpassSectorAware.test.js (تعذّر صريح لا مطاعم).
+        const d = await overpassCompetitorsConnector({ city: 'الرياض', concept: 'مطعم' });
         expect(d.provenance).toBe(PROVENANCE.SOURCED);
         expect(d.value.count).toBe(3);
         expect(d.value.sample).toHaveLength(2);
