@@ -50,6 +50,12 @@
     <priority>0.4</priority>
   </url>
   <url>
+    <loc>https://sahib.sa/breakeven-calculator.html</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://sahib.sa/experts.html</loc>
     <lastmod>2026-08-22</lastmod>
     <changefreq>monthly</changefreq>
