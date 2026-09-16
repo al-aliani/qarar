@@ -223,10 +223,15 @@ export class TemplateGallery {
                     },
                     administrative: {
                         administrative: [
-                            { name: 'إيجار المكتب', monthly: 6000 },
-                            { name: 'اشتراكات وتسويق', monthly: 2000 }
+                            { name: 'إيجار المكتب', monthly: 6000 }
                         ]
-                    }
+                    },
+                    // تدقيق شامل 2026-09-16: كانت مدرجة ضمن administrative.administrative —
+                    // المحرك يحسب marketingAnnual حصراً من marketing.campaigns (engine.js)،
+                    // فميزانية التسويق المرصودة هنا لا تصل إليه إطلاقاً (تظهر صفراً في
+                    // القوائم المالية رغم وجودها صراحة في القالب الرسمي). نفس نمط قالبي
+                    // fb/tech أعلاه.
+                    marketing: { campaigns: [{ name: 'اشتراكات وتسويق', type: 'operating', monthly: 2000 }] }
                 }
             },
             {
@@ -271,10 +276,13 @@ export class TemplateGallery {
                     },
                     administrative: {
                         administrative: [
-                            { name: 'إيجار المقر', monthly: 18000 },
-                            { name: 'اشتراكات وتسويق', monthly: 2500 }
+                            { name: 'إيجار المقر', monthly: 18000 }
                         ]
                     },
+                    // تدقيق شامل 2026-09-16: كانت مدرجة ضمن administrative.administrative —
+                    // المحرك يحسب marketingAnnual حصراً من marketing.campaigns (engine.js)،
+                    // فميزانية التسويق المرصودة هنا لا تصل إليه إطلاقاً. نفس نمط قالبي fb/tech.
+                    marketing: { campaigns: [{ name: 'اشتراكات وتسويق', type: 'operating', monthly: 2500 }] },
                     logistics: {
                         // العميل الخدمي لا «يوصّل» شيئاً، لكن المرافق والمستهلكات حقيقية
                         // ومرتفعة في الصالونات (سخانات ومجففات وغسيل مستمر) — تركها
