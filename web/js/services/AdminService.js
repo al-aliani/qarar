@@ -57,6 +57,16 @@ export function confirmBankTransfer(orderId) {
     return callAdminRpc('admin_confirm_bank_transfer', { target_order_id: orderId });
 }
 
+/** التحويلات البنكية المدفوعة القابلة للاسترداد. */
+export function getPaidBankTransfers() {
+    return callAdminRpc('admin_list_paid_bank_transfers');
+}
+
+/** عكس تحويل بنكي مدفوع إلى مسترَد → يُغلق التصدير عن العميل. @param {string} orderId */
+export function refundBankTransfer(orderId) {
+    return callAdminRpc('admin_refund_bank_transfer', { target_order_id: orderId });
+}
+
 /**
  * @param {string|null} eventName - فلترة حسب اسم حدث معيّن، أو null لكل الأحداث
  * @param {number} days - نافذة زمنية بالأيام (افتراضي 30)
