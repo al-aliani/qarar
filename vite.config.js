@@ -78,6 +78,9 @@ export default defineConfig({
                 help: resolve(__dirname, 'web/help.html'),
                 experts: resolve(__dirname, 'web/experts.html'),
                 blog: resolve(__dirname, 'web/blog.html'),
+                blogRestaurantFeasibility: resolve(__dirname, 'web/restaurant-feasibility-study-saudi.html'),
+                blogHowToWrite: resolve(__dirname, 'web/how-to-write-feasibility-study.html'),
+                blogNpvIrr: resolve(__dirname, 'web/npv-irr-explained-simply.html'),
                 experiences: resolve(__dirname, 'web/experiences.html'),
                 suppliers: resolve(__dirname, 'web/suppliers.html'),
                 // investor.html: صفحة عرض المستثمر (للقراءة فقط) — أُصلح الاستيراد المكسور (getPitchFromStorage)

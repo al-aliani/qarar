@@ -1,0 +1,166 @@
+/* article-pages.css — عناصر إضافية لمقالات المدونة الطويلة، فوق legal-pages.css مباشرة.
+   يعيد استخدام متغيرات --lp-* نفسها (لا لوحة ألوان جديدة) بنفس نطاقها (لا دعم وضع داكن —
+   legal-pages.css نفسها بلا هذا الدعم لصفحات المحتوى، هذا امتداد لا استثناء). */
+
+.art-byline {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 12.5px;
+  color: var(--lp-text-muted);
+  margin: -4px 0 18px;
+}
+.art-byline .art-badge {
+  background: var(--lp-primary);
+  color: #fff;
+  border-radius: 100px;
+  padding: 3px 11px;
+  font-weight: 700;
+  font-size: 11.5px;
+}
+
+.art-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.art-kpi {
+  background: var(--lp-bg);
+  border: 1px solid var(--lp-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.art-kpi .art-kpi-val {
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--lp-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.art-kpi .art-kpi-val.negative { color: #a5432c; }
+.art-kpi .art-kpi-lbl {
+  font-size: 12px;
+  color: var(--lp-text-muted);
+  margin-top: 4px;
+}
+
+.art-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--lp-border);
+  border-radius: 12px;
+  margin: 16px 0;
+}
+table.art-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  min-width: 480px;
+}
+table.art-table th {
+  text-align: start;
+  background: var(--lp-bg);
+  padding: 10px 12px;
+  font-weight: 700;
+  color: var(--lp-text-main);
+  border-bottom: 1px solid var(--lp-border);
+  white-space: nowrap;
+}
+table.art-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--lp-border);
+  color: var(--lp-text-main);
+  font-variant-numeric: tabular-nums;
+}
+table.art-table tr:last-child td { border-bottom: none; }
+table.art-table td.negative { color: #a5432c; font-weight: 600; }
+
+.art-callout {
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 13.5px;
+  border: 1px solid var(--lp-border);
+  background: var(--lp-bg);
+  margin: 16px 0;
+}
+.art-callout b { color: var(--lp-primary); }
+.art-callout--warn {
+  background: #fbeae3;
+  border-color: #e3c3b3;
+}
+.art-callout--warn b { color: #a5432c; }
+.art-callout--info {
+  background: #eaf4f0;
+  border-color: #cfe6dc;
+}
+.art-callout--info b { color: var(--lp-primary); }
+
+.art-assumptions {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  padding: 0;
+  list-style: none;
+}
+.art-assumptions li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--lp-border);
+  font-size: 13.5px;
+}
+.art-assumptions li:last-child { border-bottom: none; }
+.art-assumptions li span:first-child { color: var(--lp-text-muted); }
+.art-assumptions li span:last-child { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.art-cta {
+  background: var(--lp-hero-gradient, var(--lp-primary));
+  color: #fff;
+  border-radius: var(--lp-radius, 16px);
+  padding: 22px 24px;
+  margin: 24px 0 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+}
+.art-cta p { margin: 0; font-size: 14px; max-width: 46ch; }
+.art-cta a {
+  background: #fff;
+  color: var(--lp-primary-dark);
+  font-weight: 700;
+  padding: 10px 20px;
+  border-radius: 100px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.art-related {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+.art-related a {
+  display: block;
+  padding: 12px 14px;
+  border: 1px solid var(--lp-border);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--lp-text-main);
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.art-related a:hover { border-color: var(--lp-primary); color: var(--lp-primary); }
+
+.art-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .art-grid-2 { grid-template-columns: 1fr; }
+}
