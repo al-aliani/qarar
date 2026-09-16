@@ -2851,8 +2851,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (proactiveDebounce) clearTimeout(proactiveDebounce);
     proactiveDebounce = setTimeout(async () => {
       try {
-        const { hasMinimumRevenueData } = await import('./js/utils/dataSufficiency.js');
-        if (!hasMinimumRevenueData(state)) return;
+        const { hasMinimumRevenueData, hasMinimumFinancialData } = await import('./js/utils/dataSufficiency.js');
+        // تدقيق شامل 2026-09-16: hasMinimumRevenueData وحدها تجيز دراسة بإيراد بلا أي تكلفة
+        // (NPV/IRR وهمية بصفر تكلفة) — نفس الشرط المزدوج المستخدم فعلاً في
+        // DecisionDashboard.js/FinancialDashboard.js.
+        if (!hasMinimumRevenueData(state) || !hasMinimumFinancialData(state)) return;
         
         const { calculateStudy } = await import('./js/core/engine.js');
         const { SmartAdvisor } = await import('./js/services/SmartAdvisor.js');

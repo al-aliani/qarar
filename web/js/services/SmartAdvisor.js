@@ -9,6 +9,7 @@
 import { resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
 import { getCostRatios } from '../core/costRatios.js';
 import { getOfficialIndicators } from '../core/resultContract.js';
+import { hasMinimumFinancialData } from '../utils/dataSufficiency.js';
 
 const pctText = (v) => (v * 100).toFixed(0) + '%';
 // تدقيق 2026-07-08 (ملاحظة حرجة، خبير السوق): نطاقات sectorBenchmarks.js تقديرية
@@ -75,7 +76,12 @@ export class SmartAdvisor {
         }
 
         // 2b. القرار وأسبابه (REVISE / NO-GO)
-        const decision = results?.decision;
+        // تدقيق شامل 2026-09-16: hasFull أعلاه يتحقق من الإيراد فقط — دراسة بإيراد
+        // وحيد بلا أي تكلفة (رأسمالية/تشغيلية/تمويل) كانت تدخل هذا الفرع وتُصدر حكم
+        // قرار (REVISE/NO-GO) واثقاً كـinsight حرج، رغم أن نفس السبب غالباً هو غياب
+        // بيانات الاستثمار نفسها لا مشكلة جدوى حقيقية (نفس فئة حادثة 2026-09-04 أعلاه،
+        // بمسار مختلف: "إيراد بلا تكلفة" لا "بلا إيراد إطلاقاً").
+        const decision = hasMinimumFinancialData(inputs) ? results?.decision : null;
         const reasons = results?.decisionReasons || [];
         if (decision === 'REVISE' || decision === 'NO-GO') {
             const msg = decision === 'NO-GO' ? 'القرار يشير إلى عدم جدوى المشروع في ظل الافتراضات الحالية.' : 'القرار يوصي بمراجعة الدراسة قبل المضي قدماً.';

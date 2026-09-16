@@ -16,6 +16,7 @@ import { buildFinancingDiagnostics } from '../utils/financingDiagnostics.js';
 import { formatRatio } from '../../export/ratioUnits.js';
 import { SAFE } from '../../export/utils.js';
 import { escapeHtml } from '../utils/escape.js';
+import { hasMinimumRevenueData, hasMinimumFinancialData } from '../utils/dataSufficiency.js';
 
 /** عناوين الأقسام (لفهرس المحتويات وترتيب التصدير) */
 const REPORT_SECTION_LABELS = {
@@ -609,7 +610,16 @@ export class ReportGenerator {
                 const exDecision = results.decision === 'GO' ? '<span class="status-positive">المضي قدماً</span>'
                     : (results.decision === 'NO-GO' || results.decision === 'NOGO') ? '<span class="status-negative">عدم المضي</span>'
                     : results.decision === 'REVISE' ? '<span style="color:#b45309;font-weight:700;">مراجعة مطلوبة</span>' : '—';
-                const exHighlights = `
+                // تدقيق شامل 2026-09-16: كانت هذه الأرقام (NPV/IRR/التوصية) تُعرَض بثقة كاملة حتى
+                // لدراسة بإيراد وحيد بلا أي تكلفة (رأسمالية/تشغيلية/تمويل) — نفس بوابة
+                // hasMinimumFinancialData المستخدمة فعلاً في DecisionDashboard.js/FinancialDashboard.js
+                // لمنع عرض قرار/رقم موثوق المظهر لبيانات ناقصة أصلاً.
+                const exDataSufficient = hasMinimumRevenueData(state) && hasMinimumFinancialData(state);
+                const exHighlights = !exDataSufficient
+                    ? `<div style="padding:10px 12px; background:#FEF3C7; border:1px solid #F59E0B; border-radius:6px; margin-bottom:14px;">
+                            لا توجد بيانات كافية (إيرادات و/أو تكلفة رأسمالية أو تشغيلية أو تمويل) لعرض مؤشرات مالية أو توصية موثوقة لهذه الدراسة بعد.
+                        </div>`
+                    : `
                             <table style="margin-bottom:14px;"><thead><tr>
                                 <th>الاستثمار المطلوب</th><th>NPV</th><th>IRR</th><th>الاسترداد</th><th>التوصية</th>
                             </tr></thead><tbody><tr>
