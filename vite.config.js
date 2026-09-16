@@ -83,6 +83,9 @@ export default defineConfig({
                 blogNpvIrr: resolve(__dirname, 'web/npv-irr-explained-simply.html'),
                 blogSalonFeasibility: resolve(__dirname, 'web/salon-feasibility-study-saudi.html'),
                 blogCafeFeasibility: resolve(__dirname, 'web/cafe-feasibility-study-saudi.html'),
+                blogCost: resolve(__dirname, 'web/feasibility-study-cost-saudi-arabia.html'),
+                blogSdbFinancing: resolve(__dirname, 'web/sdb-financing-feasibility-study.html'),
+                blogTemplateVsCalculated: resolve(__dirname, 'web/feasibility-study-template-vs-calculated.html'),
                 experiences: resolve(__dirname, 'web/experiences.html'),
                 suppliers: resolve(__dirname, 'web/suppliers.html'),
                 // investor.html: صفحة عرض المستثمر (للقراءة فقط) — أُصلح الاستيراد المكسور (getPitchFromStorage)
