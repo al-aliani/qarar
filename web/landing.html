@@ -735,7 +735,7 @@
         <span class="brand-mark">ق</span>
         <span>قرار</span>
       </a>
-      <nav class="links" id="navLinks" aria-label="التنقل الرئيسي">
+      <nav class="links" id="navLinks" data-cms-navigation="header" aria-label="التنقل الرئيسي">
         <a href="./experts.html">المختصون</a>
         <a href="./blog.html">المدونة</a>
         <a href="./experiences.html">التجارب</a>
@@ -764,15 +764,15 @@
       </svg>
       <div class="wrap hero-in">
         <div class="hero-copy">
-          <span class="eyebrow">دراسة جدوى شاملة لمشروعك في السعودية</span>
-          <h1 class="hero-headline">قبل أن تصرف أول ريال، اعرف <span class="hl">رقم مشروعك الحقيقي.</span></h1>
-          <p class="lede">«قرار» يحوّل فكرة مشروعك إلى دراسة جدوى مالية واضحة وقابلة للتدقيق: كل رقم مربوط بافتراض تستطيع تعديله ومراجعته بنفسك، وتنتهي بتوصية صريحة — أكمِل، عدّل، أو توقّف. لا صندوق أسود، ولا وعود عامة.</p>
+          <span class="eyebrow" data-cms-text="hero.eyebrow">دراسة جدوى شاملة لمشروعك في السعودية</span>
+          <h1 class="hero-headline" data-cms-text="hero.title">قبل أن تصرف أول ريال، اعرف <span class="hl">رقم مشروعك الحقيقي.</span></h1>
+          <p class="lede" data-cms-text="hero.description">«قرار» يحوّل فكرة مشروعك إلى دراسة جدوى مالية واضحة وقابلة للتدقيق: كل رقم مربوط بافتراض تستطيع تعديله ومراجعته بنفسك، وتنتهي بتوصية صريحة — أكمِل، عدّل، أو توقّف. لا صندوق أسود، ولا وعود عامة.</p>
           <div class="hero-cta">
-            <a href="./index.html?auth=1&amp;cta=hero" class="btn btn-light">ابدأ دراستك الآن</a>
+            <a href="./index.html?auth=1&amp;cta=hero" class="btn btn-light" data-cms-link="hero.primary_url" data-cms-text="hero.primary_label">ابدأ دراستك الآن</a>
             <a href="#sample" class="btn btn-ghost btn-sm">شاهد نموذج تقرير أولاً</a>
           </div>
           <div class="hero-links" role="group" aria-label="اختر طريقة البدء">
-            <a href="./index.html?auth=1&amp;pkg=reviewed&amp;cta=hero-review">اطلب مراجعة خبير</a>
+            <a href="./index.html?auth=1&amp;pkg=reviewed&amp;cta=hero-review" data-cms-link="hero.secondary_url" data-cms-text="hero.secondary_label">اطلب مراجعة خبير</a>
           </div>
           <p class="hero-price-note">تبدأ الأسعار من <span class="hero-price-emph" data-price-min>299</span> ريالاً — سعر ثابت ومعلن، شامل الضريبة.</p>
           <p class="hero-price-note hero-guarantee-note"><svg class="ic" style="width:14px;height:14px"><use href="#i-shield"/></svg> ضمان استرداد خلال 15 يوماً على الباقات المدفوعة، وفق سياسة الاسترجاع.</p>
@@ -1103,12 +1103,15 @@
       </div>
     </section>
 
+    <section id="cmsPartners" hidden></section>
+    <div id="cmsHomeSections"></div>
+
     <!-- الدعوة الختامية -->
     <section class="final-cta">
       <div class="wrap">
         <div class="cta-box reveal reveal--pop">
-          <h2>قبل أن توقّع عقد الإيجار، اختبر القرار بالأرقام</h2>
-          <p>أرسل فكرة مشروعك الآن، أو ابدأ دراستك بنفسك على المنصة، وحوّل الحماس إلى قرار استثماري تستطيع الدفاع عنه. أنت لا تخسر شيئاً بأن تعرف الرقم الحقيقي مبكراً — بل تخسر الكثير إن تجاهلته.</p>
+          <h2 data-cms-text="final_cta.title">قبل أن توقّع عقد الإيجار، اختبر القرار بالأرقام</h2>
+          <p data-cms-text="final_cta.description">أرسل فكرة مشروعك الآن، أو ابدأ دراستك بنفسك على المنصة، وحوّل الحماس إلى قرار استثماري تستطيع الدفاع عنه. أنت لا تخسر شيئاً بأن تعرف الرقم الحقيقي مبكراً — بل تخسر الكثير إن تجاهلته.</p>
           <div class="hero-cta">
             <a href="./index.html?auth=1&amp;cta=final" class="btn btn-light">ابدأ دراستك الآن</a>
             <a href="#" class="btn btn-wa" data-wa data-pkg="استفسار / دراسة كاملة"><svg class="ic" style="stroke:none;fill:currentColor"><use href="#i-wa"/></svg> تواصل عبر واتساب</a>
@@ -1136,7 +1139,7 @@
         </div>
         <div class="foot-col">
           <h3 class="foot-col__title">المنصة</h3>
-          <nav class="foot-links" aria-label="روابط المنصة">
+          <nav class="foot-links" data-cms-navigation="footer_platform" aria-label="روابط المنصة">
             <a href="./why.html">لماذا قرار</a>
             <a href="./deliverables.html">المخرجات</a>
             <a href="./pricing.html">الأسعار</a>
@@ -1146,7 +1149,7 @@
         </div>
         <div class="foot-col">
           <h3 class="foot-col__title">الشركة</h3>
-          <nav class="foot-links" aria-label="روابط الشركة">
+          <nav class="foot-links" data-cms-navigation="footer_company" aria-label="روابط الشركة">
             <a href="./about.html">من نحن</a>
             <a href="./partners.html">الشراكات المؤسسية</a>
             <a href="./help.html">مركز المساعدة</a>
@@ -1155,7 +1158,7 @@
         </div>
         <div class="foot-col">
           <h3 class="foot-col__title">قانوني</h3>
-          <nav class="foot-links" aria-label="الروابط القانونية">
+          <nav class="foot-links" data-cms-navigation="footer_legal" aria-label="الروابط القانونية">
             <a href="./terms.html">الشروط</a>
             <a href="./privacy.html">الخصوصية</a>
             <a href="./disclaimer.html">إخلاء المسؤولية</a>
@@ -1351,5 +1354,6 @@
     })();
   </script>
   <script src="./js/cookie-notice.js"></script>
+  <script type="module" src="./js/site-content-runtime.js"></script>
 </body>
 </html>

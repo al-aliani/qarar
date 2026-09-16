@@ -20,6 +20,7 @@ import { toast } from '../utils/toast.js';
 import { formatCurrency, formatNumber, formatPercent } from '../utils/formatters.js';
 import { escapeHtml } from '../utils/escape.js';
 import { ADMIN_FEATURE_CATALOG } from '../data/adminFeatureCatalog.js';
+import { SiteEditorView } from './SiteEditorView.js';
 import Swal from 'sweetalert2';
 
 const TABS = [
@@ -42,6 +43,7 @@ const TABS = [
     { key: 'satisfaction', label: 'الرضا والآراء' },
     { key: 'team', label: 'الفريق والدعم' },
     { key: 'content', label: 'المحتوى والصفحات' },
+    { key: 'site_editor', label: 'محرر الموقع' },
     { key: 'innovation', label: 'رادار الابتكار' },
     { key: 'strategy', label: 'مؤشرات المستثمرين' },
     { key: 'coverage', label: 'تغطية 300 ميزة' },
@@ -63,7 +65,7 @@ const TAB_GROUPS = [
     { title: 'المنتج والجودة', keys: ['studies', 'quality', 'ai', 'coverage', 'innovation', 'experiments'] },
     { title: 'التشغيل والموثوقية', keys: ['reliability', 'security', 'reports'] },
     { title: 'الدعم والرضا', keys: ['tickets', 'satisfaction', 'reviews', 'reviewers', 'team'] },
-    { title: 'المحتوى', keys: ['content'] },
+    { title: 'المحتوى', keys: ['site_editor', 'content'] },
 ];
 
 // نفس تسميات ISSUE_TYPE_OPTIONS/PRIORITY_OPTIONS بـ SupportTicketsView.js (العميل) —
@@ -88,6 +90,7 @@ export class AdminDashboardView {
         this.openTicketId = null;
         this.radarMinutes = 60;
         this.radarTimer = null;
+        this.siteEditor = null;
     }
 
     async render() {
@@ -179,6 +182,12 @@ export class AdminDashboardView {
 
         if (tabKey === 'radar') {
             await this._renderRadarTab(contentEl);
+            return;
+        }
+
+        if (tabKey === 'site_editor') {
+            this.siteEditor = new SiteEditorView(contentEl);
+            await this.siteEditor.render();
             return;
         }
 

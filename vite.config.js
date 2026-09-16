@@ -85,6 +85,7 @@ export default defineConfig({
                 partners: resolve(__dirname, 'web/partners.html'),
                 charts: resolve(__dirname, 'web/financial_charts.html'),
                 admin: resolve(__dirname, 'web/admin.html'),
+                cmsPage: resolve(__dirname, 'web/page.html'),
                 // dashboard.html (لوحة "Premium"): أُوقف بناؤها للإنتاج (2026-07-16) — نموذج React
                 // تجريبي منفصل تمامًا عن محرك الحسابات الحقيقي (بيانات وهمية ثابتة)، وزر الدفع
                 // فيه وهمي بالكامل (يستدعي /api/pay غير الموجود، السعر 199$ لا علاقة له بالتسعير
