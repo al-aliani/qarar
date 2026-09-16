@@ -81,6 +81,8 @@ export default defineConfig({
                 blogRestaurantFeasibility: resolve(__dirname, 'web/restaurant-feasibility-study-saudi.html'),
                 blogHowToWrite: resolve(__dirname, 'web/how-to-write-feasibility-study.html'),
                 blogNpvIrr: resolve(__dirname, 'web/npv-irr-explained-simply.html'),
+                blogSalonFeasibility: resolve(__dirname, 'web/salon-feasibility-study-saudi.html'),
+                blogCafeFeasibility: resolve(__dirname, 'web/cafe-feasibility-study-saudi.html'),
                 experiences: resolve(__dirname, 'web/experiences.html'),
                 suppliers: resolve(__dirname, 'web/suppliers.html'),
                 // investor.html: صفحة عرض المستثمر (للقراءة فقط) — أُصلح الاستيراد المكسور (getPitchFromStorage)
