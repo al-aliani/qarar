@@ -7,6 +7,7 @@ import { SECTIONS } from '../core/schema.js';
 import { STEPS, stepIndexById } from '../core/wizardSteps.js';
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { calculateProjectScore } from '../core/scoring.js';
+import { computeInputsFingerprint } from '../core/monteCarloFingerprint.js';
 import { downloadBlob } from '../../export/utils.js';
 import { createShareLink } from '../services/ShareService.js';
 import { buildShareUrl } from './ShareModal.js';
@@ -109,7 +110,11 @@ export class DecisionDashboard {
         const financingDiagnostics = this.getFinancingDiagnostics(state, results);
         const decisionExplanation = results?.decisionExplanation || null;
         const mcLastRun = state?.monteCarlo?.lastRun;
-        const mcProbability = Number.isFinite(Number(mcLastRun?.successProbability)) ? Number(mcLastRun.successProbability) : null;
+        // تدقيق 2026-09-16: عرض احتمالية محسوبة على مدخلات سابقة بلا أي إشارة يضلّل حتى
+        // لو لم تعد تدخل الدرجة/القرار فعلياً (بعد إصلاح scoring.js وengine.js) — بصمة
+        // غير مطابقة تُعامَل كغياب تشغيل، مع تمييز الحالتين في التلميح أدناه.
+        const mcStale = !!(mcLastRun && mcLastRun.inputsFingerprint !== computeInputsFingerprint(state));
+        const mcProbability = (!mcStale && Number.isFinite(Number(mcLastRun?.successProbability))) ? Number(mcLastRun.successProbability) : null;
         const year1Revenue = Number(results?.incomeStatement?.[0]?.revenue) || 0;
         // مقام هامش أمان التعادل هو الإيراد التشغيلي لا الكلي: نقطة التعادل من المحرك
         // مُعرَّفة على الإيراد التشغيلي وحده (غير التشغيلي مخصوم من ثوابت البسط) — مقارنتها
@@ -215,7 +220,7 @@ export class DecisionDashboard {
                             ${state.appSettings?.mode === 'mini' ? '<br><span class="dd-verdict__flag dd-verdict__flag--warning">توصية أولية مبنية على 7 حقول أساسية فقط (الوضع «مصغّر») — لم تُدخَل بيانات السوق أو القانونية أو المخاطر. أكمل الوضع الكامل أو المتقدم لتقرير تمويلي معتمد.</span>' : ''}
                             ${qaResults.hardErrors.length > 0 ? '<br><span class="dd-verdict__flag dd-verdict__flag--danger">توجد أخطاء حرجة يجب إصلاحها قبل اتخاذ القرار.</span>' : ''}
                             ${cleanPass ? '<br><span class="dd-verdict__flag dd-verdict__flag--success">الدراسة اجتازت معايير الجودة.</span>' : ''}
-                            ${!cleanPass && qaResults.hardErrors.length === 0 && hasSoftIssues ? '<br><span class="dd-verdict__flag dd-verdict__flag--warning">اجتازت الأخطاء الحرجة، لكن توجد تحذيرات مهمة — راجعها قبل القرار.</span>' : ''}
+                            ${!decisionLocked && !cleanPass && qaResults.hardErrors.length === 0 && hasSoftIssues ? '<br><span class="dd-verdict__flag dd-verdict__flag--warning">اجتازت الأخطاء الحرجة، لكن توجد تحذيرات مهمة — راجعها قبل القرار.</span>' : ''}
                         </p>
                     </div>
 
@@ -388,7 +393,7 @@ export class DecisionDashboard {
                                 ${this.renderKPIItem('أقصى انخفاض بالإيراد قبل NPV السالب', npvSafetyMargin, 'percent')}
                                 ${this.renderKPIItem('أدنى تدفق نقدي تراكمي', minCumulativeCash, 'currency')}
                             </div>
-                            ${mcProbability === null ? '<p class="text-xs text-muted mt-2">لم يُشغَّل تحليل مونت كارلو بعد — افتحه لإضافة مكوّن المخاطر إلى الدرجة (10 نقاط) ولرؤية احتمالية النجاح هنا.</p>' : ''}
+                            ${mcStale ? '<p class="text-xs text-warning mt-2">نتيجة مونت كارلو محفوظة من مدخلات سابقة تغيّرت — أعد تشغيلها من خطوة المحاكاة لتحديث الدرجة والتوصية.</p>' : (mcProbability === null ? '<p class="text-xs text-muted mt-2">لم يُشغَّل تحليل مونت كارلو بعد — افتحه لإضافة مكوّن المخاطر إلى الدرجة (10 نقاط) ولرؤية احتمالية النجاح هنا.</p>' : '')}
                         </div>
 
                         <!-- اختبار الضغط (Stress Test / ماذا لو — Upmetrics) -->

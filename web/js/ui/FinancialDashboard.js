@@ -450,7 +450,10 @@ export class FinancialDashboard {
                                 ${incomeStatement.map(s => `<td class="text-mono">${this.formatCompact(s.profitBeforeZakat || s.ebt)}</td>`).join('')}
                             </tr>
                             <tr>
-                                <td>(-) الضريبة (15% من الربح)</td>
+                                <!-- تدقيق 2026-09-16 (إعادة اختبار حيّة مستقلة): "15%" كانت نسبة ثابتة لا تطابق
+                                assumptions.taxRate الفعلي (20% افتراضياً، حصة الأجانب فقط) — نفس نمط تسمية
+                                ZakatView.js تماماً هنا لتطابق الرقمين دائماً. -->
+                                <td>(-) الضريبة (${Math.round((studyData.assumptions?.taxRate ?? 0.20) * 100)}% × ${Math.round(Math.min(1, Math.max(0, Number(studyData.assumptions?.foreignOwnershipRate ?? 0))) * 100)}% حصة أجنبية)</td>
                                 ${incomeStatement.map(s => `<td class="text-mono text-muted">(${this.formatCompact(s.tax)})</td>`).join('')}
                             </tr>
                             <tr>

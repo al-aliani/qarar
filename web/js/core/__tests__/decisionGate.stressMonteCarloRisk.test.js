@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { calculateStudy } from '../engine.js';
 import { computeStressSurvival } from '../financial/stressTestMath.js';
 import { createEmptyStudy, SECTIONS } from '../schema.js';
+import { computeInputsFingerprint } from '../monteCarloFingerprint.js';
 
 // دراسة هامشية عمداً: مطعم صغير (460 عميلاً/شهر)، هامش متغير رفيع (42%، قرب الحد
 // الأعلى الواقعي لقطاع fnb)، نمو سريع (35%) يرفع القيمة الحالية الإجمالية رغم ربح
@@ -96,7 +97,7 @@ describe('بوابة القرار — محاكاة مونت كارلو (آخر �
 
     it('احتمالية نجاح محفوظة أقل من 50%: تخفّض GO إلى REVISE', () => {
         const study = baseGoStudy();
-        study[SECTIONS.MONTE_CARLO] = { lastRun: { successProbability: 0.3 } };
+        study[SECTIONS.MONTE_CARLO] = { lastRun: { successProbability: 0.3, inputsFingerprint: computeInputsFingerprint(study) } };
         const results = calculateStudy(study);
 
         expect(results.decision).toBe('REVISE');
@@ -105,11 +106,23 @@ describe('بوابة القرار — محاكاة مونت كارلو (آخر �
 
     it('احتمالية نجاح محفوظة عالية (85%): تبقى GO', () => {
         const study = baseGoStudy();
-        study[SECTIONS.MONTE_CARLO] = { lastRun: { successProbability: 0.85 } };
+        study[SECTIONS.MONTE_CARLO] = { lastRun: { successProbability: 0.85, inputsFingerprint: computeInputsFingerprint(study) } };
         const results = calculateStudy(study);
 
         expect(results.decision).toBe('GO');
         expect(results.decisionReasons).toHaveLength(0);
+    });
+
+    // تدقيق 2026-09-16: كانت النتيجة المحفوظة تُقرأ بلا أي فحص حداثة — تغيير مدخلات
+    // الدراسة بعد تشغيل المحاكاة (هنا: نفس الاحتمالية المنخفضة، لكن ببصمة لا تطابق
+    // الدراسة الحالية) كان يُبقيها تُخفِّض القرار الجديد صامتة. الآن تُعامَل كغياب تشغيل.
+    it('احتمالية نجاح محفوظة أقل من 50% ببصمة مدخلات قديمة (لا تطابق الدراسة الحالية): لا تخفّض القرار', () => {
+        const study = baseGoStudy();
+        study[SECTIONS.MONTE_CARLO] = { lastRun: { successProbability: 0.3, inputsFingerprint: 'بصمة-قديمة-لا-تطابق' } };
+        const results = calculateStudy(study);
+
+        expect(results.decision).toBe('GO');
+        expect(results.decisionReasons.some(r => r.includes('مونت كارلو'))).toBe(false);
     });
 
     it('لا تشغيل محفوظ إطلاقاً (lastRun غائب): استشارية فقط — لا تخفّض القرار لمجرد عدم التشغيل', () => {
@@ -126,7 +139,7 @@ describe('بوابة القرار — محاكاة مونت كارلو (آخر �
     // فيبدو التقرير ناقص الشفافية عن مشروع يحمل خطرين حقيقيين لا خطراً واحداً.
     it('احتمالية نجاح منخفضة على مشروع REVISE أصلاً بسبب آخر: السبب يُضاف رغم أن القرار لم يتغيّر (يبقى REVISE)', () => {
         const study = marginalGrowthStudy({ workingCapitalMonths: 0.02 }); // REVISE مؤكَّد أعلاه (اختبار التحمل)
-        study[SECTIONS.MONTE_CARLO] = { lastRun: { successProbability: 0.25 } };
+        study[SECTIONS.MONTE_CARLO] = { lastRun: { successProbability: 0.25, inputsFingerprint: computeInputsFingerprint(study) } };
         const results = calculateStudy(study);
 
         expect(results.decision).toBe('REVISE');

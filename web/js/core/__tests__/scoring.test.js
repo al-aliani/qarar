@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { calculateProjectScore } from '../scoring.js';
+import { computeInputsFingerprint } from '../monteCarloFingerprint.js';
 
 function ind(overrides = {}) {
     return { npv: 100000, irr: 0.20, paybackPeriod: 3, roi: 0.25, profitMargin: 0.15, ...overrides };
@@ -110,6 +111,7 @@ describe('calculateProjectScore — بند المخاطر/مونت كارلو (1
 
     it('احتمالية نجاح مرتفعة (≥ 70%) تمنح 10 كاملة', () => {
         const state = { monteCarlo: { lastRun: { successProbability: 0.85 } } };
+        state.monteCarlo.lastRun.inputsFingerprint = computeInputsFingerprint(state);
         const r = calculateProjectScore(state, { indicators: ind() });
         const d = r.details.find(d => d.category === 'risk');
         expect(d?.score).toBe(10);
@@ -118,6 +120,7 @@ describe('calculateProjectScore — بند المخاطر/مونت كارلو (1
 
     it('احتمالية نجاح متوسطة (40%–70%) تمنح 5 جزئية معلَّمة issue', () => {
         const state = { monteCarlo: { lastRun: { successProbability: 0.55 } } };
+        state.monteCarlo.lastRun.inputsFingerprint = computeInputsFingerprint(state);
         const r = calculateProjectScore(state, { indicators: ind() });
         const d = r.details.find(d => d.category === 'risk');
         expect(d?.score).toBe(5);
@@ -126,10 +129,21 @@ describe('calculateProjectScore — بند المخاطر/مونت كارلو (1
 
     it('احتمالية نجاح منخفضة (< 40%) تمنح صفراً — نفس عتبة تخفيض القرار في المحرك تقريباً', () => {
         const state = { monteCarlo: { lastRun: { successProbability: 0.2 } } };
+        state.monteCarlo.lastRun.inputsFingerprint = computeInputsFingerprint(state);
         const r = calculateProjectScore(state, { indicators: ind() });
         const d = r.details.find(d => d.category === 'risk');
         expect(d?.score).toBe(0);
         expect(d?.issue).toBe(true);
+    });
+
+    // تدقيق 2026-09-16: نتيجة محفوظة على مدخلات سابقة تغيّرت كانت تدخل الدرجة بلا فحص
+    // حداثة. بصمة لا تطابق state الحالي ⇒ تُعامَل كغياب تشغيل (5 محايدة)، لا كنتيجة فعلية.
+    it('نتيجة محفوظة ببصمة قديمة لا تطابق state الحالي: تُعامَل كغياب تشغيل (5 محايدة)', () => {
+        const state = { monteCarlo: { lastRun: { successProbability: 0.9, inputsFingerprint: 'بصمة-قديمة-لا-تطابق' } } };
+        const r = calculateProjectScore(state, { indicators: ind() });
+        const d = r.details.find(d => d.category === 'risk');
+        expect(d?.score).toBe(5);
+        expect(d?.label).toContain('قديمة');
     });
 });
 
@@ -157,6 +171,7 @@ describe('calculateProjectScore — سقف 100 ودرجات التقدير (rati
             hr: { positions: [{ salary: 1 }] },
             monteCarlo: { lastRun: { successProbability: 0.9 } } // بلا هذا: 95 كحد أقصى (مخاطر محايدة 5/10 لا 10/10)
         };
+        state.monteCarlo.lastRun.inputsFingerprint = computeInputsFingerprint(state);
         const r = calculateProjectScore(state, { indicators: ind({ npv: 999999, irr: 0.5, paybackPeriod: 1, roi: 0.5 }) });
         expect(r.score).toBe(100);
         expect(r.rating).toBe('A+');
@@ -164,6 +179,7 @@ describe('calculateProjectScore — سقف 100 ودرجات التقدير (rati
 
     it('كل البنود صفرية (شاملة احتمالية مونت كارلو منخفضة) ⇒ الدرجة 0 والتقدير F', () => {
         const state = { monteCarlo: { lastRun: { successProbability: 0.1 } } }; // بلا هذا: 5 لا صفر (مخاطر محايدة لغياب تشغيل)
+        state.monteCarlo.lastRun.inputsFingerprint = computeInputsFingerprint(state);
         const r = calculateProjectScore(state, { indicators: ind({ npv: -1, irr: 0, paybackPeriod: 999, roi: 0, profitMargin: -1 }) });
         expect(r.score).toBe(0);
         expect(r.rating).toBe('F');

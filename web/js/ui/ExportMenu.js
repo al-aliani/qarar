@@ -669,9 +669,13 @@ export class ExportMenu {
                 monitoring.captureException(e, { source: 'ExportMenu.handleExport.qaGate', type });
             }
             if (qa) {
-                const hasHard = (qa.hardErrors || []).length > 0;
+                // تدقيق 2026-09-16: كانت validationErrors (أخطاء المدخلات، مثل NEGATIVE_VALUE)
+                // تُصنَّف "soft" هنا فقط — فتصدير دراسة محجوب قرارها في لوحة القرار (لأن
+                // decisionQuality.js يعتبر validationErrors حرجة تماماً كـhardErrors) كان
+                // يمرّ بضغطة "أوافق وأكمل التصدير" الاختيارية، بعكس نص التعليق التوجيهي
+                // أعلى هذه البوابة بالضبط ("لا يخرج أي تقرير... إذا كانت الدراسة متناقضة").
+                const hasHard = (qa.hardErrors || []).length > 0 || (qa.validationErrors || []).length > 0;
                 const hasSoft = (qa.softWarnings || []).length > 0
-                    || (qa.validationErrors || []).length > 0
                     || (qa.validationWarnings || []).length > 0;
                 if (hasHard || hasSoft) {
                     const proceed = await this._qaGate(qa, hasHard);
@@ -1109,8 +1113,8 @@ export class ExportMenu {
                     stepIndex: resolveQaStepIndex(typeof x === 'string' ? {} : x)
                 }))
                 .filter((it) => it.text);
-            const hard = objs(qa.hardErrors);
-            const soft = [...objs(qa.softWarnings), ...objs(qa.validationErrors), ...objs(qa.validationWarnings)];
+            const hard = [...objs(qa.hardErrors), ...objs(qa.validationErrors)];
+            const soft = [...objs(qa.softWarnings), ...objs(qa.validationWarnings)];
 
             const li = (items, color) => items.map((it) => {
                 const clickable = it.stepIndex != null;

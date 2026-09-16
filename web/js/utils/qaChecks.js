@@ -610,7 +610,12 @@ export async function runQAChecks(state, results) {
             console.warn('Coherence checks failed:', coherenceErr);
         }
 
-        qaResults.passed = qaResults.hardErrors.length === 0;
+        // تدقيق 2026-09-16: كانت passed تتجاهل validationErrors (أخطاء المدخلات من
+        // validateInputs.js، مثل NEGATIVE_VALUE) رغم أن buildDecisionQualityGate
+        // (decisionQuality.js) يعتبرها حرجة تماماً كـhardErrors — فتظهر شارة "القرار
+        // محجوب" (من البوابة المرجعية) بجانب رسائل تفترض passed=true (من هذا الحقل)
+        // في نفس الشاشة. الآن المعنيان متطابقان دائماً بحكم البناء.
+        qaResults.passed = qaResults.hardErrors.length === 0 && qaResults.validationErrors.length === 0;
     } catch (e) {
         console.error('QA Check error:', e);
         qaResults.hardErrors.push({

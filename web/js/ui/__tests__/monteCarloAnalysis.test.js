@@ -12,6 +12,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MonteCarloAnalysis } from '../MonteCarloAnalysis.js';
 import { MonteCarloEngine } from '../../core/MonteCarloEngine.js';
 import { SECTIONS, createEmptyStudy } from '../../core/schema.js';
+import { computeInputsFingerprint } from '../../core/monteCarloFingerprint.js';
 
 class FakeChart {
     constructor(ctx, config) {
@@ -74,7 +75,8 @@ describe('MonteCarloAnalysis — عرض نتيجة محفوظة (displaySavedSum
         study[SECTIONS.MONTE_CARLO] = {
             lastRun: {
                 successProbability: 0.85, avgNPV: 3200000, p10: 1000000, p50: 3100000, p90: 5400000,
-                iterations: 1000, volatility: 0.20, runAt: '2026-07-01T10:00:00.000Z'
+                iterations: 1000, volatility: 0.20, runAt: '2026-07-01T10:00:00.000Z',
+                inputsFingerprint: computeInputsFingerprint(study)
             }
         };
         const view = new MonteCarloAnalysis('c', fakeStore(study));
@@ -296,7 +298,10 @@ describe('MonteCarloAnalysis — run(): تكامل حقيقي مع المحرك 
             volatility: 0.20,
             // ملاحظة: ينتظر run() فعلياً 100ms (setTimeout) قبل قراءة new Date() — الساعة
             // المزيَّفة تتقدَّم فعلياً بهذا القدر، فالطابع الزمني المتوقَّع +100ms عن البداية.
-            runAt: '2026-07-08T12:00:00.100Z'
+            runAt: '2026-07-08T12:00:00.100Z',
+            // تدقيق 2026-09-16: بصمة مدخلات الدراسة وقت هذا التشغيل — تُقارَن لاحقاً
+            // لإبطال النتيجة إن تغيّرت المدخلات (انظر monteCarloFingerprint.test.js).
+            inputsFingerprint: computeInputsFingerprint(study)
         });
     }, 15000);
 });

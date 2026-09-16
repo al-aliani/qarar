@@ -35,6 +35,10 @@ export class ZakatView {
         const rows = (results?.incomeStatement || []).map(y => ({
             year: y.year,
             base: Math.max(0, y.zakatBase ?? Math.max(0, y.ebt || 0)),
+            // تدقيق 2026-09-16: الضريبة تُحسب على "الربح المعدّل" وحده — رقم يختلف عن
+            // base أعلاه (قد يعلوه الوعاء الزكوي بطريقة مصادر الأموال). صف مستقل أدناه
+            // يُظهره ليتحقق المستخدم من ضربه × نسبة الضريبة × حصة الملكية الأجنبية.
+            adjustedProfit: Math.max(0, y.adjustedProfit ?? y.ebt ?? 0),
             zakat: y.zakat || 0,
             tax: y.tax || 0,
             total: (y.zakat || 0) + (y.tax || 0)
@@ -101,6 +105,10 @@ export class ZakatView {
                                     ${rows.map(y => `<td class="font-bold text-success">${fmt(y.zakat)}</td>`).join('')}
                                 </tr>
                                 ${foreignShare > 0 ? `
+                                    <tr>
+                                        <td>الربح المعدّل (وعاء ضريبة الدخل — يختلف عن الوعاء الزكوي أعلاه)</td>
+                                        ${rows.map(y => `<td class="font-mono text-muted">${fmt(y.adjustedProfit)}</td>`).join('')}
+                                    </tr>
                                     <tr class="bg-glass-heavy">
                                         <td class="font-bold text-danger">ضريبة الدخل (${Math.round((state.assumptions?.taxRate ?? 0.20) * 100)}% × ${Math.round(foreignShare * 100)}%)</td>
                                         ${rows.map(y => `<td class="font-bold text-danger">${fmt(y.tax)}</td>`).join('')}
@@ -118,6 +126,8 @@ export class ZakatView {
                         * الوعاء محسوب بطريقة مصادر الأموال (حقوق الملكية + الأرباح المحتجزة + رصيد القروض −
                         صافي الأصول الثابتة أول السنة) على ألا يقل عن الربح المعدل — منهجية هيئة الزكاة والضريبة
                         والجمارك. لذلك قد تُستحق زكاة حتى في سنة خاسرة (الوعاء موجب رغم الخسارة).
+                        ضريبة الدخل (حصة الأجانب) تُحسب على «الربح المعدّل» وحده دائماً — لا على الوعاء
+                        الزكوي الأعلى أعلاه — لذلك يظهر الرقمان في صفين مستقلّين حين توجد ملكية أجنبية.
                         تقدير لأغراض الجدوى وفق أنظمة هيئة الزكاة والضريبة والجمارك (ZATCA) السارية حتى أغسطس 2026 —
                         راجع مختصاً زكوياً معتمداً قبل الإقرار، فالأنظمة والتعاميم قابلة للتحديث.
                     </div>
