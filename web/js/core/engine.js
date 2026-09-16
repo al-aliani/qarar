@@ -70,7 +70,15 @@ export function computeAnnualEmployeeCost({
     return basic + gosi + insurance + expatFees;
 }
 
-export function calculateFinancingWACC(study) {
+/**
+ * التفصيل الكامل لحساب WACC (الأوزان وتكلفتا حقوق الملكية والدين، لا الرقم
+ * المُدمَج النهائي وحده) — مصدر واحد يستهلكه كل من calculateFinancingWACC
+ * (الرقم النهائي فقط، للعرض الإرشادي في FinancingStructure.js) وresults.wacc
+ * في calculateStudy (التفصيل الكامل، لقسم "تكلفة رأس المال المرجح" في تصدير
+ * Excel — كان فارغاً دائماً لأن calculateStudy لم يستدعِ أياً من هذا إطلاقاً،
+ * تدقيق شامل 2026-09-16). دالة واحدة بدل تكرار الصيغة في مكانين قد يتباعدان.
+ */
+export function computeWaccBreakdown(study) {
     const financing = study?.[SECTIONS.FINANCING] || {};
     const sources = financing.sources || {};
     const equity = Number(sources.equity?.amount || 0);
@@ -86,9 +94,15 @@ export function calculateFinancingWACC(study) {
     const foreignShare = Math.min(1, Math.max(0, Number(assumptions.foreignOwnershipRate ?? 0)));
     const effectiveLevyRate = (0.025 * (1 - foreignShare)) + (Number(assumptions.taxRate ?? 0.20) * foreignShare);
 
-    const we = equity / total;
-    const wd = debt / total;
-    return (we * costOfEquity) + (wd * costOfDebt * (1 - effectiveLevyRate));
+    const equityWeight = equity / total;
+    const debtWeight = debt / total;
+    const costOfDebtPostTax = costOfDebt * (1 - effectiveLevyRate);
+    const wacc = (equityWeight * costOfEquity) + (debtWeight * costOfDebtPostTax);
+    return { equityWeight, debtWeight, costOfEquity, costOfDebtPostTax, wacc };
+}
+
+export function calculateFinancingWACC(study) {
+    return computeWaccBreakdown(study)?.wacc ?? null;
 }
 
 /**
@@ -1437,6 +1451,13 @@ export function calculateStudy(study, overrides) {
             rentAdminAnnual: annualLogisticsFixed + annualAdmin,
             marketingAnnual: annualMarketing
         },
+        // تدقيق شامل 2026-09-16: قسم "تكلفة رأس المال المرجح" في مؤشرات تصدير Excel
+        // كان فارغاً دائماً (يقرأ results.wacc، لكن calculateStudy لم يكن يستدعي
+        // computeWaccBreakdown/calculateFinancingWACC إطلاقاً). هذا للعرض/التصدير
+        // فقط — لا علاقة له بمعدل الخصم الفعلي المُستخدَم في NPV (انظر تعليق
+        // "تصحيح 2026-08-24" أدناه: FCFE يُخصَم بتكلفة حقوق الملكية وحدها عمداً،
+        // لا WACC، تفادياً لازدواج أثر عبء الدين — هذا القرار لم يتغيّر).
+        wacc: computeWaccBreakdown(study),
         depreciation: annualDepreciation,
         depreciationSchedules: {
             // تدقيق 2026-08-25: كان `map(() => annualDepreciation)` — خطاً مسطّحاً يكرّر شحن
