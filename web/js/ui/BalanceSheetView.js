@@ -81,6 +81,11 @@ export class BalanceSheetView {
                                 <span>إجمالي الأصول المتداولة</span>
                                 <span>${this.formatCurrency(sheet.assets.current.total)}</span>
                             </div>
+                            ${(sheet.nwcRecaptured || 0) > 0 ? `
+                            <div class="bs-recapture-note">
+                                <span>${icon('i-info')} النقدية أعلاه تشمل ${this.formatCurrency(sheet.nwcRecaptured)} من استرداد رأس المال العامل (تحصيل الذمم المدينة وتصفية المخزون بعد سداد الذمم الدائنة بالكامل) — آخر سنة من الأفق فقط، نفس افتراض التصفية الذي تعتمده قائمة التدفقات النقدية.</span>
+                            </div>
+                            ` : ''}
                         </div>
 
                         <div class="bs-group">
@@ -289,6 +294,15 @@ export class BalanceSheetView {
                     background: rgba(245,158,11,0.08);
                     border-radius: 6px;
                     border-right: 3px solid #f59e0b;
+                }
+                .bs-recapture-note {
+                    margin-top: 4px;
+                    padding: 8px 10px;
+                    font-size: 0.8rem;
+                    color: var(--c-text-muted);
+                    background: rgba(16,185,129,0.08);
+                    border-radius: 6px;
+                    border-right: 3px solid var(--c-success, #10b981);
                 }
             </style>
         `;
