@@ -11,7 +11,7 @@ const BLOCK_KEYS = [
 
 import { getCityStats, getSuggestion } from '../data/SaudiCityStats.js';
 import { getCostRatios } from '../core/costRatios.js';
-import { resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
+import { resolveSectorBenchmark, sectorDetectionText } from '../core/sectorBenchmarks.js';
 import { analyzeSaudiMarket } from '../core/SaudiMarketEngine.js';
 import { getCitySnapshot, buildSectorText, detectSectorKey } from '../core/marketSizingModel.js';
 
@@ -352,7 +352,7 @@ export function generateSWOT(state) {
     }
 
     // تهديدات مبنية على مدخلات الدراسة الفعلية قدر الإمكان (كانت 3 نصوص ثابتة حرفياً لكل مشروع)
-    const sector = or(p.sector, concept);
+    const sector = sectorDetectionText(p);
     const isFandB = /مطعم|كافي|كافتيريا|قهوة|بن|وجبات|مأكولات|مشروبات|فود|طعام|حلويات|مخبوزات/i.test(sector);
     const threats = [
         marketingComps.length >= 3
@@ -455,9 +455,8 @@ export function generateSegments(state) {
  */
 export function generateCompetitors(state) {
     const p = state?.projectInfo || {};
-    const concept = shortActivity(p, 'النشاط');
     const city = or(p.city, 'المنطقة');
-    const sector = or(p.sector, concept);
+    const sector = sectorDetectionText(p);
 
     const isFandB = /مطعم|كافي|كافتيريا|قهوة|وجبات|مأكولات|مشروبات|فود|طعام/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر|بيع/i.test(sector);
@@ -793,7 +792,7 @@ export function generatePESTEL(state) {
     const name = or(p.name, 'المشروع');
     const concept = shortActivity(p, 'النشاط');
     const city = or(p.city, 'المملكة');
-    const sector = or(p.sector, concept);
+    const sector = sectorDetectionText(p);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
     const isEducation = /تعليم|مدرسة|جامعة|تدريب|أكاديم/i.test(sector);
     const isLogistics = /لوجستي|شحن|نقل|تخزين|توزيع/i.test(sector);
@@ -916,7 +915,7 @@ export function generateRisks(state) {
     const p = state?.projectInfo || {};
     const concept = shortActivity(p, 'النشاط');
     const city = or(p.city, 'المنطقة');
-    const sector = or(p.sector, concept);
+    const sector = sectorDetectionText(p);
 
     const isFandB = /مطعم|كافي|قهوة|وجبات|مأكولات|مشروبات|فود|طعام/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر|بيع/i.test(sector);
@@ -958,7 +957,7 @@ export function generateRisks(state) {
 export function generateProducts(state) {
     const p = state?.projectInfo || {};
     const concept = shortActivity(p, 'النشاط');
-    const sector = or(p.sector, concept);
+    const sector = sectorDetectionText(p);
     // تدقيق 2026-07-09: مقهى مختص كان يُصنَّف ضمن "isFandB" العام فيقترح "الأطباق
     // الرئيسية" كمنتج أول — يناقض عدم وجود شيف/مطبخ في generatePositions لنفس
     // النشاط (isCafe هناك). isCafe هنا يجب أن يُختبر قبل isFandB لنفس السبب.
@@ -995,7 +994,7 @@ export function generateProducts(state) {
 export function generateIntroServices(state) {
     const p = state?.projectInfo || {};
     const concept = shortActivity(p, 'النشاط');
-    const sector = or(p.sector, concept);
+    const sector = sectorDetectionText(p);
     const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|كافتيريا|قهوة|بن|وجبات|مأكولات|مشروبات|فود|طعام|حلويات|مخبوزات/i.test(sector);
 
@@ -1029,7 +1028,7 @@ export function generateIntroServices(state) {
 export function generateCustomerValues(state) {
     const p = state?.projectInfo || {};
     const concept = shortActivity(p, 'النشاط');
-    const sector = or(p.sector, concept);
+    const sector = sectorDetectionText(p);
     const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|كافتيريا|قهوة|بن|وجبات|مأكولات|مشروبات|فود|طعام|حلويات|مخبوزات/i.test(sector);
 
@@ -1066,7 +1065,7 @@ export function generateCustomerValues(state) {
 export function generateNameIdeas(state) {
     const p = state?.projectInfo || {};
     const concept = shortActivity(p, 'النشاط');
-    const sector = or(p.sector, concept);
+    const sector = sectorDetectionText(p);
     const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|كافتيريا|وجبات|مأكولات|مشروبات|فود|طعام|حلويات|مخبوزات/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر|بيع/i.test(sector);
@@ -1135,7 +1134,7 @@ export function generateTimeline(state) {
     }
 
     const p = state?.projectInfo || {};
-    const sector = or(p.sector, p.concept, 'النشاط');
+    const sector = sectorDetectionText(p);
     const isFandB = /مطعم|كافي|قهوة|وجبات|فود|طعام/i.test(sector);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
     const isEducation = /تعليم|مدرسة|جامعة|تدريب|أكاديم/i.test(sector);
@@ -1246,7 +1245,7 @@ export function generateAdvisorFallback(state) {
     const p = state?.projectInfo || {};
     const name = or(p.name, 'المشروع');
     const city = or(p.city, 'المنطقة');
-    const sector = or(p.sector, p.concept, '');
+    const sector = sectorDetectionText(p);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
     const isEducation = /تعليم|مدرسة|جامعة|تدريب|أكاديم/i.test(sector);
     const isLogistics = /لوجستي|شحن|نقل|تخزين|توزيع/i.test(sector);
@@ -1334,8 +1333,7 @@ export function generateFinancialImprovementAdvice(state, results) {
  */
 export function generateLicenses(state) {
     const p = state?.projectInfo || {};
-    const concept = shortActivity(p, 'النشاط');
-    const sector = or(p.sector, concept);
+    const sector = sectorDetectionText(p);
     const isFandB = /مطعم|كافي|قهوة|وجبات|فود|طعام|مأكولات|مشروبات/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر|بيع/i.test(sector);
     const isHealth = /صحي|عيادة|مستشفى|طب|تمريض|مختبر|صيدل/i.test(sector);
@@ -1387,7 +1385,7 @@ export function generateLicenses(state) {
  */
 export function generateLogistics(state) {
     const p = state?.projectInfo || {};
-    const sector = or(p.sector, p.concept, 'النشاط');
+    const sector = sectorDetectionText(p);
     const isFandB = /مطعم|كافي|فود|طعام/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر/i.test(sector);
     const isLogistics = /لوجستي|شحن|نقل|تخزين|توزيع/i.test(sector);
@@ -1431,7 +1429,7 @@ export function generateLogistics(state) {
  */
 export function generateAdministrative(state) {
     const p = state?.projectInfo || {};
-    const sector = or(p.sector, p.concept, '');
+    const sector = sectorDetectionText(p);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
     const isEducation = /تعليم|مدرسة|جامعة|تدريب|أكاديم/i.test(sector);
     const isLogistics = /لوجستي|شحن|نقل|تخزين|توزيع/i.test(sector);
@@ -1467,7 +1465,7 @@ export function generateAdministrative(state) {
  */
 export function generateCampaigns(state) {
     const p = state?.projectInfo || {};
-    const sector = or(p.sector, p.concept, 'النشاط');
+    const sector = sectorDetectionText(p);
     const isFandB = /مطعم|كافي|فود|طعام/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر/i.test(sector);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
@@ -1496,7 +1494,7 @@ export function generateCampaigns(state) {
  */
 export function generatePositions(state) {
     const p = state?.projectInfo || {};
-    const sector = or(p.sector, p.concept, 'النشاط');
+    const sector = sectorDetectionText(p);
     const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|قهوة|فود|طعام|مأكولات|مشروبات/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر|بيع/i.test(sector);
@@ -1682,7 +1680,7 @@ export function generateCompetitorBenchmark() {
 
 export function generateSuppliers(state) {
     const p = state?.projectInfo || {};
-    const sector = or(p.sector, p.concept, 'النشاط');
+    const sector = sectorDetectionText(p);
     const isFandB = /مطعم|كافي|فود|طعام|قهوة/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر/i.test(sector);
     const isIndustrial = /صناع|مصنع|إنتاج|تصنيع/i.test(sector);
@@ -1736,7 +1734,7 @@ export function generateOperationalKpis(state) {
  */
 export function generateEstablishmentCosts(state) {
     const p = state?.projectInfo || {};
-    const sector = or(p.sector, p.concept, 'النشاط');
+    const sector = sectorDetectionText(p);
 
     // City logic
     const city = or(p.city, 'الرياض');
@@ -1754,7 +1752,7 @@ export function generateEstablishmentCosts(state) {
 
 export function generateBuildings(state) {
     const p = state?.projectInfo || {};
-    const sector = or(p.sector, p.concept, 'النشاط');
+    const sector = sectorDetectionText(p);
     // تدقيق 2026-07-09: مقهى مختص لا يملك مطبخاً تجارياً كاملاً (لا شيف في
     // generatePositions لنفس النشاط) — يجب ألا يُحمَّل بند "مطبخ تجاري وتهوية"
     // 120,000 ريال المخصص لمطاعم الطهي الكامل؛ يكفيه بار تحضير مشروبات أخف تكلفة.
@@ -1799,7 +1797,7 @@ export function generateBuildings(state) {
  */
 export function generateEquipment(state) {
     const p = state?.projectInfo || {};
-    const sector = or(p.sector, p.concept, 'النشاط');
+    const sector = sectorDetectionText(p);
     const isCafe = /مقهى|كافيه|قهوة|بن|مختصة|cafe|coffee/i.test(sector);
     const isFandB = /مطعم|كافي|فود|طعام/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر/i.test(sector);
@@ -1873,7 +1871,7 @@ export function generateEquipment(state) {
  */
 export function generateFurniture(state) {
     const p = state?.projectInfo || {};
-    const sector = or(p.sector, p.concept, 'النشاط');
+    const sector = sectorDetectionText(p);
     const isFandB = /مطعم|كافي|فود|طعام/i.test(sector);
     const isRetail = /بقالة|تجزئة|متجر/i.test(sector);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
@@ -1918,7 +1916,7 @@ export function generateFurniture(state) {
  */
 export function generateTechResources(state) {
     const p = state?.projectInfo || {};
-    const sector = or(p.sector, p.concept, 'النشاط');
+    const sector = sectorDetectionText(p);
     const isHealth = /صحي|عيادة|مستشفى|طب|مختبر/i.test(sector);
     const isEducation = /تعليم|مدرسة|جامعة|تدريب|أكاديم/i.test(sector);
     const isLogistics = /لوجستي|شحن|نقل|تخزين|توزيع/i.test(sector);
@@ -1957,7 +1955,7 @@ export function generateTechResources(state) {
 export function generateRevenueStreams(state) {
     const p = state?.projectInfo || {};
     const concept = shortActivity(p, 'الخدمة');
-    const sector = or(p.sector, concept);
+    const sector = sectorDetectionText(p);
     // تدقيق 2026-07-09: مقهى مختص لا يملك مطبخاً تجارياً كاملاً (لا شيف في
     // generatePositions لنفس النشاط) — يجب ألا يُحمَّل بند "مطبخ تجاري وتهوية"
     // 120,000 ريال المخصص لمطاعم الطهي الكامل؛ يكفيه بار تحضير مشروبات أخف تكلفة.
