@@ -148,6 +148,7 @@ export class DashboardView {
 
         const hasProjects = filtered.length > 0;
         const userEmail = this.currentUser ? this.currentUser.email : null;
+        const isAdmin = this.currentUser ? await AuthGuard.isAdmin() : false;
 
         // بطاقات حساب سريعة (حالة اشتراك، اكتمال ملف شخصي، شارة الإشعارات) — بيانات
         // شبكية إضافية لا تُنتظَر هنا أبداً (نفس مبدأ hydrateProjectCompleteness أدناه:
@@ -442,6 +443,7 @@ export class DashboardView {
                                 <div id="dvAccountMenu" class="dv-account__menu" hidden>
                                     <button type="button" id="btnUserProfile">حسابي وبياناتي</button>
                                     <button type="button" id="btnDashboardBilling">الطلبات والفواتير</button>
+                                    ${isAdmin ? '<button type="button" id="btnAdminDashboard" data-dv-route="admin">لوحة الإدارة</button>' : ''}
                                     <a href="./help.html" target="_blank" rel="noopener">مركز المساعدة</a>
                                     <button type="button" id="btnLogout" class="text-danger">تسجيل الخروج</button>
                                 </div>
@@ -470,6 +472,8 @@ export class DashboardView {
                             <button type="button" data-dv-route="advisory">${inlineIcon('users')} الاستشارات</button>
                             <button type="button" data-dv-route="billing">${inlineIcon('folder')} الطلبات</button>
                             <button type="button" data-dv-route="support">${inlineIcon('bell')} الشكاوى والتذاكر</button>
+                            ${isAdmin ? `<h3 class="dv-side-nav__group-title">الإدارة</h3>
+                            <button type="button" data-dv-route="admin">${inlineIcon('shield')} لوحة الإدارة</button>` : ''}
                         </div>
                     </aside>
                     <div class="dv-home-panels">
