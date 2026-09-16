@@ -57,6 +57,16 @@ export function confirmBankTransfer(orderId) {
     return callAdminRpc('admin_confirm_bank_transfer', { target_order_id: orderId });
 }
 
+/** طلبات الاستشارة غير المدفوعة بعد بانتظار تأكيد وصول الحوالة (2026-09-16). */
+export function getPendingConsultationBankTransfers() {
+    return callAdminRpc('admin_list_pending_consultation_bank_transfers');
+}
+
+/** تأكيد وصول حوالة بنكية لطلب استشارة → payment_status='paid'. @param {string} requestId */
+export function confirmConsultationBankTransfer(requestId) {
+    return callAdminRpc('admin_confirm_consultation_bank_transfer', { target_request_id: requestId });
+}
+
 /**
  * @param {string|null} eventName - فلترة حسب اسم حدث معيّن، أو null لكل الأحداث
  * @param {number} days - نافذة زمنية بالأيام (افتراضي 30)

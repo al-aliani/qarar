@@ -2,6 +2,7 @@ import { submitConsultationRequest, listMyConsultations } from '../services/Cons
 import { toast } from '../utils/toast.js';
 import { escapeHtml } from '../utils/escape.js';
 import { trackEvent } from '../utils/analytics.js';
+import { renderBankTransferPanel } from './components/BankTransferPanel.js';
 
 const LEVELS = {
     specialist: { label: 'أخصائي', price: 190, desc: 'مساعدة تنفيذية وجمع وترتيب البيانات', output: 'ملاحظات مكتوبة داخل سجل طلبك (نقاط عمل/تصويب) تساعدك على جمع وترتيب بيانات دراستك بنفسك.', responseTime: 'خلال يوم عمل تقريباً', studyReview: 'لا — توجيه عام لطريقة الإدخال والترتيب، لا تدقيق في أرقامك المحفوظة', meeting: 'لا يشمل اجتماعاً؛ التواصل عبر الملاحظات المكتوبة في سجل الطلب' },
@@ -39,13 +40,37 @@ export class AdvisoryView {
                     <div id="consultError" class="text-danger text-sm mt-2" role="alert" style="display:none"></div>
                     <button type="button" id="consultSubmit" class="btn btn--primary mt-4">إرسال الطلب</button>
                 </div>
-                <div class="card p-6"><h2 class="text-lg font-bold mb-4">طلبات الاستشارة</h2>${requests.length ? requests.map(r => `<div class="flex items-center justify-between gap-3 py-3" style="border-bottom:1px solid var(--c-border)"><div><strong>${escapeHtml(LEVELS[r.consultant_level]?.label || r.consultant_level)} — ${escapeHtml(r.specialty)}</strong><div class="text-xs text-muted">${escapeHtml(r.sector)} · ${new Date(r.created_at).toLocaleDateString('ar-SA')}</div></div><div class="text-end"><span class="badge">${escapeHtml(STATUS[r.status] || r.status)}</span><div class="text-sm font-bold mt-1">${Number(r.amount_sar).toLocaleString('ar-SA')} ريال</div></div></div>`).join('') : '<p class="text-muted">لا توجد طلبات استشارة بعد.</p><button type="button" id="advisoryEmptyNewRequestBtn" class="btn btn--secondary mt-2">بدء طلب استشارة جديد</button>'}</div>
+                <div class="card p-6"><h2 class="text-lg font-bold mb-4">طلبات الاستشارة</h2>${requests.length ? requests.map(r => {
+            const levelLabel = LEVELS[r.consultant_level]?.label || r.consultant_level;
+            const isPaid = r.payment_status === 'paid';
+            const paymentBadge = isPaid
+                ? '<span class="badge badge--success">مدفوع</span>'
+                : `<button type="button" class="btn btn--sm btn--primary consult-pay-btn" data-id="${escapeHtml(r.id)}" data-amount="${Number(r.amount_sar) || 0}" data-level="${escapeHtml(levelLabel)}">ادفع الآن</button>`;
+            return `<div class="flex items-center justify-between gap-3 py-3" style="border-bottom:1px solid var(--c-border)"><div><strong>${escapeHtml(levelLabel)} — ${escapeHtml(r.specialty)}</strong><div class="text-xs text-muted">${escapeHtml(r.sector)} · ${new Date(r.created_at).toLocaleDateString('ar-SA')}</div></div><div class="text-end"><span class="badge">${escapeHtml(STATUS[r.status] || r.status)}</span><div class="text-sm font-bold mt-1">${Number(r.amount_sar).toLocaleString('ar-SA')} ريال</div><div class="mt-1">${paymentBadge}</div></div></div>`;
+        }).join('') : '<p class="text-muted">لا توجد طلبات استشارة بعد.</p><button type="button" id="advisoryEmptyNewRequestBtn" class="btn btn--secondary mt-2">بدء طلب استشارة جديد</button>'}
+                    <div id="consultPaymentPanel" class="mt-4" style="display:none"></div>
+                </div>
             </div>`;
         this.container.querySelector('#advisoryBack')?.addEventListener('click', () => this.onBack());
         this.container.querySelector('#consultSubmit')?.addEventListener('click', () => this.submit());
         this.container.querySelector('#advisoryEmptyNewRequestBtn')?.addEventListener('click', () => {
             this.container.querySelector('#advisoryRequestForm')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             this.container.querySelector('#consultSpecialty')?.focus();
+        });
+        this.container.querySelectorAll('.consult-pay-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const panel = this.container.querySelector('#consultPaymentPanel');
+                panel.style.display = 'block';
+                const shown = renderBankTransferPanel(panel, {
+                    orderId: btn.dataset.id,
+                    amount: Number(btn.dataset.amount),
+                    productLabel: `استشارة "${btn.dataset.level}"`,
+                    backLabel: 'رجوع لطلبات الاستشارة',
+                    onBack: () => { panel.style.display = 'none'; panel.innerHTML = ''; }
+                });
+                if (!shown) { panel.style.display = 'none'; toast.error('التحويل البنكي غير مُفعَّل حالياً — تواصل معنا لإتمام الدفع.'); return; }
+                panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
         });
     }
 

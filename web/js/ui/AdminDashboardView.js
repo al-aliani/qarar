@@ -38,6 +38,7 @@ const TABS = [
     { key: 'experiments', label: 'التجارب A/B' },
     { key: 'subscriptions', label: 'الاشتراكات والباقات' },
     { key: 'bank_transfers', label: 'التحويلات البنكية' },
+    { key: 'consultation_payments', label: 'دفعات الاستشارات' },
     { key: 'satisfaction', label: 'الرضا والآراء' },
     { key: 'team', label: 'الفريق والدعم' },
     { key: 'content', label: 'المحتوى والصفحات' },
@@ -57,7 +58,7 @@ const TABS = [
 // (نفس أزرار TABS وأزرار data-tab وربط الأحداث في _renderShell دون تغيير).
 const TAB_GROUPS = [
     { title: 'الرئيسية', keys: ['overview'] },
-    { title: 'المبيعات والنمو', keys: ['revenue', 'subscriptions', 'bank_transfers', 'growth', 'strategy', 'investor'] },
+    { title: 'المبيعات والنمو', keys: ['revenue', 'subscriptions', 'bank_transfers', 'consultation_payments', 'growth', 'strategy', 'investor'] },
     { title: 'المستخدمون والسوق', keys: ['users', 'platform', 'industry', 'behavior', 'sharing'] },
     { title: 'المنتج والجودة', keys: ['studies', 'quality', 'ai', 'coverage', 'innovation', 'experiments'] },
     { title: 'التشغيل والموثوقية', keys: ['reliability', 'security', 'reports'] },
@@ -226,6 +227,11 @@ export class AdminDashboardView {
 
         if (tabKey === 'bank_transfers') {
             await this._renderBankTransfersTab(contentEl);
+            return;
+        }
+
+        if (tabKey === 'consultation_payments') {
+            await this._renderConsultationPaymentsTab(contentEl);
             return;
         }
 
@@ -2047,6 +2053,54 @@ export class AdminDashboardView {
                 if (r.ok) {
                     toast.success('تم تأكيد الدفع وفتح التصدير للعميل.');
                     await this._renderBankTransfersTab(contentEl);
+                } else {
+                    toast.error(r.error || 'تعذّر تأكيد التحويل.');
+                    btn.disabled = false;
+                    btn.textContent = 'تأكيد وصول الحوالة';
+                }
+            });
+        });
+    }
+
+    async _renderConsultationPaymentsTab(contentEl) {
+        contentEl.innerHTML = '<p class="admin-loading">جارٍ تحميل طلبات الاستشارة غير المدفوعة…</p>';
+        const res = await AdminService.getPendingConsultationBankTransfers();
+        if (!res.ok) {
+            contentEl.innerHTML = `<p class="admin-error">تعذّر تحميل طلبات الاستشارة: ${this._esc(res.error)}</p>`;
+            return;
+        }
+        const rows = Array.isArray(res.data) ? res.data : [];
+        const LEVEL = { specialist: 'أخصائي', consultant: 'مستشار', advisor: 'استشاري' };
+        const head = `<div class="admin-behavior-controls"><div><span class="admin-eyebrow">دفعات الاستشارات</span><h3 class="admin-card__title" style="margin:4px 0 0;">طلبات استشارة بانتظار تأكيد وصول الحوالة (${rows.length})</h3></div></div>`;
+        if (rows.length === 0) {
+            contentEl.innerHTML = `${head}<p class="admin-table__empty">لا توجد طلبات استشارة غير مدفوعة حالياً.</p>`;
+            return;
+        }
+        const body = rows.map((r) => `
+            <tr>
+                <td>${this._esc(LEVEL[r.consultant_level] || r.consultant_level || '—')}</td>
+                <td>${this._esc(r.specialty || '—')}</td>
+                <td>${this._esc(r.sector || '—')}</td>
+                <td>${this._esc(Number(r.amount_sar || 0).toLocaleString('en-US'))} ريال</td>
+                <td dir="ltr">${this._esc(String(r.request_id || '').slice(0, 8))}</td>
+                <td>${this._esc(r.created_at ? new Date(r.created_at).toLocaleDateString('ar-SA-u-nu-latn') : '—')}</td>
+                <td><button type="button" class="btn btn--sm btn--primary consult-bank-confirm-btn" data-request="${this._esc(r.request_id)}">تأكيد وصول الحوالة</button></td>
+            </tr>`).join('');
+        contentEl.innerHTML = `${head}
+            <p class="text-sm text-muted mb-2">أكّد الطلب بعد التحقق فعلياً من وصول المبلغ إلى حساب الشركة.</p>
+            <div class="admin-table-wrap"><table class="admin-table">
+                <thead><tr><th>المستوى</th><th>المجال</th><th>القطاع</th><th>المبلغ</th><th>رقم الطلب</th><th>التاريخ</th><th>إجراء</th></tr></thead>
+                <tbody>${body}</tbody>
+            </table></div>`;
+        contentEl.querySelectorAll('.consult-bank-confirm-btn').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                if (!window.confirm('هل تأكّدت من وصول الحوالة إلى حساب الشركة؟')) return;
+                btn.disabled = true;
+                btn.textContent = 'جارٍ التأكيد...';
+                const r = await AdminService.confirmConsultationBankTransfer(btn.dataset.request);
+                if (r.ok) {
+                    toast.success('تم تأكيد دفعة الاستشارة.');
+                    await this._renderConsultationPaymentsTab(contentEl);
                 } else {
                     toast.error(r.error || 'تعذّر تأكيد التحويل.');
                     btn.disabled = false;
