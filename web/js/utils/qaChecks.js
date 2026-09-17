@@ -9,12 +9,7 @@ import { checkDriversAgainstBenchmarks, sectorDetectionText } from '../core/sect
 import { deriveRevenueFromStreams } from '../core/engine.js';
 
 function classifyProjectContext(state) {
-    const info = state?.projectInfo || {};
-    // sectorDetectionText تجمع sector/concept/activity (تدقيق 2026-09-16: اختيار حقل
-    // واحد فقط كان يُسقط تصنيف قطاعات رسمية كاملة — انظر تعليقها في sectorBenchmarks.js).
-    // description تبقى مضافة هنا فقط لهذا التصنيف العام (رقمي/أغذية)، لا لمطابقة
-    // القطاع الدقيقة في detectSectorBenchmark.
-    const text = `${sectorDetectionText(info)} ${info.description || ''}`;
+    const text = sectorDetectionText(state?.projectInfo);
     const isDigital = /تقني|رقمي|منصة|تطبيق|برمج|سحابي|saas|software|platform|app/i.test(text);
     const isFood = /مطعم|كافي|مقهى|قهوة|وجبات|فود|طعام|مأكولات|مشروبات/i.test(text);
     return { isDigital, isFood };
