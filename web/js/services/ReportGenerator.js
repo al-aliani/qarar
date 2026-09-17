@@ -16,6 +16,7 @@ import { buildFinancingDiagnostics } from '../utils/financingDiagnostics.js';
 import { formatRatio } from '../../export/ratioUnits.js';
 import { SAFE } from '../../export/utils.js';
 import { escapeHtml } from '../utils/escape.js';
+import { hasMinimumRevenueData, hasMinimumFinancialData } from '../utils/dataSufficiency.js';
 
 /** عناوين الأقسام (لفهرس المحتويات وترتيب التصدير) */
 const REPORT_SECTION_LABELS = {
@@ -609,7 +610,16 @@ export class ReportGenerator {
                 const exDecision = results.decision === 'GO' ? '<span class="status-positive">المضي قدماً</span>'
                     : (results.decision === 'NO-GO' || results.decision === 'NOGO') ? '<span class="status-negative">عدم المضي</span>'
                     : results.decision === 'REVISE' ? '<span style="color:#b45309;font-weight:700;">مراجعة مطلوبة</span>' : '—';
-                const exHighlights = `
+                // تدقيق شامل 2026-09-16: كانت هذه الأرقام (NPV/IRR/التوصية) تُعرَض بثقة كاملة حتى
+                // لدراسة بإيراد وحيد بلا أي تكلفة (رأسمالية/تشغيلية/تمويل) — نفس بوابة
+                // hasMinimumFinancialData المستخدمة فعلاً في DecisionDashboard.js/FinancialDashboard.js
+                // لمنع عرض قرار/رقم موثوق المظهر لبيانات ناقصة أصلاً.
+                const exDataSufficient = hasMinimumRevenueData(state) && hasMinimumFinancialData(state);
+                const exHighlights = !exDataSufficient
+                    ? `<div style="padding:10px 12px; background:#FEF3C7; border:1px solid #F59E0B; border-radius:6px; margin-bottom:14px;">
+                            لا توجد بيانات كافية (إيرادات و/أو تكلفة رأسمالية أو تشغيلية أو تمويل) لعرض مؤشرات مالية أو توصية موثوقة لهذه الدراسة بعد.
+                        </div>`
+                    : `
                             <table style="margin-bottom:14px;"><thead><tr>
                                 <th>الاستثمار المطلوب</th><th>NPV</th><th>IRR</th><th>الاسترداد</th><th>التوصية</th>
                             </tr></thead><tbody><tr>
@@ -793,7 +803,7 @@ export class ReportGenerator {
                         <div class="section-content">
                             <div class="kpi-grid">
                                 <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'npv', 'صافي القيمة الحالية')}</div><div class="kpi-value ${(results.indicators?.npv || 0) > 0 ? 'positive' : 'negative'}">${formatCurrency(results.indicators?.npv || 0)}</div></div>
-                                <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'irr', 'معدل العائد الداخلي (IRR)')}</div><div class="kpi-value ${(results.indicators?.irr || 0) > 0.15 ? 'positive' : ''}">${results.indicators?.irr == null ? 'غير محقق' : (results.indicators.irr * 100).toFixed(1) + '%'}</div></div>
+                                <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'irr', 'معدل العائد الداخلي (IRR)')}</div><div class="kpi-value ${(results.indicators?.irr || 0) > 0.15 ? 'positive' : (results.indicators?.irr || 0) < 0 ? 'negative' : ''}">${results.indicators?.irr == null ? 'غير محقق' : (results.indicators.irr * 100).toFixed(1) + '%'}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">${this._lbl(lang, 'payback_period', 'فترة الاسترداد')}</div><div class="kpi-value">${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">نقطة التعادل</div><div class="kpi-value">${SAFE.breakeven(results.indicators, formatCurrency, () => (results.indicators?.breakevenUnitsPerMonth != null ? Math.round(results.indicators.breakevenUnitsPerMonth) + ' وحدة/شهر' : '—'))}</div></div>
                                 <div class="kpi-card"><div class="kpi-label">نسبة تغطية خدمة الدين (DSCR)</div><div class="kpi-value">${results.indicators?.dscr != null ? (results.indicators.dscr.toFixed(2) + 'x') : '—'}</div></div>
@@ -802,7 +812,7 @@ export class ReportGenerator {
                             ${this.renderFinancingDiagnostics(financingDiagnostics, fmt)}
                             <table><thead><tr><th>المؤشر المالي</th><th>القيمة</th><th>التقييم</th></tr></thead><tbody>
                                 <tr><td>${this._lbl(lang, 'npv', 'صافي القيمة الحالية')}</td><td>${formatCurrency(results.indicators?.npv || 0)}</td><td class="${(results.indicators?.npv || 0) > 0 ? 'status-positive' : 'status-negative'}">${(results.indicators?.npv || 0) > 0 ? '✓ موجب' : '✗ سالب'}</td></tr>
-                                <tr><td>${this._lbl(lang, 'irr', 'معدل العائد الداخلي')}</td><td>${results.indicators?.irr == null ? 'غير محقق' : (results.indicators.irr * 100).toFixed(2) + '%'}</td><td>${results.indicators?.irr == null ? '—' : (results.indicators.irr > 0.15 ? '✓ مرتفع' : 'متوسط')}</td></tr>
+                                <tr><td>${this._lbl(lang, 'irr', 'معدل العائد الداخلي')}</td><td>${results.indicators?.irr == null ? 'غير محقق' : (results.indicators.irr * 100).toFixed(2) + '%'}</td><td>${results.indicators?.irr == null ? '—' : (results.indicators.irr > 0.15 ? '✓ مرتفع' : results.indicators.irr < 0 ? '⚠ سالب' : 'متوسط')}</td></tr>
                                 <tr><td>${this._lbl(lang, 'payback_period', 'فترة الاسترداد')}</td><td>${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; return Number.isFinite(p) && p > 0 ? p.toFixed(1) + ' سنة' : 'غير محقق'; })()}</td><td>${(() => { const p = results.indicators?.paybackPeriod ?? results.indicators?.payback; if (!Number.isFinite(p) || p <= 0) return 'غير محقق'; return p < 3 ? 'سريع' : 'طويل نسبياً'; })()}</td></tr>
                                 <tr><td>فجوة التمويل</td><td>${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? fmt(financingDiagnostics.fundingGap) : financingDiagnostics.fundingGap < -(financingDiagnostics.fundingGapThreshold ?? 1) ? 'فائض ' + fmt(Math.abs(financingDiagnostics.fundingGap)) : 'متوازن'}</td><td class="${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? 'status-negative' : 'status-positive'}">${financingDiagnostics.fundingGap > (financingDiagnostics.fundingGapThreshold ?? 1) ? 'يجب سدها قبل الاعتماد' : 'مقبولة'}</td></tr>
                                 <tr><td>DSCR السنة الأولى</td><td>${financingDiagnostics.dscr == null ? 'غير قابل للحساب' : financingDiagnostics.dscr.toFixed(2) + 'x'}</td><td class="${financingDiagnostics.dscrBlocked ? 'status-negative' : 'status-positive'}">${financingDiagnostics.dscrBlocked ? 'دون الحد البنكي المستهدف' : 'مقبول مبدئياً'}</td></tr>

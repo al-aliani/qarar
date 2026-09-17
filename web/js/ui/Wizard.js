@@ -17,6 +17,7 @@ import { fieldHelp } from './components/FieldHelp.js';
 import { escapeHtml } from '../utils/escape.js';
 import { captureFocusOwner, restoreFocusAfterRerender } from '../utils/focusRestore.js';
 import { describeRevenueRampGap } from '../core/engine.js';
+import { sectorDetectionText } from '../core/sectorBenchmarks.js';
 import { suggest, isUsable } from '../services/DataConnectors.js';
 import '../services/connectors/ChamberSuppliersConnector.js'; // يسجّل 'market.suppliers' ذاتياً عند التحميل
 import { getExpertTemplates } from '../services/ExpertTemplateService.js';
@@ -1061,7 +1062,7 @@ export class Wizard {
             initialData: Array.isArray(tableData) ? tableData : [],
             // نشاط المشروع — بدونه كان زر التقدير ✨ يحقن نطاق تكلفة الطعام المطعمي
             // في أي جدول لأي قطاع (تدقيق 2026-09-04).
-            sectorText: proj().sector || proj().concept || proj().activity || '',
+            sectorText: sectorDetectionText(proj()),
             onSuggest, // Inject suggestions
             hintHtml,
             onHintAction: tableKey === 'positions'

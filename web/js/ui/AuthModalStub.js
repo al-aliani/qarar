@@ -404,7 +404,9 @@ export class AuthModal {
                         this._mfaChallengeActive = false;
                         this._succeeded = false;
                         const { signOut } = await import('../../supabaseClient.js');
-                        await signOut();
+                        // 'global' صراحة (بخلاف الافتراض 'local' الجديد في signOut()) — استرداد
+                        // 2FA بفقدان الجهاز يجب أن يُسقط كل الجلسات على كل الأجهزة، لا هذا الجهاز فقط.
+                        await signOut('global');
                         const { toast } = await import('../utils/toast.js');
                         toast.success('تم استرداد حسابك. سجّل الدخول من جديد وفعّل مصادقة ثنائية جديدة فوراً.', 10000);
                         this.close();
@@ -615,7 +617,11 @@ export class AuthModal {
                     forgotMessage.style.display = 'block';
                     forgotMessage.className = 'text-sm text-success mt-2';
                 } else if (forgotMessage) {
-                    forgotMessage.textContent = error || 'فشل إرسال الرابط';
+                    // تدقيق شامل 2026-09-16: كان يعرض error الخام من Supabase (نص إنجليزي
+                    // مثل "For security purposes, you can only request this after N seconds")
+                    // رغم وجود translateResendError أعلاه بالضبط لمنع هذا التسريب في مسار
+                    // شقيق (إعادة إرسال رابط التأكيد) — لم يكن مطبَّقاً هنا.
+                    forgotMessage.textContent = error ? translateResendError(error) : 'فشل إرسال الرابط';
                     forgotMessage.style.display = 'block';
                     forgotMessage.className = 'text-sm text-danger mt-2';
                 }

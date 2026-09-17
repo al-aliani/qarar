@@ -95,6 +95,9 @@ describe('AuthModalStub — "فقدت جهاز المصادقة؟" (استردا
         await waitUntil(() => signOutSdkMock.mock.calls.length > 0);
 
         expect(functionsInvokeMock).toHaveBeenCalledWith('mfa-recovery-unenroll', { body: { recoveryCode: 'ABCD-1234' } });
+        // تدقيق شامل 2026-09-16: استرداد فقدان الجهاز يجب أن يُسقط الجلسة على كل
+        // الأجهزة صراحة (scope:'global') — الافتراض الجديد لـsignOut() صار 'local'.
+        expect(signOutSdkMock).toHaveBeenCalledWith({ scope: 'global' });
         expect(onSuccess).not.toHaveBeenCalled();
         await waitUntil(() => modal.overlay === null);
         expect(onClose).toHaveBeenCalledTimes(1); // النافذة أُغلقت بلا نجاح دخول — يُعامَل كتخطٍّ من ناحية الحارس

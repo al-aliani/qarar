@@ -5,7 +5,7 @@
 
 import { calculateStudy as runFullModel, resolveDecisionThresholds } from '../core/engine.js';
 import { investmentDataWarning, investmentDataWarningHtml } from '../utils/dataQuality.js';
-import { hasMinimumRevenueData } from '../utils/dataSufficiency.js';
+import { hasMinimumRevenueData, hasMinimumFinancialData } from '../utils/dataSufficiency.js';
 import { formatIrrPct } from '../utils/indicatorFormat.js';
 import { calculateProjectScore } from '../core/scoring.js';
 import { checkDriversAgainstBenchmarks, SECTOR_BENCHMARKS, resolveSectorBenchmark } from '../core/sectorBenchmarks.js';
@@ -145,8 +145,21 @@ export class ExecutiveSummary {
         `;
     }
 
+    // تدقيق شامل 2026-09-16: hasMinimumRevenueData وحدها كانت تجيز عرض درجة/توصية/NPV
+    // واثقة لدراسة بإيراد وحيد بلا أي تكلفة (رأسمالية/تشغيلية/تمويل) — نفس رسالة
+    // DecisionDashboard.js/FinancialDashboard.js لنفس الحالة بالضبط.
+    renderInsufficientFinancialDataNotice() {
+        return `
+            <div class="alert alert--warning">
+                <p><strong>${icon('i-warning')} لا توجد بيانات تكلفة كافية.</strong></p>
+                <p class="text-sm mt-2">لا توجد بيانات تكلفة (رأسمالية أو تشغيلية أو تمويل). يرجى إكمال أحد البنود أدناه قبل عرض درجة الجدوى والتوصية.</p>
+            </div>
+        `;
+    }
+
     renderFeasibilityScore(score, breakdown, state) {
         if (!hasMinimumRevenueData(state)) return this.renderInsufficientRevenueNotice();
+        if (!hasMinimumFinancialData(state)) return this.renderInsufficientFinancialDataNotice();
 
         const getScoreColor = (s) => {
             if (s >= 80) return 'score-excellent';
@@ -258,6 +271,8 @@ export class ExecutiveSummary {
     }
 
     renderInvestmentHighlights(state, results) {
+        if (!hasMinimumRevenueData(state)) return this.renderInsufficientRevenueNotice();
+        if (!hasMinimumFinancialData(state)) return this.renderInsufficientFinancialDataNotice();
         const financing = state.financing || {};
         const ind = results?.indicators || {};
         const inv = financing.totalInvestment ?? results?.capex?.total ?? 0;
@@ -368,6 +383,7 @@ export class ExecutiveSummary {
 
     renderRecommendation(score, results, state) {
         if (!hasMinimumRevenueData(state)) return this.renderInsufficientRevenueNotice();
+        if (!hasMinimumFinancialData(state)) return this.renderInsufficientFinancialDataNotice();
 
         let recommendation = 'conditional';
         let message = '';

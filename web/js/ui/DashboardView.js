@@ -438,7 +438,7 @@ export class DashboardView {
                             <button type="button" id="dashboardLogin" class="btn btn--sm btn--secondary">${icon('i-user')} تسجيل الدخول</button>
                         ` : `
                             <div class="dv-account">
-                                <button type="button" id="dvAccountToggle" class="btn btn--sm btn--ghost" aria-expanded="false">${icon('i-user')} ${userEmail}</button>
+                                <button type="button" id="dvAccountToggle" class="btn btn--sm btn--ghost" aria-expanded="false">${icon('i-user')} <span class="dv-account__email">${escapeHtml(userEmail)}</span></button>
                                 <div id="dvAccountMenu" class="dv-account__menu" hidden>
                                     <button type="button" id="btnUserProfile">حسابي وبياناتي</button>
                                     <button type="button" id="btnDashboardBilling">الطلبات والفواتير</button>
