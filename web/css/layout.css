@@ -31,13 +31,20 @@ body {
     background-color: var(--c-bg-app);
     color: var(--c-text-main);
     min-height: 100%;
-    height: 100%;
     display: flex;
     flex-direction: column;
     direction: rtl;
 }
 
+/* تدقيق 2026-09-18: height:100% كانت هنا على body العام — نفس الخلل الموثّق أعلاه
+   (تدقيق 2026-07-22) لكن لم يُصلَح حينها إلا overflow:hidden. على الصفحات التسويقية
+   الـ18+ (pricing/about/terms/...) هذا يجعل body flex-item بارتفاع الفيوبورت الثابت
+   بالضبط، فـ.lp-hero (وكل عنصر flex آخر) ينكمش (flex-shrink الافتراضي) ليقل عن ارتفاع
+   محتواه الحقيقي كلما تجاوز محتوى الصفحة طول شاشة واحدة — عنوان "الأسعار" يتراكب بصرياً
+   مع نص تنويه الضريبة أسفله نتيجة لذلك. height:100% مطلوب فقط لقشرة التطبيق (حيث
+   overflow:hidden أعلاه يحصر التمرير داخلياً عمداً) فانتقل إليها معه هنا بدل البقاء عاماً. */
 body.is-app-shell-page {
+    height: 100%;
     overflow: hidden;
 }
 
