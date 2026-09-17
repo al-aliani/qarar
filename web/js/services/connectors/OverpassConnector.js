@@ -36,6 +36,12 @@ export const CITY_CENTROIDS = Object.freeze({
 
 const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter';
 const DEFAULT_RADIUS_M = 1500;
+// تدقيق 2026-09-16: fetch() هنا كان بلا أي مهلة — تعليق شبكي فعلي لدى خادم Overpass
+// العام (لا استجابة، لا رفض) كان يُعلّق زر "اكتشف المنافسين" للأبد بدوّار تحميل أبدي.
+// AbortController + setTimeout يدوياً (لا AbortSignal.timeout) — نفس نمط AIConnector.js
+// و supabaseClient.js (fetchWithTimeout) المُختبَر فعلياً في هذا المستودع، لأنه قابل
+// للاختبار بمؤقّتات Vitest الوهمية (vi.useFakeTimers) خلافاً لـAbortSignal.timeout.
+const FETCH_TIMEOUT_MS = 8000;
 
 /**
  * وسوم OpenStreetMap لكل قطاع. تدقيق 2026-09-04 (رحلة عميل صالون حلاقة): كان
@@ -170,6 +176,8 @@ export async function overpassCompetitorsConnector(context = {}) {
 
     const query = buildOverpassQuery(coords.lat, coords.lng, radiusMeters, context.concept);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
         const response = await fetch(OVERPASS_ENDPOINT, {
             method: 'POST',
@@ -177,7 +185,8 @@ export async function overpassCompetitorsConnector(context = {}) {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'User-Agent': 'Qarar-FeasibilityStudy/1.0 (data-connector)'
             },
-            body: 'data=' + encodeURIComponent(query)
+            body: 'data=' + encodeURIComponent(query),
+            signal: controller.signal
         });
 
         if (!response || !response.ok) {
@@ -203,6 +212,8 @@ export async function overpassCompetitorsConnector(context = {}) {
         );
     } catch (e) {
         return unavailable('تعذّر الاتصال بـ Overpass');
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 

@@ -17,6 +17,10 @@ import { CITY_CENTROIDS } from './OverpassConnector.js';
 
 const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter';
 const DEFAULT_RADIUS_M = 1500;
+// تدقيق 2026-09-16: نفس عطل OverpassConnector.js — fetch() بلا مهلة يُعلّق الزر للأبد
+// عند تعليق شبكي فعلي لدى خادم Overpass. AbortController + setTimeout يدوياً (لا
+// AbortSignal.timeout) لنفس سبب قابلية الاختبار بمؤقّتات Vitest الوهمية.
+const FETCH_TIMEOUT_MS = 8000;
 
 /**
  * بناء استعلام Overpass QL يعدّ منشآت توريد/تجارة محتملة حول نقطة ضمن نصف قطر.
@@ -115,6 +119,8 @@ export async function chamberSuppliersConnector(context = {}) {
 
     const query = buildSuppliersQuery(coords.lat, coords.lng, radiusMeters);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
         const response = await fetch(OVERPASS_ENDPOINT, {
             method: 'POST',
@@ -122,7 +128,8 @@ export async function chamberSuppliersConnector(context = {}) {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'User-Agent': 'Qarar-FeasibilityStudy/1.0 (data-connector)'
             },
-            body: 'data=' + encodeURIComponent(query)
+            body: 'data=' + encodeURIComponent(query),
+            signal: controller.signal
         });
 
         if (!response || !response.ok) {
@@ -148,6 +155,8 @@ export async function chamberSuppliersConnector(context = {}) {
         );
     } catch (e) {
         return unavailable('تعذّر الاتصال بـ Overpass');
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 
