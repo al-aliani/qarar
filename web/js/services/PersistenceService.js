@@ -438,9 +438,16 @@ export class PersistenceService {
         if (!supabase) return [];
 
         // studies table has 'title' (project name). Use it for listing.
+        // تدقيق شامل 2026-09-16: عمود status لا يُكتب أبداً عند الحذف (deleteProject
+        // يضبط projectInfo.deleted داخل JSON فقط، لتفادي قيد CHECK على status — انظر
+        // _saveCloud أدناه)، وكان d.status يُقرأ هنا ثم يُسقَط بالكامل بلا استخدام. أي
+        // دراسة مصدرها السحابة حصراً (بلا فهرس محلي سابق على هذا الجهاز) كانت تُفقد
+        // علم الحذف تماماً — تعود «نشطة» على جهاز آخر وتغيب عن سلة المحذوفات هناك.
+        // القراءة الآن من data.projectInfo مباشرة (نفس الحقل الذي يكتبه deleteProject
+        // فعلياً)، بنفس شكل _listLocalHeaders (deleted/deletedAt).
         const { data, error } = await supabase
             .from(SUPA_TABLE_STUDIES)
-            .select('id, title, updated_at, status')
+            .select('id, title, updated_at, deleted:data->projectInfo->>deleted, deletedAt:data->projectInfo->>deletedAt')
             .eq('user_id', userId)
             .order('updated_at', { ascending: false });
 
@@ -449,7 +456,9 @@ export class PersistenceService {
         return data.map(d => ({
             id: d.id,
             name: (d.title && d.title.trim()) ? d.title.trim() : 'مشروع جديد',
-            lastModified: d.updated_at
+            lastModified: d.updated_at,
+            deleted: d.deleted === 'true',
+            deletedAt: d.deletedAt ? Number(d.deletedAt) : null
         }));
     }
 }
