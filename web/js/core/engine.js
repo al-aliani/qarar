@@ -38,6 +38,17 @@ export function rateOrDefault(v, dflt) {
     return Number.isFinite(n) ? n : dflt;
 }
 
+// تسامح "نسبة مئوية خام" لمعدلات الفائدة/الخصم/تكلفة حقوق الملكية تحديداً (2026-09-16)
+// — نفس حارس buildRevenueModel لـvariableCostRate (web/js/core/financial/revenue.js):
+// قيمة > 1 تعني على الأرجح أن المستخدم كتب 8 بدل 0.08. بلا هذا الحارس، فرق حقل واحد
+// يقلب القرار الاستثماري كاملاً (خصم/فائدة بمعدل 800% بدل 8%، فيُفلِس أي مشروع مهما
+// كان ربحه). لا يُدمَج داخل rateOrDefault نفسها عمداً — تخدم حقولاً أخرى (تغيّر
+// الإيراد/التكلفة في السيناريوهات) حيث > 1 قيمة صحيحة فعلاً (سيناريو "الإيراد
+// يتضاعف" = 1.0 فأكثر)، فتعميمه هناك كان سيُفسدها صمتاً.
+export function normalizeRatePercent(v) {
+    return v > 1 ? v / 100 : v;
+}
+
 // معدل GOSI الوافد (مخاطر مهنية فقط) — نفس الرقم الحرفي 0.02 المستخدم في gosiCost
 // أدناه وفي schema.js (positions.annualCost)؛ لا ثابت مُصدَّر مشترك بينهما بعد (تعديل
 // ذلك الكود القائم خارج نطاق هذه المهمة) — يُصدَّر هنا فقط ليستهلكه computeAnnualEmployeeCost
@@ -71,7 +82,15 @@ export function computeAnnualEmployeeCost({
     return basic + gosi + insurance + expatFees;
 }
 
-export function calculateFinancingWACC(study) {
+/**
+ * التفصيل الكامل لحساب WACC (الأوزان وتكلفتا حقوق الملكية والدين، لا الرقم
+ * المُدمَج النهائي وحده) — مصدر واحد يستهلكه كل من calculateFinancingWACC
+ * (الرقم النهائي فقط، للعرض الإرشادي في FinancingStructure.js) وresults.wacc
+ * في calculateStudy (التفصيل الكامل، لقسم "تكلفة رأس المال المرجح" في تصدير
+ * Excel — كان فارغاً دائماً لأن calculateStudy لم يستدعِ أياً من هذا إطلاقاً،
+ * تدقيق شامل 2026-09-16). دالة واحدة بدل تكرار الصيغة في مكانين قد يتباعدان.
+ */
+export function computeWaccBreakdown(study) {
     const financing = study?.[SECTIONS.FINANCING] || {};
     const sources = financing.sources || {};
     const equity = Number(sources.equity?.amount || 0);
@@ -80,16 +99,22 @@ export function calculateFinancingWACC(study) {
     if (total <= 0) return null;
 
     const costOfEquity = Number.isFinite(Number(financing.costOfEquity))
-        ? Number(financing.costOfEquity)
+        ? normalizeRatePercent(Number(financing.costOfEquity))
         : 0.15;
-    const costOfDebt = rateOrDefault(sources.bankLoan?.interestRate, 0.08);
+    const costOfDebt = normalizeRatePercent(rateOrDefault(sources.bankLoan?.interestRate, 0.08));
     const assumptions = study?.assumptions || {};
     const foreignShare = Math.min(1, Math.max(0, Number(assumptions.foreignOwnershipRate ?? 0)));
     const effectiveLevyRate = (0.025 * (1 - foreignShare)) + (Number(assumptions.taxRate ?? 0.20) * foreignShare);
 
-    const we = equity / total;
-    const wd = debt / total;
-    return (we * costOfEquity) + (wd * costOfDebt * (1 - effectiveLevyRate));
+    const equityWeight = equity / total;
+    const debtWeight = debt / total;
+    const costOfDebtPostTax = costOfDebt * (1 - effectiveLevyRate);
+    const wacc = (equityWeight * costOfEquity) + (debtWeight * costOfDebtPostTax);
+    return { equityWeight, debtWeight, costOfEquity, costOfDebtPostTax, wacc };
+}
+
+export function calculateFinancingWACC(study) {
+    return computeWaccBreakdown(study)?.wacc ?? null;
 }
 
 /**
@@ -241,14 +266,16 @@ export function calculateStudy(study, overrides) {
     // FinancingStructure.js) ولم تعد تُستهلك هنا.
     const useCostOfEquityDiscountRate = Boolean(study.assumptions?.useWaccAsDiscountRate);
     const costOfEquityDiscountRate = useCostOfEquityDiscountRate
-        ? (Number.isFinite(Number(study.financing?.costOfEquity)) ? Number(study.financing?.costOfEquity) : 0.15)
+        ? (Number.isFinite(Number(study.financing?.costOfEquity)) ? normalizeRatePercent(Number(study.financing?.costOfEquity)) : 0.15)
         : null;
     const hasCostOfEquityDiscountRate = costOfEquityDiscountRate != null && Number.isFinite(Number(costOfEquityDiscountRate));
     const rawBaseDiscountRate = hasCostOfEquityDiscountRate
         ? Number(costOfEquityDiscountRate)
         // معدل خصم صفر = مقارنة اسمية يطلبها المستخدم صراحةً (لا فراغ) — rateOrDefault
         // تحترمه، بينما `Number(...) || 0.10` كانت تفرض 10% صمتاً على نفس المدخل.
-        : rateOrDefault(study.assumptions?.discountRate, 0.10);
+        // تسامح "نسبة مئوية خام" (2026-09-16، انظر normalizeRatePercent أعلاه): فرق حقل
+        // واحد (10 بدل 0.10) كان يقلب القرار الاستثماري كاملاً بلا أي حارس سابق هنا.
+        : normalizeRatePercent(rateOrDefault(study.assumptions?.discountRate, 0.10));
     // حارس المعدل السالب (2026-08-25): معامل الخصم = ‎1 / (1 + r)^i‎، فمعدل ‎−1‎ يجعل المقام
     // صفراً ⟹ المعامل ‎Infinity‎ ⟹ ‎NPV = Infinity‎ وقرار «امضِ» مؤكَّد لأي مشروع مهما كانت
     // خسائره؛ وأي معدل سالب آخر يجعل الريال المستقبلي أثمن من الحاضر — عكس معنى الخصم —
@@ -759,7 +786,9 @@ export function calculateStudy(study, overrides) {
     const financing = study[SECTIONS.FINANCING] || {};
     const loanAmount = financing.sources?.bankLoan?.amount || 0;
     // rateOrDefault يحترم الصفر الصريح: قرض 0% (بنك التنمية الاجتماعية/الزراعية) يجب أن يبقى 0% لا 8%.
-    const interestRate = rateOrDefault(financing.sources?.bankLoan?.interestRate, 0.08);
+    // تسامح "نسبة مئوية خام" (2026-09-16، انظر normalizeRatePercent أعلاه): فرق حقل واحد
+    // (8 بدل 0.08) يرفع مصروف الفائدة 108 ضعفاً ويقلب القرار الاستثماري من رابح إلى مرفوض.
+    const interestRate = normalizeRatePercent(rateOrDefault(financing.sources?.bankLoan?.interestRate, 0.08));
     const loanTerm = financing.sources?.bankLoan?.termYears || 5;
     const gracePeriodMonths = Number(financing.sources?.bankLoan?.gracePeriodMonths || 0);
     const repaymentType = financing.sources?.bankLoan?.repaymentType || 'equal';
@@ -1438,6 +1467,13 @@ export function calculateStudy(study, overrides) {
             rentAdminAnnual: annualLogisticsFixed + annualAdmin,
             marketingAnnual: annualMarketing
         },
+        // تدقيق شامل 2026-09-16: قسم "تكلفة رأس المال المرجح" في مؤشرات تصدير Excel
+        // كان فارغاً دائماً (يقرأ results.wacc، لكن calculateStudy لم يكن يستدعي
+        // computeWaccBreakdown/calculateFinancingWACC إطلاقاً). هذا للعرض/التصدير
+        // فقط — لا علاقة له بمعدل الخصم الفعلي المُستخدَم في NPV (انظر تعليق
+        // "تصحيح 2026-08-24" أدناه: FCFE يُخصَم بتكلفة حقوق الملكية وحدها عمداً،
+        // لا WACC، تفادياً لازدواج أثر عبء الدين — هذا القرار لم يتغيّر).
+        wacc: computeWaccBreakdown(study),
         depreciation: annualDepreciation,
         depreciationSchedules: {
             // تدقيق 2026-08-25: كان `map(() => annualDepreciation)` — خطاً مسطّحاً يكرّر شحن

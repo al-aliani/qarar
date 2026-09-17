@@ -29,7 +29,7 @@ export class AdvisoryView {
         this.container.innerHTML = `
             <div class="advisory-view animate-entry p-6 max-w-4xl mx-auto" dir="rtl">
                 <button type="button" class="btn btn--ghost mb-4" id="advisoryBack">← رجوع</button>
-                <div class="mb-6"><h1 class="text-2xl font-bold mb-2">طلب استشارة</h1><p class="text-muted">حدد نوع المساعدة والخبرة المناسبة، وسيتحول الطلب إلى سجل يمكنك متابعته والدفع عليه داخل المنصة.</p></div>
+                <div class="mb-6"><h1 class="text-2xl font-bold mb-2">طلب استشارة</h1><p class="text-muted">حدد نوع المساعدة والخبرة المناسبة، وسيتحول الطلب إلى سجل يمكنك متابعته من هنا — سيراجعه فريقنا ويتواصل معك لتأكيد التفاصيل وطريقة الدفع.</p></div>
                 <div class="grid grid-cols-3 gap-3 mb-5">
                     ${Object.entries(LEVELS).map(([id, item]) => `<label class="card p-4" style="cursor:pointer"><input type="radio" name="consultLevel" value="${id}" ${id === 'consultant' ? 'checked' : ''}><strong class="block mt-2">${item.label}</strong><span class="text-sm text-muted block">${escapeHtml(item.desc)}</span><span class="text-xs text-muted block mt-2"><strong>المخرج:</strong> ${item.output}</span><span class="text-xs text-muted block mt-1"><strong>زمن الرد:</strong> ${item.responseTime}</span><span class="text-xs text-muted block mt-1"><strong>مراجعة الدراسة الفعلية:</strong> ${item.studyReview}</span><span class="text-xs text-muted block mt-1"><strong>الاجتماع:</strong> ${item.meeting}</span><span class="text-gold font-bold block mt-2">${item.price} ريال</span></label>`).join('')}
                 </div>

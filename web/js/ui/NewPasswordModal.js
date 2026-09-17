@@ -6,6 +6,22 @@
 import { attachModalA11y } from '../utils/modalA11y.js';
 import { escapeHtml } from '../utils/escape.js';
 
+// تدقيق شامل 2026-09-16: كان يعرض error الخام من Supabase (نص إنجليزي، مثل "New
+// password should be different from the old password." أو "Auth session missing!"
+// عند انتهاء صلاحية جلسة الاستعادة) في نافذة عربية بالكامل — نفس نمط الترجمة
+// المستخدم في AuthModalStub.js لمسارات الدخول الشقيقة.
+const UPDATE_PASSWORD_ERROR_TRANSLATIONS = [
+    { match: 'should be different from the old password', text: 'كلمة المرور الجديدة يجب أن تختلف عن القديمة.' },
+    { match: 'auth session missing', text: 'انتهت صلاحية رابط الاستعادة — اطلب رابطاً جديداً.' },
+    { match: 'security purposes', text: 'محاولات كثيرة خلال وقت قصير — انتظر قليلاً ثم أعد المحاولة.' },
+];
+
+function translateUpdatePasswordError(error) {
+    const errLower = (error || '').toLowerCase();
+    const found = UPDATE_PASSWORD_ERROR_TRANSLATIONS.find((t) => errLower.includes(t.match));
+    return found ? found.text : 'فشل تحديث كلمة المرور.';
+}
+
 export class NewPasswordModal {
     /**
      * @param {object} options
@@ -116,7 +132,7 @@ export class NewPasswordModal {
                     if (this.onSuccess) this.onSuccess();
                     this.close();
                 } else {
-                    showErr(error || 'فشل تحديث كلمة المرور');
+                    showErr(error ? translateUpdatePasswordError(error) : 'فشل تحديث كلمة المرور');
                     btn.disabled = false;
                     btn.textContent = 'تحديث كلمة المرور';
                 }

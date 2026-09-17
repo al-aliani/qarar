@@ -5,12 +5,16 @@
  * @returns {Promise<{ passed: boolean, hardErrors: Array, softWarnings: Array, validationErrors: Array, validationWarnings: Array }>}
  */
 import { validateInputs } from '../../../lib/calc/validateInputs.js';
-import { checkDriversAgainstBenchmarks } from '../core/sectorBenchmarks.js';
+import { checkDriversAgainstBenchmarks, sectorDetectionText } from '../core/sectorBenchmarks.js';
 import { deriveRevenueFromStreams } from '../core/engine.js';
 
 function classifyProjectContext(state) {
     const info = state?.projectInfo || {};
-    const text = `${info.sector || ''} ${info.concept || ''} ${info.description || ''}`;
+    // sectorDetectionText تجمع sector/concept/activity (تدقيق 2026-09-16: اختيار حقل
+    // واحد فقط كان يُسقط تصنيف قطاعات رسمية كاملة — انظر تعليقها في sectorBenchmarks.js).
+    // description تبقى مضافة هنا فقط لهذا التصنيف العام (رقمي/أغذية)، لا لمطابقة
+    // القطاع الدقيقة في detectSectorBenchmark.
+    const text = `${sectorDetectionText(info)} ${info.description || ''}`;
     const isDigital = /تقني|رقمي|منصة|تطبيق|برمج|سحابي|saas|software|platform|app/i.test(text);
     const isFood = /مطعم|كافي|مقهى|قهوة|وجبات|فود|طعام|مأكولات|مشروبات/i.test(text);
     return { isDigital, isFood };
@@ -232,6 +236,8 @@ export async function runQAChecks(state, results) {
                     // تدقيق 2026-07-08 (ملاحظة حرجة، خبير السوق): وجود أي تراخيص لا يعني
                     // اكتمالها — مشروع مطعم بلا رخصة هيئة الغذاء والدواء (SFDA) يمر هذا
                     // الفحص سابقاً لمجرد طول المصفوفة > 0. تحقق مخصص لقطاع الأغذية.
+                    // isFandB أصبح projectContext.isFood (محسوب مرة واحدة أعلى الدالة عبر
+                    // sectorDetectionText نفسها) — لا حاجة لإعادة حسابه محلياً هنا.
                     const hasSfda = licenses.some(l => /الغذاء والدواء|SFDA/i.test(String(l?.name || '')));
                     if (projectContext.isFood && !hasSfda) {
                         qaResults.softWarnings.push({
@@ -364,7 +370,7 @@ export async function runQAChecks(state, results) {
 
             // 6) نسبة الإيرادات التراكمية للاستثمار حسب القطاع (معيار 4 في الإطار المعياري)
             //    النسبة = مجموع إيرادات سنوات الدراسة ÷ إجمالي الاستثمار
-            const sectorText = String(state?.projectInfo?.sector || state?.projectInfo?.concept || '');
+            const sectorText = sectorDetectionText(state?.projectInfo);
             const cumRevenue = (results?.incomeStatement || []).reduce((a, y) => a + (Number(y.revenue) || 0), 0);
             if (Number.isFinite(capexTotal) && capexTotal > 0 && cumRevenue > 0) {
                 const ratio = cumRevenue / capexTotal;

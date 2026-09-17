@@ -1434,7 +1434,7 @@ export class AdminDashboardView {
                     <h3 class="admin-card__title" style="margin:4px 0 0;">رحلة العميل من التسجيل إلى الدفع</h3>
                 </div>
                 <label class="admin-period-control">الفترة
-                    <select id="growthDaysSelect" class="admin-select" aria-label="فترة النمو">
+                    <select id="growthDaysSelect" class="admin-select" aria-label="الفترة الزمنية">
                         <option value="7">٧ أيام</option>
                         <option value="30">٣٠ يوماً</option>
                         <option value="90">٩٠ يوماً</option>
@@ -1851,7 +1851,7 @@ export class AdminDashboardView {
 
     async _renderInvestorTab(contentEl) {
         const days = this.behaviorDays;
-        contentEl.innerHTML = `${this._growthControlsHtml().replace('growthDaysSelect', 'investorDaysSelect')}<p class="admin-loading">جاري تحميل سلوك المستثمرين…</p>`;
+        contentEl.innerHTML = `${this._growthControlsHtml().replace('growthDaysSelect', 'investorDaysSelect').replace('النمو والاكتساب', 'المستثمرون والمشاركة').replace('رحلة العميل من التسجيل إلى الدفع', 'تفاعل المستثمرين مع روابط المشاركة')}<p class="admin-loading">جاري تحميل سلوك المستثمرين…</p>`;
         const stats = (name, group = null) => AdminService.getEventsStats(name, days, group);
         const [sharing, views, prints, referrals, created, revoked, feedback] = await Promise.all([
             AdminService.getSharingStats(),
@@ -1874,7 +1874,7 @@ export class AdminDashboardView {
         const viewRate = createdCount ? formatPercent(shareViews / createdCount) : '—';
 
         contentEl.innerHTML = `
-            ${this._growthControlsHtml().replace('growthDaysSelect', 'investorDaysSelect')}
+            ${this._growthControlsHtml().replace('growthDaysSelect', 'investorDaysSelect').replace('النمو والاكتساب', 'المستثمرون والمشاركة').replace('رحلة العميل من التسجيل إلى الدفع', 'تفاعل المستثمرين مع روابط المشاركة')}
             <div class="admin-tile-grid admin-tile-grid--executive">
                 ${this._tile('إجمالي روابط المشاركة', formatNumber(shareTotal))}
                 ${this._tile('الروابط النشطة', formatNumber(activeShares))}
@@ -1928,7 +1928,7 @@ export class AdminDashboardView {
 
     async _renderIndustryTab(contentEl) {
         const days = this.behaviorDays;
-        contentEl.innerHTML = `${this._growthControlsHtml().replace('growthDaysSelect', 'industryDaysSelect')}<p class="admin-loading">جاري تحليل القطاعات والقوالب…</p>`;
+        contentEl.innerHTML = `${this._growthControlsHtml().replace('growthDaysSelect', 'industryDaysSelect').replace('النمو والاكتساب', 'القطاعات والقوالب').replace('رحلة العميل من التسجيل إلى الدفع', 'الطلب القطاعي وأداء القوالب')}<p class="admin-loading">جاري تحليل القطاعات والقوالب…</p>`;
         const [studies, created, completed, steps, exports] = await Promise.all([
             AdminService.getStudiesStats(),
             AdminService.getEventsStats('study_created', days, 'source'),
@@ -1946,7 +1946,7 @@ export class AdminDashboardView {
         const topSector = bySector[0]?.sector || bySector[0]?.value || 'غير متاح';
 
         contentEl.innerHTML = `
-            ${this._growthControlsHtml().replace('growthDaysSelect', 'industryDaysSelect')}
+            ${this._growthControlsHtml().replace('growthDaysSelect', 'industryDaysSelect').replace('النمو والاكتساب', 'القطاعات والقوالب').replace('رحلة العميل من التسجيل إلى الدفع', 'الطلب القطاعي وأداء القوالب')}
             <div class="admin-tile-grid admin-tile-grid--executive">
                 ${this._tile('أكثر قطاع طلبًا', this._esc(topSector))}
                 ${this._tile('دراسات منشأة', formatNumber(studyCreated))}
@@ -2114,7 +2114,17 @@ export class AdminDashboardView {
             </table></div>`;
         contentEl.querySelectorAll('.bank-confirm-btn').forEach((btn) => {
             btn.addEventListener('click', async () => {
-                if (!window.confirm('هل تأكّدت من وصول الحوالة إلى حساب الشركة؟ سيُفتح التصدير للعميل فوراً.')) return;
+                const confirmResult = await Swal.fire({
+                    title: 'تأكيد وصول الحوالة؟',
+                    text: 'هل تأكّدت من وصول الحوالة إلى حساب الشركة؟ سيُفتح التصدير للعميل فوراً.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'نعم، تأكيد',
+                    cancelButtonText: 'إلغاء',
+                    customClass: { confirmButton: 'btn btn--sm btn--primary', cancelButton: 'btn btn--sm btn--ghost' },
+                    buttonsStyling: false,
+                });
+                if (!confirmResult.isConfirmed) return;
                 btn.disabled = true;
                 btn.textContent = 'جارٍ التأكيد...';
                 const r = await AdminService.confirmBankTransfer(btn.dataset.order);
