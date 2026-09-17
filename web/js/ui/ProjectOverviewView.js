@@ -251,7 +251,7 @@ export class ProjectOverviewView {
             Number.isFinite(Number(ind.npv)) ? { label: 'صافي القيمة الحالية', value: fmtMoney(ind.npv), good: Number(ind.npv) > 0 } : null,
             Number.isFinite(Number(ind.irr)) ? { label: 'معدل العائد الداخلي', value: fmtPct(ind.irr), good: Number(ind.irr) > 0 } : null,
             Number(ind.paybackPeriod) > 0 ? { label: 'فترة الاسترداد', value: fmtYears(ind.paybackPeriod), good: true } : null,
-            Number.isFinite(Number(ind.roi)) ? { label: 'العائد على الاستثمار', value: fmtPct(ind.roi), good: Number(ind.roi) > 0 } : null,
+            Number.isFinite(Number(ind.roi)) ? { label: 'العائد التراكمي على الاستثمار', value: fmtPct(ind.roi), good: Number(ind.roi) > 0 } : null,
             Number.isFinite(Number(ind.breakEvenPointValue)) ? { label: 'نقطة التعادل (سنوياً)', value: fmtMoney(ind.breakEvenPointValue), good: true } : null,
             Number.isFinite(Number(ind.profitMargin)) ? { label: 'هامش الربح الصافي', value: fmtPct(ind.profitMargin), good: Number(ind.profitMargin) > 0 } : null
         ].filter(Boolean);

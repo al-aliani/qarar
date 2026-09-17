@@ -384,7 +384,7 @@ export class DecisionDashboard {
                                 صافي القيمة الحالية <strong class="${(results?.indicators?.npv ?? 0) >= 0 ? 'text-success' : 'text-danger'}">${this.formatCurrency(results?.indicators?.npv)}</strong> ·
                                 العائد الداخلي <strong>${this.formatPercent(results?.indicators?.irr)}</strong> ·
                                 الاسترداد <strong>${Number.isFinite(results?.indicators?.paybackPeriod) && results.indicators.paybackPeriod > 0 ? (Math.round(results.indicators.paybackPeriod * 10) / 10) + ' سنة' : 'غير محقق'}</strong> ·
-                                العائد على الاستثمار <strong>${this.formatPercent(results?.indicators?.roi)}</strong> ·
+                                العائد التراكمي على الاستثمار <strong>${this.formatPercent(results?.indicators?.roi)}</strong> ·
                                 فجوة التمويل <strong>${this.formatFundingGapLabel(financingDiagnostics.fundingGap, financingDiagnostics.fundingGapThreshold)}</strong> ·
                                 DSCR <strong>${Number.isFinite(financingDiagnostics.dscr) ? Number(financingDiagnostics.dscr).toFixed(2) + 'x' : 'غير قابل للحساب'}</strong>
                                 — التفاصيل الكاملة (قوائم الدخل، الرسوم، التوقعات 5-7 سنوات) في لوحة المؤشرات المالية.

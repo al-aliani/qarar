@@ -23,7 +23,7 @@ const STRINGS = {
     npv: { ar: 'صافي القيمة الحالية (NPV)', en: 'Net Present Value (NPV)' },
     irr: { ar: 'معدل العائد الداخلي (IRR)', en: 'Internal Rate of Return (IRR)' },
     payback_period: { ar: 'فترة الاسترداد', en: 'Payback Period' },
-    roi: { ar: 'العائد على الاستثمار (ROI)', en: 'Return on Investment (ROI)' },
+    roi: { ar: 'العائد التراكمي على الاستثمار (ROI)', en: 'Cumulative Return on Investment (ROI)' },
 
     // قائمة الدخل
     revenue: { ar: 'الإيرادات', en: 'Revenue' },

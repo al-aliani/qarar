@@ -34,6 +34,9 @@ export class ZakatView {
         // وعاء 32,020 × 2.5% ≠ 6,409 (تدقيق ٢٠٢٦-٠٧-٠٦).
         const rows = (results?.incomeStatement || []).map(y => ({
             year: y.year,
+            ebt: y.ebt || 0,
+            bookDepreciation: y.depreciation || 0,
+            taxDepreciation: y.taxDepreciation || 0,
             base: Math.max(0, y.zakatBase ?? Math.max(0, y.ebt || 0)),
             // تدقيق 2026-09-16: الضريبة تُحسب على "الربح المعدّل" وحده — رقم يختلف عن
             // base أعلاه (قد يعلوه الوعاء الزكوي بطريقة مصادر الأموال). صف مستقل أدناه
@@ -106,7 +109,19 @@ export class ZakatView {
                                 </tr>
                                 ${foreignShare > 0 ? `
                                     <tr>
-                                        <td>الربح المعدّل (وعاء ضريبة الدخل — يختلف عن الوعاء الزكوي أعلاه)</td>
+                                        <td>الربح قبل الزكاة والضريبة (EBT)</td>
+                                        ${rows.map(y => `<td class="font-mono text-muted">${fmt(y.ebt)}</td>`).join('')}
+                                    </tr>
+                                    <tr>
+                                        <td>(+) الإهلاك المحاسبي</td>
+                                        ${rows.map(y => `<td class="font-mono text-muted">${fmt(y.bookDepreciation)}</td>`).join('')}
+                                    </tr>
+                                    <tr>
+                                        <td>(−) الإهلاك الضريبي</td>
+                                        ${rows.map(y => `<td class="font-mono text-muted">${fmt(y.taxDepreciation)}</td>`).join('')}
+                                    </tr>
+                                    <tr>
+                                        <td><strong>= الربح المعدّل الخاضع للضريبة</strong></td>
                                         ${rows.map(y => `<td class="font-mono text-muted">${fmt(y.adjustedProfit)}</td>`).join('')}
                                     </tr>
                                     <tr class="bg-glass-heavy">

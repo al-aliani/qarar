@@ -13,7 +13,7 @@ function setPath(target, section, path, value) {
 }
 
 const metric = (label, key, type = 'money') => ({ label, key, type });
-const METRICS = [metric('صافي القيمة الحالية', 'npv'), metric('العائد الداخلي', 'irr', 'percent'), metric('العائد على الاستثمار', 'roi', 'percent'), metric('فترة الاسترداد', 'paybackPeriod', 'years')];
+const METRICS = [metric('صافي القيمة الحالية', 'npv'), metric('العائد الداخلي', 'irr', 'percent'), metric('العائد التراكمي على الاستثمار', 'roi', 'percent'), metric('فترة الاسترداد', 'paybackPeriod', 'years')];
 
 export function compareStudyChange(study, { section, path, value }) {
     const nextStudy = structuredClone(study || {});

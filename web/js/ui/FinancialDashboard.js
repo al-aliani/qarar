@@ -309,7 +309,7 @@ export class FinancialDashboard {
                 ${this.renderKPICard('NPV', 'صافي القيمة الحالية', this.formatCurrency(indicators.npv), indicators.npv >= 0 ? 'positive' : 'negative')}
                 ${this.renderKPICard('IRR', 'معدل العائد الداخلي', this.formatPercent(indicators.irr), indicators.irr >= decisionThresholds.minIRR ? 'positive' : 'negative')}
                 ${this.renderKPICard('PAYBACK', 'فترة الاسترداد', (indicators.paybackPeriod != null && Number.isFinite(indicators.paybackPeriod)) ? indicators.paybackPeriod.toFixed(1) + ' سنة' : 'غير قابل للاسترداد خلال فترة الدراسة', 'neutral')}
-                ${this.renderKPICard('ROI', 'العائد على الاستثمار', this.formatPercent(indicators.roi), indicators.roi >= decisionThresholds.minROI ? 'positive' : 'negative')}
+                ${this.renderKPICard('ROI', 'العائد التراكمي على الاستثمار', this.formatPercent(indicators.roi), indicators.roi >= decisionThresholds.minROI ? 'positive' : 'negative')}
             </div>
 
             <!-- النسب المالية (سنة 1) — سيولة/ملاءة/ربحية من engine.js result.ratios (مخفى في العرض المبسّط) -->
@@ -330,9 +330,9 @@ export class FinancialDashboard {
                         <p class="text-xs text-muted mt-1">مبيعات شهرية للوصول لتعادل التكاليف</p>
                     </div>
                     <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">
-                        <div class="kpi-label text-muted">العائد على الاستثمار (ROI)</div>
+                        <div class="kpi-label text-muted">العائد التراكمي على الاستثمار (ROI)</div>
                         <div class="kpi-value ${(indicators.roi || 0) >= decisionThresholds.minROI ? 'positive' : 'negative'}">${this.formatPercent(indicators.roi)}</div>
-                        <p class="text-xs text-muted mt-1">عائد سنوي على إجمالي الاستثمار</p>
+                        <p class="text-xs text-muted mt-1">صافي أرباح مدة الدراسة ÷ إجمالي الاستثمار</p>
                     </div>
                     <div class="kpi-card" style="background: var(--c-surface-2); border-radius: 8px; padding: 16px;">
                         <div class="kpi-label text-muted">نسبة تغطية خدمة الدين (DSCR)</div>
