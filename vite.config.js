@@ -93,6 +93,13 @@ export default defineConfig({
                 blogBreakEven: resolve(__dirname, 'web/break-even-point-explained.html'),
                 blogPaybackDscr: resolve(__dirname, 'web/payback-period-dscr-explained.html'),
                 blogNitaqat: resolve(__dirname, 'web/nitaqat-saudization-small-business.html'),
+                blogPerfumeShop: resolve(__dirname, 'web/perfume-shop-feasibility-study-saudi.html'),
+                blogSaas: resolve(__dirname, 'web/saas-app-feasibility-study-saudi.html'),
+                blogSensitivity: resolve(__dirname, 'web/sensitivity-analysis-monte-carlo.html'),
+                blogVatZakat: resolve(__dirname, 'web/vat-zakat-feasibility-study.html'),
+                blogGosi: resolve(__dirname, 'web/gosi-cost-feasibility-study.html'),
+                blogFreeVsDetailed: resolve(__dirname, 'web/free-vs-detailed-feasibility-study.html'),
+                blogProfitVsCashFlow: resolve(__dirname, 'web/accounting-profit-vs-cash-flow.html'),
                 experiences: resolve(__dirname, 'web/experiences.html'),
                 suppliers: resolve(__dirname, 'web/suppliers.html'),
                 // investor.html: صفحة عرض المستثمر (للقراءة فقط) — أُصلح الاستيراد المكسور (getPitchFromStorage)
