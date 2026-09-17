@@ -268,6 +268,11 @@ export class AdminDashboardView {
             return;
         }
 
+        if (tabKey === 'operations') {
+            await this._renderConnectedOperations(contentEl);
+            return;
+        }
+
         if (tabKey === 'innovation') {
             await this._renderInnovationTab(contentEl);
             return;
@@ -2443,11 +2448,6 @@ export class AdminDashboardView {
             if (!silent) contentEl.innerHTML = `<p class="admin-error">تعذّر تحميل رادار الموقع: ${this._esc(result.error)}</p>`;
             return;
         }
-        if (tabKey === 'operations') {
-            await this._renderConnectedOperations(contentEl);
-            return;
-        }
-
         const data = result.data || {};
         const current = data.current_period || {};
         const previous = data.previous_period || {};
