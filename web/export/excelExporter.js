@@ -8,6 +8,7 @@
 import { sanitizeSheetName, sanitizeFilename, loadXLSX, formatExportDateTime, exportDateISO, SAFE, formatDscr } from './utils.js';
 import { t, yearColumnLabel } from '../js/i18n/reportStrings.js';
 import { formatRatio } from './ratioUnits.js';
+import { DEFAULT_SCENARIOS } from '../js/core/schema.js';
 
 /** معرّفات أوراق المحتوى (بعد ورقة الفهرس) — قابلة للربط مع reportSectionOrder. */
 const EXCEL_SHEET_IDS = [
@@ -465,7 +466,11 @@ export class ExcelExporter {
                 lang === 'en' ? '(+/-) Working Capital & Other Adjustments' : '(±) تغيّر رأس المال العامل وتسويات أخرى',
                 residual
             ),
+            // كانا غائبين تماماً عن Excel رغم وجودهما في Word لنفس البيانات (createCashFlowTable) —
+            // نفس الدراسة تُنتج قصتين ماليتين مختلفتين حسب صيغة التصدير (تدقيق شامل 2026-09-16).
+            ...rowIfAny(t('vat_net_payable', lang), (c) => component(c, 'vatNetPayable')),
             [t('net_cash_flow', lang), ...list.map((c) => SAFE.num(c.cashFlow))],
+            ...rowIfAny(t('cash_flow_after_vat', lang), (c) => component(c, 'cashFlowAfterVat')),
             [t('cumulative_cash_flow', lang), ...cum],
         ];
 
@@ -847,11 +852,16 @@ export class ExcelExporter {
         // فتُقرأ undefined ⟶ SAFE.num تُحوّلها 0 لكل سيناريو بما فيه الأساسي. النتائج
         // الفعلية المحسوبة (npv/irr/payback) موجودة في this.results.scenarios[key].kpis
         // (انظر engine.js buildScenarios/runCase) — مصدر منفصل عن مدخلات السيناريو الخام.
+        // تصحيح (تدقيق شامل 2026-09-16): fallback كان {revenueChange:0, costChange:0} محلياً
+        // بدل DEFAULT_SCENARIOS الحقيقي — عند غياب state.scenarios (دراسة قديمة/مُرحَّلة)
+        // كانت الأعمدة تعرض "0%/0%" لكل السيناريوهات الثلاثة رغم أن NPV/IRR الفعليين
+        // (المحسوبين من DEFAULT_SCENARIOS نفسه في المحرك) متباعدان جداً — يبدو كخطأ حسابي
+        // جوهري بينما الوصف فقط هو الخاطئ.
         const sc = this.data?.scenarios || {};
         const scRes = this.results?.scenarios || {};
-        const p = sc.pessimistic || { revenueChange: 0, costChange: 0, description: '—' };
-        const b = sc.base || { revenueChange: 0, costChange: 0, description: '—' };
-        const o = sc.optimistic || { revenueChange: 0, costChange: 0, description: '—' };
+        const p = sc.pessimistic || { ...DEFAULT_SCENARIOS.pessimistic, description: '—' };
+        const b = sc.base || { ...DEFAULT_SCENARIOS.base, description: '—' };
+        const o = sc.optimistic || { ...DEFAULT_SCENARIOS.optimistic, description: '—' };
         const pRes = scRes.pessimistic?.kpis || {};
         const bRes = scRes.base?.kpis || {};
         const oRes = scRes.optimistic?.kpis || {};
