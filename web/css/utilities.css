@@ -290,7 +290,7 @@
    تدقيق ShareView.js (صفحة مشاركة المستثمر/البنك الخارجية) — 94 فئة Tailwind
    وهمية بلا أي تعريف CSS فعلي (tailwind.config.js لا يغطي web/js/**). القيم
    تطابق سلّم Tailwind الفعلي كبقية هذا الملف؛ الألوان حصراً عبر متغيرات
-   --c-*/--grad-* الموجودة أصلاً في variables.css — بلا أي قيمة hex جديدة.
+   متغيرات الألوان والتدرجات الموجودة أصلاً في variables.css — بلا أي قيمة hex جديدة.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* --- أولوية قصوى: print:hidden لم تكن معرَّفة إطلاقاً — شريط التنقّل الثابت
@@ -485,7 +485,7 @@
 .h-10 { height: 40px; }
 .h-40 { height: 160px; }
 
-/* --- ألوان: عبر --c-accent-*/--c-warning/--c-primary الموجودة، + --c-accent-teal
+/* --- ألوان: عبر متغيرات c-accent وc-warning وc-primary الموجودة، + --c-accent-teal
    المضافة بنفس نمطها في variables.css (لا بديل فيروزي كان موجوداً) --- */
 .bg-amber-500 { background-color: var(--c-warning); }
 .text-primary { color: var(--c-primary); }
@@ -550,7 +550,7 @@
 
 /* تدرّج بنفسجي/فيروزي خفيف لرأس M&A Hub / Supply Chain Sandbox — Tailwind يبني
    هذا عبر متغيرات --tw-gradient-* غير الموجودة هنا؛ تعريف مباشر يغطي التركيبتين
-   الفعليتين المستخدَمتين فقط (from-*/500/10 + to-transparent + bg-gradient-to-l). */
+   الفعليتين المستخدَمتين فقط (from-color-500/10 + to-transparent + bg-gradient-to-l). */
 .bg-gradient-to-l.from-purple-500\/10 {
     background-image: linear-gradient(to left, color-mix(in srgb, var(--c-accent-purple) 10%, transparent), transparent);
 }
