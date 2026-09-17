@@ -133,13 +133,25 @@ export const GENERIC_VALUATION_MULTIPLE = 3;
  * @returns {{multiple:number, label:string, isGeneric:boolean}}
  */
 export function resolveValuationMultiple(state) {
-    const text = state?.projectInfo?.sector || state?.projectInfo?.concept || state?.projectInfo?.activity;
-    const bench = detectSectorBenchmark(text);
+    const bench = detectSectorBenchmark(sectorDetectionText(state?.projectInfo));
     if (!bench) {
         return { multiple: GENERIC_VALUATION_MULTIPLE, label: GENERIC_BENCHMARK.label, isGeneric: true };
     }
     const sectorKey = Object.keys(SECTOR_BENCHMARKS).find(k => SECTOR_BENCHMARKS[k] === bench);
     return { multiple: SECTOR_VALUATION_MULTIPLES[sectorKey] ?? GENERIC_VALUATION_MULTIPLE, label: bench.label, isGeneric: false };
+}
+
+/**
+ * يجمع كل نصوص القطاع/الفكرة المتاحة على projectInfo بدل اختيار أحدها فقط (تدقيق
+ * شامل 2026-09-16): القوالب الرسمية (TemplateGallery.js) تملأ sector بنص تصنيفي عام
+ * أحياناً (مثال: "تقنية المعلومات" لقالب SaaS، "الخدمات الشخصية والعناية" لقالب
+ * الصالون) بينما concept يحمل النص الدقيق المطابق فعلياً لمعيار قطاعي محدد ("تطبيق
+ * إلكتروني / منصة رقمية"، "صالون / مركز تجميل"). اختيار أحدهما فقط (sector || concept)
+ * كان يُسقط تصنيف قطاعين رسميين كاملين إلى "عام (غير مصنّف)" فتختفي كل تحذيرات الجودة
+ * القطاعية بصمت — الدمج (لا الاختيار) يضمن مطابقة أي نص يحمل الإشارة الصحيحة.
+ */
+export function sectorDetectionText(projectInfo) {
+    return [projectInfo?.sector, projectInfo?.concept, projectInfo?.activity].filter(Boolean).join(' ');
 }
 
 /** يكتشف قطاع الدراسة من نص القطاع/الفكرة — null إن لم يُطابق */
@@ -160,8 +172,7 @@ export function detectSectorBenchmark(sectorText) {
  * @returns {{label:string, variableCostRate:number[], rentToRevenue:number[], laborToRevenue:number[], marketingToRevenue:number[], netProfitToRevenue:number[], isGeneric:boolean}}
  */
 export function resolveSectorBenchmark(state) {
-    const text = state?.projectInfo?.sector || state?.projectInfo?.concept || state?.projectInfo?.activity;
-    const bench = detectSectorBenchmark(text);
+    const bench = detectSectorBenchmark(sectorDetectionText(state?.projectInfo));
     return bench ? { ...bench, isGeneric: false } : { ...GENERIC_BENCHMARK, isGeneric: true };
 }
 
@@ -175,7 +186,7 @@ export function resolveSectorBenchmark(state) {
  */
 export function checkDriversAgainstBenchmarks(state, results) {
     const warnings = [];
-    const bench = detectSectorBenchmark(state?.projectInfo?.sector || state?.projectInfo?.concept);
+    const bench = detectSectorBenchmark(sectorDetectionText(state?.projectInfo));
     if (!bench) return warnings;
 
     const y1 = results?.incomeStatement?.[0];
