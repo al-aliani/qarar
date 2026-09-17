@@ -25,6 +25,21 @@ const PUBLIC_PAGES = [
     'landing.html', 'pricing.html', 'about.html', 'help.html', 'contact.html',
     'why.html', 'deliverables.html', 'partners.html', 'experts.html',
     'blog.html', 'experiences.html', 'suppliers.html',
+    'breakeven-calculator.html', 'valuation-calculator.html',
+    'margin-of-safety-calculator.html', 'target-profit-calculator.html',
+    'cost-plus-pricing-calculator.html', 'profit-margin-calculator.html',
+    'daily-customers-calculator.html', 'payback-period-calculator.html',
+    'roi-calculator.html', 'cost-increase-impact-calculator.html',
+    'startup-capital-calculator.html', 'loan-coverage-calculator.html',
+    'debt-to-equity-calculator.html', 'staffing-needs-calculator.html',
+    'hire-breakeven-calculator.html', 'capacity-revenue-calculator.html',
+    'marketing-campaign-breakeven-calculator.html',
+    'pricing-mistakes-small-business.html', 'is-your-project-worth-it-roi.html',
+    'how-much-money-to-start.html', 'should-you-take-a-business-loan.html',
+    'when-to-hire-first-employee.html', 'how-many-customers-do-you-need-daily.html',
+    'customer-acquisition-cost-explained.html', 'how-to-value-your-company.html',
+    'validate-idea-before-spending.html', 'profit-vs-cash-flow.html',
+    'conservative-scenario-stress-test.html',
 ];
 
 function extractMeta(html, attr, value) {
@@ -42,7 +57,7 @@ describe('OG/Twitter — كل صفحة عامة قابلة للمشاركة تح
         const html = read(page);
         expect(extractMeta(html, 'property', 'og:title'), 'og:title').toBeTruthy();
         expect(extractMeta(html, 'property', 'og:description'), 'og:description').toBeTruthy();
-        expect(extractMeta(html, 'property', 'og:type'), 'og:type').toBe('website');
+        expect(extractMeta(html, 'property', 'og:type'), 'og:type').toMatch(/^(website|article)$/);
         expect(extractMeta(html, 'property', 'og:url'), 'og:url').toMatch(/^https:\/\/sahib\.sa\//);
     });
 

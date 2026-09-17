@@ -1,0 +1,15 @@
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+const errors = [];
+page.on('pageerror', e => errors.push(e.message));
+page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+await page.goto('http://127.0.0.1:4173/landing.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+await page.waitForTimeout(2500);
+await page.screenshot({ path: 'output/cms-landing-verify.png', fullPage: false });
+console.log(JSON.stringify({ title: await page.title(), textLength: (await page.locator('body').innerText()).length, hero: await page.locator('[data-cms-text="hero.title"]').innerText(), errors }));
+await page.goto('http://127.0.0.1:4173/page.html?slug=missing', { waitUntil: 'domcontentloaded', timeout: 15000 });
+await page.waitForTimeout(1500);
+console.log(JSON.stringify({ page404: (await page.locator('#cmsPage').innerText()).slice(0,100), errors }));
+await browser.close();
+process.exit(0);
