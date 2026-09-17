@@ -82,6 +82,18 @@ describe('calculateProjectScore — بند فترة الاسترداد (25 نق�
         const d = r.details.find(d => d.label === 'فترة الاسترداد غير محققة');
         expect(d?.score).toBe(0);
     });
+
+    // كانت فترة استرداد شديدة السرعة (مثل 0.1 سنة، غالباً بيانات تكلفة/استثمار ناقصة لا
+    // أداءً استثنائياً) تمر من شرط payback<=maxPayback حرفياً وتُحسب "نقطة قوة" كاملة في
+    // بطاقة «لماذا هذا القرار؟» — بجانب تحذير computeDecision «المؤشرات مرتفعة بشكل غير
+    // معتاد» لنفس القيمة (implausible check، نفس عتبة 1.2 سنة). تناقض مباشر على نفس الشاشة.
+    it('استرداد أسرع من 1.2 سنة يُعلَّم issue ولا يُحسب نقطة قوة كاملة', () => {
+        const r = calculateProjectScore({}, { indicators: ind({ paybackPeriod: 0.1 }) });
+        const d = r.details.find(d => d.label.includes('سريعة بشكل غير معتاد'));
+        expect(d?.score).toBe(10);
+        expect(d?.issue).toBe(true);
+        expect(r.details.some(x => x.label.includes('≤ 3.5 سنوات'))).toBe(false);
+    });
 });
 
 describe('calculateProjectScore — بند الربحية (5 نقاط، خُفِّضت من 15 تدقيق 2026-07-12 لإفساح مكوّن المخاطر)', () => {
@@ -172,7 +184,9 @@ describe('calculateProjectScore — سقف 100 ودرجات التقدير (rati
             monteCarlo: { lastRun: { successProbability: 0.9 } } // بلا هذا: 95 كحد أقصى (مخاطر محايدة 5/10 لا 10/10)
         };
         state.monteCarlo.lastRun.inputsFingerprint = computeInputsFingerprint(state);
-        const r = calculateProjectScore(state, { indicators: ind({ npv: 999999, irr: 0.5, paybackPeriod: 1, roi: 0.5 }) });
+        // paybackPeriod: 2 لا 1 — أقل من 1.2 سنة يُعامَل كإشارة بيانات تكلفة ناقصة لا نقطة
+        // قوة (راجع فحص implausible في computeDecision بـ engine.js، نفس العتبة هنا الآن).
+        const r = calculateProjectScore(state, { indicators: ind({ npv: 999999, irr: 0.5, paybackPeriod: 2, roi: 0.5 }) });
         expect(r.score).toBe(100);
         expect(r.rating).toBe('A+');
     });

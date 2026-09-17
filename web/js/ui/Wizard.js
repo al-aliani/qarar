@@ -1479,8 +1479,11 @@ export class Wizard {
         }
 
         const phGeneric = (fieldHint?.placeholder && displayValue === '') ? `placeholder="${fieldHint.placeholder}"` : '';
-        // حقل التاريخ يُعرض باتجاه LTR داخل نموذج RTL
-        const dirAttr = inputType === 'date' ? 'dir="ltr" style="text-align:right"' : '';
+        // حقل التاريخ يُعرض باتجاه LTR داخل نموذج RTL — direction inline (لا فقط dir=)
+        // لأن قاعدة CSS المقابلة (input[type="date"]{direction:ltr}) تُفقد أحياناً من
+        // حزمة الإنتاج المبنية (تأكيد عبر build محلي)، وسمة dir وحدها لا تكفي لتجاوز
+        // body{direction:rtl} الموروثة في كل المتصفحات المُختبرة.
+        const dirAttr = inputType === 'date' ? 'dir="ltr" style="direction:ltr;text-align:right"' : '';
         return `
             <div class="form-group">
                 <label for="field-${fullKey}">${arabicLabel}${tooltipHtml}</label>

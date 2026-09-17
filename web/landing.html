@@ -664,6 +664,9 @@
       .grid-4, .steps, .pillars { grid-template-columns: repeat(2, 1fr); }
       .hero-curve { display: none; }
       .wa-fab { display: flex; }
+      /* .wa-fab عائم بـposition:fixed فوق الزاوية — بلا هذا الهامش يتراكب مع نص
+         حقوق النشر/إخلاء المسؤولية في أسفل الفوتر عند نهاية التمرير. */
+      .foot-copy { padding-inline-end: 84px; }
       /* على الجوال لا نرفع البطاقة المميّزة — تبقى في التدفق مع فسحة للشارة */
       .price.featured { transform: none; margin-top: 8px; }
       .price.featured:hover { transform: translateY(-4px); }

@@ -66,8 +66,15 @@ export function calculateProjectScore(state, results) {
         details.push({ category: 'financial', label: 'معدل العائد الداخلي غير محقق', score: 0, max: 25, issue: true });
     }
 
-    // فترة الاسترداد (حتى 25)
-    if (payback > 0 && payback <= maxPayback) {
+    // فترة الاسترداد (حتى 25) — تدقيق: استرداد أقل من 1.2 سنة (نفس عتبة implausible في
+    // computeDecision أعلاه في هذا الملف) غالباً يعني بيانات تكلفة/استثمار ناقصة لا أداءً
+    // استثنائياً؛ كان يُحسب "نقطة قوة" كاملة لمروره حرفياً بشرط payback <= maxPayback، فيظهر
+    // في بطاقة «لماذا هذا القرار؟» كنقطة قوة بجانب تحذير «المؤشرات مرتفعة بشكل غير معتاد»
+    // لنفس الدراسة — تناقض مباشر يقوّض ثقة المستخدم بالتقرير.
+    if (payback > 0 && payback < 1.2) {
+        score += 10;
+        details.push({ category: 'financial', label: 'فترة الاسترداد سريعة بشكل غير معتاد — تحقّق من اكتمال بيانات التكلفة والاستثمار', score: 10, max: 25, issue: true });
+    } else if (payback > 0 && payback <= maxPayback) {
         score += 25;
         details.push({ category: 'financial', label: `فترة الاسترداد ≤ ${maxPayback} سنوات`, score: 25, max: 25 });
     } else if (payback > 0 && payback < 10) {
