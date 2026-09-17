@@ -1,14 +1,18 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Wizard } from '../Wizard.js';
 import { CentralAssumptionsView } from '../CentralAssumptionsView.js';
 import { generateBusinessModel } from '../../services/InternalAIGenerator.js';
 
+const webRoot = existsSync(resolve(process.cwd(), 'app.js'))
+    ? process.cwd()
+    : resolve(process.cwd(), 'web');
+
 describe('دفعة الموثوقية الثانية', () => {
     it('يربط زري التراجع والإعادة بتاريخ store ويحدّث حالتهما', () => {
-        const app = readFileSync(resolve(process.cwd(), 'app.js'), 'utf8');
+        const app = readFileSync(resolve(webRoot, 'app.js'), 'utf8');
         expect(app).toContain("document.getElementById('headerUndoStudy')");
         expect(app).toContain('await store.undo()');
         expect(app).toContain('await store.redo()');
@@ -57,7 +61,7 @@ describe('دفعة الموثوقية الثانية', () => {
     });
 
     it('يفصح سطح التصدير عن النسخ السحابية بنفس نص سياسة الخصوصية', () => {
-        const source = readFileSync(resolve(process.cwd(), 'js/ui/ExportMenu.js'), 'utf8');
+        const source = readFileSync(resolve(webRoot, 'js/ui/ExportMenu.js'), 'utf8');
         expect(source).toContain('Excel وWord وPowerPoint');
         expect(source).toContain('مركز التنزيلات');
         expect(source).not.toContain('تُعالَج ملفات التصدير محلياً على جهازك، باستثناء');
