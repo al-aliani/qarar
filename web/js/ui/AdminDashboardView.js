@@ -21,6 +21,7 @@ import { formatCurrency, formatNumber, formatPercent } from '../utils/formatters
 import { escapeHtml } from '../utils/escape.js';
 import { ADMIN_FEATURE_CATALOG } from '../data/adminFeatureCatalog.js';
 import { SiteEditorView } from './SiteEditorView.js';
+import { adminCreateParty, adminListConnectedOperations, adminUpdateParty, adminUpdateWorkRequest } from '../services/ConnectedWorkspaceService.js';
 import Swal from 'sweetalert2';
 
 const TABS = [
@@ -44,6 +45,7 @@ const TABS = [
     { key: 'team', label: 'الفريق والدعم' },
     { key: 'content', label: 'المحتوى والصفحات' },
     { key: 'site_editor', label: 'محرر الموقع' },
+    { key: 'operations', label: 'الطلبات والجهات' },
     { key: 'innovation', label: 'رادار الابتكار' },
     { key: 'strategy', label: 'مؤشرات المستثمرين' },
     { key: 'coverage', label: 'تغطية 300 ميزة' },
@@ -63,7 +65,7 @@ const TAB_GROUPS = [
     { title: 'المبيعات والنمو', keys: ['revenue', 'subscriptions', 'bank_transfers', 'growth', 'strategy', 'investor'] },
     { title: 'المستخدمون والسوق', keys: ['users', 'platform', 'industry', 'behavior', 'sharing'] },
     { title: 'المنتج والجودة', keys: ['studies', 'quality', 'ai', 'coverage', 'innovation', 'experiments'] },
-    { title: 'التشغيل والموثوقية', keys: ['reliability', 'security', 'reports'] },
+    { title: 'التشغيل والموثوقية', keys: ['operations', 'reliability', 'security', 'reports'] },
     { title: 'الدعم والرضا', keys: ['tickets', 'satisfaction', 'reviews', 'reviewers', 'team'] },
     { title: 'المحتوى', keys: ['site_editor', 'content'] },
 ];
@@ -1241,6 +1243,35 @@ export class AdminDashboardView {
         `;
     }
 
+    async _renderConnectedOperations(contentEl) {
+        contentEl.innerHTML = '<p class="admin-loading">جاري تحميل الطلبات والجهات…</p>';
+        const result = await adminListConnectedOperations();
+        if (!result.ok) { contentEl.innerHTML = `<p class="admin-error">${this._esc(result.error)}</p>`; return; }
+        const { requests, parties } = result.data;
+        contentEl.innerHTML = `<section class="admin-section">
+            <div class="admin-section__header"><div><h2>الطلبات والجهات المتصلة</h2><p>إدارة دورة الطلب من الاستلام حتى الإكمال، ودليل الموردين والخبراء والشركاء والممولين.</p></div><button class="btn btn--primary btn--sm" id="adminAddParty">إضافة جهة</button></div>
+            <div class="admin-stats-grid"><div class="admin-stat"><strong>${requests.length}</strong><span>طلب حديث</span></div><div class="admin-stat"><strong>${parties.length}</strong><span>جهة مسجلة</span></div><div class="admin-stat"><strong>${requests.filter(x => !['completed','cancelled','rejected'].includes(x.status)).length}</strong><span>قيد المتابعة</span></div></div>
+            <h3>الطلبات</h3><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>الطلب</th><th>النوع</th><th>الحالة</th></tr></thead><tbody>${requests.map(x => `<tr><td>${this._esc(x.title)}</td><td>${this._esc(x.request_type)}</td><td><select class="admin-select" data-operation-request="${this._esc(x.id)}">${['new','received','processing','waiting_customer','offered','accepted','rejected','completed','cancelled'].map(status => `<option value="${status}" ${x.status === status ? 'selected' : ''}>${status}</option>`).join('')}</select></td></tr>`).join('') || '<tr><td colspan="3">لا توجد طلبات.</td></tr>'}</tbody></table></div>
+            <h3>دليل الجهات</h3><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>الجهة</th><th>النوع</th><th>التحقق</th><th>مفعلة</th></tr></thead><tbody>${parties.map(x => `<tr><td>${this._esc(x.name)}</td><td>${this._esc(x.party_type)}</td><td><select class="admin-select" data-party-verification="${this._esc(x.id)}"><option value="pending" ${x.verification_status === 'pending' ? 'selected' : ''}>معلق</option><option value="verified" ${x.verification_status === 'verified' ? 'selected' : ''}>موثق</option><option value="rejected" ${x.verification_status === 'rejected' ? 'selected' : ''}>مرفوض</option></select></td><td><input type="checkbox" data-party-active="${this._esc(x.id)}" ${x.active ? 'checked' : ''}></td></tr>`).join('') || '<tr><td colspan="4">لا توجد جهات.</td></tr>'}</tbody></table></div>
+        </section>`;
+        contentEl.querySelectorAll('[data-operation-request]').forEach(el => el.addEventListener('change', async () => {
+            const saved = await adminUpdateWorkRequest(el.dataset.operationRequest, el.value); saved.ok ? toast.success('تم تحديث حالة الطلب') : toast.error(saved.error);
+        }));
+        contentEl.querySelectorAll('[data-party-verification]').forEach(el => el.addEventListener('change', async () => {
+            const saved = await adminUpdateParty(el.dataset.partyVerification, { verification_status: el.value }); saved.ok ? toast.success('تم تحديث اعتماد الجهة') : toast.error(saved.error);
+        }));
+        contentEl.querySelectorAll('[data-party-active]').forEach(el => el.addEventListener('change', async () => {
+            const saved = await adminUpdateParty(el.dataset.partyActive, { active: el.checked }); saved.ok ? toast.success('تم تحديث ظهور الجهة') : toast.error(saved.error);
+        }));
+        contentEl.querySelector('#adminAddParty')?.addEventListener('click', async () => {
+            const name = window.prompt('اسم الجهة'); if (!name) return;
+            const partyType = window.prompt('النوع: supplier أو expert أو partner أو financier', 'supplier');
+            if (!['supplier','expert','partner','financier'].includes(partyType)) return toast.error('نوع الجهة غير صالح');
+            const saved = await adminCreateParty({ name: name.trim(), party_type: partyType, verification_status: 'pending', active: true });
+            if (!saved.ok) return toast.error(saved.error); toast.success('تمت إضافة الجهة'); await this._renderConnectedOperations(contentEl);
+        });
+    }
+
     async _renderBehaviorTab(contentEl) {
         contentEl.innerHTML = `${this._behaviorControlsHtml()}<p class="admin-loading">جارٍ التحميل…</p>`;
 
@@ -2392,6 +2423,8 @@ export class AdminDashboardView {
             share_link_created: 'أنشأ رابط مشاركة', share_view: 'فتح مشاركة', study_created: 'أنشأ دراسة',
             decision_action_opened: 'نفّذ إجراءً من القرار', post_feasibility_action_opened: 'بدأ إجراء ما بعد الجدوى',
             partner_need_opened: 'فتح احتياج شريك أو مورد',
+            decision_tasks_created: 'حوّل القرار إلى مهام', review_suggestion_decided: 'حسم اقتراح خبير',
+            work_request_created: 'أنشأ طلب خدمة مرتبطاً',
         })[name] || name || 'حدث غير معروف';
     }
 
@@ -2408,6 +2441,10 @@ export class AdminDashboardView {
         const result = await AdminService.getActivityRadar(this.radarMinutes);
         if (!result.ok) {
             if (!silent) contentEl.innerHTML = `<p class="admin-error">تعذّر تحميل رادار الموقع: ${this._esc(result.error)}</p>`;
+            return;
+        }
+        if (tabKey === 'operations') {
+            await this._renderConnectedOperations(contentEl);
             return;
         }
 

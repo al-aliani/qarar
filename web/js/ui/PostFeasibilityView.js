@@ -39,6 +39,7 @@ export class PostFeasibilityView {
                 <button type="button" class="btn btn--ghost mb-4" id="postFeasibilityBack">← العودة</button>
                 <h1 class="text-2xl font-bold mb-2">ما بعد الجدوى</h1>
                 <p class="text-muted mb-6">خطة ما بعد القرار لمشروع <strong>${escapeHtml(projectName)}</strong>، مبنية على نتيجة الدراسة الحالية واحتياجاتها.</p>
+                <a href="#/workspace" class="btn btn--primary mb-5">فتح مركز الربط الكامل</a>
 
                 <div class="space-y-6">
                     ${actions.length ? `<section class="card p-4">

@@ -1326,7 +1326,7 @@ export class DecisionDashboard {
                     <h3 class="card-title" id="decisionActionPlanTitle">خطة العمل المقترحة</h3>
                     <p class="text-sm text-muted">كل إجراء مرتبط مباشرة بنتيجة دراستك ويفتح المكان المناسب لتنفيذه.</p>
                 </div>
-                <span class="badge">${actions.length} إجراءات</span>
+                <div class="flex gap-2 items-center"><span class="badge">${actions.length} إجراءات</span><button type="button" class="btn btn--secondary btn--sm" data-decision-action="open-connected-workspace" data-route="workspace">مركز الربط</button></div>
             </div>
             <div class="grid grid-cols-2 gap-3">
                 ${actions.map((item, index) => `<article class="card p-4" style="border-inline-start:3px solid ${item.priority === 'high' ? 'var(--c-warning)' : 'var(--c-primary)'}">

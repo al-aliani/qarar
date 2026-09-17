@@ -838,6 +838,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
+  const showConnectedWorkspaceView = () => {
+    syncHash('workspace');
+    const sidebarEl = document.querySelector('.sidebar');
+    const stepperNavEl = document.getElementById('stepperNav');
+    const breadcrumbBar = document.getElementById('breadcrumbBar');
+    if (sidebarEl) sidebarEl.style.display = 'none';
+    if (stepperNavEl) stepperNavEl.style.display = 'none';
+    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+    import('./js/ui/ConnectedWorkspaceView.js').then(({ ConnectedWorkspaceView }) => {
+      const view = new ConnectedWorkspaceView('wizardContainer', store, {
+        onBack: () => {
+          if (sidebarEl) sidebarEl.style.removeProperty('display');
+          if (stepperNavEl) stepperNavEl.style.removeProperty('display');
+          if (breadcrumbBar) breadcrumbBar.style.removeProperty('display');
+          showLandingDashboard();
+        }
+      });
+      view.render();
+    }).catch(err => {
+      console.error('ConnectedWorkspaceView load failed:', err);
+      toast.error('تعذر فتح مركز الربط');
+    });
+  };
+
   const showQuickStartGuideView = () => {
     syncHash('quickstart');
     const sidebarEl = document.querySelector('.sidebar');
@@ -1768,6 +1792,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     knowledge: showKnowledgeCenterView,
     accelerator: showAcceleratorTipsView,
     postfeasibility: showPostFeasibilityView,
+    workspace: showConnectedWorkspaceView,
     quickstart: showQuickStartGuideView
   };
 
