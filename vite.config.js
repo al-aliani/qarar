@@ -86,6 +86,13 @@ export default defineConfig({
                 blogCost: resolve(__dirname, 'web/feasibility-study-cost-saudi-arabia.html'),
                 blogSdbFinancing: resolve(__dirname, 'web/sdb-financing-feasibility-study.html'),
                 blogTemplateVsCalculated: resolve(__dirname, 'web/feasibility-study-template-vs-calculated.html'),
+                blogBarbershop: resolve(__dirname, 'web/barbershop-feasibility-study-saudi.html'),
+                blogGym: resolve(__dirname, 'web/gym-feasibility-study-saudi.html'),
+                blogGrocery: resolve(__dirname, 'web/grocery-store-feasibility-study-saudi.html'),
+                blogEcommerce: resolve(__dirname, 'web/ecommerce-feasibility-study-saudi.html'),
+                blogBreakEven: resolve(__dirname, 'web/break-even-point-explained.html'),
+                blogPaybackDscr: resolve(__dirname, 'web/payback-period-dscr-explained.html'),
+                blogNitaqat: resolve(__dirname, 'web/nitaqat-saudization-small-business.html'),
                 experiences: resolve(__dirname, 'web/experiences.html'),
                 suppliers: resolve(__dirname, 'web/suppliers.html'),
                 // investor.html: صفحة عرض المستثمر (للقراءة فقط) — أُصلح الاستيراد المكسور (getPitchFromStorage)
