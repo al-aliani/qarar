@@ -337,7 +337,7 @@ export class BankReportGenerator {
             <table class="bank-table">
                 <tr><th>المؤشر</th><th>القيمة</th><th>ملاحظة</th></tr>
                 <tr><td>${L('npv')}</td><td>${_fmt(ind.npv || 0)}</td><td>${(ind.npv || 0) > 0 ? 'إيجابي ✓' : 'يحتاج مراجعة'}</td></tr>
-                <tr><td>${L('irr')}</td><td>${formatIrrPct(ind.irr, 2)}</td><td>${(ind.irr || 0) >= 0.15 ? 'مقبول للتمويل' : 'تحت الحد المفضل'}</td></tr>
+                <tr><td>${L('irr')}</td><td>${formatIrrPct(ind.irr, 2)}</td><td>${ind.irr == null || !Number.isFinite(Number(ind.irr)) ? 'غير متاح — لا يمكن تصنيفه' : Number(ind.irr) >= 0.15 ? 'مقبول للتمويل' : 'تحت الحد المفضل'}</td></tr>
                 <tr><td>${L('paybackPeriod')}</td><td>${SAFE.payback(ind.paybackPeriod ?? ind.payback)}</td><td>${(() => { const p = ind.paybackPeriod ?? ind.payback; if (p == null || !Number.isFinite(p) || p <= 0) return 'غير محقق — يحتاج مراجعة'; return p < 5 ? 'مناسب' : 'طويل نسبياً'; })()}</td></tr>
                 <tr><td>${L('totalCapex')}</td><td>${_fmt(cap.total || financing.totalInvestment || 0)}</td><td>ريال</td></tr>
                 <tr><td>فجوة التمويل</td><td>${financingGate.fundingGap > gapThreshold ? _fmt(financingGate.fundingGap) : financingGate.fundingGap < -gapThreshold ? 'فائض ' + _fmt(Math.abs(financingGate.fundingGap)) : 'متوازن'}</td><td>${Math.abs(financingGate.fundingGap) > gapThreshold ? 'يجب مطابقتها مع الاستثمار قبل التقديم' : 'مقبولة'}</td></tr>

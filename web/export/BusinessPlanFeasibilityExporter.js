@@ -112,7 +112,8 @@ export class BusinessPlanFeasibilityExporter {
         const cost = rev - net;
         const npvStr = ind.npv != null ? formatCurrency(ind.npv, currency) : '—';
         const irrStr = ind.irr != null ? formatPercent(ind.irr) : '—';
-        const paybackStr = ind.paybackPeriod != null ? (ind.paybackPeriod.toFixed(1) + ' سنة') : '—';
+        const payback = Number(ind.paybackPeriod ?? ind.payback);
+        const paybackStr = Number.isFinite(payback) && payback > 0 ? (payback.toFixed(1) + ' سنة') : 'غير محقق';
 
         const askAmount = financing.totalInvestment || (financing.sources?.equity?.amount || 0) + (financing.sources?.bankLoan?.amount || 0);
         const useOfFunds = (financing.useOfFunds || '').toString().trim() || 'استثمار وتشغيل المشروع.';

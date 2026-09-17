@@ -874,27 +874,27 @@ export function generateExecutiveSummary(state, results) {
     const city = or(p.city, 'المنطقة');
 
     const ind = results?.indicators || results?.context?.kpis || results?.context?.financials || {};
-    const npv = ind.npv ?? results?.npv ?? 0;
-    const irr = ind.irr ?? results?.irr ?? 0;
+    const npv = ind.npv ?? results?.npv ?? null;
+    const irr = ind.irr ?? results?.irr ?? null;
     const payback = ind.paybackPeriod ?? results?.paybackPeriod ?? ind.payback ?? null;
-    const roi = ind.roi ?? results?.roi ?? 0;
-    const breakEven = ind.breakEvenPointValue ?? results?.breakEvenPointValue ?? 0;
-    const margin = ind.profitMargin ?? results?.profitMargin ?? 0;
+    const roi = ind.roi ?? results?.roi ?? null;
+    const breakEven = ind.breakEvenPointValue ?? results?.breakEvenPointValue ?? null;
+    const margin = ind.profitMargin ?? results?.profitMargin ?? null;
 
     const decision = results?.decision ?? results?.context?.decision ?? null; // لا نفترض GO على بيانات ناقصة — يمنع توصية «امضِ قدماً» زائفة
     const reasons = results?.decisionReasons ?? results?.context?.decisionReasons ?? [];
 
     let overview = `تهدف دراسة الجدوى إلى تقييم جدوى مشروع «${name}» في ${city}، وهو مشروع يركز على ${concept}.`;
     let indText = [];
-    // نعرض المؤشر فقط إذا كان له قيمة فعلية (غير صفرية) — يمنع طباعة «٠ ريال · ٠٪» على بيانات ناقصة
+    // نعرض الصفر الحقيقي إذا أعاده المحرك، ونحذف المؤشر فقط إن كان مفقوداً/غير منتهٍ.
     // المحرك يخزّن IRR/ROI/الهامش كسوراً عشرية (−0.127 = −12.7%) — الضرب في 100 إلزامي
     // قبل الطباعة، وإلا خرج «معدل العائد الداخلي: −0.1%» في ملخص يُقدَّم لممول (تدقيق ٢٠٢٦-٠٧-٠٦).
-    if (Number(npv)) indText.push(`صافي القيمة الحالية: ${Math.round(Number(npv)).toLocaleString('ar-SA')} ريال`);
-    if (Number(irr)) indText.push(`معدل العائد الداخلي: ${(Number(irr) * 100).toFixed(1)}%`);
+    if (Number.isFinite(Number(npv)) && npv != null) indText.push(`صافي القيمة الحالية: ${Math.round(Number(npv)).toLocaleString('ar-SA')} ريال`);
+    if (Number.isFinite(Number(irr)) && irr != null) indText.push(`معدل العائد الداخلي: ${(Number(irr) * 100).toFixed(1)}%`);
     if (Number(payback) > 0) indText.push(`فترة الاسترداد: ${Number(payback).toFixed(1)} سنة`);
-    if (Number(roi)) indText.push(`العائد على الاستثمار: ${(Number(roi) * 100).toFixed(1)}% (تراكمي لسنوات الدراسة)`);
-    if (Number(breakEven)) indText.push(`نقطة التعادل: ${Math.round(Number(breakEven)).toLocaleString('ar-SA')} ريال سنوياً`);
-    if (Number(margin)) indText.push(`هامش الربح الصافي (سنة أولى): ${(Number(margin) * 100).toFixed(1)}%`);
+    if (Number.isFinite(Number(roi)) && roi != null) indText.push(`العائد على الاستثمار: ${(Number(roi) * 100).toFixed(1)}% (تراكمي لسنوات الدراسة)`);
+    if (Number.isFinite(Number(breakEven)) && breakEven != null) indText.push(`نقطة التعادل: ${Math.round(Number(breakEven)).toLocaleString('ar-SA')} ريال سنوياً`);
+    if (Number.isFinite(Number(margin)) && margin != null) indText.push(`هامش الربح الصافي (سنة أولى): ${(Number(margin) * 100).toFixed(1)}%`);
     const indicatorsBlock = indText.length ? `أهم المؤشرات: ${indText.join('؛ ')}.` : 'تم حساب المؤشرات المالية في نموذج التدفقات.';
 
     let feasibility = 'الجدوى المالية تُحدد وفق المؤشرات أعلاه ومقارنتها بمعايير القطاع.';
