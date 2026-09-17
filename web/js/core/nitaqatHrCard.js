@@ -6,7 +6,7 @@
  * ولا صيغة تكلفة موازية (خطة الاستفادة 2026-07-12، مهمة Nitaqat، دفعة 4).
  */
 import { classifyNitaqatTier } from './nitaqatBands.js';
-import { detectSectorBenchmark, SECTOR_BENCHMARKS } from './sectorBenchmarks.js';
+import { detectSectorBenchmark, SECTOR_BENCHMARKS, sectorDetectionText } from './sectorBenchmarks.js';
 import { computeAnnualEmployeeCost } from './engine.js';
 import { SAUDI_GOSI_RATE_2026 } from './schema.js';
 
@@ -37,8 +37,7 @@ export function buildNitaqatHrCardData(state) {
     const saudiHeadcount = positions.reduce((acc, p) => acc + (p.nationality === 'saudi' ? (Number(p.count) || 1) : 0), 0);
     const rate = totalHeadcount > 0 ? saudiHeadcount / totalHeadcount : null;
 
-    const sectorText = state?.projectInfo?.sector || state?.projectInfo?.concept || state?.projectInfo?.activity;
-    const bench = detectSectorBenchmark(sectorText);
+    const bench = detectSectorBenchmark(sectorDetectionText(state?.projectInfo));
     const sectorKey = bench ? Object.keys(SECTOR_BENCHMARKS).find(k => SECTOR_BENCHMARKS[k] === bench) : null;
 
     const tierInfo = rate !== null ? classifyNitaqatTier(rate, sectorKey) : null;

@@ -62,6 +62,52 @@ async function decompress(str) {
 const LOCAL_STORAGE_KEY_PREFIX = 'feas_project_';
 const SUPA_TABLE_STUDIES = 'studies';
 
+// تدقيق شامل 2026-09-16 (دمج تعديل متزامن): تعديل فعلي متزامن لنفس الدراسة من جهازين/
+// تبويبين كان يُفقِد أحدهما بالكامل — الحفظ اللاحق upsert غير مشروط يكتب فوق أي تعديل
+// وصل للسحابة بعد آخر مرة قرأنا/كتبنا فيها هذا الجهاز، بصرف النظر عن كونه في قسم مختلف
+// تماماً لا علاقة له بما عدّله المستخدم هنا. الحل: دمج ثلاثي على مستوى القسم الأعلى
+// (projectInfo/technical/hr/revenue/...) قبل كل كتابة سحابية — قسم لم يتغيّر إلا على
+// جهاز واحد يُؤخذ كما هو من ذلك الجهاز، ولا يُفقَد أي قسم يخص الطرف الآخر. القاعدة
+// المرجعية (base) هي آخر لقطة سحابية معروفة لهذا الجهاز (تُحدَّث عند كل قراءة/كتابة
+// ناجحة) — بلا هذه اللقطة (أول حفظ في الجلسة قبل أي تحميل ناجح) نتراجع لمقارنة
+// ثنائية بسيطة (محلي مقابل سحابي حالي) بدل دمج ثلاثي كامل. تعارض حقيقي (نفس القسم
+// تغيّر على الطرفين معاً) نادر عملياً (أغلب التعديلات المتزامنة تمس خطوات/أقسام
+// مختلفة من المعالج) ويُحسَم بإبقاء نسخة الجهاز الذي يحفظ الآن — تحسين جوهري على
+// الوضع الحالي (فقدان كامل لكل الأقسام الأخرى) لا حلاً كاملاً لكل تعارض نظرياً ممكن.
+const _remoteSnapshotCache = new Map();
+
+function _deepEqual(a, b) {
+    try { return JSON.stringify(a) === JSON.stringify(b); } catch { return a === b; }
+}
+
+function _deepClone(obj) {
+    return obj == null ? obj : JSON.parse(JSON.stringify(obj));
+}
+
+/**
+ * دمج ثلاثي على مستوى القسم الأعلى فقط (لا حقول فرعية، لا مصفوفات) — انظر تعليق
+ * _remoteSnapshotCache أعلاه للسياق الكامل.
+ * @param {object|null} base - آخر لقطة سحابية معروفة (null = لا مرجع، تراجع لثنائي)
+ * @param {object} local - النسخة المطلوب حفظها من هذا الجهاز
+ * @param {object} remote - النسخة الحالية فعلياً في السحابة الآن
+ * @returns {object} النسخة المدموجة الواجب كتابتها
+ */
+function _mergeStudySections(base, local, remote) {
+    const keys = new Set([...Object.keys(local || {}), ...Object.keys(remote || {})]);
+    const merged = {};
+    for (const key of keys) {
+        const localVal = local ? local[key] : undefined;
+        const remoteVal = remote ? remote[key] : undefined;
+        if (_deepEqual(localVal, remoteVal)) { merged[key] = localVal; continue; }
+        if (!base) { merged[key] = localVal; continue; } // لا مرجع: نفضّل نسخة الجهاز الحافظ الآن
+        const localChanged = !_deepEqual(localVal, base[key]);
+        const remoteChanged = !_deepEqual(remoteVal, base[key]);
+        if (remoteChanged && !localChanged) { merged[key] = remoteVal; continue; } // لم نمسّه هنا — لا نفقد تعديل الطرف الآخر
+        merged[key] = localVal; // localChanged فقط، أو تعارض حقيقي على نفس القسم — نُبقي المحلي
+    }
+    return merged;
+}
+
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -113,12 +159,18 @@ export class PersistenceService {
             const { getAuthUser } = await _getSupabase();
             const { user } = await getAuthUser();
             if (user) {
-                await this._saveCloudWithRetry(id, cloudData, user.id);
+                const savedCloudData = await this._saveCloudWithRetry(id, cloudData, user.id);
                 try {
                     const { log, ACTIONS } = await _getAuditLogger();
                     log(ACTIONS.SAVE, { id, location: 'both' });
                 } catch (_) { }
-                return { success: true, location: 'both' };
+                // دُمِج تعديل من جهاز آخر (انظر _mergeStudySections) — النسخة الفعلية
+                // في السحابة الآن تحمل أقساماً هذا الجهاز لا يعرفها بعد؛ نُعيدها
+                // للمستدعي (store.js) كي يحدّث حالته في الذاكرة والمسودة المحلية،
+                // وإلا بقي هذا الجهاز يقارن بنسخة محلية ناقصة في الحفظ التالي.
+                const merged = savedCloudData && !_deepEqual(savedCloudData, cloudData) ? savedCloudData : null;
+                if (merged) await this._saveLocal(id, { ...dataWithMeta, ...merged });
+                return { success: true, location: 'both', ...(merged ? { merged } : {}) };
             }
 
             return { success: true, location: 'local' };
@@ -383,14 +435,34 @@ export class PersistenceService {
             );
         }
 
+        // دمج ثلاثي مع أي تعديل وصل من جهاز/تبويب آخر منذ آخر مزامنة معروفة لهذا
+        // الجهاز — انظر تعليق _remoteSnapshotCache/_mergeStudySections أعلى الملف.
+        // maybeSingle (لا single) عمداً: دراسة جديدة لم تُحفَظ سحابياً بعد لا صف لها
+        // إطلاقاً، وهذا متوقَّع تماماً لا خطأ.
+        let dataToSave = data;
+        try {
+            const { data: existingRow } = await supabase
+                .from(SUPA_TABLE_STUDIES)
+                .select('data')
+                .eq('id', id)
+                .maybeSingle();
+            const remoteData = existingRow?.data || null;
+            if (remoteData && !_deepEqual(remoteData, data)) {
+                dataToSave = _mergeStudySections(_remoteSnapshotCache.get(id) || null, data, remoteData);
+            }
+        } catch (_) {
+            // فشل القراءة التمهيدية (شبكة، إلخ) لا يجوز أن يمنع الحفظ نفسه —
+            // نتراجع لكتابة data كما هي بدل إسقاط الحفظ بالكامل بسبب خطوة تحسينية.
+        }
+
         // كتابة واحدة إلى جدول studies الكنسي (user_id + data) — المخطط الموحّد.
         // data كاملة الدراسة تُخزَّن في عمود data (JSONB). لا نكتب status لتفادي
         // مخالفة قيد CHECK إن حملت projectInfo.status قيمة خارج المسموح.
         const studyRow = {
             id: id,
             user_id: userId,
-            title: data.projectInfo?.name || 'مشروع جديد',
-            data: data,
+            title: dataToSave.projectInfo?.name || 'مشروع جديد',
+            data: dataToSave,
             updated_at: new Date().toISOString()
         };
 
@@ -399,6 +471,8 @@ export class PersistenceService {
             .upsert(studyRow);
 
         if (error) throw error;
+        _remoteSnapshotCache.set(id, _deepClone(dataToSave));
+        return dataToSave;
     }
 
     static async _loadCloud(id) {
@@ -418,6 +492,7 @@ export class PersistenceService {
             .single();
 
         if (error) throw error;
+        if (data?.data) _remoteSnapshotCache.set(id, _deepClone(data.data));
         return { data: data?.data || null, updatedAt: data?.updated_at };
     }
 
@@ -438,9 +513,16 @@ export class PersistenceService {
         if (!supabase) return [];
 
         // studies table has 'title' (project name). Use it for listing.
+        // تدقيق شامل 2026-09-16: عمود status لا يُكتب أبداً عند الحذف (deleteProject
+        // يضبط projectInfo.deleted داخل JSON فقط، لتفادي قيد CHECK على status — انظر
+        // _saveCloud أدناه)، وكان d.status يُقرأ هنا ثم يُسقَط بالكامل بلا استخدام. أي
+        // دراسة مصدرها السحابة حصراً (بلا فهرس محلي سابق على هذا الجهاز) كانت تُفقد
+        // علم الحذف تماماً — تعود «نشطة» على جهاز آخر وتغيب عن سلة المحذوفات هناك.
+        // القراءة الآن من data.projectInfo مباشرة (نفس الحقل الذي يكتبه deleteProject
+        // فعلياً)، بنفس شكل _listLocalHeaders (deleted/deletedAt).
         const { data, error } = await supabase
             .from(SUPA_TABLE_STUDIES)
-            .select('id, title, updated_at, status')
+            .select('id, title, updated_at, deleted:data->projectInfo->>deleted, deletedAt:data->projectInfo->>deletedAt')
             .eq('user_id', userId)
             .order('updated_at', { ascending: false });
 
@@ -449,7 +531,9 @@ export class PersistenceService {
         return data.map(d => ({
             id: d.id,
             name: (d.title && d.title.trim()) ? d.title.trim() : 'مشروع جديد',
-            lastModified: d.updated_at
+            lastModified: d.updated_at,
+            deleted: d.deleted === 'true',
+            deletedAt: d.deletedAt ? Number(d.deletedAt) : null
         }));
     }
 }

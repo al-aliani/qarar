@@ -71,8 +71,12 @@ describe('NewPasswordModal', () => {
         expect(document.getElementById('newPasswordModalOverlay')).toBeNull();
     });
 
-    it('فشل updatePassword: يعرض رسالة الخطأ ولا يُغلق النافذة', async () => {
-        updatePasswordMock.mockResolvedValueOnce({ ok: false, error: 'خطأ من الخادم' });
+    it('فشل updatePassword: يعرض رسالة خطأ عربية ولا يُغلق النافذة', async () => {
+        // تدقيق شامل 2026-09-16: كانت رسالة error الخام (حتى غير المعروفة) تُعرض كما هي —
+        // الآن تُترجَم الأنماط المعروفة (انظر الاختبار التالي) وأي رسالة أخرى غير معروفة
+        // تُستبدَل برسالة عامة، بنفس نمط translateAuthError/translateResendError في
+        // AuthModalStub.js (لا نعرض أبداً error كما هو، حتى لو بدا نصاً عربياً معقولاً).
+        updatePasswordMock.mockResolvedValueOnce({ ok: false, error: 'unrecognized error shape' });
         const { NewPasswordModal } = await import('../NewPasswordModal.js');
         const modal = new NewPasswordModal();
         modal.open();
@@ -82,6 +86,22 @@ describe('NewPasswordModal', () => {
         await new Promise((r) => setTimeout(r, 0));
 
         expect(document.getElementById('newPasswordModalOverlay')).not.toBeNull();
-        expect(document.getElementById('newPasswordError').textContent).toContain('خطأ من الخادم');
+        expect(document.getElementById('newPasswordError').textContent).toBe('فشل تحديث كلمة المرور.');
+        expect(document.getElementById('newPasswordError').textContent).not.toContain('unrecognized error shape');
+    });
+
+    it('خطأ Supabase الخام المعروف ("should be different from the old password") يُترجَم لعربية واضحة', async () => {
+        updatePasswordMock.mockResolvedValueOnce({ ok: false, error: 'New password should be different from the old password.' });
+        const { NewPasswordModal } = await import('../NewPasswordModal.js');
+        const modal = new NewPasswordModal();
+        modal.open();
+        document.getElementById('newPassword1').value = 'Str0ng!Pass';
+        document.getElementById('newPassword2').value = 'Str0ng!Pass';
+        document.getElementById('newPasswordForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 0));
+
+        const msg = document.getElementById('newPasswordError').textContent;
+        expect(msg).not.toContain('should be different');
+        expect(msg).toContain('يجب أن تختلف عن القديمة');
     });
 });

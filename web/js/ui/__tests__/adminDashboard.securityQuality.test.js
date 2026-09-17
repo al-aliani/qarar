@@ -90,6 +90,11 @@ describe('AdminDashboardView - security and data quality', () => {
         expect(content.textContent).toContain('مشاهدات المستثمرين');
         expect(content.textContent).toContain('مخرجات آمنة للمشاركة');
         expect(AdminService.getSharingStats).toHaveBeenCalled();
+        // تدقيق 2026-09-17: عنوان التبويب كان "رحلة العميل من التسجيل إلى الدفع" —
+        // متبقٍ من تبويب النمو المشترَك القالب (_growthControlsHtml) لأن استبدال
+        // العنوان/الشعار لم يكن يُنفَّذ هنا خلافاً لبقية التبويبات المشابهة (ai/reliability/security/quality).
+        expect(content.textContent).toContain('تفاعل المستثمرين مع روابط المشاركة');
+        expect(content.textContent).not.toContain('رحلة العميل من التسجيل إلى الدفع');
     });
 
     it('يربط القطاعات بمصادر إنشاء الدراسات وصيغ التصدير', async () => {
@@ -101,6 +106,10 @@ describe('AdminDashboardView - security and data quality', () => {
         expect(content.textContent).toContain('ترتيب القطاعات لبناء القوالب');
         expect(content.textContent).toContain('تقنية');
         expect(content.textContent).toContain('أشكال التصدير المطلوبة');
+        // تدقيق 2026-09-17: نفس عطل تبويب المستثمرين — عنوان تبويب النمو المشترَك
+        // كان متبقياً بلا استبدال.
+        expect(content.textContent).toContain('الطلب القطاعي وأداء القوالب');
+        expect(content.textContent).not.toContain('رحلة العميل من التسجيل إلى الدفع');
     });
 
     it('يعرض مصفوفة 300 ميزة مع بحث وحالات مصدر واضحة', async () => {
