@@ -1587,7 +1587,12 @@ export class Wizard {
 
         // حقول النِسب المعروضة كنسبة مئوية تُخزَّن ككسر (10 → 0.10) — انظر renderField
         if (type === 'number' && finalVal != null && Wizard.isFractionPercentKey(keyPath)) {
-            finalVal = finalVal / 100;
+            // القيمة الظاهرة نسبة مئوية. صحّح أي كتابة خارج 0–100 قبل التخزين حتى
+            // لا تبقى 101% ظاهرة بينما المحرك يقصّها داخلياً إلى 100% بصمت.
+            finalVal = Math.min(100, Math.max(0, finalVal)) / 100;
+            const field = Array.from(this.container?.querySelectorAll?.('[data-key]') || [])
+                .find(candidate => candidate.dataset.key === keyPath);
+            if (field) field.value = String(finalVal * 100);
         }
 
         // Update the specific path

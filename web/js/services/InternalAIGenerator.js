@@ -73,9 +73,11 @@ export function generateBusinessModel(state) {
         ...(tech.equipment || []),
         ...(tech.furniture || [])
     ];
+    const sectorText = `${or(p.sector, '')} ${concept} ${desc}`;
+    const isDigitalProject = /تقني|رقمي|منصة|تطبيق|برمج|سحابي|saas|software|platform|app/i.test(sectorText);
     const assetsSummary = assets.length
         ? assets.slice(0, 6).map(a => or(a.name, 'بند')).join('، ')
-        : 'الموقع، المعدات، والأثاث';
+        : (isDigitalProject ? 'المنصة التقنية، البنية السحابية، وأدوات التشغيل الرقمي' : 'الموقع، المعدات، والأثاث');
 
     // الحملات التسويقية
     const camps = state?.marketing?.campaigns || [];
@@ -88,7 +90,9 @@ export function generateBusinessModel(state) {
     const risksSummary = risksList.length ? risksList.join('، ') : 'مخاطر السوق والتشغيل العامة';
 
     // قنوات الوصول
-    let channelsText = 'قنوات الوصول: الموقع الفعلي أو الفرع، التفاعل المباشر مع العميل.';
+    let channelsText = isDigitalProject
+        ? 'قنوات الوصول: المنصة الرقمية، المحتوى، الشراكات، والتواصل الإلكتروني مع العميل.'
+        : 'قنوات الوصول: الموقع الفعلي أو الفرع، والتفاعل المباشر مع العميل.';
     if (hasDigital || camps.length > 0) {
         channelsText += ' الاعتماد على المنصات الإلكترونية والحملات الرقمية.';
     }
@@ -123,7 +127,9 @@ export function generateBusinessModel(state) {
         keyResources: `الموارد الأساسية: ${assetsSummary}. الفريق البشري: ${positionsSummary}.`,
         keyActivities: `الأنشطة الرئيسية: التشغيل اليومي، الإنتاج أو تقديم الخدمة، التسويق وخدمة العملاء، والمتابعة الإدارية.`,
         keyPartners: `الشراكات: الموردون، مزودو التقنية والخدمات، وإمكانية التحالفات التسويقية أو التوزيع لتعزيز الوصول.`,
-        costStructure: `هيكل التكاليف: تكاليف ثابتة (إيجار، رواتب، إهلاك) وتكاليف متغيرة مرتبطة بالإنتاج والمبيعات. مراعاة: ${risksSummary}.`
+        costStructure: isDigitalProject
+            ? `هيكل التكاليف: التطوير والاستضافة والتراخيص التقنية والرواتب والتسويق، مع تكاليف متغيرة مرتبطة بالاستخدام والمبيعات. مراعاة: ${risksSummary}.`
+            : `هيكل التكاليف: تكاليف ثابتة (إيجار، رواتب، إهلاك) وتكاليف متغيرة مرتبطة بالإنتاج والمبيعات. مراعاة: ${risksSummary}.`
     };
 }
 

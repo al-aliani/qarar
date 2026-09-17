@@ -177,7 +177,9 @@ export class FinancialStatements {
 
     initCountUp(results) {
         if (!results || !results.incomeStatement) return;
-        const totalProfit = results.incomeStatement.reduce((sum, y) => sum + (y.netIncome || 0), 0);
+        // البطاقة تلخّص نفس القيم السنوية المعروضة بلا كسور؛ جمع الأرقام الدقيقة ثم
+        // تقريب الناتج كان يختلف ريالاً أو أكثر عن مجموع صف «صافي الربح» المرئي.
+        const totalProfit = results.incomeStatement.reduce((sum, y) => sum + Math.round(y.netIncome || 0), 0);
         const counterEl = this.container.querySelector('#totalProfitCounter');
         if (counterEl) {
             const countUp = new CountUp(counterEl, totalProfit, {

@@ -2495,6 +2495,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   const headerSaveStudy = document.getElementById('headerSaveStudy');
   if (headerSaveStudy) headerSaveStudy.addEventListener('click', performSaveStudy);
 
+  // التراجع/الإعادة في الترويسة مربوطان بتاريخ store الحقيقي. كان الزران موجودين
+  // في HTML فقط وظلا disabled دائماً، رغم أن كل update/updatePath يسجل لقطة تراجع.
+  const headerUndoStudy = document.getElementById('headerUndoStudy');
+  const headerRedoStudy = document.getElementById('headerRedoStudy');
+  const syncHistoryControls = () => {
+    if (headerUndoStudy) headerUndoStudy.disabled = !store.canUndo();
+    if (headerRedoStudy) headerRedoStudy.disabled = !store.canRedo();
+  };
+  if (headerUndoStudy) {
+    headerUndoStudy.addEventListener('click', async () => {
+      if (await store.undo()) toast.success('تم التراجع عن آخر تعديل');
+      syncHistoryControls();
+    });
+  }
+  if (headerRedoStudy) {
+    headerRedoStudy.addEventListener('click', async () => {
+      if (await store.redo()) toast.success('تمت إعادة التعديل');
+      syncHistoryControls();
+    });
+  }
+  if (store.subscribe) store.subscribe(syncHistoryControls);
+  syncHistoryControls();
+
   // «معايرة سريعة» — زر ترويسة دائم (مرئي من أي خطوة) يفتح لوحة الافتراضات المركزية
   // (خطة 2026-07-12، الدفعة 4، البند 1): يعالج مباشرة أكبر إحباط وثّقه اختبار العميل
   // الحقيقي (التنقل بين 41 قسماً لمعايرة أرقام مترابطة أثناء محاولة الوصول لـGO).

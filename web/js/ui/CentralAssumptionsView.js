@@ -350,13 +350,14 @@ export class CentralAssumptionsView {
             <div class="ca-row">
                 <label class="ca-row__field">
                     <span>نسبة الملكية الأجنبية %</span>
-                    <input type="text" inputmode="decimal" class="input ca-input" id="caForeignOwnershipRate" value="${escapeHtml(String(foreignPct))}">
+                    <input type="number" inputmode="decimal" min="0" max="100" class="input ca-input" id="caForeignOwnershipRate" value="${escapeHtml(String(foreignPct))}" aria-describedby="caOwnershipLimit">
                 </label>
                 <label class="ca-row__field">
                     <span>معدل الضريبة %</span>
                     <input type="text" inputmode="decimal" class="input ca-input" id="caTaxRate" value="${escapeHtml(String(taxPct))}">
                 </label>
             </div>
+            <p id="caOwnershipLimit" class="text-xs text-muted mt-1">القيمة المقبولة من 0% إلى 100%، وتُصحّح تلقائياً عند تجاوزها.</p>
             <p id="caZakatTaxResult" class="text-xs text-muted mt-1">أضف مصدر إيراد لعرض الزكاة/الضريبة المحسوبة فعلياً للسنة الأولى.</p>
         `;
     }
@@ -531,7 +532,7 @@ export class CentralAssumptionsView {
 
     _commitPercentAssumption(key, rawValue, el) {
         const parsed = DynamicTable.parseLenientNumber(rawValue);
-        const pct = parsed == null ? 0 : Math.max(0, parsed);
+        const pct = parsed == null ? 0 : Math.min(100, Math.max(0, parsed));
         const current = Number(this.store.getState().assumptions?.[key] || 0);
         if (current === pct / 100) {
             if (el) el.value = String(pct);
