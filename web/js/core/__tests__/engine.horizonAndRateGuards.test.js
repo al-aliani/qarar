@@ -107,6 +107,49 @@ describe('المحرك — حارس معدل الخصم السالب', () => {
     });
 });
 
+describe('المحرك — تسامح "نسبة مئوية خام" لمعدل الفائدة/الخصم/تكلفة حقوق الملكية (2026-09-16)', () => {
+    it('bankLoan.interestRate=8 (بدل 0.08): يُطبَّع تلقائياً وينتج نفس نتيجة 0.08 بالضبط', () => {
+        const withRaw = makeStudy();
+        withRaw[SECTIONS.FINANCING] = { sources: { equity: { amount: 50000 }, bankLoan: { amount: 50000, interestRate: 8, termYears: 3, repaymentType: 'equal' } } };
+        const withFraction = makeStudy();
+        withFraction[SECTIONS.FINANCING] = { sources: { equity: { amount: 50000 }, bankLoan: { amount: 50000, interestRate: 0.08, termYears: 3, repaymentType: 'equal' } } };
+
+        const raw = calculateStudy(withRaw);
+        const fraction = calculateStudy(withFraction);
+
+        expect(raw.loanSchedule.annualRate).toBeCloseTo(0.08, 10);
+        expect(raw.indicators.npv).toBeCloseTo(fraction.indicators.npv, 6);
+        expect(raw.incomeStatement[0].interest).toBeCloseTo(fraction.incomeStatement[0].interest, 2);
+    });
+
+    it('bankLoan.interestRate=0.08 (كسر صحيح ≤1): يمرّ بلا أي تغيير', () => {
+        const study = makeStudy();
+        study[SECTIONS.FINANCING] = { sources: { equity: { amount: 50000 }, bankLoan: { amount: 50000, interestRate: 0.08, termYears: 3, repaymentType: 'equal' } } };
+        expect(calculateStudy(study).loanSchedule.annualRate).toBeCloseTo(0.08, 10);
+    });
+
+    it('bankLoan.interestRate=0 (قرض بلا فائدة صريح): يبقى صفراً لا يسقط لأي افتراضي', () => {
+        const study = makeStudy();
+        study[SECTIONS.FINANCING] = { sources: { equity: { amount: 50000 }, bankLoan: { amount: 50000, interestRate: 0, termYears: 3, repaymentType: 'equal' } } };
+        expect(calculateStudy(study).loanSchedule.annualRate).toBe(0);
+    });
+
+    it('discountRate=10 (بدل 0.10): يُطبَّع تلقائياً وينتج نفس نتيجة 0.10 بالضبط', () => {
+        const raw = calculateStudy(makeStudy({ discountRate: 10 }));
+        const fraction = calculateStudy(makeStudy({ discountRate: 0.10 }));
+        expect(raw.assumptionsApplied.discountRate).toBeCloseTo(0.10, 10);
+        expect(raw.indicators.npv).toBeCloseTo(fraction.indicators.npv, 6);
+    });
+
+    it('تكلفة حقوق الملكية = 15 (بدل 0.15) مع useWaccAsDiscountRate: تُطبَّع أيضاً (المسار الثاني للمعدل)', () => {
+        const study = makeStudy({ useWaccAsDiscountRate: true });
+        study.financing = { costOfEquity: 15 };
+        const r = calculateStudy(study);
+        expect(r.assumptionsApplied.discountRateSource).toBe('costOfEquity');
+        expect(r.assumptionsApplied.discountRate).toBeCloseTo(0.15, 10);
+    });
+});
+
 describe('المحرك — حارس التضخم ≤ −1', () => {
     it('inflationRate = −1: التكاليف لا تختفي من السنة الثانية — يسقط للافتراضي 2%', () => {
         const r = calculateStudy(makeStudy({ inflationRate: -1 }));
