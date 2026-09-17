@@ -31,14 +31,22 @@ describe('المستشار الذكي: لا حكم قرار على دراسة ب
         expect(texts).not.toContain('يوصي بمراجعة الدراسة');
     });
 
-    it('لا انحدار: الحكم يبقى ظاهراً لدراسة لها إيراد فعلي', () => {
+    it('لا انحدار: الحكم يبقى ظاهراً لدراسة لها إيراد وتكلفة فعليين معاً', () => {
+        // تدقيق شامل 2026-09-16: "إيراد فعلي" وحده لم يعد كافياً لعرض الحكم — دراسة
+        // بإيراد بلا أي تكلفة/استثمار (hasMinimumFinancialData=false) هي بالضبط
+        // العطل المُصلَح أدناه (نفس فئة حادثة 2026-09-04 بمسار مختلف). الفكسشر هنا
+        // يضيف technical.equipment كي يمثّل دراسة مكتملة البيانات فعلاً.
         const results = {
             decision: 'REVISE',
             decisionReasons: ['هامش منخفض'],
             incomeStatement: [{ revenue: 1000000, netIncome: 50000 }],
             indicators: { npv: 100000, irr: 0.2, paybackPeriod: 3 },
         };
-        const state = { ...EMPTY_STATE, projectInfo: { name: 'دراسة كاملة', concept: 'مطعم' } };
+        const state = {
+            ...EMPTY_STATE,
+            projectInfo: { name: 'دراسة كاملة', concept: 'مطعم' },
+            technical: { equipment: [{ name: 'معدات', price: 100000, quantity: 1 }] },
+        };
         const { insights } = SmartAdvisor.analyze(results, state);
         expect(insights.some(i => i.category === 'قرار')).toBe(true);
     });
@@ -47,5 +55,23 @@ describe('المستشار الذكي: لا حكم قرار على دراسة ب
         const results = { decision: 'REVISE', incomeStatement: [], indicators: { npv: -50000 } };
         const { insights } = SmartAdvisor.analyze(results, EMPTY_STATE);
         expect(insights.some(i => i.category === 'جدوى')).toBe(true);
+    });
+
+    it('[تدقيق شامل 2026-09-16] إيراد فعلي بلا أي تكلفة/استثمار (hasFull=true لكن hasMinimumFinancialData=false): لا حكم قرار', () => {
+        // إعادة إنتاج حادثة عميل مطابقة لتدقيق 2026-09-04 لكن بمسار مختلف: هنا year1.revenue>0
+        // فعلياً (hasFull=true، يدخل الفرع "الكامل" لا فرع !hasFull أعلاه)، لكن الدراسة
+        // بلا أي equipment/hr/financing — القرار (REVISE/NO-GO) في هذه الحالة غالباً ناتج
+        // عن غياب بيانات الاستثمار نفسها لا مشكلة جدوى حقيقية.
+        const results = {
+            decision: 'REVISE',
+            decisionReasons: ['معدل العائد الداخلي غير قابل للحساب'],
+            incomeStatement: [{ revenue: 500000, netIncome: 500000 }],
+            indicators: { npv: 1612007, irr: null, paybackPeriod: 0.1 },
+        };
+        const state = { ...EMPTY_STATE, projectInfo: { name: 'دراسة بإيراد بلا تكلفة', concept: 'صالون' } };
+        const { insights } = SmartAdvisor.analyze(results, state);
+        expect(insights.some(i => i.category === 'قرار')).toBe(false);
+        const texts = insights.map(i => String(i.message || '')).join(' | ');
+        expect(texts).not.toContain('يوصي بمراجعة الدراسة');
     });
 });

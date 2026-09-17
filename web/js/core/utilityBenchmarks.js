@@ -12,7 +12,7 @@
  * عدّل هذه الأرقام بحذر وبمصدر عند توفره؛ الواجهة تُفصح دوماً عن طبيعتها التقديرية.
  */
 
-import { detectSectorBenchmark, SECTOR_BENCHMARKS } from './sectorBenchmarks.js';
+import { detectSectorBenchmark, SECTOR_BENCHMARKS, sectorDetectionText } from './sectorBenchmarks.js';
 
 /** ريال/ك.و.س — تقريب لتعرفة الكهرباء التجارية الثابتة (SERA). */
 export const ELECTRICITY_SAR_PER_KWH = 0.32;
@@ -41,8 +41,7 @@ export function estimateMonthlyUtilityCost(state) {
     const areaSize = Number(state?.projectInfo?.areaSize) || 0;
     if (areaSize <= 0) return null;
 
-    const sectorText = state?.projectInfo?.sector || state?.projectInfo?.concept || state?.projectInfo?.activity;
-    const bench = detectSectorBenchmark(sectorText);
+    const bench = detectSectorBenchmark(sectorDetectionText(state?.projectInfo));
     const sectorKey = bench ? Object.keys(SECTOR_BENCHMARKS).find(k => SECTOR_BENCHMARKS[k] === bench) : null;
     const util = (sectorKey && UTILITY_BENCHMARKS[sectorKey]) || GENERIC_UTILITY_BENCHMARK;
 

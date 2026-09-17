@@ -51,8 +51,12 @@ describe('FIX A — PersistenceService._saveCloud: حارس خفيف قبل ال
     });
 
     it('يمرّر بيانات طبيعية الحجم فعلياً إلى upsert (لا يكسر المسار السليم)', async () => {
+        // تدقيق شامل 2026-09-16 (دمج تعديل متزامن): _saveCloud تُعيد الآن dataToSave
+        // (قد تكون مدموجة مع نسخة سحابية أحدث) بدل undefined — الموك هنا بلا .select
+        // عمداً (يثبت أن فشل قراءة الدمج التمهيدية لا يكسر مسار الحفظ السليم: يتراجع
+        // لكتابة data كما هي).
         const data = { projectInfo: { name: 'مشروع صغير طبيعي' } };
-        await expect(PersistenceService._saveCloud('id1', data, 'user-1')).resolves.toBeUndefined();
+        await expect(PersistenceService._saveCloud('id1', data, 'user-1')).resolves.toEqual(data);
         expect(upsertMock).toHaveBeenCalledTimes(1);
         expect(fromMock).toHaveBeenCalledWith('studies');
     });

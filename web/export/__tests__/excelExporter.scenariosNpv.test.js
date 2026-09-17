@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ExcelExporter } from '../excelExporter.js';
-import { createEmptyStudy, SECTIONS } from '../../js/core/schema.js';
+import { createEmptyStudy, SECTIONS, DEFAULT_SCENARIOS } from '../../js/core/schema.js';
 import { calculateStudy } from '../../js/core/engine.js';
 import ExcelJS from 'exceljs';
 
@@ -83,5 +83,33 @@ describe('ExcelExporter — ورقة السيناريوهات تعرض NPV/IRR �
         expect(Number(baseRow[1])).not.toBe(0);
         expect(Number(optRow[1])).toBeCloseTo(results.scenarios.optimistic.kpis.npv, 0);
         expect(Number(pessRow[1])).toBeCloseTo(results.scenarios.pessimistic.kpis.npv, 0);
+    });
+
+    it('تدقيق شامل 2026-09-16: عند غياب study.scenarios (دراسة قديمة/مُرحَّلة)، أعمدة تغيّر الإيراد/التكلفة تعرض DEFAULT_SCENARIOS الفعلية لا "0%/0%" رغم أن NPV يبقى متبايناً فعلياً', async () => {
+        const study = basicStudy();
+        delete study[SECTIONS.SCENARIOS];
+        const results = calculateStudy(study);
+
+        // NPV يبقى متبايناً وصحيحاً (المحرك له افتراضه الداخلي المستقل) — هذا ليس محلّ الخلل
+        expect(results.scenarios.optimistic.kpis.npv).toBeGreaterThan(results.scenarios.base.kpis.npv);
+        expect(results.scenarios.pessimistic.kpis.npv).toBeLessThan(results.scenarios.base.kpis.npv);
+
+        const exporter = new ExcelExporter(study, results, { lang: 'ar' });
+        await exporter.export('test');
+        const wb = await reload(capturedBlob);
+        const ws = wb.getWorksheet('السيناريوهات');
+
+        const rows = [];
+        ws.eachRow((row) => rows.push([row.getCell(1).value, row.getCell(2).value, row.getCell(3).value]));
+        const pessRow = rows.find((r) => r[0] === 'متشائم');
+        const optRow = rows.find((r) => r[0] === 'متفائل');
+
+        // كانت تعرض "0%" و"0%" لكلا العمودين بصرف النظر عن DEFAULT_SCENARIOS الفعلي
+        expect(pessRow[1]).toBe((DEFAULT_SCENARIOS.pessimistic.revenueChange * 100).toFixed(0) + '%');
+        expect(pessRow[2]).toBe((DEFAULT_SCENARIOS.pessimistic.costChange * 100).toFixed(0) + '%');
+        expect(optRow[1]).toBe((DEFAULT_SCENARIOS.optimistic.revenueChange * 100).toFixed(0) + '%');
+        expect(optRow[2]).toBe((DEFAULT_SCENARIOS.optimistic.costChange * 100).toFixed(0) + '%');
+        expect(pessRow[1]).not.toBe('0%');
+        expect(optRow[1]).not.toBe('0%');
     });
 });

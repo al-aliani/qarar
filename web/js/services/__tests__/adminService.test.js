@@ -81,6 +81,26 @@ describe('AdminService', () => {
         expect(rpcMock).toHaveBeenCalledWith('admin_confirm_phone_verified', { target_user_id: 'user-123' });
     });
 
+    it('getPendingBankTransfers يستدعي admin_list_pending_bank_transfers', async () => {
+        const { getPendingBankTransfers } = await import('../AdminService.js');
+        await getPendingBankTransfers();
+        expect(rpcMock).toHaveBeenCalledWith('admin_list_pending_bank_transfers', {});
+    });
+
+    it('confirmBankTransfer يمرّر target_order_id بالاسم الصحيح', async () => {
+        const { confirmBankTransfer } = await import('../AdminService.js');
+        await confirmBankTransfer('order-123');
+        expect(rpcMock).toHaveBeenCalledWith('admin_confirm_bank_transfer', { target_order_id: 'order-123' });
+    });
+
+    it('خطأ RPC عند تأكيد تحويل بنكي (مثال: طلب غير موجود) ⇒ ok:false برسالة الخطأ', async () => {
+        rpcMock.mockResolvedValue({ data: null, error: { message: 'order not found' } });
+        const { confirmBankTransfer } = await import('../AdminService.js');
+        const result = await confirmBankTransfer('order-missing');
+        expect(result.ok).toBe(false);
+        expect(result.error).toBe('order not found');
+    });
+
     it('خطأ RPC (مثال: مستخدم غير أدمن) ⇒ ok:false برسالة الخطأ', async () => {
         rpcMock.mockResolvedValue({ data: null, error: { message: 'not authorized' } });
         const { getOverview } = await import('../AdminService.js');

@@ -248,10 +248,16 @@ export async function signUp(email, password, phone, fullName, referredByToken) 
  * الدراسات المحلية (feas_project_*، بما فيها actuals حساسة بعد الإطلاق) ظاهرة
  * لأي مستخدم لاحق على جهاز مشترك. نمسحها الآن أيضاً عند الخروج صراحة.
  */
-export async function signOut() {
+// scope: تدقيق شامل 2026-09-16 — supabase-js يستخدم افتراضياً scope:'global' (يُبطل
+// جلسات المستخدم على كل أجهزته، موثَّق صراحة في مصدر المكتبة نفسها)، فكل استدعاء بلا
+// معامل كان يُسقط الأجهزة الأخرى فعلياً حتى من مسارات تخص الجهاز الحالي فقط (الخروج
+// اليدوي، الخروج التلقائي بعد الخمول، إغلاق نافذة تعيين كلمة مرور جديدة/تحدي 2FA بلا
+// إكمالها). الافتراض هنا الآن 'local' — الاستدعاء الوحيد الذي يحتاج فعلاً إسقاط كل
+// الجلسات (بعد استرداد 2FA بفقدان الجهاز، AuthModalStub.js) يمرّر 'global' صراحة.
+export async function signOut(scope = 'local') {
   const { supabase } = await getSupabaseClient();
   if (supabase) {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope });
   }
   _client = null;
   _clientPromise = null;

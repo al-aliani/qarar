@@ -834,6 +834,19 @@ class StudyStore {
                 console.debug(`[Store] Saved to local only (not authenticated, project: ${projectId})`);
             }
 
+            // دمج تعديل جهاز آخر (انظر PersistenceService._mergeStudySections): السحابة
+            // احتوت فعلياً على أقسام هذا الجهاز لا يعرفها — نطبّقها على الحالة الحيّة
+            // كي لا يُفقَدها الحفظ التالي من هذا الجهاز. نُطبّق فقط الأقسام التي لم
+            // يعدّلها المستخدم هنا أثناء رحلة هذا الحفظ نفسها (تفادي الكتابة فوق تعديل
+            // أحدث من ذلك بالخطأ).
+            if (result.merged) {
+                for (const key of Object.keys(result.merged)) {
+                    const stillUnchangedSinceThisSave = JSON.stringify(this.state[key]) === JSON.stringify(data[key]);
+                    if (stillUnchangedSinceThisSave) this.state[key] = result.merged[key];
+                }
+                this.notify();
+            }
+
             if (result.cloudSyncFailed) {
                 this._scheduleCloudSyncRetryOnReconnect(data);
             } else {
