@@ -1,6 +1,7 @@
 import * as SiteContent from '../services/SiteContentService.js';
 import { escapeHtml } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
+import * as AdminService from '../services/AdminService.js';
 
 const STATUS_LABELS = { draft: 'مسودة', published: 'منشورة', disabled: 'معطلة' };
 const LOCATION_LABELS = { header: 'القائمة الرئيسية', footer_platform: 'فوتر المنصة', footer_company: 'فوتر الشركة', footer_legal: 'الفوتر القانوني' };
@@ -16,8 +17,8 @@ export class SiteEditorView {
 
     async render() {
         this.container.innerHTML = '<p class="admin-loading">جارٍ تحميل محرر الموقع…</p>';
-        const [pages, navigation, partners] = await Promise.all([
-            SiteContent.listPages(), SiteContent.listNavigation(), SiteContent.listPartners(),
+        const [pages, navigation, partners, analytics] = await Promise.all([
+            SiteContent.listPages(), SiteContent.listNavigation(), SiteContent.listPartners(), AdminService.getEventsStats('page_view', 30, 'path'),
         ]);
         if (![pages, navigation, partners].every((result) => result.ok)) {
             this.container.innerHTML = `<p class="admin-error">تعذر تحميل المحرر: ${escapeHtml([pages, navigation, partners].find((r) => !r.ok)?.error)}</p>`;
@@ -26,6 +27,7 @@ export class SiteEditorView {
         this.pages = pages.data;
         this.navigation = navigation.data;
         this.partners = partners.data;
+        this.pageViews = new Map((analytics.ok ? analytics.data?.by_prop || [] : []).map(item => [String(item.value || item.key || ''), Number(item.count || 0)]));
         this._renderShell();
     }
 
@@ -62,7 +64,7 @@ export class SiteEditorView {
         workspace.innerHTML = `
             <div class="admin-cms-toolbar"><div><span class="admin-eyebrow">المحتوى</span><h3>صفحات الموقع</h3></div><button id="cmsNewPage" class="btn btn--primary btn--sm">إضافة صفحة</button></div>
             <div class="admin-cms-list">${this.pages.map((page) => `<article class="admin-cms-row">
-                <div><strong>${escapeHtml(page.title)}</strong><small>/${escapeHtml(page.slug)} · آخر تعديل ${escapeHtml(new Date(page.updated_at).toLocaleString('ar-SA'))}</small></div>
+                <div><strong>${escapeHtml(page.title)}</strong><small>/${escapeHtml(page.slug)} · آخر تعديل ${escapeHtml(new Date(page.updated_at).toLocaleString('ar-SA'))} · ${this._pageViewCount(page)} مشاهدة/30 يوم</small></div>
                 <span class="admin-status admin-status--${page.status === 'published' ? 'connected' : page.status === 'draft' ? 'instrumented' : 'planned'}">${STATUS_LABELS[page.status]}</span>
                 <div class="admin-cms-row__actions"><button class="btn btn--sm btn--ghost" data-edit-page="${page.id}">تعديل</button><button class="btn btn--sm btn--ghost" data-preview-page="${page.id}">معاينة</button><button class="btn btn--sm btn--ghost" data-history-page="${page.id}">السجل</button>${page.slug !== 'home' ? `<button class="btn btn--sm btn--ghost" data-delete-page="${page.id}">حذف</button>` : ''}</div>
             </article>`).join('') || '<p class="admin-table__empty">لا توجد صفحات.</p>'}</div>`;
@@ -78,6 +80,11 @@ export class SiteEditorView {
             toast.success('تم حذف الصفحة');
             this._renderPages();
         }));
+    }
+
+    _pageViewCount(page) {
+        const slug = page.slug === 'home' ? '/landing.html' : `/p/${page.slug}`;
+        return this.pageViews?.get(slug) || this.pageViews?.get(page.slug) || 0;
     }
 
     async _renderPageHistory(page) {

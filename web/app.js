@@ -862,6 +862,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
+  const showExternalPartyPortalView = () => {
+    syncHash('party-portal');
+    document.querySelector('.sidebar')?.style.setProperty('display', 'none');
+    document.getElementById('stepperNav')?.style.setProperty('display', 'none');
+    document.getElementById('breadcrumbBar')?.style.setProperty('display', 'none');
+    import('./js/ui/ExternalPartyPortalView.js').then(({ ExternalPartyPortalView }) => new ExternalPartyPortalView('wizardContainer').render()).catch(err => {
+      console.error('ExternalPartyPortalView load failed:', err);
+      toast.error('تعذر فتح بوابة الجهات');
+    });
+  };
+
   const showQuickStartGuideView = () => {
     syncHash('quickstart');
     const sidebarEl = document.querySelector('.sidebar');
@@ -1793,6 +1804,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     accelerator: showAcceleratorTipsView,
     postfeasibility: showPostFeasibilityView,
     workspace: showConnectedWorkspaceView,
+    'party-portal': showExternalPartyPortalView,
     quickstart: showQuickStartGuideView
   };
 

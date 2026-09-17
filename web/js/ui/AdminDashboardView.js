@@ -693,6 +693,21 @@ export class AdminDashboardView {
         this._renderTrendChart('chartExecutiveRevenue', 'ريال سعودي', revenueDaily);
         this._renderTrendChart('chartExecutiveSignups', 'مستخدمون', signupDaily);
         this._bindExecutiveControls(contentEl);
+        this._hydrateOperationalExceptions(contentEl);
+    }
+
+    async _hydrateOperationalExceptions(contentEl) {
+        const result = await adminListConnectedOperations();
+        if (!result.ok || !contentEl.isConnected) return;
+        const { requests, parties } = result.data;
+        const waiting = requests.filter(item => item.status === 'waiting_customer').length;
+        const active = requests.filter(item => ['new', 'received', 'processing', 'offered'].includes(item.status)).length;
+        const pendingParties = parties.filter(item => item.verification_status === 'pending').length;
+        const section = document.createElement('section');
+        section.className = 'admin-card';
+        section.innerHTML = `<div class="admin-section__header"><div><h3 class="admin-card__title">تدخلات تشغيلية مطلوبة</h3><p>ما يحتاج انتباه الإدارة الآن.</p></div><button class="btn btn--ghost btn--sm" data-open-operations>فتح الإدارة</button></div><div class="admin-stats-grid"><div class="admin-stat"><strong>${active}</strong><span>طلبات جارية</span></div><div class="admin-stat"><strong>${waiting}</strong><span>بانتظار العميل</span></div><div class="admin-stat"><strong>${pendingParties}</strong><span>جهات تنتظر الاعتماد</span></div></div>`;
+        contentEl.prepend(section);
+        section.querySelector('[data-open-operations]')?.addEventListener('click', async () => { this.activeTab = 'operations'; this._renderShell(); await this._loadTab('operations'); });
     }
 
     _bindExecutiveControls(contentEl) {

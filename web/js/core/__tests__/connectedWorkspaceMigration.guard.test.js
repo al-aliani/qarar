@@ -12,6 +12,16 @@ describe('connected workspace migration', () => {
         }
     });
 
+    it('adds an auditable request lifecycle and participant messaging', () => {
+        const lifecycle = fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20260917144116_operational_lifecycle.sql'), 'utf8');
+        for (const table of ['external_party_members', 'work_request_events', 'work_request_messages']) {
+            expect(lifecycle).toContain(`public.${table}`);
+        }
+        expect(lifecycle).toContain('advance_work_request');
+        expect(lifecycle).toContain('record_work_request_change');
+        expect(lifecycle).toContain('enable row level security');
+    });
+
     it('حسم اقتراح الخبير واعتماد العرض يمران عبر RPC محمية', () => {
         expect(sql).toContain('function public.decide_review_suggestion');
         expect(sql).toContain('function public.accept_supplier_quote');

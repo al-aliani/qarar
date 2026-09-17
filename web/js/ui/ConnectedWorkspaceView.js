@@ -3,13 +3,16 @@ import { buildDecisionActionPlan } from '../core/decisionActionPlan.js';
 import { escapeHtml } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
 import { trackEvent } from '../utils/analytics.js';
+import { compareStudyChange, formatImpactValue } from '../core/changeImpact.js';
 import {
     acceptSupplierQuote,
     createStudyVersion,
     createWorkRequest,
     decideSuggestion,
     listConnectedWorkspace,
+    listRequestThread,
     listParties,
+    sendRequestMessage,
     syncDecisionTasks,
     updateTaskStatus
 } from '../services/ConnectedWorkspaceService.js';
@@ -102,7 +105,7 @@ export class ConnectedWorkspaceView {
     }
 
     _requests(items) {
-        return `<section class="card p-5" data-connected-section="requests"><div class="flex justify-between gap-2"><h2 class="font-bold">الطلبات الموحدة</h2><button id="newConnectedRequest" class="btn btn--secondary btn--sm">طلب جديد</button></div><div class="mt-4 space-y-3">${items.length ? items.map(x => `<article class="card p-3"><div class="flex justify-between gap-2"><strong>${escapeHtml(x.title)}</strong><span class="badge">${escapeHtml(STATUS_LABEL[x.status] || x.status)}</span></div><p class="text-xs text-muted mt-1">${escapeHtml(x.details || '')}</p></article>`).join('') : this._empty('لا توجد طلبات مرتبطة بالمشروع.')}</div></section>`;
+        return `<section class="card p-5" data-connected-section="requests"><div class="flex justify-between gap-2"><h2 class="font-bold">الطلبات الموحدة</h2><button id="newConnectedRequest" class="btn btn--secondary btn--sm">طلب جديد</button></div><div class="mt-4 space-y-3">${items.length ? items.map(x => `<article class="card p-3"><div class="flex justify-between gap-2"><strong>${escapeHtml(x.title)}</strong><span class="badge">${escapeHtml(STATUS_LABEL[x.status] || x.status)}</span></div><p class="text-xs text-muted mt-1">${escapeHtml(x.details || '')}</p>${x.next_action ? `<p class="text-sm mt-2"><strong>المطلوب الآن:</strong> ${escapeHtml(x.next_action)}</p>` : ''}<button class="btn btn--ghost btn--sm mt-2" data-request-thread="${escapeHtml(x.id)}">السجل والرسائل</button><div data-thread-host="${escapeHtml(x.id)}"></div></article>`).join('') : this._empty('لا توجد طلبات مرتبطة بالمشروع.')}</div></section>`;
     }
 
     _quotes(items) {
@@ -153,8 +156,23 @@ export class ConnectedWorkspaceView {
         this.container.querySelectorAll('[data-suggestion]').forEach(button => button.addEventListener('click', async () => this._handleSuggestion(button, state)));
         this.container.querySelectorAll('[data-accept-quote]').forEach(button => button.addEventListener('click', async () => this._handleQuote(button, state)));
         this.container.querySelector('#newConnectedRequest')?.addEventListener('click', () => this._promptRequest(state));
+        this.container.querySelectorAll('[data-request-thread]').forEach(button => button.addEventListener('click', async () => this._openRequestThread(button.dataset.requestThread)));
         this.container.querySelector('#connectedShareStudy')?.addEventListener('click', () => document.getElementById('btnShareStudy')?.click());
         this.container.querySelectorAll('[data-request-party]').forEach(button => button.addEventListener('click', () => this._promptRequest(state, button.dataset)));
+    }
+
+    async _openRequestThread(requestId) {
+        const host = this.container.querySelector(`[data-thread-host="${requestId}"]`);
+        if (!host) return;
+        host.innerHTML = '<p class="text-xs text-muted mt-2">جاري التحميل…</p>';
+        const result = await listRequestThread(requestId);
+        if (!result.ok) { host.innerHTML = `<p class="text-danger">${escapeHtml(result.error)}</p>`; return; }
+        host.innerHTML = `<div class="mt-3 space-y-2">${result.data.events.map(item => `<p class="text-xs text-muted">${new Date(item.created_at).toLocaleString('ar-SA')} · ${escapeHtml(item.event_type)} ${item.to_status ? `→ ${escapeHtml(STATUS_LABEL[item.to_status] || item.to_status)}` : ''}</p>`).join('')}${result.data.messages.map(item => `<div class="card p-2 text-sm">${escapeHtml(item.body || 'مرفق')}</div>`).join('')}<button class="btn btn--secondary btn--sm" data-send-request-message>إضافة رسالة</button></div>`;
+        host.querySelector('[data-send-request-message]')?.addEventListener('click', async () => {
+            const body = window.prompt('اكتب رسالتك'); if (!body) return;
+            const sent = await sendRequestMessage(requestId, body); if (!sent.ok) return toast.error(sent.error);
+            toast.success('تم إرسال الرسالة'); await this._openRequestThread(requestId);
+        });
     }
 
     async _handleSuggestion(button, state) {
@@ -162,10 +180,12 @@ export class ConnectedWorkspaceView {
         if (!suggestion) return;
         const accepted = button.dataset.decision === 'accepted';
         if (accepted) {
-            const version = await createStudyVersion(state.projectInfo.id, state, `قبل تطبيق اقتراح الخبير: ${suggestion.field_path}`);
-            if (!version.ok) return toast.error(version.error);
             const [section, ...path] = suggestion.field_path.split('.');
             if (!section || !path.length) return toast.error('مسار الحقل المقترح غير صالح.');
+            const approved = await this._confirmImpactChange(state, { section, path: path.join('.'), value: suggestion.proposed_value }, suggestion.rationale);
+            if (!approved) return;
+            const version = await createStudyVersion(state.projectInfo.id, state, `قبل تطبيق اقتراح الخبير: ${suggestion.field_path}`);
+            if (!version.ok) return toast.error(version.error);
         }
         const result = await decideSuggestion(suggestion.id, accepted ? 'accepted' : 'rejected');
         if (!result.ok) return toast.error(result.error);
@@ -181,6 +201,8 @@ export class ConnectedWorkspaceView {
         const quote = this.data.quotes.find(item => item.id === button.dataset.acceptQuote);
         if (!quote) return;
         if (quote.item_key) {
+            const approved = await this._confirmImpactChange(state, { section: quote.section_key, path: quote.item_key, value: Number(quote.amount_sar) }, `اعتماد عرض ${quote.item_label}`);
+            if (!approved) return;
             const version = await createStudyVersion(state.projectInfo.id, state, `قبل اعتماد عرض المورد: ${quote.item_label}`);
             if (!version.ok) return toast.error(version.error);
         }
@@ -189,6 +211,20 @@ export class ConnectedWorkspaceView {
         if (quote.item_key) this.store.updatePath(quote.section_key, quote.item_key, Number(quote.amount_sar));
         toast.success(quote.item_key ? 'تم اعتماد العرض وتحديث بند التكلفة' : 'تم اعتماد عرض السعر');
         await this.render();
+    }
+
+    async _confirmImpactChange(state, change, reason) {
+        let impact;
+        try { impact = compareStudyChange(state, change); } catch { return window.confirm('تعذر حساب الأثر الكامل. هل تريد متابعة التغيير؟'); }
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.innerHTML = `<div class="modal-card p-6 max-w-3xl" role="dialog" aria-modal="true" dir="rtl"><h2 class="text-xl font-bold">قارن الأثر قبل الاعتماد</h2><p class="text-muted mt-2">${escapeHtml(reason || 'تغيير مقترح')}</p><div class="overflow-auto mt-4"><table class="w-full"><thead><tr><th>المؤشر</th><th>قبل</th><th>بعد</th><th>الفرق</th></tr></thead><tbody>${impact.rows.map(row => `<tr><td>${escapeHtml(row.label)}</td><td>${formatImpactValue(row.before, row.type)}</td><td>${formatImpactValue(row.after, row.type)}</td><td>${formatImpactValue(row.after - row.before, row.type)}</td></tr>`).join('')}</tbody></table></div><p class="mt-4"><strong>القرار:</strong> ${escapeHtml(impact.beforeDecision || '—')} ← ${escapeHtml(impact.afterDecision || '—')}</p><div class="flex gap-2 mt-5"><button class="btn btn--primary" data-impact-approve>اعتماد التغيير</button><button class="btn btn--ghost" data-impact-cancel>إلغاء</button></div></div>`;
+        document.body.appendChild(overlay);
+        return new Promise(resolve => {
+            const finish = value => { overlay.remove(); resolve(value); };
+            overlay.querySelector('[data-impact-approve]').addEventListener('click', () => finish(true));
+            overlay.querySelector('[data-impact-cancel]').addEventListener('click', () => finish(false));
+        });
     }
 
     async _promptRequest(state, party = {}) {

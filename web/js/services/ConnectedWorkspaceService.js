@@ -10,7 +10,7 @@ export async function listConnectedWorkspace(studyId) {
     const ctx = await clientAndUser();
     if (!ctx.ok || !studyId) return { ...ctx, data: null };
     const [requests, quotes, suggestions, tasks, versions] = await Promise.all([
-        ctx.supabase.from('work_requests').select('id,request_type,title,details,status,party_id,created_at').eq('study_id', studyId).order('created_at', { ascending: false }),
+        ctx.supabase.from('work_requests').select('id,request_type,title,details,status,party_id,assigned_to,due_at,next_action,result,created_at,updated_at').eq('study_id', studyId).order('created_at', { ascending: false }),
         ctx.supabase.from('supplier_quotes').select('id,request_id,party_id,section_key,item_key,item_label,amount_sar,vat_included,valid_until,attachment_url,accepted_at,created_at').eq('study_id', studyId).order('created_at', { ascending: false }),
         ctx.supabase.from('review_suggestions').select('id,field_path,old_value,proposed_value,rationale,status,created_at').eq('study_id', studyId).order('created_at', { ascending: false }),
         ctx.supabase.from('project_tasks').select('id,source_type,source_key,title,details,status,priority,due_date,completed_at,created_at').eq('study_id', studyId).order('created_at', { ascending: false }),
@@ -115,6 +115,48 @@ export async function adminUpdateWorkRequest(id, status) {
     if (!ok || !supabase) return { ok: false, error };
     const result = await supabase.from('work_requests').update({ status }).eq('id', id).select('id').single();
     return result.error ? { ok: false, error: result.error.message } : { ok: true };
+}
+
+export async function listRequestThread(requestId) {
+    const ctx = await clientAndUser();
+    if (!ctx.ok) return ctx;
+    const [events, messages] = await Promise.all([
+        ctx.supabase.from('work_request_events').select('id,event_type,from_status,to_status,details,created_at').eq('request_id', requestId).order('created_at'),
+        ctx.supabase.from('work_request_messages').select('id,sender_id,body,attachment_url,created_at').eq('request_id', requestId).order('created_at')
+    ]);
+    const failure = events.error || messages.error;
+    return failure ? { ok: false, error: failure.message } : { ok: true, data: { events: events.data || [], messages: messages.data || [] } };
+}
+
+export async function sendRequestMessage(requestId, body, attachmentUrl = null) {
+    const ctx = await clientAndUser();
+    if (!ctx.ok) return ctx;
+    const result = await ctx.supabase.from('work_request_messages').insert({ request_id: requestId, sender_id: ctx.user.id, body: String(body || '').trim() || null, attachment_url: attachmentUrl }).select().single();
+    return result.error ? { ok: false, error: result.error.message } : { ok: true, data: result.data };
+}
+
+export async function advanceWorkRequest(id, status, nextAction = null) {
+    const ctx = await clientAndUser();
+    if (!ctx.ok) return ctx;
+    const result = await ctx.supabase.rpc('advance_work_request', { target_id: id, next_status: status, requested_next_action: nextAction });
+    return result.error ? { ok: false, error: result.error.message } : { ok: true, data: result.data };
+}
+
+export async function listAssignedRequests() {
+    const ctx = await clientAndUser();
+    if (!ctx.ok) return ctx;
+    const result = await ctx.supabase.from('work_requests').select('id,user_id,study_id,request_type,title,details,status,due_at,next_action,created_at').eq('assigned_to', ctx.user.id).order('created_at', { ascending: false });
+    return result.error ? { ok: false, error: result.error.message } : { ok: true, data: result.data || [] };
+}
+
+export async function submitSupplierQuote(request, quote) {
+    const ctx = await clientAndUser();
+    if (!ctx.ok) return ctx;
+    const payload = { request_id: request.id, study_id: request.study_id, user_id: request.user_id, party_id: quote.partyId || null, section_key: quote.sectionKey, item_key: quote.itemKey || null, item_label: quote.itemLabel, amount_sar: Number(quote.amount), vat_included: !!quote.vatIncluded, valid_until: quote.validUntil || null };
+    const result = await ctx.supabase.from('supplier_quotes').insert(payload).select().single();
+    if (result.error) return { ok: false, error: result.error.message };
+    await advanceWorkRequest(request.id, 'offered', 'مراجعة العرض واعتماده أو رفضه');
+    return { ok: true, data: result.data };
 }
 
 export async function adminCreateParty(party) {
