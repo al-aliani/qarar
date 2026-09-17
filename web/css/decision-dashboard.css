@@ -1451,11 +1451,16 @@
 }
 .dd-quality-gate__score {
     min-width: 86px;
-    color: var(--c-gold-500, #d7aa4a);
+    color: var(--c-gold-500);
     font-size: 1.8rem;
     font-weight: 800;
     text-align: center;
-    filter: drop-shadow(0 0 8px rgba(215, 170, 74, .28));
+    /* تدقيق 2026-09-17: كان هذا التوهّج rgba(215,170,74) — تدرّج ذهبي فاتح لا يطابق
+       اللون الفعلي المعروض أصلاً (--c-gold-500 غامق دائماً، الاحتياطي القديم #d7aa4a
+       لم يكن يُطبَّق إطلاقاً لأن المتغيّر معرَّف دوماً بـ:root) — توهّج بلون لا يطابق
+       النص نفسه. الآن يشتق من نفس اللون المعروض فعلياً بنفس أسلوب color-mix المستخدم
+       أعلاه بهذا الملف. */
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--c-gold-500) 28%, transparent));
 }
 .dd-quality-gate__bar {
     height: 8px;
@@ -1503,7 +1508,7 @@
 .dd-insight--good { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--c-success) 65%, transparent); }
 .dd-insight--warning { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--c-warning) 65%, transparent); }
 .dd-insight--bad { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--c-danger) 65%, transparent); }
-.dd-insight__head span { color: var(--c-gold-500, #d7aa4a); font-weight: 800; }
+.dd-insight__head span { color: var(--c-gold-500); font-weight: 800; }
 .dd-insight p { margin: 10px 0 0; color: var(--c-text-muted); font-size: .84rem; line-height: 1.65; }
 .dd-insight__source span,
 .dd-insight__action span { color: var(--c-text); font-weight: 750; }
@@ -1850,14 +1855,14 @@
 
 .dv-quality__cta {
     background: #fff;
-    color: #0a4634;
+    color: var(--c-p-600);
     border-color: transparent;
     font-weight: 700;
 }
 
 .dv-quality__cta:hover {
     background: #fff;
-    color: #0a4634;
+    color: var(--c-p-600);
     filter: brightness(0.96);
 }
 

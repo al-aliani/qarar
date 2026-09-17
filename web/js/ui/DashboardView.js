@@ -2,7 +2,6 @@ import Swal from 'sweetalert2';
 import { ProjectManager } from '../services/ProjectManager.js';
 import { getAuthUser, signOut, getUserProfile } from '../../supabaseClient.js';
 import { AuthGuard } from '../middleware/AuthGuard.js';
-import { listOrders } from '../services/PaymentService.js';
 import { unreadCount } from '../services/NotificationService.js';
 import { getAuditLog, ACTIONS } from '../utils/auditLogger.js';
 import { toast } from '../utils/toast.js';
@@ -303,9 +302,7 @@ export class DashboardView {
                     { name: 'مونت كارلو', desc: 'احتمالات الربح والخسارة بدل رقم واحد', icon: 'flask', step: stepIndexBy(s => s.isMonteCarlo, 35), engine: true },
                     { name: 'تقييم الشركة', desc: 'قيمة المشروع للتفاوض مع مستثمر', icon: 'chart', step: stepIndexBy(s => s.isValuation, 36), engine: true },
                     { name: 'التسعير المثالي', desc: 'سعر مقترح من تكلفتك ومنافسيك ورغبة السوق بالدفع', icon: 'bank', step: stepIndexBy(s => s.isPricingOptimizer, 15), engine: true },
-                    { name: 'مؤشر تنافسية الرواتب', desc: 'نسبة إنفاقك على الرواتب مقارنة بنطاق قطاعك', icon: 'scale', id: 'linkTalentCompetitivenessToolkit', engine: true },
-                    { name: 'مختبر تسعير الاستراتيجيات', desc: 'نفس أداة «التسعير المثالي» أعلاه — بنفس بياناتك الحقيقية', icon: 'flask', step: stepIndexBy(s => s.isPricingOptimizer, 15), engine: true },
-                    { name: 'غرفة إدارة الأزمات', desc: 'نفس أداة «اختبار التحمل» — سيناريوهات جاهزة لركود، صدمة تكاليف، وأزمة حادة', icon: 'chart', step: stepIndexBy(s => s.isStressTest, 30), engine: true }
+                    { name: 'مؤشر تنافسية الرواتب', desc: 'نسبة إنفاقك على الرواتب مقارنة بنطاق قطاعك', icon: 'scale', id: 'linkTalentCompetitivenessToolkit', engine: true }
                 ]
             },
             {
@@ -320,8 +317,7 @@ export class DashboardView {
                     { name: 'محفظة الأصول والإهلاك', desc: 'متى تحتاج لاستبدال معداتك وأثاثك', icon: 'briefcase', id: 'linkAssetsPortfolioToolkit', engine: true },
                     { name: 'لوحة تنفيذ المهام (Kanban)', desc: 'حالة أنشطة خطتك الزمنية على شكل أعمدة', icon: 'list', id: 'linkExecutionKanbanToolkit', engine: true },
                     { name: 'مخطط توزيع الحصص (ESOP)', desc: 'هيكل الملكية من عقود الشراكة الفعلية، مزيج مصادر التمويل، وحاسبة تخفيف تخطيطية', icon: 'users', id: 'linkOwnershipPlannerToolkit', engine: true },
-                    { name: 'رحلة الشريك', desc: 'نوع الشريك الذي يحتاجه مشروعك فعلياً، من بيانات دراستك', icon: 'users', id: 'linkPartnerSelectionToolkit', engine: true },
-                    { name: 'غرفة التحالفات (Joint Ventures)', desc: 'نفس أداة «رحلة الشريك» أعلاه — بنفس بياناتك الحقيقية', icon: 'users', id: 'linkJointVenturesToolkit', engine: true }
+                    { name: 'رحلة الشريك', desc: 'نوع الشريك الذي يحتاجه مشروعك فعلياً، من بيانات دراستك', icon: 'users', id: 'linkPartnerSelectionToolkit', engine: true }
                 ]
             },
             {
@@ -330,8 +326,7 @@ export class DashboardView {
                 tools: [
                     { name: 'لوحة الإحصائيات الشاملة', desc: 'رأس المال والعائد عبر كل دراساتك المحفوظة', icon: 'trend', id: 'linkGlobalAnalyticsToolkit', engine: true },
                     { name: 'مركز الإشعارات', desc: 'كل التنبيهات المتعلقة بحسابك ودراساتك', icon: 'bell', id: 'linkNotificationsToolkit' },
-                    { name: 'سجل الأنشطة', desc: 'عمليات الدخول والحفظ والتصدير المسجّلة على هذا الجهاز فقط', icon: 'activity', id: 'linkActivityLogToolkit' },
-                    { name: 'محاكي التوسع والفروع', desc: 'نفس «الإحصائيات الشاملة» أعلاه — قارن دراساتك، وانسخ أي دراسة لبدء فرع جديد من قائمة دراساتك', icon: 'map', id: 'linkMultiBranchToolkit', engine: true }
+                    { name: 'سجل الأنشطة', desc: 'عمليات الدخول والحفظ والتصدير المسجّلة على هذا الجهاز فقط', icon: 'activity', id: 'linkActivityLogToolkit' }
                 ]
             },
             {
@@ -342,9 +337,7 @@ export class DashboardView {
                     { name: 'هل أرقامي منطقية؟', desc: 'مقارنة أرقامك بالقطاع', icon: 'scale', id: 'linkBenchmarkingFromJourneys', engine: true },
                     { name: 'تحليل المخاطر', desc: 'احتمال، أثر، وخطة تخفيف', icon: 'shield', step: stepIndexBy(s => s.isRiskMatrix, 29) },
                     { name: 'توافق منشآت', desc: 'جدول مرجعي يقارن أقسام دراستك بالنموذج الاسترشادي', icon: 'shield', id: 'linkMonshaatToolkit' },
-                    { name: 'معاييرنا', desc: 'كيف تُفحص جودة المخرجات', icon: 'book', id: 'linkTrustCriteriaToolkit' },
-                    { name: 'سوق الخبراء والمستشارين', desc: 'نفس صفحة «الاستشارات» — احجز مختصاً أو مستشاراً بسعر ثابت', icon: 'chat', id: 'linkExpertsMarketplaceToolkit' },
-                    { name: 'المساعد الذكي الكامل', desc: 'نفس المستشار الذكي العائم — يفتح نافذة المحادثة أسفل يمين الشاشة', icon: 'bulb', id: 'linkAiCopilotToolkit' }
+                    { name: 'معاييرنا', desc: 'كيف تُفحص جودة المخرجات', icon: 'book', id: 'linkTrustCriteriaToolkit' }
                 ]
             },
             {
@@ -356,29 +349,7 @@ export class DashboardView {
                     { name: 'نسخة التمويل', desc: 'قائمة متطلبات وتقرير مناسب للممول', icon: 'bank', id: 'linkFinancingToolkit' },
                     { name: 'عرض المستثمر', desc: 'عرض تقديمي مختصر للشريك أو المستثمر', icon: 'rocket', step: stepIndexBy(s => s.isDecisionDashboard, 40) },
                     { name: 'موارد وإرشاد', desc: 'جهات داعمة وروابط مفيدة', icon: 'book', id: 'linkResourcesToolkit' },
-                    { name: 'الأدلة والمرفقات', desc: 'حفظ ومشاركة مستندات دراستك بأمان', icon: 'folder', step: stepIndexBy(s => s.isAppendices, 41) },
-                    { name: 'غرفة البيانات الافتراضية', desc: 'نفس «الأدلة والمرفقات» أعلاه — حفظ ومشاركة مستنداتك بأمان', icon: 'folder', step: stepIndexBy(s => s.isAppendices, 41) },
-                    { name: 'مركز التمويل والعرض الاستثماري', desc: 'نفس «عرض المستثمر» و«تصدير التقرير» — جاهزية التمويل ومولّدات العروض الحقيقية', icon: 'rocket', step: stepIndexBy(s => s.isDecisionDashboard, 40), engine: true }
-                ]
-            },
-            {
-                title: 'قريباً',
-                note: 'مفاهيم قيد التطوير — بيانات تجريبية فقط، غير مفعّلة بعد',
-                tools: [
-                    { name: 'فريق العمل', desc: 'دعوة شركاء ومراجعين للدراسة (يحتاج نظام دعوات حقيقي)', icon: 'users', id: 'linkTeamManagementToolkit', tag: 'قريباً' },
-                    { name: 'أكاديمية قرار', desc: 'دورات تدريبية مصغّرة (يحتاج إنتاج محتوى فيديو حقيقي)', icon: 'book', id: 'linkAcademyToolkit', tag: 'قريباً' },
-                    { name: 'سوق مقدمي الخدمات', desc: 'موردون ومقاولون معتمدون (يحتاج شراكات تجارية حقيقية)', icon: 'list', id: 'linkMarketplaceToolkit', tag: 'قريباً' },
-                    { name: 'شبكة المستثمرين', desc: 'عرض دراستك على مستثمرين (يحتاج شبكة مستثمرين حقيقية ومراجعة نظامية)', icon: 'bank', id: 'linkInvestorNetworkToolkit', tag: 'قريباً' },
-                    { name: 'مجتمع قرار', desc: 'تبادل خبرات مع رواد أعمال آخرين (يحتاج أعضاء حقيقيين)', icon: 'users', id: 'linkCommunityForumToolkit', tag: 'قريباً' },
-                    { name: 'منصة الامتياز التجاري', desc: 'طرح علامتك للفرنشايز (يحتاج قراراً تجارياً ومستثمرين حقيقيين)', icon: 'briefcase', id: 'linkFranchiseHubToolkit', tag: 'قريباً' },
-                    { name: 'رادار الامتثال', desc: 'تنبيهات تشريعية حية (يحتاج تكاملاً حكومياً حقيقياً)', icon: 'shield', id: 'linkComplianceRadarToolkit', tag: 'قريباً' },
-                    { name: 'محاكي سلاسل الإمداد', desc: 'تتبع مخزون حي (يحتاج ربط نظام مخزون/شحن حقيقي)', icon: 'map', id: 'linkSupplyChainToolkit', tag: 'قريباً' },
-                    { name: 'منصة الاكتتاب العام', desc: 'جاهزية الطرح بسوق نمو (يحتاج نموذج بيانات حوكمة جديد)', icon: 'rocket', id: 'linkIpoReadinessToolkit', tag: 'قريباً' },
-                    { name: 'مجموعة تركيز بالذكاء الاصطناعي', desc: 'محادثة مع عميل افتراضي (يحتاج اشتراك LLM حقيقي)', icon: 'chat', id: 'linkAiFocusGroupToolkit', tag: 'قريباً' },
-                    { name: 'رادار السمعة الرقمية', desc: 'رصد ذكرك بمنصات التواصل (يحتاج اشتراكات API مدفوعة)', icon: 'target', id: 'linkDigitalReputationToolkit', tag: 'قريباً' },
-                    { name: 'مركز صفقات الاستحواذ', desc: 'تواصل مع صناديق استثمارية (يحتاج شبكة مشترين حقيقية)', icon: 'scale', id: 'linkMandAHubToolkit', tag: 'قريباً' },
-                    { name: 'رادار المناقصات الحكومية', desc: 'مناقصات متوافقة مع نشاطك (يحتاج شراكة مع منصة اعتماد الحكومية)', icon: 'briefcase', id: 'linkGovTendersToolkit', tag: 'قريباً' },
-                    { name: 'مركز التكاملات', desc: 'ربط أدوات خارجية بدراستك (يحتاج شراكات تكامل فعلية)', icon: 'list', id: 'linkIntegrationsHubToolkit', tag: 'قريباً' }
+                    { name: 'الأدلة والمرفقات', desc: 'حفظ ومشاركة مستندات دراستك بأمان', icon: 'folder', step: stepIndexBy(s => s.isAppendices, 41) }
                 ]
             }
         ];
@@ -393,9 +364,14 @@ export class DashboardView {
                 </div>
             </details>
         `).join('');
-        const activeHomePanel = ['studies', 'my-studies', 'engines', 'support', 'additional', 'databases'].includes(this.activeHomePanel)
+        const activeHomePanel = ['studies', 'engines', 'support', 'additional', 'databases'].includes(this.activeHomePanel)
             ? this.activeHomePanel
             : 'studies';
+        // «المكتبة» زر واحد في الشريط الجانبي يفتح لوحة «additional» افتراضياً، وتبديل
+        // داخلي بين دراسات جاهزة/قواعد بيانات داخل اللوحة نفسها (انظر أدنى الملف) — يبقى
+        // كل من activeHomePanel:'additional' وactiveHomePanel:'databases' (روابط #/ready-studies
+        // و#/data الخارجية) مساراً صحيحاً مستقلاً، هذا فقط يحدد أي زر شريط جانبي يبدو نشطاً.
+        const activeForSideNav = activeHomePanel === 'databases' ? 'additional' : activeHomePanel;
         const allSupportTools = toolkitGroups.flatMap(group => group.tools);
         // بحث موحّد (2026-07-16): dashboardSearch كان يبحث بأسماء الدراسات فقط — نضيف
         // مطابقة الأدوات/الأدلة من نفس القائمة الموجودة أصلاً (allSupportTools)، بلا
@@ -443,6 +419,7 @@ export class DashboardView {
                                 <div id="dvAccountMenu" class="dv-account__menu" hidden>
                                     <button type="button" id="btnUserProfile">حسابي وبياناتي</button>
                                     <button type="button" id="btnDashboardBilling">الطلبات والفواتير</button>
+                                    <button type="button" data-dv-route="support">الشكاوى والتذاكر</button>
                                     ${isAdmin ? '<button type="button" id="btnAdminDashboard" data-dv-route="admin">لوحة الإدارة</button>' : ''}
                                     <a href="./help.html" target="_blank" rel="noopener">مركز المساعدة</a>
                                     <button type="button" id="btnLogout" class="text-danger">تسجيل الخروج</button>
@@ -456,24 +433,10 @@ export class DashboardView {
                 <div class="dv-workspace" id="homeWorkspace">
                     <aside class="dv-side-nav" aria-label="قائمة لوحة المستخدم">
                         <div class="dv-side-nav__main">
-                            <button type="button" data-dv-panel-button="studies" class="${activeHomePanel === 'studies' ? 'is-active' : ''}">${inlineIcon('folder')} الرئيسية</button>
-                            <button type="button" data-dv-panel-button="my-studies" class="${activeHomePanel === 'my-studies' ? 'is-active' : ''}">${inlineIcon('briefcase')} دراساتي</button>
-
-                            <h3 class="dv-side-nav__group-title">بناء الدراسة</h3>
-                            <button type="button" data-dv-panel-button="engines" class="${activeHomePanel === 'engines' ? 'is-active' : ''}">${inlineIcon('chart')} الأدوات والمحرّكات</button>
-                            <button type="button" data-dv-panel-button="support" class="${activeHomePanel === 'support' ? 'is-active' : ''}">${inlineIcon('clipboard')} أدوات مساندة للدراسة</button>
-
-                            <h3 class="dv-side-nav__group-title">الموارد</h3>
-                            <button type="button" data-dv-panel-button="additional" class="${activeHomePanel === 'additional' ? 'is-active' : ''}">${inlineIcon('book')} دراسات جدوى جاهزة</button>
-                            <button type="button" data-dv-panel-button="databases" class="${activeHomePanel === 'databases' ? 'is-active' : ''}">${inlineIcon('list')} قواعد البيانات</button>
-                            <button type="button" data-dv-route="knowledge">${inlineIcon('book')} مركز المعرفة والموارد</button>
-
-                            <h3 class="dv-side-nav__group-title">الخدمات</h3>
+                            <button type="button" data-dv-panel-button="studies" class="${activeForSideNav === 'studies' ? 'is-active' : ''}">${inlineIcon('folder')} الرئيسية</button>
+                            <button type="button" data-dv-panel-button="support" class="${activeForSideNav === 'support' ? 'is-active' : ''}">${inlineIcon('clipboard')} أدوات مساندة للدراسة</button>
+                            <button type="button" data-dv-panel-button="additional" class="${activeForSideNav === 'additional' ? 'is-active' : ''}">${inlineIcon('book')} المكتبة</button>
                             <button type="button" data-dv-route="advisory">${inlineIcon('users')} الاستشارات</button>
-                            <button type="button" data-dv-route="billing">${inlineIcon('folder')} الطلبات</button>
-                            <button type="button" data-dv-route="support">${inlineIcon('bell')} الشكاوى والتذاكر</button>
-                            ${isAdmin ? `<h3 class="dv-side-nav__group-title">الإدارة</h3>
-                            <button type="button" data-dv-route="admin">${inlineIcon('shield')} لوحة الإدارة</button>` : ''}
                         </div>
                     </aside>
                     <div class="dv-home-panels">
@@ -509,35 +472,12 @@ export class DashboardView {
                                 `).join('')}
                             </div>
                             ` : ''}
-                        </section>
 
-                        <!-- «دراساتي»: كل ما عدا بطاقة البدء وآخر 3 دراسات — انتقل من لوحة «studies» هنا
-                             بلا تغيير في منطقه الداخلي (بحث/فلترة مجلد/فرز/فتح/تصدير/إعادة تسمية/نسخ/حذف/
-                             حفظ في الحساب)، فقط استضافته الآن في لوحة منفصلة (قرار مالك 2026-08-24). -->
-                        <section class="dv-section dv-home-panel" id="homePanel-my-studies" data-home-panel="my-studies" ${activeHomePanel !== 'my-studies' ? 'hidden' : ''}>
-
-                            ${this.currentUser ? `
-                            <div class="dv-bento" role="tablist" aria-label="حسابك">
-                                <button type="button" id="dvTileSubscription" class="dv-bento-tile dv-bento-tile--small">
-                                    <span class="dv-bento-tile__label"><span class="dv-bento-tile__ic">${inlineIcon('bank')}</span> اشتراكك</span>
-                                    <span class="dv-bento-tile__count dv-num">…</span>
-                                    <span class="dv-bento-tile__hint">جاري التحقق...</span>
-                                </button>
-                                ${hasProjects ? `
-                                <button type="button" id="dvTileUsageStats" class="dv-bento-tile dv-bento-tile--small">
-                                    <span class="dv-bento-tile__label"><span class="dv-bento-tile__ic">${inlineIcon('chart')}</span> إحصائياتك</span>
-                                    <span class="dv-bento-tile__count dv-num">${filtered.length}</span>
-                                    <span class="dv-bento-tile__hint">${lastActivityDate ? `آخر نشاط: ${lastActivityDate}` : 'لا نشاط بعد'}</span>
-                                </button>
-                                ` : ''}
-                                <button type="button" id="dvTileTemplateGallery" class="dv-bento-tile dv-bento-tile--small">
-                                    <span class="dv-bento-tile__label"><span class="dv-bento-tile__ic">${inlineIcon('clipboard')}</span> معرض القوالب</span>
-                                    <span class="dv-bento-tile__count dv-num">${inlineIcon('chev')}</span>
-                                    <span class="dv-bento-tile__hint">ابدأ من قالب قطاع جاهز بدل الصفر</span>
-                                </button>
-                            </div>
-                            ` : ''}
-
+                            <!-- «دراساتي» أُدمجت هنا مباشرة تحت البداية (تدقيق 2026-09-17): كانت لوحة
+                                 منفصلة (قرار مالك 2026-08-24) فتطلّب الوصول لدراساتك نقرة إضافية دائماً.
+                                 نفس المنطق الداخلي بلا تغيير (بحث/فلترة مجلد/فرز/فتح/تصدير/إعادة تسمية/
+                                 نسخ/حذف)؛ بطاقات «اشتراكك/إحصائياتك/معرض القوالب» الزخرفية حُذفت — نفس
+                                 الوجهات متاحة أصلاً من قائمة الحساب وزر «دراسة جديدة». -->
                             ${recentActivity.length > 0 ? `
                             <details class="dv-toolkit" style="margin-top:8px;">
                                 <summary class="dv-toolkit__head">
@@ -627,10 +567,12 @@ export class DashboardView {
                         </section>
 
                         <section class="dv-section dv-home-panel" id="additionalReadyStudies" data-home-panel="additional" ${activeHomePanel !== 'additional' ? 'hidden' : ''}>
+                            ${this.renderLibraryTabsHeader(activeHomePanel)}
                             <div id="readyStudiesRoot"></div>
                         </section>
 
                         <section class="dv-section dv-home-panel" id="databaseFilesRootPanel" data-home-panel="databases" ${activeHomePanel !== 'databases' ? 'hidden' : ''}>
+                            ${this.renderLibraryTabsHeader(activeHomePanel)}
                             <div id="databaseFilesRoot"></div>
                         </section>
 
@@ -758,20 +700,11 @@ export class DashboardView {
         const safeAwait = async (fn, fallback) => {
             try { return await fn(); } catch (_) { return fallback; }
         };
-        const [profileResult, orders, notifCount, shareLinks] = await Promise.all([
+        const [profileResult, notifCount, shareLinks] = await Promise.all([
             safeAwait(() => getUserProfile(), { ok: false }),
-            safeAwait(() => listOrders(), []),
             safeAwait(() => unreadCount(), 0),
             safeAwait(async () => (await import('../services/ShareService.js')).listAllMyShares(), []),
         ]);
-
-        const subTile = this.container.querySelector('#dvTileSubscription');
-        if (subTile) {
-            const latestOrder = orders[0] || null;
-            const ORDER_STATUS_LABEL = { pending: 'قيد المعالجة', paid: 'مدفوع', failed: 'فشل', refunded: 'مسترَد' };
-            subTile.querySelector('.dv-bento-tile__count').textContent = latestOrder ? (ORDER_STATUS_LABEL[latestOrder.status] || latestOrder.status) : '—';
-            subTile.querySelector('.dv-bento-tile__hint').textContent = latestOrder ? 'اضغط لعرض سجل الفواتير الكامل' : 'لا يوجد اشتراك نشط بعد';
-        }
 
         const notifBell = this.container.querySelector('#dvNotifBell');
         if (notifBell && notifCount > 0) {
@@ -786,21 +719,6 @@ export class DashboardView {
 
         const checklistPhone = this.container.querySelector('[data-checklist-phone]');
         if (checklistPhone && profile?.phone) checklistPhone.textContent = '✓ إضافة رقم الجوال';
-
-        const bento = this.container.querySelector('.dv-bento');
-        if (bento && profile && !profile.phone && !this.container.querySelector('#dvTileProfileIncomplete')) {
-            const tile = document.createElement('button');
-            tile.type = 'button';
-            tile.id = 'dvTileProfileIncomplete';
-            tile.className = 'dv-bento-tile dv-bento-tile--small';
-            tile.innerHTML = `
-                <span class="dv-bento-tile__label"><span class="dv-bento-tile__ic">${icon('i-user')}</span> أكمل ملفك</span>
-                <span class="dv-bento-tile__count dv-num">1</span>
-                <span class="dv-bento-tile__hint">أضف رقم جوالك لتفعيل كل ميزات الحساب</span>
-            `;
-            tile.addEventListener('click', () => window.dispatchEvent(new CustomEvent('feasibility:showUserProfile')));
-            bento.appendChild(tile);
-        }
 
         const shareLinksList = this.container.querySelector('#dvShareLinksList');
         if (shareLinksList) {
@@ -879,13 +797,8 @@ export class DashboardView {
                         </button>
                         <button type="button" class="mode-card" data-onb-choice="full">
                             <span class="mode-card__icon" aria-hidden="true">${inlineIcon('briefcase')}</span>
-                            <span class="mode-card__name">عندي مشروع قائم وأريد دراسة توسّع</span>
-                            <span class="mode-card__desc">دراسة احترافية كاملة بكل الأقسام والتحليلات.</span>
-                        </button>
-                        <button type="button" class="mode-card" data-onb-choice="funding">
-                            <span class="mode-card__icon" aria-hidden="true">${inlineIcon('bank')}</span>
-                            <span class="mode-card__name">أحتاج ملف لجهة تمويل</span>
-                            <span class="mode-card__desc">الدراسة الاحترافية الكاملة هي المسار الصحيح لملفات البنوك وجهات التمويل.</span>
+                            <span class="mode-card__name">عندي مشروع قائم، أو أحتاج ملف تمويل</span>
+                            <span class="mode-card__desc">دراسة احترافية كاملة بكل الأقسام والتحليلات — نفس المسار الصحيح لملفات البنوك وجهات التمويل.</span>
                         </button>
                         <button type="button" class="mode-card" data-onb-choice="ready">
                             <span class="mode-card__icon" aria-hidden="true">${inlineIcon('book')}</span>
@@ -959,7 +872,6 @@ export class DashboardView {
                 const choice = btn.dataset.onbChoice;
                 if (choice === 'quick') startQuickStudy();
                 else if (choice === 'ready') this.container.querySelector('[data-dv-panel-button="additional"]')?.click();
-                // full / funding: كلاهما نفس مسار الدراسة الاحترافية الكاملة الوحيد
                 else this.container.querySelector('#cardFullStudy')?.click();
             });
         });
@@ -967,6 +879,22 @@ export class DashboardView {
         setTimeout(() => (closeBtn || choiceButtons[0] || btnDismiss)?.focus(), 0);
     }
 
+    // «المكتبة» (تدقيق 2026-09-17): دراسات جاهزة/قواعد بيانات كانتا زرّين منفصلين
+    // بالشريط الجانبي — أُدمجتا خلف مدخل واحد («المكتبة») مع تبويبين داخليين هنا
+    // يستخدمان data-dv-lib-tab (لا data-dv-panel-button) حتى لا يتحوّل زر الشريط
+    // الجانبي نشطاً على تبويب خطأ — انظر switchHomePanel في bindEvents. رابط «مركز
+    // المعرفة» أُضيف هنا بدل زر جانبي مستقل يفتح صفحة كاملة منفصلة.
+    renderLibraryTabsHeader(active) {
+        return `
+            <div class="dv-section__head dv-section__head--row dv-libtabs-row">
+                <div class="dv-libtabs" role="tablist" aria-label="أقسام المكتبة">
+                    <button type="button" class="dv-libtabs__btn${active === 'additional' ? ' is-active' : ''}" data-dv-lib-tab="additional" role="tab" aria-selected="${active === 'additional'}">${inlineIcon('book')} دراسات جدوى جاهزة</button>
+                    <button type="button" class="dv-libtabs__btn${active === 'databases' ? ' is-active' : ''}" data-dv-lib-tab="databases" role="tab" aria-selected="${active === 'databases'}">${inlineIcon('list')} قواعد بيانات وأدلة</button>
+                </div>
+                <button type="button" class="btn btn--ghost btn--sm" data-dv-route="knowledge">${inlineIcon('book')} مركز المعرفة والموارد</button>
+            </div>
+        `;
+    }
 
     renderEmptyState() {
         // حالة «تصفية بلا نتائج»: توجد دراسات لكن البحث/المجلد لم يُطابق شيئاً
@@ -1103,10 +1031,15 @@ export class DashboardView {
 
                 <div class="dv-project__actions">
                     <button class="btn btn--sm btn--secondary dv-project__open btn-open" data-id="${project.id}">فتح</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-share" data-id="${project.id}" aria-label="تصدير الدراسة (PDF/Excel/Word)" title="تصدير الدراسة (PDF/Excel/Word)">${icon('i-share')}</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-rename" data-id="${project.id}" data-name="${safeName}" aria-label="إعادة تسمية" title="إعادة تسمية">${icon('i-pen')}</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn btn-duplicate" data-id="${project.id}" data-name="${safeName}" aria-label="نسخ المشروع لبدء فرع جديد" title="نسخ المشروع لبدء فرع جديد">${icon('i-clipboard')}</button>
-                    <button class="btn btn--sm btn--ghost dv-iconbtn dv-iconbtn--danger btn-delete" data-id="${project.id}" aria-label="نقل لسلة المحذوفات" title="نقل لسلة المحذوفات">${icon('i-trash')}</button>
+                    <div class="dv-project__more">
+                        <button type="button" class="btn btn--sm btn--ghost dv-iconbtn dv-project__moreToggle" aria-haspopup="true" aria-expanded="false" aria-label="مزيد من الإجراءات" title="مزيد من الإجراءات">${icon('i-more')}</button>
+                        <div class="dv-project__moreMenu" hidden role="menu">
+                            <button class="btn-share" data-id="${project.id}" role="menuitem">${icon('i-share')} تصدير</button>
+                            <button class="btn-rename" data-id="${project.id}" data-name="${safeName}" role="menuitem">${icon('i-pen')} إعادة تسمية</button>
+                            <button class="btn-duplicate" data-id="${project.id}" data-name="${safeName}" role="menuitem">${icon('i-clipboard')} نسخ لبدء فرع</button>
+                            <button class="btn-delete text-danger" data-id="${project.id}" role="menuitem">${icon('i-trash')} نقل لسلة المحذوفات</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -1247,7 +1180,7 @@ export class DashboardView {
         });
 
         const switchHomePanel = (panel, { scroll = false, focusSelector = null } = {}) => {
-            if (!['studies', 'my-studies', 'engines', 'support', 'additional', 'databases'].includes(panel)) return;
+            if (!['studies', 'engines', 'support', 'additional', 'databases'].includes(panel)) return;
             this.activeHomePanel = panel;
 
             if (panel === 'additional' && this.readyStudiesView && !this.readyStudiesView.loaded) {
@@ -1256,10 +1189,17 @@ export class DashboardView {
             if (panel === 'databases' && this.databaseFilesView && !this.databaseFilesView.loaded) {
                 this.databaseFilesView.render();
             }
+            // «المكتبة» زر جانبي واحد يمثّل 'additional' و'databases' معاً — انظر
+            // activeForSideNav في render() لنفس المبدأ عند الرسم الأولي. التبويبان
+            // الداخليان (data-dv-lib-tab) يفرّقان بينهما بدقة أدناه.
+            const panelForNav = panel === 'databases' ? 'additional' : panel;
             this.container.querySelectorAll('[data-dv-panel-button]').forEach(btn => {
-                const isActive = btn.dataset.dvPanelButton === panel;
+                const isActive = btn.dataset.dvPanelButton === panelForNav;
                 btn.classList.toggle('is-active', isActive);
                 btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+            this.container.querySelectorAll('[data-dv-lib-tab]').forEach(btn => {
+                btn.classList.toggle('is-active', btn.dataset.dvLibTab === panel);
             });
             this.container.querySelectorAll('[data-home-panel]').forEach(section => {
                 const show = section.dataset.homePanel === panel;
@@ -1285,6 +1225,11 @@ export class DashboardView {
         this.container.querySelectorAll('[data-dv-panel-button]').forEach(btn => {
             btn.addEventListener('click', () => switchHomePanel(btn.dataset.dvPanelButton));
         });
+        // تبويبا «المكتبة» الداخليان (دراسات جاهزة ⇄ قواعد بيانات) — نفس الدالة، مفتاح مختلف
+        // عن data-dv-panel-button حتى لا يتحوّل زر الشريط الجانبي نشطاً على التبويب الخطأ.
+        this.container.querySelectorAll('[data-dv-lib-tab]').forEach(btn => {
+            btn.addEventListener('click', () => switchHomePanel(btn.dataset.dvLibTab));
+        });
 
         // شعار «قرار» بالشريط العلوي (ظاهر دائماً) يعيد المستخدم لتبويب «دراساتك» —
         // ضروري الآن لأن شريط التنقل الجانبي الدائم أُزيل لصالح شبكة Bento داخل تبويب
@@ -1296,17 +1241,6 @@ export class DashboardView {
             if (Number.isInteger(index) && STEPS[index]) this.options.onShowStudyStep?.(index);
         });
 
-        // بطاقات الحساب السريعة الجديدة (2026-07-16)
-        this.container.querySelector('#dvTileSubscription')?.addEventListener('click', () => {
-            window.location.hash = '#/billing';
-        });
-        this.container.querySelector('#dvTileUsageStats')?.addEventListener('click', () => {
-            this.container.querySelector('#projectsGrid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-        this.container.querySelector('#dvTileTemplateGallery')?.addEventListener('click', async () => {
-            const { TemplateGallery } = await import('./TemplateGallery.js');
-            new TemplateGallery('templateGalleryOverlay', this.store).open();
-        });
         this.container.querySelectorAll('.dv-recent-strip__item').forEach(btn => {
             btn.addEventListener('click', () => this.loadProject(btn.dataset.recentId));
         });
@@ -1501,6 +1435,29 @@ export class DashboardView {
                 e.preventDefault();
                 this.openProjectOverview(card.dataset.id);
             });
+        });
+
+        // «⋯ مزيد» على بطاقة الدراسة (تدقيق 2026-09-17): يجمع تصدير/إعادة تسمية/نسخ/حذف
+        // خلف قائمة واحدة بدل 4 أزرار أيقونة ظاهرة دائماً — نفس نمط لوحة الإشعارات
+        // #dvNotifPanel أعلاه (تبديل + إغلاق عند نقر خارجها). الأزرار داخل القائمة هي
+        // نفسها .btn-share/.btn-rename/.btn-duplicate/.btn-delete بلا أي تغيير في
+        // معالجاتها بالأسفل — فقط انتقلت بصرياً لموضع مختلف.
+        this.container.querySelectorAll('.dv-project__moreToggle').forEach(toggle => {
+            const menu = toggle.nextElementSibling;
+            if (!menu) return;
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const willOpen = menu.hidden;
+                this.container.querySelectorAll('.dv-project__moreMenu').forEach(m => { m.hidden = true; });
+                this.container.querySelectorAll('.dv-project__moreToggle').forEach(t => t.setAttribute('aria-expanded', 'false'));
+                menu.hidden = !willOpen;
+                toggle.setAttribute('aria-expanded', String(willOpen));
+            });
+        });
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.dv-project__more')) return;
+            this.container.querySelectorAll('.dv-project__moreMenu').forEach(m => { m.hidden = true; });
+            this.container.querySelectorAll('.dv-project__moreToggle').forEach(t => t.setAttribute('aria-expanded', 'false'));
         });
 
         // Delete Project

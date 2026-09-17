@@ -25,7 +25,7 @@ describe('DashboardView — رابط لوحة الإدارة', () => {
         isAdmin.mockReset();
     });
 
-    it('يظهر في القائمة الجانبية وقائمة الحساب للأدمن ويفتح مسار الإدارة', async () => {
+    it('يظهر في قائمة الحساب للأدمن ويفتح مسار الإدارة (تدقيق 2026-09-17: أُزيل من الشريط الجانبي — كان مكرَّراً مع قائمة الحساب ضمن تبسيط القائمة)', async () => {
         isAdmin.mockResolvedValue(true);
         const { DashboardView } = await import('../DashboardView.js');
         const view = new DashboardView('dv', { getState: () => ({}), get: () => ({}), subscribe: () => () => {} });
@@ -34,7 +34,7 @@ describe('DashboardView — رابط لوحة الإدارة', () => {
 
         expect(document.getElementById('btnAdminDashboard')).not.toBeNull();
         const links = document.querySelectorAll('[data-dv-route="admin"]');
-        expect(links).toHaveLength(2);
+        expect(links).toHaveLength(1);
         links[0].click();
         expect(window.location.hash).toBe('#/admin');
     });
