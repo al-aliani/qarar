@@ -21,6 +21,11 @@ export class AdvisoryView {
         if (!this.container) return;
         const requests = await listMyConsultations();
         const state = this.store?.getState?.() || {};
+        const primaryIssue = state.results?.decisionExplanation?.primary || state.results?.decisionExplanation?.issues?.[0] || null;
+        const suggestedSpecialty = primaryIssue?.title || '';
+        const suggestedNotes = primaryIssue
+            ? `سبب الطلب من لوحة القرار: ${primaryIssue.explanation || primaryIssue.title}\nالإجراء المقترح: ${primaryIssue.action || 'مراجعة افتراضات الدراسة.'}`
+            : '';
         this.container.innerHTML = `
             <div class="advisory-view animate-entry p-6 max-w-4xl mx-auto" dir="rtl">
                 <button type="button" class="btn btn--ghost mb-4" id="advisoryBack">← رجوع</button>
@@ -31,11 +36,11 @@ export class AdvisoryView {
                 <div class="card p-6 mb-6" id="advisoryRequestForm">
                     <div class="form-group mb-3"><label class="flex items-center gap-2"><input type="checkbox" id="consultFromStart"><span>أحتاج مختصًا يساعدني من بداية كتابة دراسة الجدوى</span></label></div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="form-group"><label class="block text-sm mb-1">المجال المطلوب</label><input id="consultSpecialty" class="form-input w-full" placeholder="مثال: مالي، تسويقي، تشغيلي" required></div>
+                        <div class="form-group"><label class="block text-sm mb-1">المجال المطلوب</label><input id="consultSpecialty" class="form-input w-full" value="${escapeHtml(suggestedSpecialty)}" placeholder="مثال: مالي، تسويقي، تشغيلي" required></div>
                         <div class="form-group"><label class="block text-sm mb-1">قطاع المشروع</label><input id="consultSector" class="form-input w-full" value="${escapeHtml(state.projectInfo?.sector || '')}" placeholder="مثال: تقنية، تجارة، صحة" required></div>
                     </div>
                     <div class="form-group mt-3"><label class="block text-sm mb-1">الفكرة الأساسية</label><textarea id="consultIdea" class="form-input w-full" rows="5" minlength="10" placeholder="صف الفكرة والمرحلة الحالية وما الذي تحتاج مساعدة فيه">${escapeHtml(state.projectInfo?.concept || '')}</textarea></div>
-                    <div class="form-group mt-3"><label class="block text-sm mb-1">ملاحظات إضافية</label><textarea id="consultNotes" class="form-input w-full" rows="3"></textarea></div>
+                    <div class="form-group mt-3"><label class="block text-sm mb-1">ملاحظات إضافية</label><textarea id="consultNotes" class="form-input w-full" rows="3">${escapeHtml(suggestedNotes)}</textarea></div>
                     <div id="consultError" class="text-danger text-sm mt-2" role="alert" style="display:none"></div>
                     <button type="button" id="consultSubmit" class="btn btn--primary mt-4">إرسال الطلب</button>
                 </div>

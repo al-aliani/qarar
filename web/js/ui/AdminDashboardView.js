@@ -2191,18 +2191,20 @@ export class AdminDashboardView {
     async _renderContentTab(contentEl) {
         const days = this.behaviorDays;
         contentEl.innerHTML = '<p class="admin-loading">جاري تحليل المحتوى والصفحات…</p>';
-        const [pages, applications, sources] = await Promise.all([
+        const [pages, applications, sources, decisionActions, postActions] = await Promise.all([
             AdminService.getEventsStats('public_page_view', days, 'page'),
             AdminService.getEventsStats('public_application_submitted', days, 'application_type'),
             AdminService.getEventsStats(null, days, 'utm_source'),
+            AdminService.getEventsStats('decision_action_opened', days, 'action'),
+            AdminService.getEventsStats('post_feasibility_action_opened', days, 'action'),
         ]);
         const total = (result) => result.ok ? (result.data?.daily || []).reduce((sum, row) => sum + Number(row.count || 0), 0) : 0;
-        const warnings = [pages, applications, sources].filter((result) => !result.ok).map((result) => result.error).filter(Boolean);
+        const warnings = [pages, applications, sources, decisionActions, postActions].filter((result) => !result.ok).map((result) => result.error).filter(Boolean);
         contentEl.innerHTML = `
             <div class="admin-behavior-controls"><div><span class="admin-eyebrow">المحتوى والصفحات</span><h3 class="admin-card__title" style="margin:4px 0 0;">ما الذي يجذب الزوار ويحوّلهم؟</h3></div><span class="admin-period-badge">${days} يومًا</span></div>
-            <div class="admin-tile-grid admin-tile-grid--executive">${this._tile('مشاهدات الصفحات', formatNumber(total(pages)))}${this._tile('طلبات عامة', formatNumber(total(applications)))}${this._tile('صفحات مرصودة', formatNumber((pages.data?.by_prop || []).length))}${this._tile('مصادر UTM', formatNumber((sources.data?.by_prop || []).length))}</div>
+            <div class="admin-tile-grid admin-tile-grid--executive">${this._tile('مشاهدات الصفحات', formatNumber(total(pages)))}${this._tile('طلبات عامة', formatNumber(total(applications)))}${this._tile('إجراءات من القرار', formatNumber(total(decisionActions)))}${this._tile('إجراءات ما بعد الجدوى', formatNumber(total(postActions)))}</div>
             <div class="admin-section-grid admin-section-grid--executive"><section class="admin-card"><span class="admin-eyebrow">أداء الصفحات</span><h3 class="admin-card__title">الزيارات العامة</h3>${this._table(['الصفحة', 'المشاهدات'], (pages.data?.by_prop || []).map((row) => [row.value || 'غير محدد', row.count]))}</section><section class="admin-card"><span class="admin-eyebrow">التحويل</span><h3 class="admin-card__title">الطلبات حسب النوع</h3>${this._table(['النوع', 'الطلبات'], (applications.data?.by_prop || []).map((row) => [row.value || 'غير محدد', row.count]))}</section></div>
-            <section class="admin-card"><h3 class="admin-card__title">مصادر الوصول</h3>${this._table(['المصدر', 'الأحداث'], (sources.data?.by_prop || []).map((row) => [row.value || 'غير محدد', row.count]))}</section>
+            <div class="admin-section-grid admin-section-grid--executive"><section class="admin-card"><h3 class="admin-card__title">ما الذي ينفذه المستخدم بعد القرار؟</h3>${this._table(['الإجراء', 'المرات'], (decisionActions.data?.by_prop || []).map((row) => [row.value || 'غير محدد', row.count]))}</section><section class="admin-card"><h3 class="admin-card__title">مصادر الوصول</h3>${this._table(['المصدر', 'الأحداث'], (sources.data?.by_prop || []).map((row) => [row.value || 'غير محدد', row.count]))}</section></div>
             ${warnings.length ? `<p class="admin-data-note">تعذر تحديث بعض بيانات المحتوى: ${this._esc(warnings.join('، '))}</p>` : ''}
         `;
     }
@@ -2388,6 +2390,8 @@ export class AdminDashboardView {
             signup_complete: 'أنشأ حساباً', signup_error: 'تعثر إنشاء الحساب', export_click: 'صدّر تقريراً',
             ai_wand_use: 'استخدم الذكاء الاصطناعي', support_ticket_created: 'فتح تذكرة دعم',
             share_link_created: 'أنشأ رابط مشاركة', share_view: 'فتح مشاركة', study_created: 'أنشأ دراسة',
+            decision_action_opened: 'نفّذ إجراءً من القرار', post_feasibility_action_opened: 'بدأ إجراء ما بعد الجدوى',
+            partner_need_opened: 'فتح احتياج شريك أو مورد',
         })[name] || name || 'حدث غير معروف';
     }
 

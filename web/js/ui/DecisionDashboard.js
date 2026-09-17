@@ -22,6 +22,7 @@ import { hasMinimumRevenueData, hasMinimumFinancialData } from '../utils/dataSuf
 import { toast } from '../utils/toast.js';
 import { trackEvent } from '../utils/analytics.js';
 import { renderEngineVersionNotice } from '../utils/engineVersionNotice.js';
+import { buildDecisionActionPlan } from '../core/decisionActionPlan.js';
 import 'gridstack/dist/gridstack.min.css';
 
 export class DecisionDashboard {
@@ -109,6 +110,7 @@ export class DecisionDashboard {
         const decision = this.buildDecisionReasons(state, results, readiness, evaluation);
         const financingDiagnostics = this.getFinancingDiagnostics(state, results);
         const decisionExplanation = results?.decisionExplanation || null;
+        const actionPlan = buildDecisionActionPlan(state, results);
         const mcLastRun = state?.monteCarlo?.lastRun;
         // تدقيق 2026-09-16: عرض احتمالية محسوبة على مدخلات سابقة بلا أي إشارة يضلّل حتى
         // لو لم تعد تدخل الدرجة/القرار فعلياً (بعد إصلاح scoring.js وengine.js) — بصمة
@@ -278,6 +280,7 @@ export class DecisionDashboard {
                 </div>
 
                 ${decisionLocked ? '' : this.renderDecisionExplainer(decisionExplanation)}
+                ${decisionLocked ? '' : this.renderActionPlan(actionPlan)}
 
                 <!-- QA Gate Status -->
                 ${qaResults.hardErrors.length > 0 ? `
@@ -634,6 +637,21 @@ export class DecisionDashboard {
     // jsdom كانت تتجنّبه بدارة قصر (canPlayConfetti=false) فتبقى الاختبارات خضراء رغم
     // الخلل. الآن تُمرَّران من نقطة الاستدعاء الوحيدة في render().
     bindEvents(state, results, readiness, financingDiagnostics) {
+        this.container.querySelectorAll('[data-decision-action]').forEach((button) => {
+            const handler = () => {
+                const actionId = button.dataset.decisionAction || 'unknown';
+                const route = button.dataset.route;
+                const targetStep = Number(button.dataset.stepIndex);
+                trackEvent('decision_action_opened', { action: actionId, decision: results?.decision });
+                if (route) {
+                    window.location.hash = `#/${route}`;
+                } else if (this.onNavigate && Number.isInteger(targetStep) && targetStep >= 0) {
+                    this.onNavigate(targetStep);
+                }
+            };
+            button.addEventListener('click', handler);
+            this._eventListeners.push({ element: button, event: 'click', handler });
+        });
         this.container.querySelectorAll('[data-quality-step]').forEach((button) => {
             const handler = () => {
                 const stepIndex = Number(button.dataset.qualityStep);
@@ -1298,6 +1316,31 @@ export class DecisionDashboard {
         });
 
         return { desc: readiness.recommendation?.desc || '', reasons, nextSteps: uniqueSteps, positives };
+    }
+
+    renderActionPlan(actions) {
+        if (!actions?.length) return '';
+        return `<section class="card glass-card mb-6" aria-labelledby="decisionActionPlanTitle">
+            <div class="flex justify-between items-center gap-3 mb-4">
+                <div>
+                    <h3 class="card-title" id="decisionActionPlanTitle">خطة العمل المقترحة</h3>
+                    <p class="text-sm text-muted">كل إجراء مرتبط مباشرة بنتيجة دراستك ويفتح المكان المناسب لتنفيذه.</p>
+                </div>
+                <span class="badge">${actions.length} إجراءات</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                ${actions.map((item, index) => `<article class="card p-4" style="border-inline-start:3px solid ${item.priority === 'high' ? 'var(--c-warning)' : 'var(--c-primary)'}">
+                    <div class="flex items-start gap-3">
+                        <span class="badge">${index + 1}</span>
+                        <div class="flex-1">
+                            <strong>${escapeHtml(item.title)}</strong>
+                            <p class="text-sm text-muted mt-1">${escapeHtml(item.description || '')}</p>
+                            <button type="button" class="btn btn--secondary btn--sm mt-3" data-decision-action="${escapeHtml(item.id)}" ${item.route ? `data-route="${escapeHtml(item.route)}"` : `data-step-index="${item.stepIndex}"`}>تنفيذ الآن</button>
+                        </div>
+                    </div>
+                </article>`).join('')}
+            </div>
+        </section>`;
     }
 
     /** نص فجوة/توازن التمويل الموحَّد — يستهلكه renderKPIItem وشريط ملخّص المؤشرات معاً. */

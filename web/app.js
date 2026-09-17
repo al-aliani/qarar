@@ -821,6 +821,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (breadcrumbBar) breadcrumbBar.style.display = 'none';
     import('./js/ui/PostFeasibilityView.js').then(({ PostFeasibilityView }) => {
       const view = new PostFeasibilityView('wizardContainer', {
+        store,
+        onNavigateStep: (stepIndex) => navigateTo(stepIndex),
+        onNavigateRoute: (route) => { window.location.hash = `#/${route}`; },
         onBack: () => {
           if (sidebarEl) sidebarEl.style.removeProperty('display');
           if (stepperNavEl) stepperNavEl.style.removeProperty('display');
