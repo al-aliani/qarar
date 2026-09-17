@@ -40,26 +40,26 @@ export class OperationalSim {
                         <h3 class="card-title mb-4">${icon('i-settings')} إعدادات المحاكاة</h3>
                         
                         <div class="form-group mb-4">
-                            <label>معدل وصول العملاء (عميل/ساعة)</label>
-                            <input type="range" class="input-range" id="arrivalRate" min="5" max="200" value="${operational.arrivalRate}">
+                            <label for="arrivalRate">معدل وصول العملاء (عميل/ساعة)</label>
+                            <input type="range" class="input-range" id="arrivalRate" min="5" max="200" value="${operational.arrivalRate}" aria-label="معدل وصول العملاء في الساعة">
                             <div class="flex-between text-sm text-gold"><span id="arrivalVal">${operational.arrivalRate}</span> عميل/ساعة</div>
                         </div>
 
                         <div class="form-group mb-4">
-                            <label>مدة الخدمة للعميل الواحد (دقيقة)</label>
-                            <input type="range" class="input-range" id="serviceTime" min="1" max="30" value="${operational.serviceTime}">
+                            <label for="serviceTime">مدة الخدمة للعميل الواحد (دقيقة)</label>
+                            <input type="range" class="input-range" id="serviceTime" min="1" max="30" value="${operational.serviceTime}" aria-label="مدة الخدمة للعميل بالدقائق">
                             <div class="flex-between text-sm text-gold"><span id="serviceVal">${operational.serviceTime}</span> دقيقة</div>
                         </div>
 
                         <div class="form-group mb-4">
-                            <label>عدد نقاط الخدمة/الموظفين</label>
-                            <input type="range" class="input-range" id="servers" min="1" max="20" value="${operational.servers}">
+                            <label for="servers">عدد نقاط الخدمة/الموظفين</label>
+                            <input type="range" class="input-range" id="servers" min="1" max="20" value="${operational.servers}" aria-label="عدد نقاط الخدمة أو الموظفين">
                             <div class="flex-between text-sm text-gold"><span id="serversVal">${operational.servers}</span> موظف</div>
                         </div>
 
                         <div class="form-group mb-6">
-                            <label>معامل ذروة الطلب (مقابل المتوسط)</label>
-                            <input type="range" class="input-range" id="peakFactor" min="1" max="3" step="0.1" value="${peakFactor}">
+                            <label for="peakFactor">معامل ذروة الطلب (مقابل المتوسط)</label>
+                            <input type="range" class="input-range" id="peakFactor" min="1" max="3" step="0.1" value="${peakFactor}" aria-label="معامل ذروة الطلب">
                             <div class="flex-between text-sm text-gold"><span id="peakFactorVal">${peakFactor.toFixed(1)}</span>×</div>
                             <p class="text-xs text-muted mt-1">مثال: 1.5× يعني ساعة الذروة تستقبل ضعف ونصف عدد عملاء الساعة العادية — النتائج أدناه تعرض المتوسط والذروة معاً.</p>
                         </div>

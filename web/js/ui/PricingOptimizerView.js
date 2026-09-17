@@ -98,7 +98,7 @@ export class PricingOptimizerView {
                     </div>
                     <div class="form-group mt-3">
                         <label for="pricingPeakMultiplier">معامل سعر ساعة الذروة (استراتيجية اختيارية)</label>
-                        <input type="range" class="input-range" id="pricingPeakMultiplier" min="1" max="2" step="0.1" value="${toNumber(settings.peakMultiplier, 1.2)}">
+                        <input type="range" class="input-range" id="pricingPeakMultiplier" min="1" max="2" step="0.1" value="${toNumber(settings.peakMultiplier, 1.2)}" aria-label="معامل سعر ساعة الذروة">
                         <div class="flex-between text-sm text-gold"><span id="pricingPeakMultiplierVal">${toNumber(settings.peakMultiplier, 1.2).toFixed(1)}</span>×</div>
                         <p class="text-xs text-muted mt-1">اختياري: يرفع سعر أوقات الذروة فقط دون تغيير السعر القياسي أدناه — طبّقه فقط إن ناسب مشروعك.</p>
                     </div>

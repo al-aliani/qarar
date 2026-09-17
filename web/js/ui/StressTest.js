@@ -67,13 +67,13 @@ export class StressTest {
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                            <label class="block mb-2">انخفاض المبيعات المفاجئ</label>
-                            <input type="range" class="input-range danger-slider" id="salesDrop" min="0" max="100" value="${salesDrop}">
+                            <label class="block mb-2" for="salesDrop">انخفاض المبيعات المفاجئ</label>
+                            <input type="range" class="input-range danger-slider" id="salesDrop" min="0" max="100" value="${salesDrop}" aria-label="انخفاض المبيعات المفاجئ بالنسبة المئوية">
                             <div class="flex-between font-bold text-danger"><span id="salesDropVal">${salesDrop}</span>% انخفاض</div>
                         </div>
                         <div>
-                            <label class="block mb-2">ارتفاع التكاليف</label>
-                            <input type="range" class="input-range danger-slider" id="costHike" min="0" max="100" value="${costHike}">
+                            <label class="block mb-2" for="costHike">ارتفاع التكاليف</label>
+                            <input type="range" class="input-range danger-slider" id="costHike" min="0" max="100" value="${costHike}" aria-label="ارتفاع التكاليف بالنسبة المئوية">
                             <div class="flex-between font-bold text-danger"><span id="costHikeVal">${costHike}</span>% ارتفاع</div>
                         </div>
                     </div>

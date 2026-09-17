@@ -42,7 +42,7 @@ export class SensitivityWidget {
                             <span>تغير الإيرادات</span>
                             <span class="val-rev font-bold text-success">0%</span>
                         </div>
-                        <input type="range" class="w-full range-slider slider-rev" min="-30" max="30" value="0" step="5">
+                        <input type="range" class="w-full range-slider slider-rev" min="-30" max="30" value="0" step="5" aria-label="تغير الإيرادات بالنسبة المئوية">
                         <div class="flex justify-between text-[10px] text-muted mt-1">
                             <span>-30%</span>
                             <span>+30%</span>
@@ -55,7 +55,7 @@ export class SensitivityWidget {
                             <span>تغير التكاليف</span>
                             <span class="val-cost font-bold text-danger">0%</span>
                         </div>
-                        <input type="range" class="w-full range-slider slider-cost" min="-30" max="30" value="0" step="5">
+                        <input type="range" class="w-full range-slider slider-cost" min="-30" max="30" value="0" step="5" aria-label="تغير التكاليف بالنسبة المئوية">
                         <div class="flex justify-between text-[10px] text-muted mt-1">
                             <span>-30%</span>
                             <span>+30%</span>
