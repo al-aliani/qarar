@@ -28,8 +28,8 @@
 }
 
 .art-kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin: 16px 0;
 }
@@ -38,6 +38,10 @@
   border: 1px solid var(--lp-border);
   border-radius: 12px;
   padding: 14px 16px;
+  min-width: 140px;
+}
+@media (max-width: 720px) {
+  .art-kpi { flex: 1 1 100%; }
 }
 .art-kpi .art-kpi-val {
   font-family: inherit;
