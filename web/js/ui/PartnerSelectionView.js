@@ -6,6 +6,13 @@
 import { RESOURCES_GUIDANCE_LINKS } from '../config.js';
 import { calculateStudy } from '../core/engine.js';
 import { escapeHtml } from '../utils/escape.js';
+import { trackEvent } from '../utils/analytics.js';
+
+function needHref(type) {
+    if (type === 'supplier') return './suppliers.html';
+    if (type === 'financial_equity') return './partners.html';
+    return '#/advisory';
+}
 
 export class PartnerSelectionView {
     constructor(containerId, options = {}) {
@@ -32,6 +39,7 @@ export class PartnerSelectionView {
                     <li class="card p-4">
                         <strong>${n.label}</strong>
                         <p class="text-sm text-muted mt-1">${escapeHtml(n.reason)}</p>
+                        <a class="btn btn--secondary btn--sm mt-3" data-partner-need="${escapeHtml(n.type)}" href="${needHref(n.type)}">متابعة الاحتياج</a>
                     </li>
                 `).join('')}
             </ul>
@@ -90,5 +98,8 @@ export class PartnerSelectionView {
         `;
 
         this.container.querySelector('#partnerBack')?.addEventListener('click', () => this.onBack());
+        this.container.querySelectorAll('[data-partner-need]').forEach(link => link.addEventListener('click', () => {
+            trackEvent('partner_need_opened', { type: link.dataset.partnerNeed || 'unknown' });
+        }));
     }
 }

@@ -70,6 +70,11 @@ export function getEventsStats(eventName = null, days = 30, groupByPropKey = nul
     });
 }
 
+/** لقطة تشغيلية شبه لحظية، بجلسات مستعارة وخصائص آمنة فقط. */
+export function getActivityRadar(windowMinutes = 60) {
+    return callAdminRpc('admin_activity_radar_stats', { window_minutes: windowMinutes });
+}
+
 /**
  * قائمة العملاء اللي عندهم جوال مُدخَل لكن بانتظار تأكيد يدوي (تواصل واتساب
  * — انظر migration 20260717020000_whatsapp_manual_confirm.sql). دالة ضيّقة

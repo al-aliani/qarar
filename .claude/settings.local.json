@@ -5,7 +5,10 @@
       "Bash(wc:*)",
       "Bash(grep:*)",
       "Bash(ls:*)",
-      "Bash(vitest list:*)"
+      "Bash(vitest list:*)",
+      "Bash(gh pr *)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh secret *)"
     ]
   }
 }

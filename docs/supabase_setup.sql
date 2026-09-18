@@ -108,10 +108,15 @@ CREATE POLICY "Study owners can manage shares" ON public.study_shares
         )
     );
 
+-- ملاحظة 2026-09-16: تقرأ من مطالبة JWT (auth.jwt()->>'email') لا من جدول
+-- auth.users مباشرة — استعلام الجدول يتطلب صلاحية SELECT عليه لتقييم كل فروع
+-- OR في السياسة (حتى غير المطابق)، ولا authenticated/anon يملكانها، فيفشل كل
+-- SELECT من study_shares بـ"permission denied for table users" حتى للمالك.
+-- انظر supabase/migrations/20260916000000_fix_study_shares_auth_users_permission.sql.
 CREATE POLICY "Shared users can view their shares" ON public.study_shares
     FOR SELECT USING (
         shared_with_user_id = auth.uid() OR
-        shared_with_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+        shared_with_email = (auth.jwt() ->> 'email')
     );
 
 -- ============================================

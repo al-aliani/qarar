@@ -1,4 +1,5 @@
 import { resolveDecisionThresholds } from './engine.js';
+import { computeInputsFingerprint } from './monteCarloFingerprint.js';
 
 /**
  * Project Scoring Engine
@@ -65,8 +66,15 @@ export function calculateProjectScore(state, results) {
         details.push({ category: 'financial', label: 'معدل العائد الداخلي غير محقق', score: 0, max: 25, issue: true });
     }
 
-    // فترة الاسترداد (حتى 25)
-    if (payback > 0 && payback <= maxPayback) {
+    // فترة الاسترداد (حتى 25) — تدقيق: استرداد أقل من 1.2 سنة (نفس عتبة implausible في
+    // computeDecision أعلاه في هذا الملف) غالباً يعني بيانات تكلفة/استثمار ناقصة لا أداءً
+    // استثنائياً؛ كان يُحسب "نقطة قوة" كاملة لمروره حرفياً بشرط payback <= maxPayback، فيظهر
+    // في بطاقة «لماذا هذا القرار؟» كنقطة قوة بجانب تحذير «المؤشرات مرتفعة بشكل غير معتاد»
+    // لنفس الدراسة — تناقض مباشر يقوّض ثقة المستخدم بالتقرير.
+    if (payback > 0 && payback < 1.2) {
+        score += 10;
+        details.push({ category: 'financial', label: 'فترة الاسترداد سريعة بشكل غير معتاد — تحقّق من اكتمال بيانات التكلفة والاستثمار', score: 10, max: 25, issue: true });
+    } else if (payback > 0 && payback <= maxPayback) {
         score += 25;
         details.push({ category: 'financial', label: `فترة الاسترداد ≤ ${maxPayback} سنوات`, score: 25, max: 25 });
     } else if (payback > 0 && payback < 10) {
@@ -96,10 +104,15 @@ export function calculateProjectScore(state, results) {
     // هش لا يصمد أمام التذبذب. نفس عتبتَي 0.4/0.7 المستخدمتَين في عرض بطاقة الاحتمالية
     // بلوحة القرار (اتساق لغة المنتج). غياب تشغيل سابق محايد (5 لا صفر) — نفس فلسفة بوابة
     // القرار في المحرك: المحاكاة استشارية اختيارية، غيابها ليس خللاً مؤكَّداً في المشروع.
-    const mcProbability = Number(state?.monteCarlo?.lastRun?.successProbability);
+    // تدقيق 2026-09-16: نتيجة محاكاة محفوظة على مدخلات سابقة كانت تدخل الدرجة الجديدة
+    // بلا فحص حداثة — تغيير مدخل جوهري بعد التشغيل يُبقي مكوّن المخاطر (حتى 10 نقاط)
+    // محسوباً على مشروع لم يعد قائماً. بصمة غير مطابقة = معاملتها كـ"لم تُشغَّل بعد".
+    const mcLastRun = state?.monteCarlo?.lastRun;
+    const mcStale = !!(mcLastRun && state && mcLastRun.inputsFingerprint !== computeInputsFingerprint(state));
+    const mcProbability = (!mcStale) ? Number(mcLastRun?.successProbability) : NaN;
     if (!Number.isFinite(mcProbability)) {
         score += 5;
-        details.push({ category: 'risk', label: 'لم يُشغَّل تحليل مونت كارلو بعد — نقاط محايدة', score: 5, max: 10 });
+        details.push({ category: 'risk', label: mcStale ? 'نتيجة مونت كارلو قديمة (تغيّرت المدخلات) — أعد التشغيل، نقاط محايدة مؤقتاً' : 'لم يُشغَّل تحليل مونت كارلو بعد — نقاط محايدة', score: 5, max: 10 });
     } else if (mcProbability >= 0.7) {
         score += 10;
         details.push({ category: 'risk', label: 'احتمالية نجاح مونت كارلو مرتفعة (صامدة تحت التذبذب)', score: 10, max: 10 });

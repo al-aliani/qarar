@@ -4,6 +4,7 @@
  */
 import { MonteCarloEngine } from '../core/MonteCarloEngine.js';
 import { SECTIONS } from '../core/schema.js';
+import { computeInputsFingerprint } from '../core/monteCarloFingerprint.js';
 import { formatNumber, formatFractionAsPercent, formatCurrency } from '../utils/formatters.js';
 
 const MONTE_CARLO_ITERATIONS = 1000;
@@ -55,7 +56,11 @@ export class MonteCarloAnalysis {
     render() {
         // نتائج محفوظة من تشغيل سابق (إن وُجدت) — لا نُشغّل 1000 تكرار تلقائياً عند كل زيارة
         // للخطوة (كان يجمّد الخيط الرئيسي — تدقيق 2026-07-08)؛ التشغيل بزر صريح فقط الآن.
-        const saved = this.store.getState()[SECTIONS.MONTE_CARLO]?.lastRun || null;
+        const state = this.store.getState();
+        const saved = state[SECTIONS.MONTE_CARLO]?.lastRun || null;
+        // تدقيق 2026-09-16: بصمة غير مطابقة لمدخلات الحالة الحالية = تغيّر جوهري منذ
+        // آخر تشغيل — النتيجة المحفوظة لا تزال معروضة كـ"سجل" لكنها لا تُستخدم كمُحدَّثة.
+        const isStale = !!(saved && saved.inputsFingerprint !== computeInputsFingerprint(state));
 
         this.container.innerHTML = `
             <div class="monte-carlo-section">
@@ -68,14 +73,15 @@ export class MonteCarloAnalysis {
                             <!-- تدقيق 2026-07-08 (ملاحظة متوسطة #32): كانت نسبة التقلّب المستخدمة فعلياً
                             (20%) غير مُفصَح عنها للمستخدم إطلاقاً رغم أنها أساس كل الأرقام أدناه. -->
                             <p class="text-xs text-muted mt-1">افتراض التقلّب: ±20% على الإيراد (تقديري)، وتقلّب أقل تناسبياً على التكلفة والاستثمار الرأسمالي.</p>
-                            ${saved ? `<p class="text-xs text-muted mt-1">آخر تشغيل: ${new Date(saved.runAt).toLocaleString('ar-SA')} — بذرة ثابتة (نفس المدخلات = نفس النتيجة)</p>` : ''}
+                            ${saved && !isStale ? `<p class="text-xs text-muted mt-1">آخر تشغيل: ${new Date(saved.runAt).toLocaleString('ar-SA')} — بذرة ثابتة (نفس المدخلات = نفس النتيجة)</p>` : ''}
+                            ${isStale ? `<p class="text-xs text-warning mt-1"><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg> تغيّرت مدخلات الدراسة منذ آخر تشغيل (${new Date(saved.runAt).toLocaleString('ar-SA')}) — النتيجة المحفوظة لا تُستخدم في الدرجة أو التوصية حتى تُعاد المحاكاة.</p>` : ''}
                         </div>
                         <button id="btnRunSim" class="btn btn--primary btn-magic">
                             <svg class="ic" aria-hidden="true"><use href="#i-bolt"/></svg> تشغيل المحاكاة
                         </button>
                     </div>
 
-                    <div id="simResults" class="${saved ? '' : 'hidden'}">
+                    <div id="simResults" class="${saved && !isStale ? '' : 'hidden'}">
                         <div class="kpi-grid mb-6">
                             <div class="kpi-card">
                                 <span class="kpi-label">احتمالية النجاح (صافي القيمة الحالية > 0)</span>
@@ -124,7 +130,7 @@ export class MonteCarloAnalysis {
 
         // إن وُجدت نتيجة محفوظة نعرضها فوراً بلا إعادة حساب (رسم المدرّج يحتاج النتائج
         // الخام، لا نحتفظ بها في الحالة — نعرض المؤشرات فقط ونطلب زر التشغيل للمدرّج)
-        if (saved) this.displaySavedSummary(saved);
+        if (saved && !isStale) this.displaySavedSummary(saved);
     }
 
     displaySavedSummary(saved) {
@@ -205,6 +211,7 @@ export class MonteCarloAnalysis {
                     iterations: simulation.iterations ?? MONTE_CARLO_ITERATIONS,
                     volatility: 0.20,
                     runAt: new Date().toISOString(),
+                    inputsFingerprint: computeInputsFingerprint(state),
                 });
             }
         } catch (err) {

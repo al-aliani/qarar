@@ -71,6 +71,15 @@ const DOCUMENTED_BACKDATED_ALLOWLIST = new Set([
     // تاريخي متوارَث (grandfathered)، نفس الفئة: commit مباشر (c909492) يلي بثانية
     // واحدة commit (13c21ff) يحوي ملفاً بختم أعلى — نفس جلسة العمل عملياً.
     '20260721000001_share_feedback.sql',
+    // تاريخي متوارَث (grandfathered)، نفس الفئة: commit مباشر (6971b5f، "Add
+    // calculators and security verification updates"، 2026-09-17 22:44) حزم هذين
+    // الترحيلين الأمنيين (مؤرَّخين فعلياً مساء 2026-09-16) مع دفعة كبيرة غير متعلقة
+    // بهما، بعد ~5 ساعات من commit ملف 20260917144116_operational_lifecycle.sql
+    // (09a36f8، 17:47) الذي يحمل ختماً أحدث. بلا عطل نشر: list_migrations يؤكد أن
+    // كليهما مُطبَّق على قاعدة الإنتاج الحية بترتيبه الصحيح زمنياً (بين
+    // 20260916192117 و20260916204123) — فجوة إدخال Git فقط، لا تسلسل تطبيق خاطئ.
+    '20260916200602_restrict_rate_limit_rpc_execution.sql',
+    '20260916200730_harden_internal_function_execution_and_search_path.sql',
 ]);
 
 function embeddedTimestamp(filename) {

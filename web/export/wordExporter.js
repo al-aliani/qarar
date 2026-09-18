@@ -18,7 +18,7 @@ import { formatPayback } from '../js/utils/formatters.js';
 import { formatIrrPct } from '../js/utils/indicatorFormat.js';
 import { t } from '../js/i18n/reportStrings.js';
 import { SECTIONS } from '../js/core/schema.js';
-import { getExportMetadata } from './utils.js';
+import { getExportMetadata, SAFE } from './utils.js';
 import { formatRatio } from './ratioUnits.js';
 
 /** أقسام تقرير Word (معرّفات قابلة للربط مع reportSectionOrder). */
@@ -461,8 +461,8 @@ export class WordExporter {
                 this.createTableRow([t('indicator_column', lang), t('value_column', lang)], true),
                 this.createTableRow([t('npv', lang), formatCurrency(ind.npv, lang)]),
                 this.createTableRow([t('irr', lang), formatIrrPct(ind.irr)]),
-                this.createTableRow([t('payback_period', lang), formatPayback(ind.paybackPeriod)]),
-                this.createTableRow([t('roi', lang), `${((ind.roi ?? 0) * 100).toFixed(1)}%`])
+                this.createTableRow([t('payback_period', lang), formatPayback(ind.paybackPeriod ?? ind.payback)]),
+                this.createTableRow([t('roi', lang), SAFE.pctText(ind.roi)])
             ]
         });
     }

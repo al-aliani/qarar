@@ -20,10 +20,13 @@ import { toast } from '../utils/toast.js';
 import { formatCurrency, formatNumber, formatPercent } from '../utils/formatters.js';
 import { escapeHtml } from '../utils/escape.js';
 import { ADMIN_FEATURE_CATALOG } from '../data/adminFeatureCatalog.js';
+import { SiteEditorView } from './SiteEditorView.js';
+import { adminCreateParty, adminListConnectedOperations, adminUpdateParty, adminUpdateWorkRequest } from '../services/ConnectedWorkspaceService.js';
 import Swal from 'sweetalert2';
 
 const TABS = [
     { key: 'overview', label: 'نظرة عامة' },
+    { key: 'radar', label: 'رادار الموقع' },
     { key: 'studies', label: 'الدراسات' },
     { key: 'users', label: 'المستخدمون' },
     { key: 'revenue', label: 'الإيرادات' },
@@ -41,6 +44,8 @@ const TABS = [
     { key: 'satisfaction', label: 'الرضا والآراء' },
     { key: 'team', label: 'الفريق والدعم' },
     { key: 'content', label: 'المحتوى والصفحات' },
+    { key: 'site_editor', label: 'محرر الموقع' },
+    { key: 'operations', label: 'الطلبات والجهات' },
     { key: 'innovation', label: 'رادار الابتكار' },
     { key: 'strategy', label: 'مؤشرات المستثمرين' },
     { key: 'coverage', label: 'تغطية 300 ميزة' },
@@ -56,13 +61,13 @@ const TABS = [
 // يتطلب تمرير أفقي طويلاً للوصول لتبويب معيّن؛ التجميع هنا تنظيم بصري فقط
 // (نفس أزرار TABS وأزرار data-tab وربط الأحداث في _renderShell دون تغيير).
 const TAB_GROUPS = [
-    { title: 'الرئيسية', keys: ['overview'] },
+    { title: 'الرئيسية', keys: ['overview', 'radar'] },
     { title: 'المبيعات والنمو', keys: ['revenue', 'subscriptions', 'bank_transfers', 'growth', 'strategy', 'investor'] },
     { title: 'المستخدمون والسوق', keys: ['users', 'platform', 'industry', 'behavior', 'sharing'] },
     { title: 'المنتج والجودة', keys: ['studies', 'quality', 'ai', 'coverage', 'innovation', 'experiments'] },
-    { title: 'التشغيل والموثوقية', keys: ['reliability', 'security', 'reports'] },
+    { title: 'التشغيل والموثوقية', keys: ['operations', 'reliability', 'security', 'reports'] },
     { title: 'الدعم والرضا', keys: ['tickets', 'satisfaction', 'reviews', 'reviewers', 'team'] },
-    { title: 'المحتوى', keys: ['content'] },
+    { title: 'المحتوى', keys: ['site_editor', 'content'] },
 ];
 
 // نفس تسميات ISSUE_TYPE_OPTIONS/PRIORITY_OPTIONS بـ SupportTicketsView.js (العميل) —
@@ -85,6 +90,9 @@ export class AdminDashboardView {
         this.executiveDays = 30;
         this.growthDays = 30;
         this.openTicketId = null;
+        this.radarMinutes = 60;
+        this.radarTimer = null;
+        this.siteEditor = null;
     }
 
     async render() {
@@ -169,6 +177,22 @@ export class AdminDashboardView {
         const contentEl = this.container.querySelector('#adminTabContent');
         if (!contentEl) return;
 
+        if (this.radarTimer) {
+            clearInterval(this.radarTimer);
+            this.radarTimer = null;
+        }
+
+        if (tabKey === 'radar') {
+            await this._renderRadarTab(contentEl);
+            return;
+        }
+
+        if (tabKey === 'site_editor') {
+            this.siteEditor = new SiteEditorView(contentEl);
+            await this.siteEditor.render();
+            return;
+        }
+
         if (tabKey === 'behavior') {
             await this._renderBehaviorTab(contentEl);
             return;
@@ -241,6 +265,11 @@ export class AdminDashboardView {
 
         if (tabKey === 'content') {
             await this._renderContentTab(contentEl);
+            return;
+        }
+
+        if (tabKey === 'operations') {
+            await this._renderConnectedOperations(contentEl);
             return;
         }
 
@@ -389,10 +418,11 @@ export class AdminDashboardView {
         renderers[tabKey]?.();
     }
 
-    _tile(label, value) {
+    _tile(label, value, note = '') {
         return `<div class="admin-tile">
             <div class="admin-tile__label">${this._esc(label)}</div>
             <div class="admin-tile__value">${this._esc(value)}</div>
+            ${note ? `<div class="admin-tile__note">${this._esc(note)}</div>` : ''}
         </div>`;
     }
 
@@ -663,6 +693,21 @@ export class AdminDashboardView {
         this._renderTrendChart('chartExecutiveRevenue', 'ريال سعودي', revenueDaily);
         this._renderTrendChart('chartExecutiveSignups', 'مستخدمون', signupDaily);
         this._bindExecutiveControls(contentEl);
+        this._hydrateOperationalExceptions(contentEl);
+    }
+
+    async _hydrateOperationalExceptions(contentEl) {
+        const result = await adminListConnectedOperations();
+        if (!result.ok || !contentEl.isConnected) return;
+        const { requests, parties } = result.data;
+        const waiting = requests.filter(item => item.status === 'waiting_customer').length;
+        const active = requests.filter(item => ['new', 'received', 'processing', 'offered'].includes(item.status)).length;
+        const pendingParties = parties.filter(item => item.verification_status === 'pending').length;
+        const section = document.createElement('section');
+        section.className = 'admin-card';
+        section.innerHTML = `<div class="admin-section__header"><div><h3 class="admin-card__title">تدخلات تشغيلية مطلوبة</h3><p>ما يحتاج انتباه الإدارة الآن.</p></div><button class="btn btn--ghost btn--sm" data-open-operations>فتح الإدارة</button></div><div class="admin-stats-grid"><div class="admin-stat"><strong>${active}</strong><span>طلبات جارية</span></div><div class="admin-stat"><strong>${waiting}</strong><span>بانتظار العميل</span></div><div class="admin-stat"><strong>${pendingParties}</strong><span>جهات تنتظر الاعتماد</span></div></div>`;
+        contentEl.prepend(section);
+        section.querySelector('[data-open-operations]')?.addEventListener('click', async () => { this.activeTab = 'operations'; this._renderShell(); await this._loadTab('operations'); });
     }
 
     _bindExecutiveControls(contentEl) {
@@ -1216,6 +1261,35 @@ export class AdminDashboardView {
                 </select>
             </div>
         `;
+    }
+
+    async _renderConnectedOperations(contentEl) {
+        contentEl.innerHTML = '<p class="admin-loading">جاري تحميل الطلبات والجهات…</p>';
+        const result = await adminListConnectedOperations();
+        if (!result.ok) { contentEl.innerHTML = `<p class="admin-error">${this._esc(result.error)}</p>`; return; }
+        const { requests, parties } = result.data;
+        contentEl.innerHTML = `<section class="admin-section">
+            <div class="admin-section__header"><div><h2>الطلبات والجهات المتصلة</h2><p>إدارة دورة الطلب من الاستلام حتى الإكمال، ودليل الموردين والخبراء والشركاء والممولين.</p></div><button class="btn btn--primary btn--sm" id="adminAddParty">إضافة جهة</button></div>
+            <div class="admin-stats-grid"><div class="admin-stat"><strong>${requests.length}</strong><span>طلب حديث</span></div><div class="admin-stat"><strong>${parties.length}</strong><span>جهة مسجلة</span></div><div class="admin-stat"><strong>${requests.filter(x => !['completed','cancelled','rejected'].includes(x.status)).length}</strong><span>قيد المتابعة</span></div></div>
+            <h3>الطلبات</h3><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>الطلب</th><th>النوع</th><th>الحالة</th></tr></thead><tbody>${requests.map(x => `<tr><td>${this._esc(x.title)}</td><td>${this._esc(x.request_type)}</td><td><select class="admin-select" data-operation-request="${this._esc(x.id)}">${['new','received','processing','waiting_customer','offered','accepted','rejected','completed','cancelled'].map(status => `<option value="${status}" ${x.status === status ? 'selected' : ''}>${status}</option>`).join('')}</select></td></tr>`).join('') || '<tr><td colspan="3">لا توجد طلبات.</td></tr>'}</tbody></table></div>
+            <h3>دليل الجهات</h3><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>الجهة</th><th>النوع</th><th>التحقق</th><th>مفعلة</th></tr></thead><tbody>${parties.map(x => `<tr><td>${this._esc(x.name)}</td><td>${this._esc(x.party_type)}</td><td><select class="admin-select" data-party-verification="${this._esc(x.id)}"><option value="pending" ${x.verification_status === 'pending' ? 'selected' : ''}>معلق</option><option value="verified" ${x.verification_status === 'verified' ? 'selected' : ''}>موثق</option><option value="rejected" ${x.verification_status === 'rejected' ? 'selected' : ''}>مرفوض</option></select></td><td><input type="checkbox" data-party-active="${this._esc(x.id)}" ${x.active ? 'checked' : ''}></td></tr>`).join('') || '<tr><td colspan="4">لا توجد جهات.</td></tr>'}</tbody></table></div>
+        </section>`;
+        contentEl.querySelectorAll('[data-operation-request]').forEach(el => el.addEventListener('change', async () => {
+            const saved = await adminUpdateWorkRequest(el.dataset.operationRequest, el.value); saved.ok ? toast.success('تم تحديث حالة الطلب') : toast.error(saved.error);
+        }));
+        contentEl.querySelectorAll('[data-party-verification]').forEach(el => el.addEventListener('change', async () => {
+            const saved = await adminUpdateParty(el.dataset.partyVerification, { verification_status: el.value }); saved.ok ? toast.success('تم تحديث اعتماد الجهة') : toast.error(saved.error);
+        }));
+        contentEl.querySelectorAll('[data-party-active]').forEach(el => el.addEventListener('change', async () => {
+            const saved = await adminUpdateParty(el.dataset.partyActive, { active: el.checked }); saved.ok ? toast.success('تم تحديث ظهور الجهة') : toast.error(saved.error);
+        }));
+        contentEl.querySelector('#adminAddParty')?.addEventListener('click', async () => {
+            const name = window.prompt('اسم الجهة'); if (!name) return;
+            const partyType = window.prompt('النوع: supplier أو expert أو partner أو financier', 'supplier');
+            if (!['supplier','expert','partner','financier'].includes(partyType)) return toast.error('نوع الجهة غير صالح');
+            const saved = await adminCreateParty({ name: name.trim(), party_type: partyType, verification_status: 'pending', active: true });
+            if (!saved.ok) return toast.error(saved.error); toast.success('تمت إضافة الجهة'); await this._renderConnectedOperations(contentEl);
+        });
     }
 
     async _renderBehaviorTab(contentEl) {
@@ -2178,18 +2252,20 @@ export class AdminDashboardView {
     async _renderContentTab(contentEl) {
         const days = this.behaviorDays;
         contentEl.innerHTML = '<p class="admin-loading">جاري تحليل المحتوى والصفحات…</p>';
-        const [pages, applications, sources] = await Promise.all([
+        const [pages, applications, sources, decisionActions, postActions] = await Promise.all([
             AdminService.getEventsStats('public_page_view', days, 'page'),
             AdminService.getEventsStats('public_application_submitted', days, 'application_type'),
             AdminService.getEventsStats(null, days, 'utm_source'),
+            AdminService.getEventsStats('decision_action_opened', days, 'action'),
+            AdminService.getEventsStats('post_feasibility_action_opened', days, 'action'),
         ]);
         const total = (result) => result.ok ? (result.data?.daily || []).reduce((sum, row) => sum + Number(row.count || 0), 0) : 0;
-        const warnings = [pages, applications, sources].filter((result) => !result.ok).map((result) => result.error).filter(Boolean);
+        const warnings = [pages, applications, sources, decisionActions, postActions].filter((result) => !result.ok).map((result) => result.error).filter(Boolean);
         contentEl.innerHTML = `
             <div class="admin-behavior-controls"><div><span class="admin-eyebrow">المحتوى والصفحات</span><h3 class="admin-card__title" style="margin:4px 0 0;">ما الذي يجذب الزوار ويحوّلهم؟</h3></div><span class="admin-period-badge">${days} يومًا</span></div>
-            <div class="admin-tile-grid admin-tile-grid--executive">${this._tile('مشاهدات الصفحات', formatNumber(total(pages)))}${this._tile('طلبات عامة', formatNumber(total(applications)))}${this._tile('صفحات مرصودة', formatNumber((pages.data?.by_prop || []).length))}${this._tile('مصادر UTM', formatNumber((sources.data?.by_prop || []).length))}</div>
+            <div class="admin-tile-grid admin-tile-grid--executive">${this._tile('مشاهدات الصفحات', formatNumber(total(pages)))}${this._tile('طلبات عامة', formatNumber(total(applications)))}${this._tile('إجراءات من القرار', formatNumber(total(decisionActions)))}${this._tile('إجراءات ما بعد الجدوى', formatNumber(total(postActions)))}</div>
             <div class="admin-section-grid admin-section-grid--executive"><section class="admin-card"><span class="admin-eyebrow">أداء الصفحات</span><h3 class="admin-card__title">الزيارات العامة</h3>${this._table(['الصفحة', 'المشاهدات'], (pages.data?.by_prop || []).map((row) => [row.value || 'غير محدد', row.count]))}</section><section class="admin-card"><span class="admin-eyebrow">التحويل</span><h3 class="admin-card__title">الطلبات حسب النوع</h3>${this._table(['النوع', 'الطلبات'], (applications.data?.by_prop || []).map((row) => [row.value || 'غير محدد', row.count]))}</section></div>
-            <section class="admin-card"><h3 class="admin-card__title">مصادر الوصول</h3>${this._table(['المصدر', 'الأحداث'], (sources.data?.by_prop || []).map((row) => [row.value || 'غير محدد', row.count]))}</section>
+            <div class="admin-section-grid admin-section-grid--executive"><section class="admin-card"><h3 class="admin-card__title">ما الذي ينفذه المستخدم بعد القرار؟</h3>${this._table(['الإجراء', 'المرات'], (decisionActions.data?.by_prop || []).map((row) => [row.value || 'غير محدد', row.count]))}</section><section class="admin-card"><h3 class="admin-card__title">مصادر الوصول</h3>${this._table(['المصدر', 'الأحداث'], (sources.data?.by_prop || []).map((row) => [row.value || 'غير محدد', row.count]))}</section></div>
             ${warnings.length ? `<p class="admin-data-note">تعذر تحديث بعض بيانات المحتوى: ${this._esc(warnings.join('، '))}</p>` : ''}
         `;
     }
@@ -2365,6 +2441,147 @@ export class AdminDashboardView {
                 contentEl.querySelector('#adminReportStatus').textContent = 'تعذر النسخ التلقائي؛ استخدم التنزيل.';
             }
         });
+    }
+
+    _radarEventLabel(name) {
+        return ({
+            public_page_view: 'زيارة صفحة عامة', study_start: 'بدأ دراسة', study_complete: 'أكمل دراسة',
+            wizard_step_view: 'انتقل بين خطوات الدراسة', checkout_start: 'بدأ الدفع', payment_success: 'نجح الدفع',
+            payment_error: 'خطأ دفع', error: 'خطأ تقني', login_complete: 'سجّل الدخول', login_failed: 'فشل تسجيل الدخول',
+            signup_complete: 'أنشأ حساباً', signup_error: 'تعثر إنشاء الحساب', export_click: 'صدّر تقريراً',
+            ai_wand_use: 'استخدم الذكاء الاصطناعي', support_ticket_created: 'فتح تذكرة دعم',
+            share_link_created: 'أنشأ رابط مشاركة', share_view: 'فتح مشاركة', study_created: 'أنشأ دراسة',
+            decision_action_opened: 'نفّذ إجراءً من القرار', post_feasibility_action_opened: 'بدأ إجراء ما بعد الجدوى',
+            partner_need_opened: 'فتح احتياج شريك أو مورد',
+            decision_tasks_created: 'حوّل القرار إلى مهام', review_suggestion_decided: 'حسم اقتراح خبير',
+            work_request_created: 'أنشأ طلب خدمة مرتبطاً',
+        })[name] || name || 'حدث غير معروف';
+    }
+
+    _radarDelta(current, previous) {
+        const a = Number(current || 0);
+        const b = Number(previous || 0);
+        if (!b) return a ? '+100%' : '0%';
+        const value = Math.round(((a - b) / b) * 100);
+        return `${value > 0 ? '+' : ''}${value}%`;
+    }
+
+    async _renderRadarTab(contentEl, { silent = false } = {}) {
+        if (!silent) contentEl.innerHTML = '<p class="admin-loading">جارٍ قراءة نبض الموقع…</p>';
+        const result = await AdminService.getActivityRadar(this.radarMinutes);
+        if (!result.ok) {
+            if (!silent) contentEl.innerHTML = `<p class="admin-error">تعذّر تحميل رادار الموقع: ${this._esc(result.error)}</p>`;
+            return;
+        }
+        const data = result.data || {};
+        const current = data.current_period || {};
+        const previous = data.previous_period || {};
+        const events = Array.isArray(data.recent_activity) ? data.recent_activity : [];
+        const journeys = Array.isArray(data.active_journeys) ? data.active_journeys : [];
+        const topEvents = Array.isArray(data.top_events) ? data.top_events : [];
+        const topPages = Array.isArray(data.top_pages) ? data.top_pages : [];
+        const funnel = Array.isArray(data.funnel) ? data.funnel : [];
+        const errorRate = Number(data.events) ? (Number(data.errors || 0) / Number(data.events)) * 100 : 0;
+        const lastUpdated = data.generated_at ? new Date(data.generated_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'الآن';
+        const relativeTime = (value) => {
+            const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+            if (seconds < 60) return `منذ ${seconds} ث`;
+            if (seconds < 3600) return `منذ ${Math.floor(seconds / 60)} د`;
+            return `منذ ${Math.floor(seconds / 3600)} س`;
+        };
+        const safePropSummary = (props = {}) => [props.page, props.step, props.provider, props.status, props.format]
+            .filter(Boolean).slice(0, 3).map((value) => this._esc(value)).join(' · ') || 'بدون تفاصيل إضافية';
+        const maxFunnel = Math.max(...funnel.map((row) => Number(row.sessions || 0)), 1);
+        const anomaly = Number(current.error_count || 0) > Math.max(Number(previous.error_count || 0) * 1.5, 3);
+
+        contentEl.innerHTML = `
+            <section class="admin-radar-hero">
+                <div>
+                    <span class="admin-eyebrow">مراقبة تشغيلية تحترم الخصوصية</span>
+                    <h2><span class="admin-live-dot" aria-hidden="true"></span> نبض الموقع الآن</h2>
+                    <p>جلسات مستعارة وأحداث تشغيلية فقط؛ لا كلمات مرور، لا محتوى دراسات، ولا معرّفات مستخدمين.</p>
+                    <div class="admin-executive-meta"><span>آخر تحديث: ${this._esc(lastUpdated)}</span><span>المقارنة مع الفترة السابقة المماثلة</span></div>
+                </div>
+                <div class="admin-radar-actions">
+                    <label class="admin-period-control">النافذة
+                        <select id="radarMinutesSelect" class="admin-select">
+                            <option value="15">15 دقيقة</option><option value="60">ساعة</option><option value="360">6 ساعات</option><option value="1440">24 ساعة</option>
+                        </select>
+                    </label>
+                    <button id="btnRadarRefresh" class="btn btn--sm btn--ghost">تحديث الآن</button>
+                    <label class="admin-radar-auto"><input id="radarAutoRefresh" type="checkbox" checked> تحديث كل 30 ثانية</label>
+                </div>
+            </section>
+            ${anomaly ? `<div class="admin-radar-alert admin-radar-alert--danger"><strong>ارتفاع غير معتاد في الأخطاء</strong><span>${formatNumber(current.error_count || 0)} مقابل ${formatNumber(previous.error_count || 0)} في الفترة السابقة. ابدأ بأحدث الجلسات المتعثرة أدناه.</span></div>` : ''}
+            <div class="admin-tile-grid admin-tile-grid--executive">
+                ${this._tile('نشطون الآن (5 دقائق)', formatNumber(data.active_now || 0))}
+                ${this._tile('الجلسات', formatNumber(data.sessions || 0), this._radarDelta(current.session_count, previous.session_count))}
+                ${this._tile('الأحداث', formatNumber(data.events || 0), this._radarDelta(current.event_count, previous.event_count))}
+                ${this._tile('جلسات مسجّلة', formatNumber(data.authenticated_sessions || 0))}
+                ${this._tile('الأخطاء', formatNumber(data.errors || 0), `${formatPercent(errorRate / 100)} من النشاط`)}
+            </div>
+            <div class="admin-radar-grid">
+                <section class="admin-card admin-radar-span-2">
+                    <div class="admin-card__heading-row"><div><span class="admin-eyebrow">شريط حي</span><h3 class="admin-card__title">آخر حركة داخل الموقع</h3></div><select id="radarEventFilter" class="admin-select"><option value="all">كل الأحداث</option><option value="errors">الأخطاء فقط</option><option value="conversion">التحويل والدفع</option></select></div>
+                    <div id="radarActivityFeed" class="admin-activity-feed">
+                        ${events.length ? events.map((row) => `<article class="admin-activity-item" data-kind="${this._esc(row.event_name)}">
+                            <span class="admin-activity-icon ${String(row.event_name).includes('error') || row.event_name === 'login_failed' ? 'admin-activity-icon--danger' : ''}"></span>
+                            <div><strong>${this._esc(this._radarEventLabel(row.event_name))}</strong><small>${safePropSummary(row.safe_props)}</small></div>
+                            <div class="admin-activity-meta"><code>${this._esc(row.session_label)}</code><span>${this._esc(relativeTime(row.created_at))}</span></div>
+                        </article>`).join('') : '<p class="admin-table__empty">لا توجد أحداث في هذه النافذة.</p>'}
+                    </div>
+                </section>
+                <section class="admin-card">
+                    <span class="admin-eyebrow">القمع الفعلي</span><h3 class="admin-card__title">من الزيارة إلى الدفع</h3>
+                    <div class="admin-funnel-list">${funnel.map((row, index) => {
+                        const count = Number(row.sessions || 0);
+                        const prior = index ? Number(funnel[index - 1]?.sessions || 0) : count;
+                        const retention = prior ? Math.round((count / prior) * 100) : 0;
+                        return `<div class="admin-funnel-row"><div><span>${this._esc(row.stage)}</span><strong>${formatNumber(count)}</strong></div><div class="admin-funnel-track"><i style="width:${Math.max(3, (count / maxFunnel) * 100)}%"></i></div>${index ? `<small>استمرار ${retention}%</small>` : ''}</div>`;
+                    }).join('')}</div>
+                </section>
+                <section class="admin-card admin-radar-span-2">
+                    <span class="admin-eyebrow">رحلات مستعارة</span><h3 class="admin-card__title">آخر الجلسات ومسارها المختصر</h3>
+                    <div class="admin-journey-list">${journeys.length ? journeys.map((row) => `<div class="admin-journey-row ${Number(row.error_count) ? 'admin-journey-row--error' : ''}">
+                        <div><code>${this._esc(row.session_label)}</code><span class="admin-status ${row.authenticated ? 'admin-status--connected' : 'admin-status--instrumented'}">${row.authenticated ? 'مسجّل' : 'زائر'}</span></div>
+                        <div class="admin-journey-events">${(row.recent_events || []).map((name) => `<span>${this._esc(this._radarEventLabel(name))}</span>`).join('<b>←</b>')}</div>
+                        <div><strong>${formatNumber(row.event_count)} أحداث</strong><small>${Number(row.error_count) ? `${formatNumber(row.error_count)} أخطاء` : this._esc(relativeTime(row.last_seen_at))}</small></div>
+                    </div>`).join('') : '<p class="admin-table__empty">لا توجد جلسات في هذه النافذة.</p>'}</div>
+                </section>
+                <section class="admin-card"><span class="admin-eyebrow">الأكثر تكراراً</span><h3 class="admin-card__title">الأحداث</h3>${this._table(['الحدث', 'المرات', 'الجلسات'], topEvents.map((row) => [this._radarEventLabel(row.event_name), formatNumber(row.count), formatNumber(row.sessions)]))}</section>
+                <section class="admin-card"><span class="admin-eyebrow">أماكن الحركة</span><h3 class="admin-card__title">الصفحات والأسطح</h3>${this._table(['المكان', 'الأحداث', 'الجلسات'], topPages.map((row) => [row.page, formatNumber(row.count), formatNumber(row.sessions)]))}</section>
+            </div>
+            <p class="admin-data-note">الأرقام تشمل فقط الزوار الذين وافقوا على ملفات التحليل. معرّف الجلسة الظاهر مستعار وغير قابل للاستخدام لتسجيل الدخول أو كشف هوية الشخص.</p>
+        `;
+
+        const select = contentEl.querySelector('#radarMinutesSelect');
+        if (select) {
+            select.value = String(this.radarMinutes);
+            select.addEventListener('change', async () => {
+                this.radarMinutes = Number(select.value);
+                await this._renderRadarTab(contentEl);
+            });
+        }
+        contentEl.querySelector('#btnRadarRefresh')?.addEventListener('click', () => this._renderRadarTab(contentEl, { silent: true }));
+        const filter = contentEl.querySelector('#radarEventFilter');
+        filter?.addEventListener('change', () => {
+            contentEl.querySelectorAll('.admin-activity-item').forEach((item) => {
+                const name = item.dataset.kind || '';
+                const visible = filter.value === 'all'
+                    || (filter.value === 'errors' && (name.includes('error') || name === 'login_failed'))
+                    || (filter.value === 'conversion' && ['checkout_start', 'payment_success', 'payment_error'].includes(name));
+                item.hidden = !visible;
+            });
+        });
+        const auto = contentEl.querySelector('#radarAutoRefresh');
+        const startTimer = () => {
+            if (this.radarTimer) clearInterval(this.radarTimer);
+            this.radarTimer = auto?.checked ? setInterval(() => {
+                if (this.activeTab === 'radar' && document.visibilityState !== 'hidden') this._renderRadarTab(contentEl, { silent: true });
+            }, 30000) : null;
+        };
+        auto?.addEventListener('change', startTimer);
+        startTimer();
     }
 
 

@@ -40,6 +40,11 @@
    نفس منطق إخفاء app-header وbreadcrumb-bar أدناه. */
 .app-shell.dashboard-mode .category-stepper { display: none !important; }
 .app-shell.dashboard-mode .mobile-category-nav { display: none !important; }
+/* تدقيق 2026-09-17: ترويسة الجوال (مؤشّر مرحلة معالج + زر تصدير) كانت تظهر فوق
+   لوحة البداية أيضاً — لا دراسة نشطة هنا فتعرض مرحلة/زر تصدير من آخر دراسة مفتوحة
+   بلا معنى، فوق شريط .dv-topbar العلوي الذي يغطي نفس الحاجة (الشعار + المستشار
+   الذكي عبر الزر العائم). ترويسة اللوحة الوحيدة الآن هي .dv-topbar. */
+.app-shell.dashboard-mode .mobile-header { display: none !important; }
 .app-header__brand { font-weight: 700; font-size: 1.1rem; color: var(--c-p-500); }
 .app-header__actions { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
 .sync-indicator { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 8px; color: var(--c-text-muted); font-size: .72rem; white-space: nowrap; }

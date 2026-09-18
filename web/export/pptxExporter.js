@@ -218,7 +218,7 @@ export class PPTXExporter {
             [{ text: 'صافي القيمة الحالية (NPV)' }, { text: formatCurrency(ind.npv) }],
             [{ text: 'معدل العائد الداخلي (IRR)' }, { text: SAFE.pctText(ind.irr) }],
             [{ text: 'فترة الاسترداد' }, { text: SAFE.payback(ind.paybackPeriod ?? ind.payback) }],
-            [{ text: 'العائد على الاستثمار (ROI)' }, { text: `${((ind.roi ?? 0) * 100).toFixed(1)}%` }],
+            [{ text: 'العائد التراكمي على الاستثمار (ROI)' }, { text: SAFE.pctText(ind.roi) }],
             [{ text: 'الإيرادات (السنة 1)' }, { text: formatCurrency(inc.revenue) }],
             [{ text: 'صافي الربح (السنة 1)' }, { text: formatCurrency(inc.netIncome) }]
         ];

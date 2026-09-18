@@ -66,7 +66,7 @@ export class NotificationsView {
             const meta = TYPE_META[n.type] || TYPE_META.system;
             const unread = !n.read_at;
             return `
-                <div class="notif-row" data-id="${escapeHtml(n.id)}" style="display:flex;gap:12px;padding:12px;border-radius:10px;cursor:${unread ? 'pointer' : 'default'};${unread ? 'background:var(--c-p-subtle);' : ''}">
+                <div class="notif-row" data-id="${escapeHtml(n.id)}" data-study-id="${escapeHtml(n.study_id || '')}" style="display:flex;gap:12px;padding:12px;border-radius:10px;cursor:${unread || n.study_id ? 'pointer' : 'default'};${unread ? 'background:var(--c-p-subtle);' : ''}">
                     <span class="badge" style="align-self:flex-start;white-space:nowrap;"><svg class="ic" aria-hidden="true"><use href="#${meta.icon}"/></svg> ${meta.label}</span>
                     <div style="flex:1;min-width:0;">
                         <div class="text-sm font-bold">${escapeHtml(n.title)}</div>
@@ -82,7 +82,8 @@ export class NotificationsView {
                 const id = row.dataset.id;
                 if (!id) return;
                 await markRead(id);
-                await this.renderList();
+                if (row.dataset.studyId) window.location.hash = `#/project/${encodeURIComponent(row.dataset.studyId)}`;
+                else await this.renderList();
             });
         });
     }

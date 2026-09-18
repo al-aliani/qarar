@@ -25,6 +25,7 @@ const ANON_ENDPOINT_HITS_MIGRATION_PATH = resolve(
     MIGRATIONS_DIR,
     '20260827030000_anon_endpoint_hits_and_public_applications_lockdown.sql',
 );
+const RPC_ACCESS_FIX_PATH = resolve(MIGRATIONS_DIR, '20260916200602_restrict_rate_limit_rpc_execution.sql');
 
 /** يستبعد أسطر التعليق (-- ...) قبل البحث عن عبارات SQL فعلية — التعليقات
  * التفسيرية تذكر عمداً كلمات مثل "GRANT EXECUTE" و"create policy" كنصّ توثيقي
@@ -41,14 +42,22 @@ function readAllMigrationsConcatenated() {
     return files.map((f) => stripSqlComments(readFileSync(resolve(MIGRATIONS_DIR, f), 'utf8'))).join('\n');
 }
 
-describe('نموذج وصول RPC حدّ المعدّل: بلا GRANT EXECUTE لعميل غير موثوق، مقصود لا سهو', () => {
-    it('لا يوجد أمر GRANT EXECUTE فعلي (خارج التعليقات) لأي من الدالتين لأي دور في أي ترحيل', () => {
+describe('نموذج وصول RPC حدّ المعدّل: التنفيذ محصور في service_role', () => {
+    it('لا يمنح أي ترحيل anon أو authenticated تنفيذ دالتَي حدّ المعدّل', () => {
         const codeOnly = readAllMigrationsConcatenated();
-        expect(codeOnly).not.toMatch(/grant\s+execute\s+on\s+function\s+public\.check_and_record_rate_limit/i);
-        expect(codeOnly).not.toMatch(/grant\s+execute\s+on\s+function\s+public\.check_and_record_anon_rate_limit/i);
-        // وتحديداً: لا وجود إطلاقاً لأي GRANT EXECUTE يمنح anon أو authenticated
-        // تنفيذ أي من الدالتين (الفحص أعلاه أشمل، وهذا تأكيد صريح للأدوار المعنيّة).
         expect(codeOnly).not.toMatch(/check_and_record_(anon_)?rate_limit[\s\S]{0,40}\bto\s+(anon|authenticated)\b/i);
+    });
+
+    it('يسحب EXECUTE الافتراضي من PUBLIC والأدوار غير الموثوقة ويمنحه صراحةً لـservice_role', () => {
+        const sql = stripSqlComments(readFileSync(RPC_ACCESS_FIX_PATH, 'utf8'));
+        for (const signature of [
+            'check_and_record_rate_limit\\(uuid, text, integer, integer\\)',
+            'check_and_record_anon_rate_limit\\(text, text, integer, integer\\)',
+            'cleanup_old_rate_limit_events\\(\\)',
+        ]) {
+            expect(sql).toMatch(new RegExp(`revoke\\s+execute\\s+on\\s+function\\s+public\\.${signature}[\\s\\S]{0,80}from\\s+public,\\s*anon,\\s*authenticated`, 'i'));
+            expect(sql).toMatch(new RegExp(`grant\\s+execute\\s+on\\s+function\\s+public\\.${signature}[\\s\\S]{0,50}to\\s+service_role`, 'i'));
+        }
     });
 
     it('التعليق التفسيري لسبب غياب GRANT EXECUTE موجود فعلاً في ملف الترحيل (لا سهو ناتج عن حذف مستقبلي)', () => {

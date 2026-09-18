@@ -580,6 +580,20 @@ select:focus {
     margin-bottom: var(--s-4);
 }
 
+/* تدقيق 2026-09-18: auto-fit مع minmax(180px,1fr) بلا عمود ثابت يحسب عدد الأعمدة من
+   عرض الحاوية فقط، بلا علاقة بعدد البطاقات. #fullKpiGrid وID=ratiosKpiGrid في
+   FinancialDashboard.js يعرضان دائماً 4 بطاقات بالضبط عبر هذه القاعدة (بلا تجاوز inline)
+   — على شاشة تابلت (~650-750px) يحسب المتصفح 3 أعمدة بالضبط فتتيتّم البطاقة الرابعة في
+   صف منفصل. نفرض عمودين عند العرض الذي يقع فيه فخ الأعمدة الثلاثة (النطاق أدناه 900px
+   يغطي كل عرض حاوية ممكن ينتج 3 أعمدة بهذا minmax)، فيصبح التوزيع 2×2 دائماً. لا يؤثر
+   على الاستخدامات الأخرى لأنها كلها تُجاوز grid-template-columns عبر inline style التي
+   لها أولوية أعلى من أي قاعدة media query هنا. */
+@media (max-width: 900px) {
+    .indicators-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 .kpi-card {
     background: var(--c-bg-card);
     border: 1px solid var(--c-border);

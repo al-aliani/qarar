@@ -6,6 +6,13 @@
  * — الإصلاح في app.js يمرّر الآن options.activeHomePanel عند فتح هذه المسارات مباشرة.
  * هذا يثبّت أن DashboardView (الآلية الموجودة أصلاً في الباني، لم تكن مغطاة باختبار)
  * تعرض فعلياً اللوحة المطلوبة بدل «الرئيسية والمشاريع» الافتراضية.
+ *
+ * تدقيق 2026-09-17 (تبسيط القائمة الجانبية): زرّا الشريط الجانبي لـ'engines'
+ * و'databases' حُذفا (الأول أصبح متاحاً برابط مباشر فقط #/tools بلا مدخل قائمة،
+ * والثاني أُدمج مع 'additional' خلف زر واحد «المكتبة» + تبويب داخلي data-dv-lib-tab
+ * — انظر renderLibraryTabsHeader في DashboardView.js). عقد الرابط المباشر (المسار
+ * الصحيح يظهر فوراً بلا NotFoundView) هو ما يثبّته هذا الملف، لا عدد أو تسميات أزرار
+ * الشريط الجانبي — فحُدّثت التوقعات لتطابق ما تغيّر فعلاً دون إضعاف الضمانة الأصلية.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { DashboardView } from '../DashboardView.js';
@@ -29,25 +36,30 @@ describe('DashboardView — تفعيل لوحة أولية عبر options.active
         expect(document.querySelector('[data-home-panel="engines"]').hidden).toBe(true);
     });
 
-    it('activeHomePanel:"engines" (#/tools) ⇒ تظهر لوحة الأدوات والمحرّكات مباشرة', async () => {
+    it('activeHomePanel:"engines" (#/tools) ⇒ تظهر لوحة الأدوات والمحرّكات مباشرة (بلا مدخل قائمة جانبية بعد اليوم)', async () => {
         const view = new DashboardView('c', { get: () => ({}), getState: () => ({}) }, () => {}, { activeHomePanel: 'engines' });
         await view.renderList([]);
-        expect(document.querySelector('[data-dv-panel-button="engines"]').classList.contains('is-active')).toBe(true);
+        expect(document.querySelector('[data-dv-panel-button="engines"]')).toBeNull();
         expect(document.querySelector('[data-home-panel="engines"]').hidden).toBe(false);
         expect(document.querySelector('[data-home-panel="studies"]').hidden).toBe(true);
     });
 
-    it('activeHomePanel:"additional" (#/ready-studies) ⇒ تظهر لوحة دراسات الجدوى الجاهزة مباشرة', async () => {
+    it('activeHomePanel:"additional" (#/ready-studies) ⇒ تظهر لوحة دراسات الجدوى الجاهزة، وزر «المكتبة» الجانبي وتبويبها الداخلي نشطان', async () => {
         const view = new DashboardView('c', { get: () => ({}), getState: () => ({}) }, () => {}, { activeHomePanel: 'additional' });
         await view.renderList([]);
         expect(document.querySelector('[data-dv-panel-button="additional"]').classList.contains('is-active')).toBe(true);
+        expect(document.querySelector('[data-dv-lib-tab="additional"]').classList.contains('is-active')).toBe(true);
+        expect(document.querySelector('[data-dv-lib-tab="databases"]').classList.contains('is-active')).toBe(false);
         expect(document.querySelector('[data-home-panel="additional"]').hidden).toBe(false);
     });
 
-    it('activeHomePanel:"databases" (#/data) ⇒ تظهر لوحة قواعد البيانات مباشرة', async () => {
+    it('activeHomePanel:"databases" (#/data) ⇒ تظهر لوحة قواعد البيانات، وزر «المكتبة» الجانبي (المُمثِّل المشترك) وتبويبها الداخلي الصحيح نشطان', async () => {
         const view = new DashboardView('c', { get: () => ({}), getState: () => ({}) }, () => {}, { activeHomePanel: 'databases' });
         await view.renderList([]);
-        expect(document.querySelector('[data-dv-panel-button="databases"]').classList.contains('is-active')).toBe(true);
+        expect(document.querySelector('[data-dv-panel-button="databases"]')).toBeNull();
+        expect(document.querySelector('[data-dv-panel-button="additional"]').classList.contains('is-active')).toBe(true);
+        expect(document.querySelector('[data-dv-lib-tab="databases"]').classList.contains('is-active')).toBe(true);
+        expect(document.querySelector('[data-dv-lib-tab="additional"]').classList.contains('is-active')).toBe(false);
         expect(document.querySelector('[data-home-panel="databases"]').hidden).toBe(false);
     });
 });

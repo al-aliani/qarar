@@ -1479,8 +1479,11 @@ export class Wizard {
         }
 
         const phGeneric = (fieldHint?.placeholder && displayValue === '') ? `placeholder="${fieldHint.placeholder}"` : '';
-        // حقل التاريخ يُعرض باتجاه LTR داخل نموذج RTL
-        const dirAttr = inputType === 'date' ? 'dir="ltr" style="text-align:right"' : '';
+        // حقل التاريخ يُعرض باتجاه LTR داخل نموذج RTL — direction inline (لا فقط dir=)
+        // لأن قاعدة CSS المقابلة (input[type="date"]{direction:ltr}) تُفقد أحياناً من
+        // حزمة الإنتاج المبنية (تأكيد عبر build محلي)، وسمة dir وحدها لا تكفي لتجاوز
+        // body{direction:rtl} الموروثة في كل المتصفحات المُختبرة.
+        const dirAttr = inputType === 'date' ? 'dir="ltr" style="direction:ltr;text-align:right"' : '';
         return `
             <div class="form-group">
                 <label for="field-${fullKey}">${arabicLabel}${tooltipHtml}</label>
@@ -1588,7 +1591,12 @@ export class Wizard {
 
         // حقول النِسب المعروضة كنسبة مئوية تُخزَّن ككسر (10 → 0.10) — انظر renderField
         if (type === 'number' && finalVal != null && Wizard.isFractionPercentKey(keyPath)) {
-            finalVal = finalVal / 100;
+            // القيمة الظاهرة نسبة مئوية. صحّح أي كتابة خارج 0–100 قبل التخزين حتى
+            // لا تبقى 101% ظاهرة بينما المحرك يقصّها داخلياً إلى 100% بصمت.
+            finalVal = Math.min(100, Math.max(0, finalVal)) / 100;
+            const field = Array.from(this.container?.querySelectorAll?.('[data-key]') || [])
+                .find(candidate => candidate.dataset.key === keyPath);
+            if (field) field.value = String(finalVal * 100);
         }
 
         // Update the specific path

@@ -119,217 +119,95 @@
     }
 }
 
-/* =========================================================================
-   DASHBOARD V2 PREMIUM AESTHETIC OVERRIDES
-   ========================================================================= */
-
-.dashboard-view.dv {
-    --v2-bg: #f8f9fa;
-    --v2-glass-bg: rgba(255, 255, 255, 0.7);
-    --v2-glass-border: rgba(255, 255, 255, 0.5);
-    --v2-glass-shadow: 0 8px 32px 0 rgba(14, 91, 68, 0.05);
-    --v2-primary: var(--c-p-500, #0e5b44);
-    background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%) !important;
-    min-height: 100vh;
-    padding: 24px !important;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
-/* TOPBAR */
-.dv-topbar {
-    background: var(--v2-glass-bg) !important;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--v2-glass-border) !important;
-    border-radius: 100px !important;
-    box-shadow: var(--v2-glass-shadow) !important;
-    padding: 16px 32px !important;
-    margin: 0 !important;
-    /* backdrop-filter يجعل الشريط سياق تكديس (stacking context) مستقلاً بذاته دون position/z-index —
-       فيُصبح z-index:70 لقائمة الحساب المنسدلة محلياً داخله فقط، ويرسم .dv-home-panels (بعده في DOM
-       وله backdrop-filter أيضاً) فوق الشريط بالكامل كوحدة واحدة، فتُحجب القائمة خلف بطاقات لوحة البداية. */
+/* ═══ «⋯ مزيد» على بطاقة الدراسة (تدقيق 2026-09-17) — يجمع تصدير/إعادة تسمية/
+   نسخ/حذف خلف قائمة واحدة بدل 4 أزرار أيقونة ظاهرة دائماً. نفس أسلوب
+   .dv-account__menu في decision-dashboard.css. تُفتح للأعلى (bottom) لأن
+   المُشغّل قرب أسفل البطاقة، فلا تفيض القائمة خارج شبكة البطاقات أسفلها. ═══ */
+.dv-project__more {
     position: relative;
-    z-index: 5;
+    flex: none;
 }
 
-/* WORKSPACE GRID */
-.dv-workspace {
-    display: grid !important;
-    grid-template-columns: 280px 1fr !important;
-    gap: 24px !important;
-    background: transparent !important;
-    padding: 0 !important;
-    align-items: start;
+.dv-project__moreMenu {
+    position: absolute;
+    inset-inline-end: 0;
+    bottom: calc(100% + 8px);
+    z-index: 20;
+    width: 190px;
+    padding: 6px;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-md);
+    background: var(--c-bg-card);
+    box-shadow: var(--shadow-lg);
 }
 
-/* SIDEBAR */
-.dv-side-nav {
-    background: var(--v2-glass-bg) !important;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--v2-glass-border) !important;
-    border-radius: 24px !important;
-    box-shadow: var(--v2-glass-shadow) !important;
-    padding: 24px 16px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
-    position: sticky !important;
-    top: 24px !important;
-}
-
-.dv-side-nav__main {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.dv-side-nav__main button {
+.dv-project__moreMenu button {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px 20px !important;
-    border-radius: 16px !important;
-    background: transparent !important;
-    border: none !important;
-    font-weight: 600 !important;
-    font-size: 0.95rem !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    text-align: right;
+    gap: 8px;
     width: 100%;
-}
-
-.dv-side-nav__main button:hover {
-    background: rgba(14, 91, 68, 0.1) !important;
-    transform: translateX(-4px);
-}
-
-.dv-side-nav__main button.is-active {
-    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
-    color: white !important;
-    box-shadow: 0 4px 12px rgba(14, 91, 68, 0.15) !important;
-}
-
-.dv-side-nav__main button.is-active .ic {
-    color: white !important;
-}
-
-/* عنوان قسم نصي بسيط داخل قائمة الشريط الجانبي (يجمّع أزراراً منطقياً — لا يفتح شيئاً بذاته).
-   نفس نمط .study-map__group-title في main.css: نص صغير مكتوم بلا زخرفة زر. */
-.dv-side-nav__group-title {
-    margin: 4px 4px 0;
-    padding: 0 4px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: var(--c-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.dv-side-nav__group-title:first-child {
-    margin-top: 0;
-}
-
-/* MAIN CONTENT PANELS */
-.dv-home-panels {
-    background: var(--v2-glass-bg) !important;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--v2-glass-border) !important;
-    border-radius: 24px !important;
-    box-shadow: var(--v2-glass-shadow) !important;
-    padding: 32px !important;
-}
-
-/* CARDS */
-.dv-project {
-    background: var(--v2-glass-bg) !important;
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--v2-glass-border) !important;
-    border-radius: 20px !important;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    padding: 24px !important;
-}
-
-.dv-project:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(14, 91, 68, 0.1) !important;
-    border-color: var(--v2-primary) !important;
-}
-
-/* BENTO HERO TILE (Welcome Card) */
-/* selector مركّب (.dv-bento-tile.dv-bento-tile--hero) عمداً: العنصر يحمل الكلاسين معاً دائماً،
-   والقاعدة العامة .dv-bento-tile بالأسفل بنفس الخصوصية (0,1,0) كانت تكسب بترتيب الظهور فتُسقط
-   التدرّج الأخضر وتترك نص "مشروع جديد" الأبيض بلا خلفية داكنة — غير مرئي في الوضع النهاري تحديداً
-   لأن var(--v2-glass-bg) شبه شفاف أبيض هناك (وداكن صدفةً في الوضع الليلي فبدت السلامة). */
-.dv-bento-tile.dv-bento-tile--hero {
-    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 24px !important;
-    padding: 32px !important;
-    box-shadow: 0 16px 32px rgba(14, 91, 68, 0.2) !important;
-    position: relative;
-    overflow: hidden;
-}
-
-.dv-bento-tile--hero::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
-    animation: rotateSlow 20s linear infinite;
-    pointer-events: none;
-}
-
-@keyframes rotateSlow {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.dv-bento-tile--hero .dv-bento-tile__heroTitle {
-    font-size: 2rem !important;
-    font-weight: 800 !important;
-    margin-bottom: 12px !important;
-}
-
-/* WIDE BUTTONS & PANELS */
-.dv-bento-tile--wide, .dv-bento-tile {
-    background: var(--v2-glass-bg) !important;
-    border: 1px solid var(--v2-glass-border) !important;
-    border-radius: 24px !important;
-    box-shadow: var(--v2-glass-shadow) !important;
-    transition: all 0.3s ease !important;
-}
-
-.dv-bento-tile:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(14, 91, 68, 0.1) !important;
-}
-
-/* SCROLLBAR REFINEMENTS FOR V2 */
-.dv-home-panels::-webkit-scrollbar {
-    width: 8px;
-}
-.dv-home-panels::-webkit-scrollbar-track {
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 8px;
     background: transparent;
-}
-.dv-home-panels::-webkit-scrollbar-thumb {
-    background: rgba(14, 91, 68, 0.2);
-    border-radius: 4px;
+    color: var(--c-text-main);
+    font: inherit;
+    font-size: 0.84rem;
+    text-align: start;
+    cursor: pointer;
 }
 
-/* RESPONSIVE LAYOUT */
-@media (max-width: 900px) {
-    .dv-workspace {
-        grid-template-columns: 1fr !important;
-    }
-    .dv-side-nav {
-        position: static !important;
-    }
+.dv-project__moreMenu button:hover {
+    background: var(--c-surface-2);
+}
+
+.dv-project__moreMenu button.text-danger:hover {
+    background: var(--c-danger-subtle);
+}
+
+.dv-project__moreMenu .ic {
+    width: 16px;
+    height: 16px;
+    flex: none;
+}
+
+/* ═══ تبويبا «المكتبة» الداخليان (دراسات جاهزة ⇄ قواعد بيانات) — تدقيق 2026-09-17 ═══ */
+.dv-libtabs-row {
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.dv-libtabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-pill);
+    background: var(--c-surface-2);
+}
+
+.dv-libtabs__btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: var(--c-text-muted);
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dv-libtabs__btn.is-active {
+    background: var(--c-bg-card);
+    color: var(--c-p-500);
+    box-shadow: var(--shadow-sm);
+}
+
+.dv-libtabs__btn .ic {
+    width: 16px;
+    height: 16px;
 }

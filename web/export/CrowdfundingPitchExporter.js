@@ -50,7 +50,8 @@ export class CrowdfundingPitchExporter {
             ? escapeHtml(rewardsRaw)
             : '';
         const ind = results.indicators || {};
-        const paybackStr = ind.paybackPeriod != null ? (ind.paybackPeriod.toFixed(1) + ' سنة') : '—';
+        const payback = Number(ind.paybackPeriod ?? ind.payback);
+        const paybackStr = Number.isFinite(payback) && payback > 0 ? (payback.toFixed(1) + ' سنة') : 'غير محقق';
 
         return `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -100,10 +101,10 @@ export class CrowdfundingPitchExporter {
         <p>${timelineText}</p>
     </div>` : ''}
 
-    ${(rewardsText || paybackStr !== '—') ? `<div class="block">
+    ${(rewardsText || paybackStr !== 'غير محقق') ? `<div class="block">
         <h3>ما يقدمه الداعم/المستثمر — المكافآت أو العوائد</h3>
         ${rewardsText ? `<p>${rewardsText}</p>` : ''}
-        ${paybackStr !== '—' ? `<p class="text-muted mt-2">فترة الاسترداد المتوقعة: ${paybackStr}</p>` : ''}
+        ${paybackStr !== 'غير محقق' ? `<p class="text-muted mt-2">فترة الاسترداد المتوقعة: ${paybackStr}</p>` : ''}
     </div>` : ''}
 
     <div class="footer">

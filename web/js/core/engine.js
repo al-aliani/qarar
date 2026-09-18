@@ -8,6 +8,7 @@ import { analyzeSaudiMarket } from './SaudiMarketEngine.js';
 import { explainDecisionBreakers } from './DecisionExplainer.js';
 import { analyzePartnerNeeds } from './partnerNeeds.js';
 import { calculateZakatAndTax } from './financial/tax.js';
+import { computeInputsFingerprint } from './monteCarloFingerprint.js';
 import { calculateNPV, calculateIRR, calculateMIRR, calculateTerminalValue, countSignChanges, outstandingDebtAtHorizon } from './financial/cashflow.js';
 import { buildDepreciationModel, itemDepAtYear, replaceableItemDepAtYear } from './financial/depreciation.js';
 import { buildFinancialRatios } from './financial/ratios.js';
@@ -1693,8 +1694,13 @@ export function calculateStudy(study, overrides) {
             // لا يُظهر سبب الاحتمالية المنخفضة إطلاقاً رغم صحته، فيبدو التقرير ناقصاً. نفس
             // نمط بقية البوابات أعلاه: تخفيض القرار يبقى مشروطاً بـGO (لا داعي لتخفيض REVISE/NO-GO
             // أصلاً)، لكن إضافة السبب للشفافية غير مشروطة بحالة القرار الحالية.
+            // تدقيق 2026-09-16: كانت تُقرأ بلا أي فحص حداثة — تغيير مدخل جوهري (مثل عدد
+            // العملاء) بعد تشغيل المحاكاة يُبقي احتمالية النجاح القديمة تُخفِّض القرار
+            // الجديد صامتة حتى إعادة تشغيل يدوية. mcFresh يُبطل القراءة إن اختلفت بصمة
+            // المدخلات الحالية عن بصمة وقت التشغيل (نفس معاملة "لم يُشغَّل بعد").
             const mcLastRun = study[SECTIONS.MONTE_CARLO]?.lastRun;
-            if (mcLastRun && Number.isFinite(mcLastRun.successProbability) && mcLastRun.successProbability < 0.5) {
+            const mcFresh = !!(mcLastRun && mcLastRun.inputsFingerprint === computeInputsFingerprint(study));
+            if (mcFresh && Number.isFinite(mcLastRun.successProbability) && mcLastRun.successProbability < 0.5) {
                 if (d.decision === 'GO') d.decision = 'REVISE';
                 d.decisionReasons.unshift(
                     `احتمالية النجاح في محاكاة مونت كارلو (آخر تشغيل: ${Math.round(mcLastRun.successProbability * 100)}%) أقل من 50% — نصف السيناريوهات العشوائية المعقولة تخسر`

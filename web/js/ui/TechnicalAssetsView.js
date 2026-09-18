@@ -275,7 +275,7 @@ export class TechnicalAssetsView {
                         <input type="text" class="input input--sm quote-input" data-field="source" data-row="${i}" placeholder="المورد/المتجر">
                         <input type="text" inputmode="decimal" class="input input--sm quote-input" data-field="price" data-row="${i}" placeholder="السعر">
                         <input type="text" class="input input--sm quote-input" data-field="url" data-row="${i}" placeholder="رابط العرض (اختياري)">
-                        <input type="date" class="input input--sm quote-input" data-field="date" data-row="${i}">
+                        <input type="date" class="input input--sm quote-input" data-field="date" data-row="${i}" dir="ltr" style="direction:ltr;text-align:right">
                         <button type="button" class="btn btn--sm btn--secondary btn-add-quote" data-row="${i}">+ إضافة عرض</button>
                     </div>
                 </div>
@@ -437,7 +437,7 @@ export class TechnicalAssetsView {
                     <input type="text" class="input input--sm listing-input" data-field="source" placeholder="المالك/الوسيط">
                     <input type="text" inputmode="decimal" class="input input--sm listing-input" data-field="price" placeholder="الإيجار الشهري">
                     <input type="text" class="input input--sm listing-input" data-field="url" placeholder="رابط الإعلان (اختياري)">
-                    <input type="date" class="input input--sm listing-input" data-field="date">
+                    <input type="date" class="input input--sm listing-input" data-field="date" dir="ltr" style="direction:ltr;text-align:right">
                     <button type="button" class="btn btn--sm btn--secondary" id="btnAddListing">+ إضافة عرض إيجار</button>
                 </div>
             </div>

@@ -283,7 +283,7 @@ export class ExecutiveSummary {
             { label: 'صافي القيمة الحالية', value: this.formatCurrency(ind.npv ?? 0), icon: icon('i-chart'), positive: (ind.npv ?? 0) > 0, term: 'NPV' },
             { label: 'معدل العائد الداخلي', value: formatIrrPct(ind.irr), icon: icon('i-chart'), term: 'IRR' },
             { label: 'فترة الاسترداد', value: (payback != null && Number.isFinite(payback) && payback > 0 && payback < 900) ? `${payback.toFixed(1)} سنة` : 'غير محقق', icon: icon('i-clock'), term: 'PAYBACK' },
-            { label: 'العائد على الاستثمار', value: formatIrrPct(ind.roi, 0), icon: icon('i-chart'), term: 'ROI' }
+            { label: 'العائد التراكمي على الاستثمار (مدة الدراسة)', value: formatIrrPct(ind.roi, 0), icon: icon('i-chart'), term: 'ROI' }
         ];
 
         return `

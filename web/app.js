@@ -821,6 +821,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (breadcrumbBar) breadcrumbBar.style.display = 'none';
     import('./js/ui/PostFeasibilityView.js').then(({ PostFeasibilityView }) => {
       const view = new PostFeasibilityView('wizardContainer', {
+        store,
+        onNavigateStep: (stepIndex) => navigateTo(stepIndex),
+        onNavigateRoute: (route) => { window.location.hash = `#/${route}`; },
         onBack: () => {
           if (sidebarEl) sidebarEl.style.removeProperty('display');
           if (stepperNavEl) stepperNavEl.style.removeProperty('display');
@@ -832,6 +835,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     }).catch(err => {
       console.error('PostFeasibilityView load failed:', err);
       toast.error('تعذر فتح ما بعد الجدوى');
+    });
+  };
+
+  const showConnectedWorkspaceView = () => {
+    syncHash('workspace');
+    const sidebarEl = document.querySelector('.sidebar');
+    const stepperNavEl = document.getElementById('stepperNav');
+    const breadcrumbBar = document.getElementById('breadcrumbBar');
+    if (sidebarEl) sidebarEl.style.display = 'none';
+    if (stepperNavEl) stepperNavEl.style.display = 'none';
+    if (breadcrumbBar) breadcrumbBar.style.display = 'none';
+    import('./js/ui/ConnectedWorkspaceView.js').then(({ ConnectedWorkspaceView }) => {
+      const view = new ConnectedWorkspaceView('wizardContainer', store, {
+        onBack: () => {
+          if (sidebarEl) sidebarEl.style.removeProperty('display');
+          if (stepperNavEl) stepperNavEl.style.removeProperty('display');
+          if (breadcrumbBar) breadcrumbBar.style.removeProperty('display');
+          showLandingDashboard();
+        }
+      });
+      view.render();
+    }).catch(err => {
+      console.error('ConnectedWorkspaceView load failed:', err);
+      toast.error('تعذر فتح مركز الربط');
+    });
+  };
+
+  const showExternalPartyPortalView = () => {
+    syncHash('party-portal');
+    document.querySelector('.sidebar')?.style.setProperty('display', 'none');
+    document.getElementById('stepperNav')?.style.setProperty('display', 'none');
+    document.getElementById('breadcrumbBar')?.style.setProperty('display', 'none');
+    import('./js/ui/ExternalPartyPortalView.js').then(({ ExternalPartyPortalView }) => new ExternalPartyPortalView('wizardContainer').render()).catch(err => {
+      console.error('ExternalPartyPortalView load failed:', err);
+      toast.error('تعذر فتح بوابة الجهات');
     });
   };
 
@@ -1765,6 +1803,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     knowledge: showKnowledgeCenterView,
     accelerator: showAcceleratorTipsView,
     postfeasibility: showPostFeasibilityView,
+    workspace: showConnectedWorkspaceView,
+    'party-portal': showExternalPartyPortalView,
     quickstart: showQuickStartGuideView
   };
 
@@ -2454,6 +2494,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const headerSaveStudy = document.getElementById('headerSaveStudy');
   if (headerSaveStudy) headerSaveStudy.addEventListener('click', performSaveStudy);
+
+  // التراجع/الإعادة في الترويسة مربوطان بتاريخ store الحقيقي. كان الزران موجودين
+  // في HTML فقط وظلا disabled دائماً، رغم أن كل update/updatePath يسجل لقطة تراجع.
+  const headerUndoStudy = document.getElementById('headerUndoStudy');
+  const headerRedoStudy = document.getElementById('headerRedoStudy');
+  const syncHistoryControls = () => {
+    if (headerUndoStudy) headerUndoStudy.disabled = !store.canUndo();
+    if (headerRedoStudy) headerRedoStudy.disabled = !store.canRedo();
+  };
+  if (headerUndoStudy) {
+    headerUndoStudy.addEventListener('click', async () => {
+      if (await store.undo()) toast.success('تم التراجع عن آخر تعديل');
+      syncHistoryControls();
+    });
+  }
+  if (headerRedoStudy) {
+    headerRedoStudy.addEventListener('click', async () => {
+      if (await store.redo()) toast.success('تمت إعادة التعديل');
+      syncHistoryControls();
+    });
+  }
+  if (store.subscribe) store.subscribe(syncHistoryControls);
+  syncHistoryControls();
 
   // «معايرة سريعة» — زر ترويسة دائم (مرئي من أي خطوة) يفتح لوحة الافتراضات المركزية
   // (خطة 2026-07-12، الدفعة 4، البند 1): يعالج مباشرة أكبر إحباط وثّقه اختبار العميل

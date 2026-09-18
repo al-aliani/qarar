@@ -8,6 +8,13 @@ import { validateInputs } from '../../../lib/calc/validateInputs.js';
 import { checkDriversAgainstBenchmarks, sectorDetectionText } from '../core/sectorBenchmarks.js';
 import { deriveRevenueFromStreams } from '../core/engine.js';
 
+function classifyProjectContext(state) {
+    const text = sectorDetectionText(state?.projectInfo);
+    const isDigital = /تقني|رقمي|منصة|تطبيق|برمج|سحابي|saas|software|platform|app/i.test(text);
+    const isFood = /مطعم|كافي|مقهى|قهوة|وجبات|فود|طعام|مأكولات|مشروبات/i.test(text);
+    return { isDigital, isFood };
+}
+
 export async function runQAChecks(state, results) {
     const qaResults = {
         passed: true,
@@ -18,6 +25,7 @@ export async function runQAChecks(state, results) {
     };
 
     try {
+        const projectContext = classifyProjectContext(state);
         const validation = validateInputs(state);
         qaResults.validationErrors = validation.errors || [];
         qaResults.validationWarnings = validation.warnings || [];
@@ -86,23 +94,33 @@ export async function runQAChecks(state, results) {
             }
             // حجب: إيرادات دون أي تكاليف تشغيل = نتيجة غير منطقية
             if (results && Number.isFinite(revenue1) && revenue1 > 0 && Number.isFinite(opexAnnual) && opexAnnual <= 0) {
+                const operatingCostName = projectContext.isDigital
+                    ? 'استضافة سحابية وأدوات تشغيل'
+                    : 'إيجار وتكاليف تشغيلية';
                 qaResults.hardErrors.push({
                     code: 'REVENUE_WITHOUT_COSTS',
                     message: 'توجد إيرادات دون أي تكاليف تشغيل — نتيجة غير منطقية. أدخِل التكاليف الثابتة والمتغيرة.',
                     impact: 'نسبة هامش الربح ستكون 100% وهي نتيجة مستحيلة اقتصادياً، مما يفقد الدراسة مصداقيتها.',
-                    suggestion: 'إضافة تكلفة رواتب وإيجار شهرية تقديرية.',
-                    suggestionAction: { type: 'patch', path: 'opex', value: { items: [{ name: 'إيجار وتكاليف تشغيلية', amount: 15000, frequency: 'monthly' }] } },
+                    suggestion: projectContext.isDigital
+                        ? 'إضافة تكاليف الفريق، الاستضافة، والأدوات البرمجية الشهرية.'
+                        : 'إضافة تكلفة رواتب وتشغيل شهرية تقديرية.',
+                    suggestionAction: { type: 'patch', path: 'opex', value: { items: [{ name: operatingCostName, amount: 15000, frequency: 'monthly' }] } },
                     path: 'opex'
                 });
             }
             // تنبيه: لا يوجد استثمار رأسمالي
             if (results && Number.isFinite(capexTotal) && capexTotal <= 0) {
+                const setupCostName = projectContext.isDigital
+                    ? 'تطوير المنتج وإعداد البنية التقنية'
+                    : 'تجهيزات ومعدات';
                 qaResults.softWarnings.push({
                     code: 'NO_CAPEX',
                     message: 'لا توجد تكاليف تأسيسية (استثمار رأسمالي = صفر). تأكّد أن هذا مقصود.',
                     impact: 'لا يوجد رأس مال مطلوب لبدء المشروع، وهذا غير واقعي لمعظم المشاريع ويثير قلق الممول.',
-                    suggestion: 'إضافة ميزانية تأسيس وتجهيزات تقديرية (100,000 ريال).',
-                    suggestionAction: { type: 'patch', path: 'capex', value: { items: [{ name: 'تجهيزات ومعدات', amount: 100000 }] } },
+                    suggestion: projectContext.isDigital
+                        ? 'إضافة تكلفة تطوير المنتج والتهيئة التقنية والإطلاق.'
+                        : 'إضافة ميزانية تأسيس وتجهيزات تقديرية (100,000 ريال).',
+                    suggestionAction: { type: 'patch', path: 'capex', value: { items: [{ name: setupCostName, amount: 100000 }] } },
                     path: 'capex'
                 });
             }
@@ -179,10 +197,16 @@ export async function runQAChecks(state, results) {
                 if (!district) {
                     qaResults.softWarnings.push({
                         code: 'TARGET_LOCATION_MISSING',
-                        message: 'النطاق الجغرافي غير محدد بدقة (حي/منطقة مستهدفة) — دراسة مقهى بلا حي واضح تجعل أرقام السوق والمنافسين عامة أكثر من اللازم.',
+                        message: projectContext.isDigital
+                            ? 'السوق الجغرافي المستهدف غير محدد (محلي، سعودي، خليجي، أو عالمي) — هذا يجعل تقدير حجم السوق والمنافسين عاماً.'
+                            : 'النطاق الجغرافي غير محدد بدقة (مدينة/حي/منطقة مستهدفة) — هذا يجعل أرقام السوق والمنافسين عامة أكثر من اللازم.',
                         impact: 'فقدان دقة تقديرات حجم السوق الجغرافية.',
-                        suggestion: 'تحديد النطاق بـ "منطقة الرياض - حي العليا".',
-                        suggestionAction: { type: 'patch', path: 'marketSizing.targetNeighborhood', value: 'الرياض - حي العليا' },
+                        suggestion: projectContext.isDigital
+                            ? 'حدد نطاق الإطلاق الفعلي، مثل "المملكة العربية السعودية".'
+                            : 'حدد المدينة والحي أو منطقة الخدمة الفعلية.',
+                        suggestionAction: projectContext.isDigital
+                            ? { type: 'patch', path: 'marketSizing.targetNeighborhood', value: 'المملكة العربية السعودية' }
+                            : null,
                         path: 'marketSizing.targetNeighborhood'
                     });
                 }
@@ -191,20 +215,26 @@ export async function runQAChecks(state, results) {
                 if (licenses.length === 0) {
                     qaResults.softWarnings.push({
                         code: 'LICENSES_MISSING',
-                        message: 'التراخيص والرسوم غير موثقة — أضف السجل التجاري، رخصة البلدية، الدفاع المدني، وأي اشتراطات غذائية/تشغيلية حسب النشاط.',
+                        message: projectContext.isDigital
+                            ? 'المتطلبات النظامية والرسوم غير موثقة — أضف السجل التجاري، سياسات الخصوصية وحماية البيانات، وأي ترخيص مهني يتطلبه نشاط المنصة.'
+                            : 'التراخيص والرسوم غير موثقة — أضف السجل التجاري، والتراخيص البلدية والتشغيلية المطلوبة حسب النشاط.',
                         impact: 'يعتبر الممول المشروع مخاطرة قانونية إذا لم تُدرج التراخيص وتكاليفها.',
-                        suggestion: 'إضافة التراخيص الأساسية (سجل تجاري، رخصة بلدية).',
-                        suggestionAction: { type: 'patch', path: 'legal.licenses', value: [{ name: 'سجل تجاري', cost: 1200 }, { name: 'رخصة البلدية', cost: 3000 }] },
+                        suggestion: projectContext.isDigital
+                            ? 'إضافة السجل التجاري ومراجعة متطلبات حماية البيانات والترخيص المهني.'
+                            : 'إضافة التراخيص الأساسية المطلوبة فعلياً لنوع النشاط.',
+                        suggestionAction: projectContext.isDigital
+                            ? { type: 'patch', path: 'legal.licenses', value: [{ name: 'سجل تجاري', cost: 1200 }, { name: 'مراجعة الخصوصية وحماية البيانات', cost: 0 }] }
+                            : null,
                         path: 'legal.licenses'
                     });
                 } else {
                     // تدقيق 2026-07-08 (ملاحظة حرجة، خبير السوق): وجود أي تراخيص لا يعني
                     // اكتمالها — مشروع مطعم بلا رخصة هيئة الغذاء والدواء (SFDA) يمر هذا
                     // الفحص سابقاً لمجرد طول المصفوفة > 0. تحقق مخصص لقطاع الأغذية.
-                    const sectorText = sectorDetectionText(state?.projectInfo).trim();
-                    const isFandB = /مطعم|كافي|قهوة|وجبات|فود|طعام|مأكولات|مشروبات/i.test(sectorText);
+                    // isFandB أصبح projectContext.isFood (محسوب مرة واحدة أعلى الدالة عبر
+                    // sectorDetectionText نفسها) — لا حاجة لإعادة حسابه محلياً هنا.
                     const hasSfda = licenses.some(l => /الغذاء والدواء|SFDA/i.test(String(l?.name || '')));
-                    if (isFandB && !hasSfda) {
+                    if (projectContext.isFood && !hasSfda) {
                         qaResults.softWarnings.push({
                             code: 'SFDA_LICENSE_MISSING',
                             message: 'مشروع أغذية/مشروبات بلا رخصة هيئة الغذاء والدواء (SFDA) في قائمة التراخيص — إلزامية لمنشآت الأغذية في السعودية.',
@@ -610,7 +640,12 @@ export async function runQAChecks(state, results) {
             console.warn('Coherence checks failed:', coherenceErr);
         }
 
-        qaResults.passed = qaResults.hardErrors.length === 0;
+        // تدقيق 2026-09-16: كانت passed تتجاهل validationErrors (أخطاء المدخلات من
+        // validateInputs.js، مثل NEGATIVE_VALUE) رغم أن buildDecisionQualityGate
+        // (decisionQuality.js) يعتبرها حرجة تماماً كـhardErrors — فتظهر شارة "القرار
+        // محجوب" (من البوابة المرجعية) بجانب رسائل تفترض passed=true (من هذا الحقل)
+        // في نفس الشاشة. الآن المعنيان متطابقان دائماً بحكم البناء.
+        qaResults.passed = qaResults.hardErrors.length === 0 && qaResults.validationErrors.length === 0;
     } catch (e) {
         console.error('QA Check error:', e);
         qaResults.hardErrors.push({

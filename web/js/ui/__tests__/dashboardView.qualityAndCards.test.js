@@ -91,23 +91,27 @@ describe('DashboardView — تبديل تبويبات مساحة العمل', ()
         vi.clearAllMocks();
     });
 
-    it('النقر على تبويب «الأدوات والمحرّكات» يُفعِّله ويُخفي لوحة «دراساتك»', async () => {
+    // تدقيق 2026-09-17: زر «الأدوات والمحرّكات» حُذف من الشريط الجانبي (تبسيط
+    // القائمة — لوحته لا تزال موجودة، تُفتح فقط برابط مباشر #/tools، انظر
+    // dashboardView.activeHomePanel.test.js). «أدوات مساندة للدراسة» هو التبويب
+    // الباقي الذي يمثّل نفس آلية التبديل بنقرة سليمة الآن.
+    it('النقر على تبويب «أدوات مساندة للدراسة» يُفعِّله ويُخفي لوحة «دراساتك»', async () => {
         const view = await makeView([]);
         await view.render();
 
-        const enginesTab = document.querySelector('[data-dv-panel-button="engines"]');
+        const supportTab = document.querySelector('[data-dv-panel-button="support"]');
         const studiesPanel = document.getElementById('homePanel-studies');
-        const enginesPanel = document.getElementById('toolsAndEngines');
+        const supportPanel = document.getElementById('studyToolkits');
 
         expect(studiesPanel.hidden).toBe(false);
-        expect(enginesPanel.hidden).toBe(true);
+        expect(supportPanel.hidden).toBe(true);
 
-        enginesTab.click();
+        supportTab.click();
 
-        expect(enginesTab.classList.contains('is-active')).toBe(true);
-        expect(enginesTab.getAttribute('aria-selected')).toBe('true');
+        expect(supportTab.classList.contains('is-active')).toBe(true);
+        expect(supportTab.getAttribute('aria-selected')).toBe('true');
         expect(studiesPanel.hidden).toBe(true);
-        expect(enginesPanel.hidden).toBe(false);
+        expect(supportPanel.hidden).toBe(false);
     });
 });
 

@@ -7,6 +7,7 @@ import { SECTIONS } from '../core/schema.js';
 import { STEPS, stepIndexById } from '../core/wizardSteps.js';
 import { calculateStudy as runFullModel } from '../core/engine.js';
 import { calculateProjectScore } from '../core/scoring.js';
+import { computeInputsFingerprint } from '../core/monteCarloFingerprint.js';
 import { downloadBlob } from '../../export/utils.js';
 import { createShareLink } from '../services/ShareService.js';
 import { buildShareUrl } from './ShareModal.js';
@@ -21,6 +22,7 @@ import { hasMinimumRevenueData, hasMinimumFinancialData } from '../utils/dataSuf
 import { toast } from '../utils/toast.js';
 import { trackEvent } from '../utils/analytics.js';
 import { renderEngineVersionNotice } from '../utils/engineVersionNotice.js';
+import { buildDecisionActionPlan } from '../core/decisionActionPlan.js';
 import 'gridstack/dist/gridstack.min.css';
 
 export class DecisionDashboard {
@@ -108,8 +110,13 @@ export class DecisionDashboard {
         const decision = this.buildDecisionReasons(state, results, readiness, evaluation);
         const financingDiagnostics = this.getFinancingDiagnostics(state, results);
         const decisionExplanation = results?.decisionExplanation || null;
+        const actionPlan = buildDecisionActionPlan(state, results);
         const mcLastRun = state?.monteCarlo?.lastRun;
-        const mcProbability = Number.isFinite(Number(mcLastRun?.successProbability)) ? Number(mcLastRun.successProbability) : null;
+        // تدقيق 2026-09-16: عرض احتمالية محسوبة على مدخلات سابقة بلا أي إشارة يضلّل حتى
+        // لو لم تعد تدخل الدرجة/القرار فعلياً (بعد إصلاح scoring.js وengine.js) — بصمة
+        // غير مطابقة تُعامَل كغياب تشغيل، مع تمييز الحالتين في التلميح أدناه.
+        const mcStale = !!(mcLastRun && mcLastRun.inputsFingerprint !== computeInputsFingerprint(state));
+        const mcProbability = (!mcStale && Number.isFinite(Number(mcLastRun?.successProbability))) ? Number(mcLastRun.successProbability) : null;
         const year1Revenue = Number(results?.incomeStatement?.[0]?.revenue) || 0;
         // مقام هامش أمان التعادل هو الإيراد التشغيلي لا الكلي: نقطة التعادل من المحرك
         // مُعرَّفة على الإيراد التشغيلي وحده (غير التشغيلي مخصوم من ثوابت البسط) — مقارنتها
@@ -215,7 +222,7 @@ export class DecisionDashboard {
                             ${state.appSettings?.mode === 'mini' ? '<br><span class="dd-verdict__flag dd-verdict__flag--warning">توصية أولية مبنية على 7 حقول أساسية فقط (الوضع «مصغّر») — لم تُدخَل بيانات السوق أو القانونية أو المخاطر. أكمل الوضع الكامل أو المتقدم لتقرير تمويلي معتمد.</span>' : ''}
                             ${qaResults.hardErrors.length > 0 ? '<br><span class="dd-verdict__flag dd-verdict__flag--danger">توجد أخطاء حرجة يجب إصلاحها قبل اتخاذ القرار.</span>' : ''}
                             ${cleanPass ? '<br><span class="dd-verdict__flag dd-verdict__flag--success">الدراسة اجتازت معايير الجودة.</span>' : ''}
-                            ${!cleanPass && qaResults.hardErrors.length === 0 && hasSoftIssues ? '<br><span class="dd-verdict__flag dd-verdict__flag--warning">اجتازت الأخطاء الحرجة، لكن توجد تحذيرات مهمة — راجعها قبل القرار.</span>' : ''}
+                            ${!decisionLocked && !cleanPass && qaResults.hardErrors.length === 0 && hasSoftIssues ? '<br><span class="dd-verdict__flag dd-verdict__flag--warning">اجتازت الأخطاء الحرجة، لكن توجد تحذيرات مهمة — راجعها قبل القرار.</span>' : ''}
                         </p>
                     </div>
 
@@ -273,6 +280,7 @@ export class DecisionDashboard {
                 </div>
 
                 ${decisionLocked ? '' : this.renderDecisionExplainer(decisionExplanation)}
+                ${decisionLocked ? '' : this.renderActionPlan(actionPlan)}
 
                 <!-- QA Gate Status -->
                 ${qaResults.hardErrors.length > 0 ? `
@@ -376,7 +384,7 @@ export class DecisionDashboard {
                                 صافي القيمة الحالية <strong class="${(results?.indicators?.npv ?? 0) >= 0 ? 'text-success' : 'text-danger'}">${this.formatCurrency(results?.indicators?.npv)}</strong> ·
                                 العائد الداخلي <strong>${this.formatPercent(results?.indicators?.irr)}</strong> ·
                                 الاسترداد <strong>${Number.isFinite(results?.indicators?.paybackPeriod) && results.indicators.paybackPeriod > 0 ? (Math.round(results.indicators.paybackPeriod * 10) / 10) + ' سنة' : 'غير محقق'}</strong> ·
-                                العائد على الاستثمار <strong>${this.formatPercent(results?.indicators?.roi)}</strong> ·
+                                العائد التراكمي على الاستثمار <strong>${this.formatPercent(results?.indicators?.roi)}</strong> ·
                                 فجوة التمويل <strong>${this.formatFundingGapLabel(financingDiagnostics.fundingGap, financingDiagnostics.fundingGapThreshold)}</strong> ·
                                 DSCR <strong>${Number.isFinite(financingDiagnostics.dscr) ? Number(financingDiagnostics.dscr).toFixed(2) + 'x' : 'غير قابل للحساب'}</strong>
                                 — التفاصيل الكاملة (قوائم الدخل، الرسوم، التوقعات 5-7 سنوات) في لوحة المؤشرات المالية.
@@ -388,7 +396,7 @@ export class DecisionDashboard {
                                 ${this.renderKPIItem('أقصى انخفاض بالإيراد قبل NPV السالب', npvSafetyMargin, 'percent')}
                                 ${this.renderKPIItem('أدنى تدفق نقدي تراكمي', minCumulativeCash, 'currency')}
                             </div>
-                            ${mcProbability === null ? '<p class="text-xs text-muted mt-2">لم يُشغَّل تحليل مونت كارلو بعد — افتحه لإضافة مكوّن المخاطر إلى الدرجة (10 نقاط) ولرؤية احتمالية النجاح هنا.</p>' : ''}
+                            ${mcStale ? '<p class="text-xs text-warning mt-2">نتيجة مونت كارلو محفوظة من مدخلات سابقة تغيّرت — أعد تشغيلها من خطوة المحاكاة لتحديث الدرجة والتوصية.</p>' : (mcProbability === null ? '<p class="text-xs text-muted mt-2">لم يُشغَّل تحليل مونت كارلو بعد — افتحه لإضافة مكوّن المخاطر إلى الدرجة (10 نقاط) ولرؤية احتمالية النجاح هنا.</p>' : '')}
                         </div>
 
                         <!-- اختبار الضغط (Stress Test / ماذا لو — Upmetrics) -->
@@ -629,6 +637,21 @@ export class DecisionDashboard {
     // jsdom كانت تتجنّبه بدارة قصر (canPlayConfetti=false) فتبقى الاختبارات خضراء رغم
     // الخلل. الآن تُمرَّران من نقطة الاستدعاء الوحيدة في render().
     bindEvents(state, results, readiness, financingDiagnostics) {
+        this.container.querySelectorAll('[data-decision-action]').forEach((button) => {
+            const handler = () => {
+                const actionId = button.dataset.decisionAction || 'unknown';
+                const route = button.dataset.route;
+                const targetStep = Number(button.dataset.stepIndex);
+                trackEvent('decision_action_opened', { action: actionId, decision: results?.decision });
+                if (route) {
+                    window.location.hash = `#/${route}`;
+                } else if (this.onNavigate && Number.isInteger(targetStep) && targetStep >= 0) {
+                    this.onNavigate(targetStep);
+                }
+            };
+            button.addEventListener('click', handler);
+            this._eventListeners.push({ element: button, event: 'click', handler });
+        });
         this.container.querySelectorAll('[data-quality-step]').forEach((button) => {
             const handler = () => {
                 const stepIndex = Number(button.dataset.qualityStep);
@@ -1293,6 +1316,31 @@ export class DecisionDashboard {
         });
 
         return { desc: readiness.recommendation?.desc || '', reasons, nextSteps: uniqueSteps, positives };
+    }
+
+    renderActionPlan(actions) {
+        if (!actions?.length) return '';
+        return `<section class="card glass-card mb-6" aria-labelledby="decisionActionPlanTitle">
+            <div class="flex justify-between items-center gap-3 mb-4">
+                <div>
+                    <h3 class="card-title" id="decisionActionPlanTitle">خطة العمل المقترحة</h3>
+                    <p class="text-sm text-muted">كل إجراء مرتبط مباشرة بنتيجة دراستك ويفتح المكان المناسب لتنفيذه.</p>
+                </div>
+                <div class="flex gap-2 items-center"><span class="badge">${actions.length} إجراءات</span><button type="button" class="btn btn--secondary btn--sm" data-decision-action="open-connected-workspace" data-route="workspace">مركز الربط</button></div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                ${actions.map((item, index) => `<article class="card p-4" style="border-inline-start:3px solid ${item.priority === 'high' ? 'var(--c-warning)' : 'var(--c-primary)'}">
+                    <div class="flex items-start gap-3">
+                        <span class="badge">${index + 1}</span>
+                        <div class="flex-1">
+                            <strong>${escapeHtml(item.title)}</strong>
+                            <p class="text-sm text-muted mt-1">${escapeHtml(item.description || '')}</p>
+                            <button type="button" class="btn btn--secondary btn--sm mt-3" data-decision-action="${escapeHtml(item.id)}" ${item.route ? `data-route="${escapeHtml(item.route)}"` : `data-step-index="${item.stepIndex}"`}>تنفيذ الآن</button>
+                        </div>
+                    </div>
+                </article>`).join('')}
+            </div>
+        </section>`;
     }
 
     /** نص فجوة/توازن التمويل الموحَّد — يستهلكه renderKPIItem وشريط ملخّص المؤشرات معاً. */

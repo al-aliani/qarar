@@ -15,7 +15,7 @@
     {
       "src": "^/(.*)$",
       "headers": {
-        "Content-Security-Policy": "default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.tile.openstreetmap.org; frame-src https://www.openstreetmap.org https://www.google.com https://www.recaptcha.net; connect-src 'self' https://kyvtfmmbohmxqjlnjoys.supabase.co https://www.google.com https://www.recaptcha.net https://overpass-api.de https://api.worldbank.org https://o4511949202063360.ingest.us.sentry.io; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://kyvtfmmbohmxqjlnjoys.supabase.co https://*.tile.openstreetmap.org; frame-src https://www.openstreetmap.org https://www.google.com https://www.recaptcha.net; connect-src 'self' https://kyvtfmmbohmxqjlnjoys.supabase.co https://www.google.com https://www.recaptcha.net https://overpass-api.de https://api.worldbank.org https://o4511949202063360.ingest.us.sentry.io; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'",
         "X-Frame-Options": "DENY",
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -85,6 +85,7 @@
       "continue": true
     },
     { "src": "^/$", "dest": "/landing.html" },
+    { "src": "^/p/([a-z0-9-]+)$", "dest": "/page.html?slug=$1" },
     { "handle": "filesystem" },
     { "src": "^/assets/.*$", "status": 404, "headers": { "Cache-Control": "no-store" } },
     { "src": "^/(.*)\\.(html|png|jpe?g|gif|svg|webp|avif|ico|pdf|xlsx|xls|docx|csv|woff2?|ttf|otf|js|css)$", "status": 404, "headers": { "Cache-Control": "no-store" } },

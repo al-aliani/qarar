@@ -27,6 +27,9 @@ import { escapeHtml } from '../utils/escape.js';
 import { runQAChecks } from '../utils/qaChecks.js';
 import { buildDecisionQualityGate } from '../utils/decisionQuality.js';
 import { renderEngineVersionNotice } from '../utils/engineVersionNotice.js';
+import { listConnectedWorkspace } from '../services/ConnectedWorkspaceService.js';
+import { actionTarget, buildNextActions } from '../core/nextActionEngine.js';
+import { trackEvent } from '../utils/analytics.js';
 
 const icon = (id) => `<svg class="ic" aria-hidden="true"><use href="#${id}"/></svg>`;
 
@@ -126,6 +129,9 @@ export class ProjectOverviewView {
         } catch (e) {
             console.warn('[ProjectOverviewView] فحص الجودة لم يكتمل:', e);
         }
+        const workspaceResult = await listConnectedWorkspace(projectId);
+        const workspace = workspaceResult.ok ? workspaceResult.data : { requests: [], quotes: [], suggestions: [], tasks: [], versions: [] };
+        const nextActions = buildNextActions({ study: data, results: results || {}, completeness, qualityGate, workspace });
         // القرار يُعرض فقط حين يكون للنموذج مخرَج فعلي — لا لمجرّد أن المحرك أعاد قيمة.
         // نفس `decision` يبوِّب الخلاصة التنفيذية أدناه (السطر 124): generateExecutiveSummary
         // تقرأ results.decision الخام (='NO-GO' لدراسة صفرية) فتُصدر «القرار يشير إلى عدم
@@ -138,6 +144,7 @@ export class ProjectOverviewView {
             <div class="dv po animate-entry">
                 ${this._renderHeader(data, completeness, headerName)}
                 ${this._renderEngineVersionNotice(data)}
+                ${this._renderCommandCenter(data, results || {}, completeness, workspace, nextActions)}
                 ${qualityGate.locked ? this._renderQualityBlocked(qualityGate) : (decision ? this._renderDecision(decision, results, data?.appSettings?.mode) : this._renderInsufficient(completeness))}
                 <!-- مبوَّبة بـhasRealModel نفسه المستخدم أعلاه لـdecision: _renderIndicators صار
                      يميّز داخلياً صفراً حقيقياً محسوباً (Number.isFinite) عن غياب حساب — لكن هذا
@@ -208,6 +215,21 @@ export class ProjectOverviewView {
         `;
     }
 
+    _renderCommandCenter(data, results, completeness, workspace, actions) {
+        const primary = actions[0];
+        const secondary = actions.slice(1);
+        const openTasks = workspace.tasks.filter(item => !['done', 'dismissed'].includes(item.status)).length;
+        const openRequests = workspace.requests.filter(item => !['completed', 'cancelled', 'rejected'].includes(item.status)).length;
+        const pendingReviews = workspace.suggestions.filter(item => item.status === 'pending').length;
+        const phase = Number(completeness.percentage || 0) < 70 ? 'جمع البيانات' : results?.decision === 'GO' ? 'الاستعداد للتنفيذ' : 'تحسين القرار';
+        return `<section class="po__section po__command" aria-label="قيادة المشروع">
+            <div class="po__command-head"><div><span class="po__eyebrow">حالة المشروع الآن</span><h2 class="po__section-title">${escapeHtml(phase)}</h2></div><a class="btn btn--ghost btn--sm" href="#/workspace">فتح مركز الربط</a></div>
+            ${primary ? `<article class="po__next"><span class="po__eyebrow">الإجراء الأهم الآن</span><h3>${escapeHtml(primary.title)}</h3><p>${escapeHtml(primary.reason || '')}</p><small>الأثر المتوقع: ${escapeHtml(primary.impact || 'تحسين جاهزية المشروع')}</small><a class="btn btn--primary" href="${actionTarget(primary)}" data-next-action="${escapeHtml(primary.id)}">ابدأ الآن</a></article>` : '<article class="po__next"><h3>لا توجد إجراءات عاجلة</h3><p>تابع تحديث بيانات المشروع عند توفر معلومات جديدة.</p></article>'}
+            ${secondary.length ? `<div class="po__secondary-actions">${secondary.map(item => `<a href="${actionTarget(item)}" data-next-action="${escapeHtml(item.id)}"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.reason || '')}</small></a>`).join('')}</div>` : ''}
+            <div class="po__pulse"><div><b>${openTasks}</b><span>مهام مفتوحة</span></div><div><b>${openRequests}</b><span>طلبات جارية</span></div><div><b>${pendingReviews}</b><span>اقتراحات تنتظر قرارك</span></div><div><b>${workspace.versions.length}</b><span>نسخ محفوظة</span></div></div>
+        </section>`;
+    }
+
     /** دراسة بلا مدخلات مالية فعلية: لا نخترع قراراً — نقول ما ينقص بالضبط. */
     _renderInsufficient(completeness) {
         return `
@@ -229,7 +251,7 @@ export class ProjectOverviewView {
             Number.isFinite(Number(ind.npv)) ? { label: 'صافي القيمة الحالية', value: fmtMoney(ind.npv), good: Number(ind.npv) > 0 } : null,
             Number.isFinite(Number(ind.irr)) ? { label: 'معدل العائد الداخلي', value: fmtPct(ind.irr), good: Number(ind.irr) > 0 } : null,
             Number(ind.paybackPeriod) > 0 ? { label: 'فترة الاسترداد', value: fmtYears(ind.paybackPeriod), good: true } : null,
-            Number.isFinite(Number(ind.roi)) ? { label: 'العائد على الاستثمار', value: fmtPct(ind.roi), good: Number(ind.roi) > 0 } : null,
+            Number.isFinite(Number(ind.roi)) ? { label: 'العائد التراكمي على الاستثمار', value: fmtPct(ind.roi), good: Number(ind.roi) > 0 } : null,
             Number.isFinite(Number(ind.breakEvenPointValue)) ? { label: 'نقطة التعادل (سنوياً)', value: fmtMoney(ind.breakEvenPointValue), good: true } : null,
             Number.isFinite(Number(ind.profitMargin)) ? { label: 'هامش الربح الصافي', value: fmtPct(ind.profitMargin), good: Number(ind.profitMargin) > 0 } : null
         ].filter(Boolean);
@@ -295,6 +317,10 @@ export class ProjectOverviewView {
 
     _bind() {
         this.container.querySelectorAll('.po__back').forEach(b => b.addEventListener('click', () => this.onBack()));
+        this.container.querySelectorAll('[data-next-action]').forEach(link => link.addEventListener('click', () => {
+            trackEvent('next_action_started', { action: link.dataset.nextAction, study_id: this.projectId });
+            try { this.store?.set?.(this._loadedData); } catch (e) { console.warn('[ProjectOverviewView] store.set فشل:', e); }
+        }));
         // تحميل الدراسة في المخزن المشترك عند الضغط الفعلي على «تعديل» فقط — لا عند مجرّد
         // العرض (انظر تعليق render() أعلاه). زر التعديل ينقل للويزارد الذي يقرأ من المخزن،
         // فبدون هذا يفتح الويزارد على دراسة أخرى (أو فارغة) — ولأن this._loadedData هي
