@@ -251,7 +251,7 @@
 
 /* Category Header Hero */
 .category-page__header {
-    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
+    background: linear-gradient(135deg, var(--v2-primary), var(--c-p-600, #0a4634)) !important;
     color: white !important;
     border-radius: 32px !important;
     padding: 48px 40px !important;
@@ -381,7 +381,7 @@
 }
 
 .category-page__nav .btn--primary {
-    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
+    background: linear-gradient(135deg, var(--v2-primary), var(--c-p-600, #0a4634)) !important;
     border: none !important;
     box-shadow: 0 8px 16px rgba(14, 91, 68, 0.2) !important;
 }
@@ -474,7 +474,7 @@
 
 /* Selected Card Highlight (Advisory Levels) */
 .advisory-view label.card:has(input:checked) {
-    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
+    background: linear-gradient(135deg, var(--v2-primary), var(--c-p-600, #0a4634)) !important;
     color: white !important;
     border: none !important;
     box-shadow: 0 12px 24px rgba(14, 91, 68, 0.2) !important;
@@ -509,7 +509,7 @@
 .billing-history-page .btn--primary,
 .support-tickets-page .btn--primary,
 .billing-history-page .btn--secondary {
-    background: linear-gradient(135deg, var(--v2-primary), #0a4634) !important;
+    background: linear-gradient(135deg, var(--v2-primary), var(--c-p-600, #0a4634)) !important;
     color: white !important;
     border: none !important;
     border-radius: 100px !important;

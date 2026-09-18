@@ -319,7 +319,7 @@
   margin-bottom: var(--s-4);
   padding: clamp(20px, 4vw, 32px);
   color: #fff;
-  background: linear-gradient(135deg, var(--c-p-500, #0e5b44), #0a4634);
+  background: linear-gradient(135deg, var(--c-p-500, #0e5b44), var(--c-p-600, #0a4634));
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--r-lg);
   box-shadow: 0 20px 40px -10px rgba(14, 91, 68, 0.35);
