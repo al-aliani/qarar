@@ -1670,10 +1670,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const openModal = document.querySelector('.modal[style*="display"]');
       if (openModal) openModal.style.display = 'none';
     }
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-      e.preventDefault();
-      toast.info('بحث شامل (Cmd+K): قريباً');
-    }
   });
 
   // انتهاء الجلسة تلقائياً بعد 30 دقيقة خمول

@@ -15,7 +15,7 @@ export const PRICING_PACKAGES = [
     },
     {
         id: 'self', name: 'ذاتي', price: 299, unit: '﷼ / دراسة', channel: 'app', audience: 'لمن يملك بياناته ويريد التقرير دون مراجعة إضافية', delivery: 'خلال ساعات العمل',
-        features: ['كل أدوات بناء الدراسة', 'بوابة الجودة وتفسير المؤشرات', 'PDF وExcel وWord والتقرير البنكي']
+        features: ['كل أدوات بناء الدراسة', 'بوابة الجودة وتفسير المؤشرات', 'PDF وExcel وWord وتقرير التمويل']
     },
     {
         id: 'reviewed', name: 'مراجَع بخبير', price: 1999, unit: '﷼ / دراسة', channel: 'app', recommended: true, audience: 'للتقديم لممول أو شريك بثقة أعلى', delivery: '24–48 ساعة',

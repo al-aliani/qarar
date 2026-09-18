@@ -42,6 +42,18 @@ function copyCatalogFiles(catalogPath, sourceRoot, urlPrefix, distDir) {
     console.log(`[copy-catalog-files] ${copied}/${urls.length} → ${distDir}`);
 }
 
+function copyStandaloneCalculatorScripts(distRoot) {
+    const sourceDir = resolve(__dirname, 'web/js');
+    const targetDir = resolve(distRoot, 'js');
+    if (!fs.existsSync(sourceDir)) return;
+    const files = fs.readdirSync(sourceDir).filter((name) => name.endsWith('-calculator.js'));
+    fs.mkdirSync(targetDir, { recursive: true });
+    for (const file of files) {
+        fs.copyFileSync(resolve(sourceDir, file), resolve(targetDir, file));
+    }
+    console.log(`[copy-standalone-calculators] ${files.length}/${files.length} → ${targetDir}`);
+}
+
 export default defineConfig({
     root: './web',
     // .env الفعلي بجذر المشروع (مستوى واحد فوق root) لا داخل web/ — بلا هذا Vite
@@ -365,6 +377,7 @@ export default defineConfig({
             apply: 'build',
             closeBundle() {
                 const distDir = resolve(__dirname, 'web/dist');
+                copyStandaloneCalculatorScripts(distDir);
                 copyCatalogFiles(
                     resolve(__dirname, 'web/public/data/ready-studies.json'),
                     resolve(__dirname, 'درسات جدوى'),
