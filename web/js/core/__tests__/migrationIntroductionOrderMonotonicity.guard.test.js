@@ -80,6 +80,12 @@ const DOCUMENTED_BACKDATED_ALLOWLIST = new Set([
     // 20260916192117 و20260916204123) — فجوة إدخال Git فقط، لا تسلسل تطبيق خاطئ.
     '20260916200602_restrict_rate_limit_rpc_execution.sql',
     '20260916200730_harden_internal_function_execution_and_search_path.sql',
+    // تاريخي/دمجي متوارَث (2026-09-18): هذان الملفان دُخلا عبر دمج فروع إصلاح
+    // أُنجزت سابقاً بتاريخ 2026-09-16، لذلك ختمهما أقدم من بعض الملفات الموجودة
+    // مسبقاً في خط الفرع الحالي. الاستثناء هنا يغطي أثر دمج الفروع المتأخرة فقط؛
+    // لا يفتح الباب لأي backdating جديد بلا توثيق صريح.
+    '20260916000000_consultation_bank_transfer.sql',
+    '20260916000000_fix_study_shares_auth_users_permission.sql',
 ]);
 
 function embeddedTimestamp(filename) {

@@ -24,6 +24,8 @@ vi.mock('sweetalert2', () => ({ default: { fire: (...args) => swalFireMock(...ar
 vi.mock('../../services/AdminService.js', () => ({
     getPendingBankTransfers: vi.fn(),
     confirmBankTransfer: vi.fn(),
+    getPaidBankTransfers: vi.fn(),
+    refundBankTransfer: vi.fn(),
 }));
 
 const { AdminDashboardView } = await import('../AdminDashboardView.js');
@@ -42,6 +44,7 @@ describe('AdminDashboardView — التحويلات البنكية', () => {
     beforeEach(() => {
         document.body.innerHTML = '<div id="admin"></div>';
         vi.clearAllMocks();
+        AdminService.getPaidBankTransfers.mockResolvedValue({ ok: true, data: [] });
     });
 
     afterEach(() => {

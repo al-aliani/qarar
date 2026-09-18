@@ -1953,10 +1953,13 @@
 .dv-account__menu button,.dv-account__menu a{display:block;width:100%;padding:10px 11px;border:0;border-radius:8px;background:transparent;color:var(--c-text-main);font:inherit;font-size:.84rem;text-align:start;cursor:pointer}
 .dv-account__menu button:hover,.dv-account__menu a:hover{background:var(--c-surface-2)}
 
-/* ═══ شبكة Bento (تبويب «دراساتك») ═══ */
+/* ═══ شبكة Bento (تبويب «دراساتك») ═══
+   ملاحظة: البطاقة الوحيدة المعروضة فعلياً هنا هي --hero (تدقيق 2026-09-18 —
+   الشبكة 4 أعمدة كانت مصممة لعدة بطاقات معاً، لكن بعد تبسيط 2026-09-17 صارت
+   --hero تُعرض وحدها دائماً، فتركت شبكة 4 أعمدة نصف الحاوية فارغاً بصرياً).
+   flex بدل grid يجعل الحاوية تُطابق حجم محتوى البطاقة بدل التمدد لعرض ثابت. */
 .dv-bento {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    display: flex;
     gap: 14px;
     margin-bottom: var(--s-4);
 }
@@ -1973,10 +1976,9 @@
 }
 
 .dv-bento-tile--hero {
-    grid-column: span 2;
-    grid-row: span 2;
     justify-content: space-between;
     gap: 14px;
+    max-width: 380px;
 }
 
 .dv-bento-tile--wide {
@@ -2073,13 +2075,9 @@
 }
 
 @media (max-width: 720px) {
-    .dv-bento {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .dv-bento-tile--hero,
-    .dv-bento-tile--wide {
-        grid-column: span 2;
+    .dv-bento-tile--hero {
+        max-width: none;
+        width: 100%;
     }
 }
 
