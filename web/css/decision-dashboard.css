@@ -2625,7 +2625,12 @@
 
 @media (max-width: 768px) {
     .dv-workspace{grid-template-columns:1fr}
-    .dv-side-nav{position:static;min-height:0;display:flex;flex-direction:row;overflow-x:auto;padding:7px}
+    /* تدقيق 2026-09-18: بعد تقليص القائمة من 10+4 عناوين إلى 4 عناصر (18c3dc4) صار
+       شريط التنقل الأفقي هنا (overflow-x:auto) يقصّ آخر عنصرين ("المكتبة"،
+       "الاستشارات") خارج حافة الشاشة على جوال 375px بلا أي إشارة بصرية بوجود مزيد —
+       المتصفحات اللمسية تُخفي شريط التمرير افتراضياً فلا يبقى أي دليل على إمكانية
+       التمرير. تلاشٍ (mask) عند الحافتين يشير لوجود محتوى إضافي، بلا جافاسكربت. */
+    .dv-side-nav{position:static;min-height:0;display:flex;flex-direction:row;overflow-x:auto;padding:7px;-webkit-mask-image:linear-gradient(to right,transparent,black 16px,black calc(100% - 16px),transparent);mask-image:linear-gradient(to right,transparent,black 16px,black calc(100% - 16px),transparent)}
     .dv-side-nav__main,.dv-side-nav__bottom{display:flex;gap:5px;padding:0;margin:0;border:0}
     .dv-side-nav button{width:max-content;white-space:nowrap}
     .modal-overlay--nonblocking {
