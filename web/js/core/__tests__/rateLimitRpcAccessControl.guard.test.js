@@ -1,18 +1,28 @@
 /**
- * حارس نموذج الوصول لدالتَي حدّ المعدّل (تقييم أمني عدائي 2026-08-29):
- * check_and_record_rate_limit وcheck_and_record_anon_rate_limit (migration
- * 20260829030000) هما الاستثناء الوحيد بهذا المشروع من نمط "كل RPC عام له
- * GRANT EXECUTE صريح" (19 دالة أخرى تملكه — get_study_by_share_token،
- * track_event، add_share_feedback، admin_*_stats...). الغياب مقصود لا سهو:
- * معاملات الدالتين (p_user_id/p_identifier_hash) تصل كوسيطة خام بلا أي ربط
- * بـauth.uid()، فمنح تنفيذها لـanon/authenticated كان يسمح لأي عميل بتسميم
- * عدّاد حدّ أي مستخدم آخر (حجب خدمة مستهدف، DoS). هذا الحارس يمنع "إصلاح"
- * مستقبلي حَسَن النية يوحّد النمط بإضافة GRANT EXECUTE ويعيد فتح الثغرة، ويثبت
- * أن الطبقة الثانية (RLS رفض-افتراضي بصفر سياسات على الجدولين تحتهما) موجودة
- * فعلاً كما هي موثَّقة. نفس فلسفة rlsStudySharesDeployment.guard.test.js.
+ * حارس نموذج الوصول لدالتَي حدّ المعدّل — مُصحَّح (تدقيق شامل 2026-09-16).
+ *
+ * الافتراض الأصلي هنا (تقييم أمني عدائي 2026-08-29) كان خاطئاً فعلياً: أن غياب
+ * أي عبارة GRANT EXECUTE صريحة في ملفات الترحيل كافٍ لمنع anon/authenticated من
+ * التنفيذ. تحقّق حي مباشر (get_advisors + استعلام pg_proc.proacl على قاعدة
+ * الإنتاج) أثبت العكس: كلا الدالتين كانتا فعلاً قابلتين للتنفيذ من anon
+ * وauthenticated (ACL: `anon=X/postgres`, `authenticated=X/postgres` صريحان)
+ * رغم صفر GRANT EXECUTE في أي ترحيل — على الأرجح عبر ALTER DEFAULT PRIVILEGES
+ * الذي يضبطه Supabase افتراضياً على مستوى المشروع نفسه (خارج أي ملف نتتبّعه
+ * هنا)، لا PUBLIC وحدها. الإصلاح الفعلي: migration
+ * 20260916010000_rate_limit_rpc_revoke_public_execute.sql يسحب الصلاحية صراحة
+ * (REVOKE)، وهذا الحارس يتحقق الآن من وجودها لا من غياب GRANT فقط.
+ *
+ * ملاحظة تصحيحية إضافية: "الطبقة الثانية" (RLS رفض-افتراضي على
+ * rate_limit_events/anon_endpoint_hits) الموثَّقة أدناه **لا تحمي من الاستدعاء
+ * المباشر لهاتين الدالتين تحديداً** — كلتاهما SECURITY DEFINER فتُنفَّذان
+ * بصلاحية المالك (تتجاوزان RLS بنيوياً بصرف النظر عمّن استدعاها)؛ RLS يحمي فقط
+ * من وصول مباشر للجدولين خارج الدالتين، وهو ليس مسار الاستغلال الذي وُثِّق هنا.
+ * تبقى الاختبارات الخاصة بها أدناه لأنها توثّق خاصية حقيقية ومفيدة (تصميم آمن
+ * افتراضياً للجدولين لو استُهدفا مباشرة لسبب آخر)، لا لأنها الدفاع الفعلي ضد
+ * هذا العطل تحديداً — الدفاع الفعلي الوحيد هو صلاحية EXECUTE نفسها.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -26,6 +36,7 @@ const ANON_ENDPOINT_HITS_MIGRATION_PATH = resolve(
     '20260827030000_anon_endpoint_hits_and_public_applications_lockdown.sql',
 );
 const RPC_ACCESS_FIX_PATH = resolve(MIGRATIONS_DIR, '20260916200602_restrict_rate_limit_rpc_execution.sql');
+const REVOKE_MIGRATION_PATH = resolve(MIGRATIONS_DIR, '20260916010000_rate_limit_rpc_revoke_public_execute.sql');
 
 /** يستبعد أسطر التعليق (-- ...) قبل البحث عن عبارات SQL فعلية — التعليقات
  * التفسيرية تذكر عمداً كلمات مثل "GRANT EXECUTE" و"create policy" كنصّ توثيقي
@@ -58,6 +69,13 @@ describe('نموذج وصول RPC حدّ المعدّل: التنفيذ محصو
             expect(sql).toMatch(new RegExp(`revoke\\s+execute\\s+on\\s+function\\s+public\\.${signature}[\\s\\S]{0,80}from\\s+public,\\s*anon,\\s*authenticated`, 'i'));
             expect(sql).toMatch(new RegExp(`grant\\s+execute\\s+on\\s+function\\s+public\\.${signature}[\\s\\S]{0,50}to\\s+service_role`, 'i'));
         }
+    });
+
+    it('ترحيل 2026-09-16 الأصلي يسحب التنفيذ من PUBLIC/anon/authenticated لكلتا الدالتين بلا مسّ service_role', () => {
+        const sql = stripSqlComments(readFileSync(REVOKE_MIGRATION_PATH, 'utf8'));
+        expect(sql).toMatch(/revoke\s+execute\s+on\s+function\s+public\.check_and_record_rate_limit\([\s\S]{0,60}\)\s+from\s+public\s*,\s*anon\s*,\s*authenticated/i);
+        expect(sql).toMatch(/revoke\s+execute\s+on\s+function\s+public\.check_and_record_anon_rate_limit\([\s\S]{0,60}\)\s+from\s+public\s*,\s*anon\s*,\s*authenticated/i);
+        expect(sql).not.toMatch(/revoke[\s\S]{0,120}service_role/i);
     });
 
     it('التعليق التفسيري لسبب غياب GRANT EXECUTE موجود فعلاً في ملف الترحيل (لا سهو ناتج عن حذف مستقبلي)', () => {
@@ -109,5 +127,9 @@ describe('نموذج وصول RPC حدّ المعدّل: التنفيذ محصو
     it('[إثبات الحارس] العطل الأصلي: لو أُضيفت سياسة RLS لأحد الجدولين مستقبلاً بلا مراجعة، هذا الفحص يفشل', () => {
         const accidentalPolicy = 'create policy "allow_all" on public.rate_limit_events for select using (true);';
         expect(accidentalPolicy).toMatch(/create policy[\s\S]{0,80}\bon\s+public\.rate_limit_events\b/i);
+    });
+
+    it('[إثبات الحارس] لو حُذف ترحيل REVOKE هذا مستقبلاً، هذا الفحص نفسه يفشل (لا نص مصطنع دائم النجاح)', () => {
+        expect(existsSync(REVOKE_MIGRATION_PATH)).toBe(true);
     });
 });
