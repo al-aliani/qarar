@@ -149,12 +149,41 @@ table {
     padding-bottom: 100px;
 }
 
-/* تدقيق 2026-09-18: نفس علة 2026-07-11 أدناه — صفحة نظرة عامة على المشروع (.po في
-   ProjectOverviewView.js) بطاقات متعددة الأعمدة (بوابة الجودة، مؤشرات، إجراءات) لا
-   نموذج عمود واحد، لكنها ورثت حبس 800px الافتراضي فتترك ~400px فارغة كل جهة على شاشة
-   1600px — نفس شكوى المستخدم عن لوحة التحكم. نفس نمط الاستثناء أدناه بالضبط. */
-.wizard-container:has(> .po) {
+/* تدقيق 2026-09-18: نفس علة 2026-07-11 أدناه (تكرّرت 18 مرة) — بعد شكوى المستخدم من
+   هوامش فارغة على شاشة عريضة، فحص شامل (وكيل استكشاف) لكل الصفحات الـ55 التي تُركَّب
+   مباشرة داخل #wizardContainer وجد 18 صفحة تُبنى بشبكات/أعمدة متعددة (بطاقات، جداول
+   عريضة، لوحة kanban) لا نموذج عمود واحد، لكنها ورثت حبس 800px الافتراضي فتترك حتى
+   ~400px فارغة كل جهة على شاشة 1600px. كل صفحة أدناه لها بالفعل max-width خاص بها
+   (960-1152px عادة) داخل CSS/inline الخاص بها، فرفع سقف الحاوية هنا لا يمدّدها بلا حدود
+   — فقط يسمح لسقفها الخاص أن يُطبَّق بدل أن يُخنَق مسبقاً بـ800px الخارجي. الصفحات
+   الهامشية (فرق ≤60px عن سقفها الخاص، مثل MarketplaceView) استُبعدت عمداً — لا تستحق
+   المخاطرة بلا فائدة ملموسة. */
+.wizard-container:has(> .po),
+.wizard-container:has(> .advisory-view),
+.wizard-container:has(> .trash-view),
+.wizard-container:has(> .team-management-view),
+.wizard-container:has(> .integrations-hub),
+.wizard-container:has(> .global-analytics-view),
+.wizard-container:has(> .community-view),
+.wizard-container:has(> .execution-kanban-view),
+.wizard-container:has(> .intelligence-view),
+.wizard-container:has(> .franchise-hub-view),
+.wizard-container:has(> .ai-focus-group-view),
+.wizard-container:has(> .supply-chain-view),
+.wizard-container:has(> .digital-reputation-view),
+.wizard-container:has(> .m-and-a-view),
+.wizard-container:has(> .central-assumptions),
+.wizard-container:has(> .admin-dashboard),
+.wizard-container:has(> .investor-dashboard),
+.wizard-container:has(> .connected-workspace-view),
+.wizard-container:has(> .academy-view) {
     max-width: 1180px;
+}
+
+/* .share-view مصمَّمة أصلاً full-bleed (app.js يخفي الشريط الجانبي/الفتات لها ويوسّع
+   .main-content بلا حشو) لكن سقف .wizard-container الخارجي كان يُبطل ذلك صامتاً. */
+.wizard-container:has(> .share-view) {
+    max-width: none;
 }
 
 /* تدقيق 2026-07-11 (#4/#5): حبس 800px مثالي لنموذج حقول عمود واحد، لكنه يخنق صفحات

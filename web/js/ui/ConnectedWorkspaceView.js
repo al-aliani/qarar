@@ -73,7 +73,7 @@ export class ConnectedWorkspaceView {
             ...d.tasks.map(x => ({ kind: 'مهمة', title: x.title, detail: x.details || '', target: 'tasks' })),
             ...this.parties.map(x => ({ kind: 'جهة', title: x.name, detail: x.description || '', target: 'parties' }))
         ];
-        this.container.innerHTML = `<div class="animate-entry p-6 max-w-5xl mx-auto" dir="rtl">
+        this.container.innerHTML = `<div class="connected-workspace-view animate-entry p-6 max-w-5xl mx-auto" dir="rtl">
             <button id="connectedBack" class="btn btn--ghost mb-4">← العودة</button>
             <div class="card glass-card p-6 mb-5">
                 <span class="text-xs text-gold">مركز الربط</span><h1 class="text-2xl font-bold mt-1">${escapeHtml(projectName)}</h1>
