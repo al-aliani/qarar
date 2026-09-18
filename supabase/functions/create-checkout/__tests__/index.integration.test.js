@@ -49,8 +49,6 @@ let authState = null; // { data: { user }, error }
 let ordersState = null; // آخر صف orders أُنشئ (يُحدَّث بنفس مرجع الكائن كما تفعل القاعدة الحقيقية)
 let orderIdSeq = 0;
 let nextInsertError = null; // حقن فشل إدراج لاختبار واحد فقط — يُستهلك ويُعاد null تلقائياً
-const sendAlertMock = vi.fn();
-let nextInsertError = null; // حقن فشل إدراج لاختبار واحد فقط — يُستهلك ويُعاد null تلقائياً
 
 function buildOrdersTable() {
     return {
@@ -129,6 +127,8 @@ const createTamaraCheckout = vi.fn(async () => ({ checkoutUrl: 'https://tamara.e
 vi.mock('../../_shared/providers/moyasar.ts', () => ({ createMoyasarCheckout: (...a) => createMoyasarCheckout(...a) }));
 vi.mock('../../_shared/providers/stripe.ts', () => ({ createStripeCheckout: (...a) => createStripeCheckout(...a) }));
 vi.mock('../../_shared/providers/tamara.ts', () => ({ createTamaraCheckout: (...a) => createTamaraCheckout(...a) }));
+
+const sendAlertMock = vi.fn();
 vi.mock('../../_shared/alerting.ts', () => ({ sendAlert: (...a) => sendAlertMock(...a) }));
 
 function makeRequest(body, { origin = 'https://sahib.sa' } = {}) {
