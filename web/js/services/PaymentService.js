@@ -16,6 +16,15 @@ import { monitoring } from '../utils/monitoring.js';
 // آخر مستقبلاً على جانب create-checkout.
 const PAID_TIERS = ['self', 'reviewed', 'full'];
 
+// تدقيق أمني 2026-08-29: الباقات المدفوعة فعلياً فقط — يجب أن تطابق حرفياً
+// PAYABLE_TIERS في supabase/functions/create-checkout/index.ts وقيد orders_tier_check
+// (migration 20260709120000_create_orders_payments.sql). 'free' موجودة في pricing.js/
+// pricing.ts لعرض صفحة الأسعار فقط وليست منتجاً حقيقياً — hasActivePayment كانت تتحقق
+// من status='paid' فقط بلا أي فلترة على tier، فأي صف orders بحالة paid (بصرف النظر عن
+// tier) كان يفتح كل بوابات التصدير المدفوعة؛ هذا دفاع مستقل حتى لو انفتح مسار سعر صفري
+// آخر مستقبلاً على جانب create-checkout.
+const PAID_TIERS = ['self', 'reviewed', 'full'];
+
 /**
  * هل يوجد طلب مدفوع فعلياً (status='paid' وtier من الباقات المدفوعة الحقيقية) لهذه
  * الدراسة تحديداً؟ يُستخدم لفتح بوابة تصدير التقرير النهائي دون تكرار الدفع لكل صيغة تصدير.
