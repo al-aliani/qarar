@@ -12,16 +12,19 @@ import { escapeHtml } from '../../utils/escape.js';
 
 /**
  * @param {HTMLElement} container - يُستبدَل محتواه بالكامل بلوحة التحويل.
- * @param {{tier:string, orderId:string, amount:number, onBack:() => void}} params
+ * @param {{tier?:string, orderId:string, amount:number, onBack:() => void, productLabel?:string, backLabel?:string}} params
+ *   productLabel: نص المنتج لغير باقات الاشتراك (مثلاً طلب استشارة) — يُغني عن tier/
+ *   PRICING_PACKAGES تماماً حين يُمرَّر؛ بدونه السلوك القديم (باقة اشتراك) كما هو.
  * @returns {boolean} false إن كان إعداد التحويل البنكي غير صالح (لا يوجد شيء لعرضه)
  */
-export function renderBankTransferPanel(container, { tier, orderId, amount, onBack }) {
+export function renderBankTransferPanel(container, { tier, orderId, amount, onBack, productLabel, backLabel }) {
     const b = getBankTransferConfig();
     if (!b) return false;
     const pkg = PRICING_PACKAGES.find((p) => p.id === tier) || {};
+    const label = productLabel || `باقة «${pkg.name || ''}»`;
     const amountText = `${formatPrice(amount ?? pkg.price)} ريال`;
     const ref = String(orderId || '').slice(0, 8);
-    const waText = `السلام عليكم، حوّلت مبلغ باقة «${pkg.name || ''}» (${amountText}) بنكياً.\nرقم الطلب المرجعي: ${ref}\nمرفق إثبات الحوالة.`;
+    const waText = `السلام عليكم، حوّلت مبلغ ${label} (${amountText}) بنكياً.\nرقم الطلب المرجعي: ${ref}\nمرفق إثبات الحوالة.`;
     const waLink = buildWhatsAppLink(waText);
 
     const row = (label, value, copyable) => `
@@ -31,7 +34,7 @@ export function renderBankTransferPanel(container, { tier, orderId, amount, onBa
         </div>`;
 
     container.innerHTML = `
-        <button type="button" id="bankBack" class="btn--text text-sm text-muted mb-2">← رجوع للباقات</button>
+        <button type="button" id="bankBack" class="btn--text text-sm text-muted mb-2">← ${escapeHtml(backLabel || 'رجوع للباقات')}</button>
         <div class="alert alert--warning mb-3">حوّل المبلغ التالي إلى حساب الشركة، ثم أرسل إثبات الحوالة عبر واتساب. يُفعّل التصدير خلال ساعات العمل بعد التحقق من وصول المبلغ.</div>
         <div class="card" style="padding:14px;border-radius:12px;">
             ${row('المبلغ المطلوب', amountText)}
